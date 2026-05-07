@@ -1,0 +1,123 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bludm}
+      POSTGRES_USER: ${POSTGRES_USER:-bludm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bludm_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-bludm} -d ${POSTGRES_DB:-bludm}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    networks:
+      - bludm
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      ADDR: ${ADDR:-:8080}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: ${POSTGRES_DB:-bludm}
+      DATABASE_USER: ${POSTGRES_USER:-bludm}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-bludm_dev_password}
+      DATABASE_SSLMODE: disable
+      SESSION_SECRET: ${SESSION_SECRET:-bludm-dev-session-secret-change-me-32}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - bludm
+
+  migrate:
+    build:
+      context: ./backend
+    profiles:
+      - tools
+    environment:
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_NAME: ${POSTGRES_DB:-bludm}
+      DATABASE_USER: ${POSTGRES_USER:-bludm}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-bludm_dev_password}
+      DATABASE_SSLMODE: disable
+    entrypoint: ["bludm-migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    networks:
+      - bludm
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-/api}
+    ports:
+      - "${WEB_PORT:-3080}:80"
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - bludm
+
+  postgres-backup:
+    image: postgres:17-alpine
+    profiles:
+      - backup
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bludm}
+      POSTGRES_USER: ${POSTGRES_USER:-bludm}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-bludm_dev_password}
+      POSTGRES_BACKUP_INTERVAL_SECONDS: ${POSTGRES_BACKUP_INTERVAL_SECONDS:-86400}
+      POSTGRES_BACKUP_RETENTION_DAYS: ${POSTGRES_BACKUP_RETENTION_DAYS:-14}
+    volumes:
+      - ./backups/postgres:/backups
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        while true; do
+          now=$$(date +%Y%m%d-%H%M%S)
+          pg_dump -h postgres -U "$${POSTGRES_USER:-bludm}" -d "$${POSTGRES_DB:-bludm}" -Fc -f "/backups/bludm-$${now}.dump"
+          find /backups -name 'bludm-*.dump' -mtime +"$${POSTGRES_BACKUP_RETENTION_DAYS}" -delete
+          sleep "$${POSTGRES_BACKUP_INTERVAL_SECONDS}"
+        done
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bludm
+
+networks:
+  bludm:
+    driver: bridge
+
+volumes:
+  postgres_data:
