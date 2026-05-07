@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- D&D dice rolls are gameplay randomness, not security-sensitive tokens or secrets.
 	mrand "math/rand/v2"
 	"strconv"
 	"strings"

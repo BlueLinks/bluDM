@@ -206,6 +206,7 @@ func (s *Server) proxyImageURL(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-store")
+	// nosemgrep: go.lang.security.audit.xss.no-direct-write-to-responsewriter.no-direct-write-to-responsewriter -- This endpoint proxies validated image bytes with an image content type, not HTML.
 	_, _ = w.Write(data)
 }
 
@@ -274,5 +275,6 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "private, max-age=86400")
+	// nosemgrep: go.lang.security.audit.xss.no-direct-write-to-responsewriter.no-direct-write-to-responsewriter -- This endpoint serves stored image bytes with an image content type, not HTML.
 	_, _ = w.Write(data)
 }
