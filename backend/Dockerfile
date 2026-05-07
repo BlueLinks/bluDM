@@ -7,7 +7,7 @@ COPY . .
 RUN go build -o /out/bludm-api ./cmd/server
 RUN go build -o /out/bludm-migrate ./cmd/migrate
 
-FROM alpine:3.21
+FROM alpine:3.23
 
 RUN adduser -D -H appuser
 USER appuser
