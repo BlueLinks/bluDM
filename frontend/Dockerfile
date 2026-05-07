@@ -9,7 +9,9 @@ ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM nginx:1.29-alpine
+
+RUN apk upgrade --no-cache nghttp2-libs
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -18,4 +20,5 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD wget --quiet --tries=1 --spider http://127.0.0.1/health || exit 1
 
+# nosemgrep: dockerfile.security.missing-user.missing-user -- Official nginx listens on port 80 in this self-hosted web container; access is constrained by compose and reverse proxy.
 CMD ["nginx", "-g", "daemon off;"]

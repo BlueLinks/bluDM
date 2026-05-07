@@ -94,7 +94,7 @@ jobs:
         run: docker compose build web api migrate
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bludm-api:latest
           severity: HIGH,CRITICAL
@@ -102,7 +102,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: bludm-web:latest
           severity: HIGH,CRITICAL
@@ -138,11 +138,11 @@ jobs:
 
       - name: Secret scan
         run: |
-          go install github.com/gitleaks/gitleaks/v8@latest
+          go install github.com/zricethezav/gitleaks/v8@latest
           gitleaks detect --source . --redact --no-banner
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.34.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .

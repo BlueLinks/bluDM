@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -330,5 +331,5 @@ func encounterDisplayName(name string, index int, quantity int) string {
 	if quantity <= 1 {
 		return name
 	}
-	return name + " " + string(rune('A'+index))
+	return fmt.Sprintf("%s (%d)", name, index+1)
 }

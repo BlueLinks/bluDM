@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bludm/backend/internal/models"
 	"encoding/json"
+	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- Initiative rolls are gameplay randomness, not security-sensitive tokens or secrets.
 	mrand "math/rand/v2"
 	"net/http"
 	"strconv"

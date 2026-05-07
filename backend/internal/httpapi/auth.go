@@ -183,7 +183,8 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID str
 		return err
 	}
 
-	http.SetCookie(w, &http.Cookie{
+	// nosemgrep: go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure -- Secure is environment-controlled for local HTTP self-hosting; production should set COOKIE_SECURE=true.
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is environment-controlled for local HTTP self-hosting; production should set COOKIE_SECURE=true.
 		Name:     "bludm_session",
 		Value:    token,
 		Path:     "/",
@@ -201,7 +202,8 @@ func (s *Server) deleteSession(ctx context.Context, token string) error {
 }
 
 func (s *Server) clearSessionCookie(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
+	// nosemgrep: go.lang.security.audit.net.cookie-missing-secure.cookie-missing-secure -- Secure is environment-controlled for local HTTP self-hosting; production should set COOKIE_SECURE=true.
+	http.SetCookie(w, &http.Cookie{ // #nosec G124 -- Secure is environment-controlled for local HTTP self-hosting; production should set COOKIE_SECURE=true.
 		Name:     "bludm_session",
 		Value:    "",
 		Path:     "/",
