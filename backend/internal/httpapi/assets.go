@@ -2,31 +2,41 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"io"
+	"mime/multipart"
+	"net"
 	"net/http"
 	neturl "net/url"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
+const maxImageBytes = 5 << 20
+
+var errPrivateImageURL = errors.New("image URL must resolve to a public address")
+
 func (s *Server) uploadImageAsset(w http.ResponseWriter, r *http.Request) {
 	user, _ := s.currentUser(r)
-	if err := r.ParseMultipartForm(8 << 20); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, 8<<20)
+	reader, err := r.MultipartReader()
+	if err != nil {
 		writeError(w, http.StatusBadRequest, "image upload must be multipart form data")
 		return
 	}
-	file, header, err := r.FormFile("image")
+	file, filename, err := multipartImagePart(reader)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "image file is required")
 		return
 	}
 	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, 5<<20+1))
+	data, err := io.ReadAll(io.LimitReader(file, maxImageBytes+1))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not read image")
 		return
 	}
-	if len(data) == 0 || len(data) > 5<<20 {
+	if len(data) == 0 || len(data) > maxImageBytes {
 		writeError(w, http.StatusBadRequest, "image must be between 1 byte and 5 MB")
 		return
 	}
@@ -40,11 +50,29 @@ func (s *Server) uploadImageAsset(w http.ResponseWriter, r *http.Request) {
 		insert into uploaded_assets (owner_user_id, filename, content_type, byte_size, data)
 		values ($1, $2, $3, $4, $5)
 		returning id
-	`, user.ID, header.Filename, contentType, len(data), data).Scan(&id); err != nil {
+	`, user.ID, filename, contentType, len(data), data).Scan(&id); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not store image")
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"assetId": id, "url": "/api/assets/" + id})
+}
+
+func multipartImagePart(reader *multipart.Reader) (io.ReadCloser, string, error) {
+	for {
+		part, err := reader.NextPart()
+		if err != nil {
+			return nil, "", err
+		}
+		if part.FormName() != "image" {
+			_ = part.Close()
+			continue
+		}
+		filename := filepath.Base(part.FileName())
+		if filename == "." || filename == string(filepath.Separator) {
+			filename = "uploaded-avatar"
+		}
+		return part, filename, nil
+	}
 }
 
 func (s *Server) importImageAssetFromURL(w http.ResponseWriter, r *http.Request) {
@@ -63,13 +91,18 @@ func (s *Server) importImageAssetFromURL(w http.ResponseWriter, r *http.Request)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	client, err := imageFetchClient(ctx, parsed)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "valid http or https image URL is required")
+		return
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil) // #nosec G704 -- imageFetchClient restricts fetches to public IPs and disables redirects.
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "valid http or https image URL is required")
 		return
 	}
 	request.Header.Set("User-Agent", "bluDM avatar importer")
-	response, err := http.DefaultClient.Do(request)
+	response, err := client.Do(request) // #nosec G704 -- request URL is prevalidated and dialer rejects private/link-local targets.
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not fetch image URL")
 		return
@@ -79,12 +112,12 @@ func (s *Server) importImageAssetFromURL(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "image URL did not return a successful response")
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, 5<<20+1))
+	data, err := io.ReadAll(io.LimitReader(response.Body, maxImageBytes+1))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not read image URL")
 		return
 	}
-	if len(data) == 0 || len(data) > 5<<20 {
+	if len(data) == 0 || len(data) > maxImageBytes {
 		writeError(w, http.StatusBadRequest, "image must be between 1 byte and 5 MB")
 		return
 	}
@@ -136,13 +169,18 @@ func (s *Server) proxyImageURL(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	client, err := imageFetchClient(ctx, parsed)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "valid http or https image URL is required")
+		return
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil) // #nosec G704 -- imageFetchClient restricts fetches to public IPs and disables redirects.
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "valid http or https image URL is required")
 		return
 	}
 	request.Header.Set("User-Agent", "bluDM avatar preview")
-	response, err := http.DefaultClient.Do(request)
+	response, err := client.Do(request) // #nosec G704 -- request URL is prevalidated and dialer rejects private/link-local targets.
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not fetch image URL")
 		return
@@ -152,12 +190,12 @@ func (s *Server) proxyImageURL(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "image URL did not return a successful response")
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(response.Body, 5<<20+1))
+	data, err := io.ReadAll(io.LimitReader(response.Body, maxImageBytes+1))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not read image URL")
 		return
 	}
-	if len(data) == 0 || len(data) > 5<<20 {
+	if len(data) == 0 || len(data) > maxImageBytes {
 		writeError(w, http.StatusBadRequest, "image must be between 1 byte and 5 MB")
 		return
 	}
@@ -169,6 +207,59 @@ func (s *Server) proxyImageURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write(data)
+}
+
+func imageFetchClient(ctx context.Context, parsed *neturl.URL) (*http.Client, error) {
+	host := parsed.Hostname()
+	if host == "" {
+		return nil, errPrivateImageURL
+	}
+	resolver := net.DefaultResolver
+	ips, err := resolver.LookupIPAddr(ctx, host)
+	if err != nil || len(ips) == 0 {
+		return nil, errPrivateImageURL
+	}
+	allowedIPs := make(map[string]struct{}, len(ips))
+	for _, ip := range ips {
+		if !publicIP(ip.IP) {
+			return nil, errPrivateImageURL
+		}
+		allowedIPs[ip.IP.String()] = struct{}{}
+	}
+	dialer := &net.Dialer{Timeout: 5 * time.Second}
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			host, port, err := net.SplitHostPort(address)
+			if err != nil {
+				return nil, err
+			}
+			ips, err := resolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			for _, ip := range ips {
+				if _, ok := allowedIPs[ip.IP.String()]; !ok || !publicIP(ip.IP) {
+					return nil, errPrivateImageURL
+				}
+			}
+			return dialer.DialContext(ctx, network, net.JoinHostPort(host, port))
+		},
+	}
+	return &http.Client{
+		Timeout:   10 * time.Second,
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}, nil
+}
+
+func publicIP(ip net.IP) bool {
+	if ip == nil {
+		return false
+	}
+	return ip.IsGlobalUnicast() && !ip.IsPrivate() && !ip.IsLoopback() && !ip.IsLinkLocalUnicast() && !ip.IsLinkLocalMulticast() && !ip.IsUnspecified()
 }
 
 func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
