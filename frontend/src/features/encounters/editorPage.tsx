@@ -31,7 +31,6 @@ import type {
 import { CombatantEditSheet, CombatantList } from "./editorComponents";
 import { EncounterCreatureAddPanel } from "./EncounterCreatureAddPanel";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
-import { loadEncounterCreatures } from "./creatureLoading";
 import {
   combatantChanged,
   draftFromCreature,
@@ -60,7 +59,6 @@ export function EncounterEditPage() {
   const [showUserCreatures, setShowUserCreatures] = useState(true);
   const [showStandardCreatures, setShowStandardCreatures] = useState(true);
   const [creatureSources, setCreatureSources] = useState(["srd-2014"]);
-  const [usingFallbackCreatures, setUsingFallbackCreatures] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -110,9 +108,11 @@ export function EncounterEditPage() {
       const allowedSources = campaignPayload.campaign.allowedStandardSources?.length
         ? campaignPayload.campaign.allowedStandardSources
         : ["srd-2014"];
-      const creaturePayload = await loadEncounterCreatures(allowedSources);
+      const creaturePayload = await api.creatures({
+        includeStandard: true,
+        source: allowedSources,
+      });
       setCreatureSources(allowedSources);
-      setUsingFallbackCreatures(creaturePayload.usingFallbackCreatures);
       setDetail(campaignPayload);
       setEncounter(encounterPayload.encounter);
       setEncounterMeta({
@@ -138,11 +138,9 @@ export function EncounterEditPage() {
 
   useEffect(() => {
     if (!detail) return;
-    loadEncounterCreatures(creatureSources)
-      .then((payload) => {
-        setCreatures(payload.creatures);
-        setUsingFallbackCreatures(payload.usingFallbackCreatures);
-      })
+    api
+      .creatures({ includeStandard: true, source: creatureSources })
+      .then((payload) => setCreatures(payload.creatures))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creatures"));
   }, [detail?.campaign.id, creatureSources.join(",")]);
 
@@ -377,7 +375,6 @@ export function EncounterEditPage() {
             creatureSources={creatureSources}
             filteredCreatures={filteredCreatures}
             hasCreatureSourceMismatch={hasCreatureSourceMismatch}
-            usingFallbackCreatures={usingFallbackCreatures}
             search={search}
             setCreatureSources={setCreatureSources}
             setSearch={setSearch}
