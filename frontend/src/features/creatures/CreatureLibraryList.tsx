@@ -1,4 +1,5 @@
 import { BookOpen, Eye, Pencil, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import { Badge, Button, EmptyMini, Modal, StatPill } from "../../components/ui";
@@ -14,12 +15,19 @@ export function CreatureLibraryList({
   onPreview: (creature: Creature) => void;
   onRemove: (creature: Creature) => void;
 }) {
+  const [visibleCount, setVisibleCount] = useState(80);
+
+  useEffect(() => {
+    setVisibleCount(80);
+  }, [creatures]);
+
   if (creatures.length === 0) {
     return <EmptyMini copy="No creatures in the selected library view." />;
   }
+  const visibleCreatures = creatures.slice(0, visibleCount);
   return (
     <div className="grid gap-3">
-      {creatures.map((creature) => (
+      {visibleCreatures.map((creature) => (
         <CreatureLibraryCard
           creature={creature}
           key={creature.id}
@@ -27,6 +35,15 @@ export function CreatureLibraryList({
           onRemove={onRemove}
         />
       ))}
+      {visibleCount < creatures.length && (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setVisibleCount((current) => current + 80)}
+        >
+          Load more creatures ({creatures.length - visibleCount} remaining)
+        </Button>
+      )}
     </div>
   );
 }
@@ -71,7 +88,13 @@ function CreatureLibraryCard({
         <div className="flex min-w-0 items-start gap-3">
           <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-muted text-sm font-bold text-muted-foreground">
             {avatarSrc ? (
-              <img className="h-full w-full object-cover" src={avatarSrc} alt="" />
+              <img
+                className="h-full w-full object-cover"
+                src={avatarSrc}
+                alt=""
+                loading="lazy"
+                decoding="async"
+              />
             ) : (
               creature.name.slice(0, 2).toUpperCase()
             )}
@@ -140,6 +163,7 @@ function CreatureStatBadges({ creature }: { creature: Creature }) {
 
 function CreaturePreviewSheet({ creature }: { creature: Creature }) {
   const abilities = abilityScores(creature);
+  const avatarSrc = avatarImageSrc(creature.imageAssetId, creature.avatarUrl);
   return (
     <div className="grid gap-5">
       <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
@@ -154,11 +178,26 @@ function CreaturePreviewSheet({ creature }: { creature: Creature }) {
           data import slice.
         </p>
       </div>
-      <div>
-        <h3 className="text-2xl font-bold">{creature.name}</h3>
-        <p className="mt-1 italic text-muted-foreground">
-          {[creature.size, creature.creatureType, creature.alignment].filter(Boolean).join(", ")}
-        </p>
+      <div className="flex flex-wrap items-start gap-4">
+        <div className="grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-2xl font-bold text-muted-foreground">
+          {avatarSrc ? (
+            <img
+              className="h-full w-full object-cover"
+              src={avatarSrc}
+              alt=""
+              loading="eager"
+              decoding="async"
+            />
+          ) : (
+            creature.name.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-2xl font-bold">{creature.name}</h3>
+          <p className="mt-1 italic text-muted-foreground">
+            {[creature.size, creature.creatureType, creature.alignment].filter(Boolean).join(", ")}
+          </p>
+        </div>
       </div>
       {creature.description && (
         <p className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-6">
