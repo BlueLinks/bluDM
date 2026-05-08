@@ -18,7 +18,7 @@ export function PrivacyPage() {
             images you upload or import.
           </p>
           <p>
-            bluDM does not need to store Google or Apple access tokens or refresh tokens. Uploaded
+            bluDM does not need to store Google or Discord access tokens or refresh tokens. Uploaded
             images and game data are private to the signed-in user that created them unless a future
             sharing feature explicitly grants access.
           </p>

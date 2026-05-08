@@ -2,27 +2,21 @@ package httpapi
 
 import (
 	"context"
-	"crypto/ecdsa"
-	crand "crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"errors"
-	"math/big"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
 
 const (
-	oauthGoogle = "google"
-	oauthApple  = "apple"
+	oauthGoogle  = "google"
+	oauthDiscord = "discord"
 )
 
 type authProviderInfo struct {
@@ -72,7 +66,7 @@ func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
-	http.Redirect(w, r, oauthConfig.AuthCodeURL( // #nosec G710 -- Redirect target is the configured Google/Apple authorization endpoint, not user-controlled input.
+	http.Redirect(w, r, oauthConfig.AuthCodeURL( // #nosec G710 -- Redirect target is the configured provider authorization endpoint, not user-controlled input.
 		state,
 		oauth2.AccessTypeOnline,
 		oauth2.SetAuthURLParam("nonce", nonce),
@@ -122,12 +116,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "could not exchange sign-in code")
 		return
 	}
-	rawIDToken, ok := token.Extra("id_token").(string)
-	if !ok || rawIDToken == "" {
-		writeError(w, http.StatusBadRequest, "provider did not return an identity token")
-		return
-	}
-	identity, err := s.verifyOAuthIdentity(r.Context(), providerName, rawIDToken, oauthConfig.ClientID, saved.Nonce)
+	identity, err := s.verifyOAuthIdentity(r.Context(), providerName, token, oauthConfig.ClientID, saved.Nonce)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "could not verify identity")
 		return
@@ -150,12 +139,15 @@ type oauthIdentity struct {
 	EmailVerified bool
 }
 
-func (s *Server) verifyOAuthIdentity(ctx context.Context, providerName, rawIDToken, clientID, nonce string) (oauthIdentity, error) {
-	issuer := "https://accounts.google.com"
-	if providerName == oauthApple {
-		issuer = "https://appleid.apple.com"
+func (s *Server) verifyOAuthIdentity(ctx context.Context, providerName string, token *oauth2.Token, clientID, nonce string) (oauthIdentity, error) {
+	if providerName == oauthDiscord {
+		return verifyDiscordIdentity(ctx, token)
 	}
-	provider, err := oidc.NewProvider(ctx, issuer)
+	rawIDToken, ok := token.Extra("id_token").(string)
+	if !ok || rawIDToken == "" {
+		return oauthIdentity{}, errors.New("provider did not return an identity token")
+	}
+	provider, err := oidc.NewProvider(ctx, "https://accounts.google.com")
 	if err != nil {
 		return oauthIdentity{}, err
 	}
@@ -182,6 +174,39 @@ func (s *Server) verifyOAuthIdentity(ctx context.Context, providerName, rawIDTok
 		Subject:       claims.Subject,
 		Email:         email,
 		EmailVerified: emailVerifiedBool(claims.EmailVerified),
+	}, nil
+}
+
+func verifyDiscordIdentity(ctx context.Context, token *oauth2.Token) (oauthIdentity, error) {
+	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://discord.com/api/users/@me", nil)
+	if err != nil {
+		return oauthIdentity{}, err
+	}
+	response, err := client.Do(request)
+	if err != nil {
+		return oauthIdentity{}, err
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return oauthIdentity{}, errors.New("discord identity request failed")
+	}
+	var payload struct {
+		ID       string `json:"id"`
+		Email    string `json:"email"`
+		Verified bool   `json:"verified"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return oauthIdentity{}, err
+	}
+	email := strings.TrimSpace(strings.ToLower(payload.Email))
+	if payload.ID == "" || email == "" || !strings.Contains(email, "@") {
+		return oauthIdentity{}, errors.New("discord identity is missing a usable email")
+	}
+	return oauthIdentity{
+		Subject:       payload.ID,
+		Email:         email,
+		EmailVerified: payload.Verified,
 	}, nil
 }
 
@@ -212,24 +237,19 @@ func (s *Server) oauthConfigWithVerifier(ctx context.Context, providerName, veri
 			Endpoint:     provider.Endpoint(),
 			Scopes:       []string{oidc.ScopeOpenID, "email"},
 		}, verifier, nil
-	case oauthApple:
-		if s.cfg.OAuth.Apple.ClientID == "" || s.cfg.OAuth.Apple.TeamID == "" || s.cfg.OAuth.Apple.KeyID == "" || s.cfg.OAuth.Apple.PrivateKey == "" {
-			return nil, "", errors.New("apple oauth is not configured")
-		}
-		secret, err := appleClientSecret(s.cfg.OAuth.Apple.TeamID, s.cfg.OAuth.Apple.ClientID, s.cfg.OAuth.Apple.KeyID, s.cfg.OAuth.Apple.PrivateKey)
-		if err != nil {
-			return nil, "", err
-		}
-		provider, err := oidc.NewProvider(ctx, "https://appleid.apple.com")
-		if err != nil {
-			return nil, "", err
+	case oauthDiscord:
+		if s.cfg.OAuth.Discord.ClientID == "" || s.cfg.OAuth.Discord.ClientSecret == "" {
+			return nil, "", errors.New("discord oauth is not configured")
 		}
 		return &oauth2.Config{
-			ClientID:     s.cfg.OAuth.Apple.ClientID,
-			ClientSecret: secret,
+			ClientID:     s.cfg.OAuth.Discord.ClientID,
+			ClientSecret: s.cfg.OAuth.Discord.ClientSecret,
 			RedirectURL:  redirectURL,
-			Endpoint:     provider.Endpoint(),
-			Scopes:       []string{oidc.ScopeOpenID, "email"},
+			Endpoint: oauth2.Endpoint{ // #nosec G101 -- These are public Discord OAuth endpoint URLs, not credentials.
+				AuthURL:  "https://discord.com/oauth2/authorize",
+				TokenURL: "https://discord.com/api/oauth2/token",
+			},
+			Scopes: []string{"identify", "email"},
 		}, verifier, nil
 	default:
 		return nil, "", errors.New("unknown oauth provider")
@@ -241,8 +261,8 @@ func (s *Server) enabledOAuthProviders() []string {
 	if s.cfg.OAuth.Google.ClientID != "" && s.cfg.OAuth.Google.ClientSecret != "" {
 		providers = append(providers, oauthGoogle)
 	}
-	if s.cfg.OAuth.Apple.ClientID != "" && s.cfg.OAuth.Apple.TeamID != "" && s.cfg.OAuth.Apple.KeyID != "" && s.cfg.OAuth.Apple.PrivateKey != "" {
-		providers = append(providers, oauthApple)
+	if s.cfg.OAuth.Discord.ClientID != "" && s.cfg.OAuth.Discord.ClientSecret != "" {
+		providers = append(providers, oauthDiscord)
 	}
 	return providers
 }
@@ -251,8 +271,8 @@ func providerLabel(provider string) string {
 	switch provider {
 	case oauthGoogle:
 		return "Continue with Google"
-	case oauthApple:
-		return "Continue with Apple"
+	case oauthDiscord:
+		return "Continue with Discord"
 	default:
 		return "Continue"
 	}
@@ -286,55 +306,4 @@ func emailVerifiedBool(value any) bool {
 	default:
 		return false
 	}
-}
-
-func appleClientSecret(teamID, clientID, keyID, privateKey string) (string, error) {
-	key, err := parseApplePrivateKey(privateKey)
-	if err != nil {
-		return "", err
-	}
-	header, _ := json.Marshal(map[string]string{"alg": "ES256", "kid": keyID})
-	now := time.Now()
-	claims, _ := json.Marshal(map[string]any{
-		"iss": teamID,
-		"iat": now.Unix(),
-		"exp": now.Add(24 * time.Hour).Unix(),
-		"aud": "https://appleid.apple.com",
-		"sub": clientID,
-	})
-	unsigned := base64.RawURLEncoding.EncodeToString(header) + "." + base64.RawURLEncoding.EncodeToString(claims)
-	sum := sha256.Sum256([]byte(unsigned))
-	r, s, err := ecdsa.Sign(crand.Reader, key, sum[:])
-	if err != nil {
-		return "", err
-	}
-	signature := append(padBigInt(r, 32), padBigInt(s, 32)...)
-	return unsigned + "." + base64.RawURLEncoding.EncodeToString(signature), nil
-}
-
-func parseApplePrivateKey(value string) (*ecdsa.PrivateKey, error) {
-	value = strings.ReplaceAll(value, `\n`, "\n")
-	block, _ := pem.Decode([]byte(value))
-	if block == nil {
-		return nil, errors.New("invalid apple private key")
-	}
-	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	ecdsaKey, ok := key.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, errors.New("apple private key must be ECDSA")
-	}
-	return ecdsaKey, nil
-}
-
-func padBigInt(value *big.Int, size int) []byte {
-	bytes := value.Bytes()
-	if len(bytes) >= size {
-		return bytes
-	}
-	padded := make([]byte, size)
-	copy(padded[size-len(bytes):], bytes)
-	return padded
 }

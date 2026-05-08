@@ -156,7 +156,7 @@ export function AuthLanding({
                 OAuth sign-in is not configured yet
               </div>
               <p>
-                Add Google or Apple OAuth environment variables to enable those sign-in buttons.
+                Add Google or Discord OAuth environment variables to enable those sign-in buttons.
                 Until then, use the local account flow if it is enabled.
               </p>
             </div>

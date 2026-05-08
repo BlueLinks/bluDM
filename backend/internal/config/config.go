@@ -26,20 +26,13 @@ type Config struct {
 }
 
 type OAuthConfig struct {
-	Google OAuthProviderConfig
-	Apple  AppleOAuthConfig
+	Google  OAuthProviderConfig
+	Discord OAuthProviderConfig
 }
 
 type OAuthProviderConfig struct {
 	ClientID     string
 	ClientSecret string
-}
-
-type AppleOAuthConfig struct {
-	ClientID   string
-	TeamID     string
-	KeyID      string
-	PrivateKey string
 }
 
 func Load() (Config, error) {
@@ -59,11 +52,9 @@ func Load() (Config, error) {
 				ClientID:     env("OAUTH_GOOGLE_CLIENT_ID", ""),
 				ClientSecret: env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
 			},
-			Apple: AppleOAuthConfig{
-				ClientID:   env("OAUTH_APPLE_CLIENT_ID", ""),
-				TeamID:     env("OAUTH_APPLE_TEAM_ID", ""),
-				KeyID:      env("OAUTH_APPLE_KEY_ID", ""),
-				PrivateKey: env("OAUTH_APPLE_PRIVATE_KEY", ""),
+			Discord: OAuthProviderConfig{
+				ClientID:     env("OAUTH_DISCORD_CLIENT_ID", ""),
+				ClientSecret: env("OAUTH_DISCORD_CLIENT_SECRET", ""),
 			},
 		},
 		SessionLifetime: 30 * 24 * time.Hour,
