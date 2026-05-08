@@ -270,7 +270,7 @@ export function FormSection({
   help?: string;
 }) {
   return (
-    <fieldset className="grid gap-5 rounded-xl border border-border bg-background p-6 shadow-sm">
+    <fieldset className="grid min-w-0 gap-5 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6">
       <legend className="px-2 text-sm font-bold uppercase tracking-wide text-accent">
         <span className="inline-flex items-center gap-2">
           {title}
@@ -294,7 +294,9 @@ export function Field({
   help?: string;
 }) {
   return (
-    <label className={["grid gap-2 text-sm font-medium", className].filter(Boolean).join(" ")}>
+    <label
+      className={["grid min-w-0 gap-2 text-sm font-medium", className].filter(Boolean).join(" ")}
+    >
       <span className="inline-flex items-center gap-2 text-[0.82rem] font-semibold text-muted-foreground">
         {label}
         {help && <HelpTip text={help} />}
@@ -320,7 +322,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={[
-        "min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/30 transition placeholder:italic placeholder:text-muted-foreground/70 focus:ring-2",
+        "min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/30 transition placeholder:italic placeholder:text-muted-foreground/70 focus:ring-2",
         props.className,
       ]
         .filter(Boolean)
