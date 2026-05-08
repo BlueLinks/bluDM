@@ -7,7 +7,14 @@ export type User = {
 export type AuthStatus = {
   setupRequired: boolean;
   authenticated: boolean;
+  localAuthEnabled: boolean;
   user?: User | null;
+};
+
+export type AuthProvider = {
+  id: string;
+  label: string;
+  url: string;
 };
 
 export type Campaign = {

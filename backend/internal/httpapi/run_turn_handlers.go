@@ -22,6 +22,10 @@ func (s *Server) getEncounterRun(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) rollInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req rollInitiativeRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -62,6 +66,10 @@ func (s *Server) rollInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) setInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req setInitiativeRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -86,6 +94,10 @@ func (s *Server) setInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) reorderInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req reorderInitiativeRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -115,6 +127,10 @@ func (s *Server) reorderInitiativeCommand(w http.ResponseWriter, r *http.Request
 
 func (s *Server) beginEncounterRunCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	if _, err := s.db.Exec(r.Context(), `
 		update encounter_runs set status = 'active', current_round = 1, current_turn_index = 0 where id = $1
 	`, runID); err != nil {
@@ -303,6 +319,10 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req executeActionRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -436,6 +456,10 @@ func (s *Server) resolveActionDamageCommand(w http.ResponseWriter, r *http.Reque
 
 func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Request) {
 	combatantID := strings.TrimSpace(r.PathValue("combatantID"))
+	if _, err := s.runCombatantOwnedByID(r.Context(), combatantID); err != nil {
+		writeError(w, http.StatusNotFound, "combatant not found")
+		return
+	}
 	var req updateRunCombatantRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -468,6 +492,10 @@ func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Requ
 
 func (s *Server) rollCheckCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req rollCheckRequest
 	if !decodeJSON(w, r, &req) {
 		return

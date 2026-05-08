@@ -8,6 +8,10 @@ import (
 
 func (s *Server) deathSaveCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	var req deathSaveRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -67,6 +71,10 @@ func (s *Server) deathSaveCommand(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
 	event, err := s.latestUndoableEvent(r.Context(), runID)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "nothing to undo")

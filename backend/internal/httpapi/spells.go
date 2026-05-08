@@ -8,6 +8,7 @@ import (
 )
 
 func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	levelFilter := strings.TrimSpace(r.URL.Query().Get("level"))
 	level, levelErr := strconv.Atoi(levelFilter)
@@ -24,11 +25,12 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 		select id, name, level, school, casting_time, spell_range, components, duration,
 			ritual, concentration, description, higher_level, source_note, mechanics, created_at, updated_at
 		from spells
-		where ($1 = '' or name ilike '%' || $1 || '%' or school ilike '%' || $1 || '%')
+		where owner_user_id = $3
+			and ($1 = '' or name ilike '%' || $1 || '%' or school ilike '%' || $1 || '%')
 			and ($2 = -1 or level = $2)
 		order by level asc, name asc
 		limit 100
-	`, q, level)
+	`, q, level, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list spells")
 		return
@@ -53,6 +55,7 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createSpell(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	var req spellRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -76,13 +79,13 @@ func (s *Server) createSpell(w http.ResponseWriter, r *http.Request) {
 
 	row := s.db.QueryRow(r.Context(), `
 		insert into spells (
-			name, level, school, casting_time, spell_range, components, duration, ritual,
+			owner_user_id, name, level, school, casting_time, spell_range, components, duration, ritual,
 			concentration, description, higher_level, source_note, mechanics
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		returning id, name, level, school, casting_time, spell_range, components, duration,
 			ritual, concentration, description, higher_level, source_note, mechanics, created_at, updated_at
-	`, req.Name, req.Level, req.School, req.CastingTime, req.Range, components, req.Duration, req.Ritual,
+	`, user.ID, req.Name, req.Level, req.School, req.CastingTime, req.Range, components, req.Duration, req.Ritual,
 		req.Concentration, req.Description, req.HigherLevel, req.SourceNote, mechanics)
 
 	spell, err := scanSpell(row)

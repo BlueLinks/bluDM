@@ -6,31 +6,66 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	Addr            string
-	DatabaseURL     string
-	SessionSecret   string
-	AdminEmail      string
-	AdminPassword   string
-	CookieSecure    bool
-	SessionLifetime time.Duration
+	Addr             string
+	DatabaseURL      string
+	SessionSecret    string
+	AdminEmail       string
+	AdminPassword    string
+	CookieSecure     bool
+	PublicAppURL     string
+	LocalAuthEnabled bool
+	OAuth            OAuthConfig
+	SessionLifetime  time.Duration
+}
+
+type OAuthConfig struct {
+	Google OAuthProviderConfig
+	Apple  AppleOAuthConfig
+}
+
+type OAuthProviderConfig struct {
+	ClientID     string
+	ClientSecret string
+}
+
+type AppleOAuthConfig struct {
+	ClientID   string
+	TeamID     string
+	KeyID      string
+	PrivateKey string
 }
 
 func Load() (Config, error) {
 	_ = godotenv.Load("../.env", ".env")
 
 	cfg := Config{
-		Addr:            env("ADDR", ":8080"),
-		DatabaseURL:     DatabaseURLFromEnv(),
-		SessionSecret:   env("SESSION_SECRET", ""),
-		AdminEmail:      env("ADMIN_EMAIL", ""),
-		AdminPassword:   env("ADMIN_PASSWORD", ""),
-		CookieSecure:    envBool("COOKIE_SECURE", false),
+		Addr:             env("ADDR", ":8080"),
+		DatabaseURL:      DatabaseURLFromEnv(),
+		SessionSecret:    env("SESSION_SECRET", ""),
+		AdminEmail:       env("ADMIN_EMAIL", ""),
+		AdminPassword:    env("ADMIN_PASSWORD", ""),
+		CookieSecure:     envBool("COOKIE_SECURE", false),
+		PublicAppURL:     strings.TrimRight(env("PUBLIC_APP_URL", "http://localhost:3000"), "/"),
+		LocalAuthEnabled: envBool("LOCAL_AUTH_ENABLED", true),
+		OAuth: OAuthConfig{
+			Google: OAuthProviderConfig{
+				ClientID:     env("OAUTH_GOOGLE_CLIENT_ID", ""),
+				ClientSecret: env("OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			},
+			Apple: AppleOAuthConfig{
+				ClientID:   env("OAUTH_APPLE_CLIENT_ID", ""),
+				TeamID:     env("OAUTH_APPLE_TEAM_ID", ""),
+				KeyID:      env("OAUTH_APPLE_KEY_ID", ""),
+				PrivateKey: env("OAUTH_APPLE_PRIVATE_KEY", ""),
+			},
+		},
 		SessionLifetime: 30 * 24 * time.Hour,
 	}
 

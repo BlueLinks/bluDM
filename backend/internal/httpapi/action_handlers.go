@@ -10,13 +10,15 @@ import (
 )
 
 func (s *Server) listActionTemplates(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	rows, err := s.db.Query(r.Context(), `
 		select id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
 			created_at, updated_at
 		from action_templates
+		where owner_user_id = $1
 		order by name asc
-	`)
+	`, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list action templates")
 		return
@@ -47,6 +49,7 @@ func (s *Server) listActionTemplates(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createActionTemplate(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	var req actionRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -64,7 +67,7 @@ func (s *Server) createActionTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	template, err := insertActionTemplate(r.Context(), tx, req)
+	template, err := insertActionTemplate(r.Context(), tx, user.ID, req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create action template")
 		return
@@ -105,12 +108,12 @@ func (s *Server) updateActionTemplate(w http.ResponseWriter, r *http.Request) {
 			limit_type = $6, reach = $7, action_range = $8, aoe_type = $9,
 			aoe_size = $10, action_type = $11, attack_modifier = $12,
 			miss_effect = $13, hit_special_event = $14
-		where id = $1
+		where id = $1 and owner_user_id = $15
 		returning id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
 			created_at, updated_at
 	`, templateID, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach, req.Range,
-		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent)
+		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent, currentUserIDMust(r.Context()))
 	template, err := scanActionTemplate(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -159,11 +162,17 @@ func (s *Server) deleteActionTemplate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context())
-	if _, err := tx.Exec(r.Context(), `delete from creature_actions where source_template_id = $1`, templateID); err != nil {
+	if _, err := tx.Exec(r.Context(), `
+		delete from creature_actions
+		using creatures
+		where creature_actions.creature_id = creatures.id
+			and creature_actions.source_template_id = $1
+			and creatures.owner_user_id = $2
+	`, templateID, currentUserIDMust(r.Context())); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not delete copied creature actions")
 		return
 	}
-	tag, err := tx.Exec(r.Context(), `delete from action_templates where id = $1`, templateID)
+	tag, err := tx.Exec(r.Context(), `delete from action_templates where id = $1 and owner_user_id = $2`, templateID, currentUserIDMust(r.Context()))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not delete action template")
 		return

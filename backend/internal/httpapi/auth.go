@@ -28,13 +28,18 @@ func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
 		user = currentUser
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"setupRequired": !hasUser,
-		"authenticated": ok,
-		"user":          user,
+		"setupRequired":    s.cfg.LocalAuthEnabled && !hasUser,
+		"authenticated":    ok,
+		"localAuthEnabled": s.cfg.LocalAuthEnabled,
+		"user":             user,
 	})
 }
 
 func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.LocalAuthEnabled {
+		writeError(w, http.StatusNotFound, "local auth is disabled")
+		return
+	}
 	hasUser, err := s.hasUser(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not check setup status")
@@ -75,6 +80,10 @@ func (s *Server) setup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.LocalAuthEnabled {
+		writeError(w, http.StatusNotFound, "local auth is disabled")
+		return
+	}
 	var req authRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -86,7 +95,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+	if user.PasswordHash == "" || bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
@@ -119,6 +128,24 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 	})
 }
 
+func currentUserFromContext(ctx context.Context) (models.User, bool) {
+	user, ok := ctx.Value(userContextKey{}).(models.User)
+	return user, ok
+}
+
+func currentUserID(ctx context.Context) (string, bool) {
+	user, ok := currentUserFromContext(ctx)
+	if !ok || user.ID == "" {
+		return "", false
+	}
+	return user.ID, true
+}
+
+func currentUserIDMust(ctx context.Context) string {
+	userID, _ := currentUserID(ctx)
+	return userID
+}
+
 func (s *Server) currentUser(r *http.Request) (models.User, bool) {
 	cookie, err := r.Cookie("bludm_session")
 	if err != nil || cookie.Value == "" {
@@ -147,10 +174,60 @@ func (s *Server) createUser(ctx context.Context, email, passwordHash string) (mo
 	return user, err
 }
 
+func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, email string, emailVerified bool) (models.User, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+	var user models.User
+	err := s.db.QueryRow(ctx, `
+		select users.id, users.email, coalesce(users.password_hash, ''), users.created_at
+		from auth_identities
+		join users on users.id = auth_identities.user_id
+		where auth_identities.provider = $1 and auth_identities.provider_subject = $2
+	`, provider, subject).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err == nil {
+		_, _ = s.db.Exec(ctx, `
+			update auth_identities
+			set email = $3, email_verified = $4, last_login_at = now()
+			where provider = $1 and provider_subject = $2
+		`, provider, subject, email, emailVerified)
+		return user, nil
+	}
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return models.User{}, err
+	}
+	defer tx.Rollback(ctx)
+	err = tx.QueryRow(ctx, `
+		insert into users (email, password_hash)
+		values ($1, null)
+		on conflict (email) do update set email = excluded.email
+		returning id, email, coalesce(password_hash, ''), created_at
+	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	if err != nil {
+		return models.User{}, err
+	}
+	_, err = tx.Exec(ctx, `
+		insert into auth_identities (user_id, provider, provider_subject, email, email_verified, last_login_at)
+		values ($1, $2, $3, $4, $5, now())
+		on conflict (provider, provider_subject) do update
+		set user_id = excluded.user_id,
+			email = excluded.email,
+			email_verified = excluded.email_verified,
+			last_login_at = now()
+	`, user.ID, provider, subject, email, emailVerified)
+	if err != nil {
+		return models.User{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return models.User{}, err
+	}
+	return user, nil
+}
+
 func (s *Server) userByEmail(ctx context.Context, email string) (models.User, error) {
 	var user models.User
 	err := s.db.QueryRow(ctx, `
-		select id, email, password_hash, created_at
+		select id, email, coalesce(password_hash, ''), created_at
 		from users
 		where email = $1
 	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
@@ -161,7 +238,7 @@ func (s *Server) userBySessionToken(ctx context.Context, token string) (models.U
 	tokenHash := hashToken(token)
 	var user models.User
 	err := s.db.QueryRow(ctx, `
-		select users.id, users.email, users.password_hash, users.created_at
+		select users.id, users.email, coalesce(users.password_hash, ''), users.created_at
 		from sessions
 		join users on users.id = sessions.user_id
 		where sessions.token_hash = $1 and sessions.expires_at > now()

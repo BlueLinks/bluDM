@@ -7,6 +7,10 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
+	mux.HandleFunc("GET /api/auth/providers", s.authProviders)
+	mux.HandleFunc("GET /api/auth/{provider}/start", s.oauthStart)
+	mux.HandleFunc("GET /api/auth/{provider}/callback", s.oauthCallback)
+	mux.HandleFunc("POST /api/auth/{provider}/callback", s.oauthCallback)
 	mux.HandleFunc("POST /api/auth/setup", s.setup)
 	mux.HandleFunc("POST /api/auth/login", s.login)
 	mux.HandleFunc("POST /api/auth/logout", s.logout)
@@ -74,5 +78,5 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /api/encounter-runs/{runID}/end", s.requireAuth(http.HandlerFunc(s.endEncounterRun)))
 	mux.Handle("POST /api/dev/seed-test-data", s.requireAuth(http.HandlerFunc(s.seedTestData)))
 
-	return withJSON(withRecover(s.log, mux))
+	return s.withCSRF(withJSON(withRecover(s.log, mux)))
 }

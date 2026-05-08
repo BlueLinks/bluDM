@@ -7,10 +7,13 @@ import { AuthShell, useThemeMode, WorkspaceShell } from "./app/shell";
 import { AuthCard, StatusPanel } from "./components/ui";
 import { ComingSoonPage } from "./pages/ComingSoonPage";
 import { api } from "./lib/api";
-import type { AuthStatus } from "./types";
+import type { AuthProvider, AuthStatus } from "./types";
 
 const ImportPage = lazy(() =>
   import("./pages/ImportPage").then((module) => ({ default: module.ImportPage })),
+);
+const PrivacyPage = lazy(() =>
+  import("./pages/PrivacyPage").then((module) => ({ default: module.PrivacyPage })),
 );
 const CampaignsPage = lazy(() =>
   import("./features/campaigns/pages").then((module) => ({ default: module.CampaignsPage })),
@@ -60,6 +63,7 @@ const EncounterEditPage = lazy(() =>
 
 function App() {
   const [auth, setAuth] = useState<AuthStatus | null>(null);
+  const [providers, setProviders] = useState<AuthProvider[]>([]);
   const [error, setError] = useState("");
   const { theme, setTheme, resolvedTheme } = useThemeMode();
 
@@ -67,6 +71,11 @@ function App() {
     setError("");
     try {
       setAuth(await api.status());
+      const providerPayload = await api.authProviders().catch(() => ({
+        providers: [],
+        localAuthEnabled: true,
+      }));
+      setProviders(providerPayload.providers);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not reach API");
     }
@@ -112,6 +121,8 @@ function App() {
             await api.login(email, password);
             await refreshAuth();
           }}
+          localAuthEnabled={auth.localAuthEnabled}
+          providers={providers}
         />
       </AuthShell>
     );
@@ -165,6 +176,7 @@ function App() {
               }
             />
             <Route path="/import" element={<ImportPage seedTestData={api.seedTestData} />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
             <Route path="*" element={<Navigate replace to="/campaigns" />} />
           </Routes>
         </Suspense>

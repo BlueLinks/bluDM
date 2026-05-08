@@ -26,6 +26,10 @@ func (s *Server) getEncounter(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) updateEncounter(w http.ResponseWriter, r *http.Request) {
 	encounterID := strings.TrimSpace(r.PathValue("encounterID"))
+	if _, err := s.encounterByID(r.Context(), encounterID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter not found")
+		return
+	}
 	var req encounterRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -54,7 +58,12 @@ func (s *Server) updateEncounter(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) deleteEncounter(w http.ResponseWriter, r *http.Request) {
 	encounterID := strings.TrimSpace(r.PathValue("encounterID"))
-	tag, err := s.db.Exec(r.Context(), `delete from encounters where id = $1`, encounterID)
+	userID := currentUserIDMust(r.Context())
+	tag, err := s.db.Exec(r.Context(), `
+		delete from encounters
+		using campaigns
+		where encounters.id = $1 and campaigns.id = encounters.campaign_id and campaigns.owner_user_id = $2
+	`, encounterID, userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not delete encounter")
 		return
@@ -226,6 +235,10 @@ func (s *Server) addAllPlayersToEncounter(w http.ResponseWriter, r *http.Request
 
 func (s *Server) updateEncounterCombatant(w http.ResponseWriter, r *http.Request) {
 	combatantID := strings.TrimSpace(r.PathValue("combatantID"))
+	if !s.encounterCombatantOwned(r.Context(), combatantID) {
+		writeError(w, http.StatusNotFound, "combatant not found")
+		return
+	}
 	var req updateCombatantRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -255,7 +268,14 @@ func (s *Server) updateEncounterCombatant(w http.ResponseWriter, r *http.Request
 
 func (s *Server) deleteEncounterCombatant(w http.ResponseWriter, r *http.Request) {
 	combatantID := strings.TrimSpace(r.PathValue("combatantID"))
-	tag, err := s.db.Exec(r.Context(), `delete from encounter_combatants where id = $1`, combatantID)
+	tag, err := s.db.Exec(r.Context(), `
+		delete from encounter_combatants
+		using encounters, campaigns
+		where encounter_combatants.id = $1
+			and encounters.id = encounter_combatants.encounter_id
+			and campaigns.id = encounters.campaign_id
+			and campaigns.owner_user_id = $2
+	`, combatantID, currentUserIDMust(r.Context()))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not delete combatant")
 		return

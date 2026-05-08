@@ -9,6 +9,10 @@ import (
 )
 
 func (s *Server) encounterByID(ctx context.Context, encounterID string) (models.Encounter, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.Encounter{}, errors.New("authentication required")
+	}
 	row := s.db.QueryRow(ctx, `
 		select encounters.id, encounters.campaign_id, encounters.name, encounters.description,
 			encounters.status, encounters.location, encounters.room_number, encounters.loot_notes,
@@ -16,10 +20,11 @@ func (s *Server) encounterByID(ctx context.Context, encounterID string) (models.
 			count(encounter_combatants.id) filter (where encounter_combatants.side = 'enemy')::int,
 			encounters.created_at, encounters.updated_at
 		from encounters
+		join campaigns on campaigns.id = encounters.campaign_id
 		left join encounter_combatants on encounter_combatants.encounter_id = encounters.id
-		where encounters.id = $1
+		where encounters.id = $1 and campaigns.owner_user_id = $2
 		group by encounters.id
-	`, encounterID)
+	`, encounterID, userID)
 	return scanEncounter(row)
 }
 
@@ -45,6 +50,24 @@ func (s *Server) combatantsForEncounter(ctx context.Context, encounterID string)
 		combatants = append(combatants, combatant)
 	}
 	return combatants, rows.Err()
+}
+
+func (s *Server) encounterCombatantOwned(ctx context.Context, combatantID string) bool {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return false
+	}
+	var exists bool
+	err := s.db.QueryRow(ctx, `
+		select exists(
+			select 1
+			from encounter_combatants
+			join encounters on encounters.id = encounter_combatants.encounter_id
+			join campaigns on campaigns.id = encounters.campaign_id
+			where encounter_combatants.id = $1 and campaigns.owner_user_id = $2
+		)
+	`, combatantID, userID).Scan(&exists)
+	return err == nil && exists
 }
 
 func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID string, side string, req addCombatantRequest) (models.EncounterCombatant, error) {

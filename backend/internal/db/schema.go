@@ -13,9 +13,38 @@ create extension if not exists pgcrypto;
 create table if not exists users (
     id uuid primary key default gen_random_uuid(),
     email text not null unique,
-    password_hash text not null,
+    password_hash text,
     created_at timestamptz not null default now()
 );
+
+alter table users alter column password_hash drop not null;
+
+create table if not exists auth_identities (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid not null references users(id) on delete cascade,
+    provider text not null,
+    provider_subject text not null,
+    email text not null default '',
+    email_verified boolean not null default false,
+    created_at timestamptz not null default now(),
+    last_login_at timestamptz not null default now(),
+    unique (provider, provider_subject)
+);
+
+create index if not exists auth_identities_user_id_idx on auth_identities(user_id);
+
+create table if not exists oauth_states (
+    id uuid primary key default gen_random_uuid(),
+    state_hash text not null unique,
+    provider text not null,
+    nonce text not null,
+    pkce_verifier text not null,
+    return_to text not null default '/',
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+);
+
+create index if not exists oauth_states_expires_at_idx on oauth_states(expires_at);
 
 create table if not exists sessions (
     id uuid primary key default gen_random_uuid(),
@@ -30,6 +59,7 @@ create index if not exists sessions_expires_at_idx on sessions(expires_at);
 
 create table if not exists campaigns (
     id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid references users(id) on delete cascade,
     name text not null,
     description text not null default '',
     archived_at timestamptz,
@@ -39,7 +69,7 @@ create table if not exists campaigns (
 
 create table if not exists uploaded_assets (
     id uuid primary key default gen_random_uuid(),
-    owner_user_id uuid references users(id) on delete set null,
+    owner_user_id uuid references users(id) on delete cascade,
     filename text not null,
     content_type text not null,
     byte_size bigint not null,
@@ -49,6 +79,7 @@ create table if not exists uploaded_assets (
 
 create table if not exists creatures (
     id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid references users(id) on delete cascade,
     name text not null,
     description text not null default '',
     size text not null default '',
@@ -68,6 +99,7 @@ create table if not exists creatures (
 
 create table if not exists spells (
     id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid references users(id) on delete cascade,
     name text not null,
     level integer not null default 0,
     school text not null default '',
@@ -87,6 +119,7 @@ create table if not exists spells (
 
 create table if not exists action_templates (
     id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid references users(id) on delete cascade,
     name text not null,
     description text not null default '',
     recharge text not null default '',
@@ -103,6 +136,37 @@ create table if not exists action_templates (
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
+
+alter table campaigns add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table uploaded_assets add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table uploaded_assets drop constraint if exists uploaded_assets_owner_user_id_fkey;
+alter table uploaded_assets add constraint uploaded_assets_owner_user_id_fkey foreign key (owner_user_id) references users(id) on delete cascade;
+alter table creatures add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table spells add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table action_templates add column if not exists owner_user_id uuid references users(id) on delete cascade;
+
+with first_user as (select id from users order by created_at asc limit 1)
+update campaigns set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+with first_user as (select id from users order by created_at asc limit 1)
+update uploaded_assets set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+with first_user as (select id from users order by created_at asc limit 1)
+update creatures set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+with first_user as (select id from users order by created_at asc limit 1)
+update spells set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+with first_user as (select id from users order by created_at asc limit 1)
+update action_templates set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+
+alter table campaigns alter column owner_user_id set not null;
+alter table uploaded_assets alter column owner_user_id set not null;
+alter table creatures alter column owner_user_id set not null;
+alter table spells alter column owner_user_id set not null;
+alter table action_templates alter column owner_user_id set not null;
+
+create index if not exists campaigns_owner_user_id_idx on campaigns(owner_user_id, updated_at desc);
+create index if not exists uploaded_assets_owner_user_id_idx on uploaded_assets(owner_user_id, created_at desc);
+create index if not exists creatures_owner_user_id_idx on creatures(owner_user_id, updated_at desc);
+create index if not exists spells_owner_user_id_idx on spells(owner_user_id, level, name);
+create index if not exists action_templates_owner_user_id_idx on action_templates(owner_user_id, name);
 
 create table if not exists action_template_roll_parts (
     id uuid primary key default gen_random_uuid(),

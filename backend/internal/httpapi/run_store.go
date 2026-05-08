@@ -4,16 +4,26 @@ import (
 	"bludm/backend/internal/models"
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 )
 
 func (s *Server) encounterRunByID(ctx context.Context, runID string) (models.EncounterRun, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.EncounterRun{}, errors.New("authentication required")
+	}
 	var run models.EncounterRun
 	var summaryBytes []byte
 	err := s.db.QueryRow(ctx, `
-		select id, encounter_id, status, is_test, current_round, current_turn_index, started_at, ended_at, summary
-		from encounter_runs where id = $1
-	`, runID).Scan(&run.ID, &run.EncounterID, &run.Status, &run.IsTest, &run.CurrentRound, &run.CurrentTurnIndex, &run.StartedAt, &run.EndedAt, &summaryBytes)
+		select encounter_runs.id, encounter_runs.encounter_id, encounter_runs.status, encounter_runs.is_test,
+			encounter_runs.current_round, encounter_runs.current_turn_index, encounter_runs.started_at,
+			encounter_runs.ended_at, encounter_runs.summary
+		from encounter_runs
+		join encounters on encounters.id = encounter_runs.encounter_id
+		join campaigns on campaigns.id = encounters.campaign_id
+		where encounter_runs.id = $1 and campaigns.owner_user_id = $2
+	`, runID, userID).Scan(&run.ID, &run.EncounterID, &run.Status, &run.IsTest, &run.CurrentRound, &run.CurrentTurnIndex, &run.StartedAt, &run.EndedAt, &summaryBytes)
 	if err != nil {
 		return models.EncounterRun{}, err
 	}
@@ -66,6 +76,37 @@ func (s *Server) runCombatantByID(ctx context.Context, runID, combatantID string
 		from encounter_run_combatants
 		where encounter_run_id = $1 and id = $2
 	`, runID, combatantID)
+	return scanEncounterRunCombatant(row)
+}
+
+func (s *Server) runCombatantOwnedByID(ctx context.Context, combatantID string) (models.EncounterRunCombatant, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.EncounterRunCombatant{}, errors.New("authentication required")
+	}
+	row := s.db.QueryRow(ctx, `
+		select encounter_run_combatants.id, encounter_run_combatants.encounter_run_id,
+			coalesce(encounter_run_combatants.source_combatant_id::text, ''), encounter_run_combatants.source_type,
+			coalesce(encounter_run_combatants.player_id::text, ''), coalesce(encounter_run_combatants.creature_id::text, ''),
+			encounter_run_combatants.side, encounter_run_combatants.display_name, encounter_run_combatants.color_label,
+			encounter_run_combatants.avatar_url, encounter_run_combatants.armor_class,
+			encounter_run_combatants.max_hit_points, encounter_run_combatants.current_hit_points,
+			encounter_run_combatants.temporary_hit_points, encounter_run_combatants.max_hit_points_modifier,
+			encounter_run_combatants.armor_class_bonus, encounter_run_combatants.armor_class_override,
+			encounter_run_combatants.max_hit_points_override, encounter_run_combatants.current_hit_points_override,
+			coalesce(encounter_run_combatants.initiative, 0), encounter_run_combatants.initiative_set,
+			encounter_run_combatants.sort_order, encounter_run_combatants.defeated, encounter_run_combatants.conditions,
+			encounter_run_combatants.damage_dealt, encounter_run_combatants.damage_taken,
+			encounter_run_combatants.healing_done, encounter_run_combatants.healing_received,
+			encounter_run_combatants.kills, encounter_run_combatants.death_save_successes,
+			encounter_run_combatants.death_save_failures, encounter_run_combatants.stable,
+			encounter_run_combatants.snapshot
+		from encounter_run_combatants
+		join encounter_runs on encounter_runs.id = encounter_run_combatants.encounter_run_id
+		join encounters on encounters.id = encounter_runs.encounter_id
+		join campaigns on campaigns.id = encounters.campaign_id
+		where encounter_run_combatants.id = $1 and campaigns.owner_user_id = $2
+	`, combatantID, userID)
 	return scanEncounterRunCombatant(row)
 }
 

@@ -3,6 +3,7 @@ import type {
   ActionTemplate,
   ActionTemplateUsage,
   AuthStatus,
+  AuthProvider,
   Campaign,
   CampaignDetail,
   Creature,
@@ -25,6 +26,8 @@ import { request } from "./request";
 
 export const api = {
   status: () => request<AuthStatus>("/api/auth/status"),
+  authProviders: () =>
+    request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
   setup: (email: string, password: string) =>
     request<{ user: User }>("/api/auth/setup", {
       method: "POST",

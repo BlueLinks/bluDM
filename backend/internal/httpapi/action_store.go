@@ -3,18 +3,20 @@ package httpapi
 import (
 	"bludm/backend/internal/models"
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 )
 
 func (s *Server) actionTemplateUsage(ctx context.Context, templateID string) ([]map[string]any, error) {
+	userID, _ := currentUserID(ctx)
 	rows, err := s.db.Query(ctx, `
 		select creature_actions.id, creatures.id, creatures.name, creature_actions.name
 		from creature_actions
 		join creatures on creatures.id = creature_actions.creature_id
-		where creature_actions.source_template_id = $1
+		where creature_actions.source_template_id = $1 and creatures.owner_user_id = $2
 		order by creatures.name asc, creature_actions.name asc
-	`, templateID)
+	`, templateID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,13 +38,17 @@ func (s *Server) actionTemplateUsage(ctx context.Context, templateID string) ([]
 }
 
 func (s *Server) actionTemplateByID(ctx context.Context, templateID string) (models.ActionTemplate, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.ActionTemplate{}, errors.New("authentication required")
+	}
 	row := s.db.QueryRow(ctx, `
 		select id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
 			created_at, updated_at
 		from action_templates
-		where id = $1
-	`, templateID)
+		where id = $1 and owner_user_id = $2
+	`, templateID, userID)
 	template, err := scanActionTemplate(row)
 	if err != nil {
 		return models.ActionTemplate{}, err
@@ -52,13 +58,22 @@ func (s *Server) actionTemplateByID(ctx context.Context, templateID string) (mod
 }
 
 func (s *Server) creatureActionByID(ctx context.Context, actionID string) (models.CreatureAction, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.CreatureAction{}, errors.New("authentication required")
+	}
 	row := s.db.QueryRow(ctx, `
-		select id, creature_id, coalesce(source_template_id::text, ''), sort_order, name, description,
-			recharge, limited_uses, limit_type, reach, action_range, aoe_type, aoe_size,
-			action_type, attack_modifier, miss_effect, hit_special_event, created_at, updated_at
+		select creature_actions.id, creature_actions.creature_id, coalesce(creature_actions.source_template_id::text, ''),
+			creature_actions.sort_order, creature_actions.name, creature_actions.description,
+			creature_actions.recharge, creature_actions.limited_uses, creature_actions.limit_type,
+			creature_actions.reach, creature_actions.action_range, creature_actions.aoe_type,
+			creature_actions.aoe_size, creature_actions.action_type, creature_actions.attack_modifier,
+			creature_actions.miss_effect, creature_actions.hit_special_event,
+			creature_actions.created_at, creature_actions.updated_at
 		from creature_actions
-		where id = $1
-	`, actionID)
+		join creatures on creatures.id = creature_actions.creature_id
+		where creature_actions.id = $1 and creatures.owner_user_id = $2
+	`, actionID, userID)
 	action, err := scanCreatureAction(row)
 	if err != nil {
 		return models.CreatureAction{}, err
@@ -191,17 +206,17 @@ func scanRollParts(rows rollRows) ([]models.ActionRollPart, error) {
 	return rolls, rows.Err()
 }
 
-func insertActionTemplate(ctx context.Context, tx pgx.Tx, req actionRequest) (models.ActionTemplate, error) {
+func insertActionTemplate(ctx context.Context, tx pgx.Tx, ownerUserID string, req actionRequest) (models.ActionTemplate, error) {
 	row := tx.QueryRow(ctx, `
 		insert into action_templates (
-			name, description, recharge, limited_uses, limit_type, reach, action_range,
+			owner_user_id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 		returning id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
 			created_at, updated_at
-	`, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach, req.Range,
+	`, ownerUserID, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach, req.Range,
 		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent)
 	return scanActionTemplate(row)
 }

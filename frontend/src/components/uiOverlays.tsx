@@ -317,10 +317,14 @@ export function AuthCard({
   title,
   submitLabel,
   onSubmit,
+  localAuthEnabled = true,
+  providers = [],
 }: {
   title: string;
   submitLabel: string;
   onSubmit: (email: string, password: string) => Promise<void>;
+  localAuthEnabled?: boolean;
+  providers?: { id: string; label: string; url: string }[];
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -349,29 +353,64 @@ export function AuthCard({
         <p className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</p>
         <h2 className="text-2xl font-semibold">{title}</h2>
       </div>
-      <Field label="Email">
-        <Input
-          autoComplete="email"
-          type="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          required
-        />
-      </Field>
-      <Field label="Password">
-        <Input
-          autoComplete={title.includes("Create") ? "new-password" : "current-password"}
-          minLength={12}
-          type="password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          required
-        />
-      </Field>
+      {providers.length > 0 && (
+        <div className="grid gap-2">
+          {providers.map((provider) => (
+            <Button
+              key={provider.id}
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                window.location.href = `${provider.url}?returnTo=${encodeURIComponent(window.location.pathname)}`;
+              }}
+            >
+              {provider.label}
+            </Button>
+          ))}
+        </div>
+      )}
+      {providers.length > 0 && localAuthEnabled && (
+        <div className="flex items-center gap-3 text-xs font-semibold uppercase text-muted-foreground">
+          <span className="h-px flex-1 bg-border" />
+          Local login
+          <span className="h-px flex-1 bg-border" />
+        </div>
+      )}
+      {localAuthEnabled && (
+        <>
+          <Field label="Email">
+            <Input
+              autoComplete="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              required
+            />
+          </Field>
+          <Field label="Password">
+            <Input
+              autoComplete={title.includes("Create") ? "new-password" : "current-password"}
+              minLength={12}
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+          </Field>
+        </>
+      )}
       {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-      <Button disabled={busy} type="submit">
-        {busy ? "Working..." : submitLabel}
-      </Button>
+      {localAuthEnabled ? (
+        <Button disabled={busy} type="submit">
+          {busy ? "Working..." : submitLabel}
+        </Button>
+      ) : (
+        providers.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            No sign-in providers are configured yet. Add OAuth provider settings on the server.
+          </p>
+        )
+      )}
     </form>
   );
 }

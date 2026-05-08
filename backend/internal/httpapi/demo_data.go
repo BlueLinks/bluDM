@@ -3,6 +3,7 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -22,6 +23,10 @@ func (s *Server) seedTestData(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) seedDemoFixture(ctx context.Context) (string, error) {
+	ownerUserID, ok := currentUserID(ctx)
+	if !ok {
+		return "", errors.New("authentication required")
+	}
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return "", err
@@ -29,16 +34,16 @@ func (s *Server) seedDemoFixture(ctx context.Context) (string, error) {
 	defer tx.Rollback(ctx)
 
 	var campaignID string
-	err = tx.QueryRow(ctx, `select id from campaigns where name = 'Demo: Greenhill Ambush' limit 1`).Scan(&campaignID)
+	err = tx.QueryRow(ctx, `select id from campaigns where owner_user_id = $1 and name = 'Demo: Greenhill Ambush' limit 1`, ownerUserID).Scan(&campaignID)
 	if err != nil && err != pgx.ErrNoRows {
 		return "", err
 	}
 	if err == pgx.ErrNoRows {
 		if err := tx.QueryRow(ctx, `
-			insert into campaigns (name, description)
-			values ('Demo: Greenhill Ambush', 'A ready-made test campaign with heroes, allies, enemies, reusable actions, and a prepared encounter.')
+			insert into campaigns (owner_user_id, name, description)
+			values ($1, 'Demo: Greenhill Ambush', 'A ready-made test campaign with heroes, allies, enemies, reusable actions, and a prepared encounter.')
 			returning id
-		`).Scan(&campaignID); err != nil {
+		`, ownerUserID).Scan(&campaignID); err != nil {
 			return "", err
 		}
 	}
@@ -63,7 +68,7 @@ func (s *Server) seedDemoFixture(ctx context.Context) (string, error) {
 	}
 	templateIDs := map[string]string{}
 	for _, action := range templates {
-		id, err := seedDemoActionTemplate(ctx, tx, action)
+		id, err := seedDemoActionTemplate(ctx, tx, ownerUserID, action)
 		if err != nil {
 			return "", err
 		}
@@ -79,7 +84,7 @@ func (s *Server) seedDemoFixture(ctx context.Context) (string, error) {
 	}
 	creatureIDs := map[string]string{}
 	for _, creature := range creatures {
-		id, err := seedDemoCreature(ctx, tx, campaignID, templateIDs, creature)
+		id, err := seedDemoCreature(ctx, tx, ownerUserID, campaignID, templateIDs, creature)
 		if err != nil {
 			return "", err
 		}
@@ -147,9 +152,9 @@ func seedDemoPlayer(ctx context.Context, tx pgx.Tx, campaignID string, player de
 	return err
 }
 
-func seedDemoActionTemplate(ctx context.Context, tx pgx.Tx, action demoAction) (string, error) {
+func seedDemoActionTemplate(ctx context.Context, tx pgx.Tx, ownerUserID string, action demoAction) (string, error) {
 	var id string
-	err := tx.QueryRow(ctx, `select id from action_templates where name = $1 limit 1`, action.name).Scan(&id)
+	err := tx.QueryRow(ctx, `select id from action_templates where owner_user_id = $1 and name = $2 limit 1`, ownerUserID, action.name).Scan(&id)
 	if err != nil && err != pgx.ErrNoRows {
 		return "", err
 	}
@@ -158,11 +163,11 @@ func seedDemoActionTemplate(ctx context.Context, tx pgx.Tx, action demoAction) (
 	}
 	if err := tx.QueryRow(ctx, `
 		insert into action_templates (
-			name, description, action_type, attack_modifier, reach, action_range, miss_effect, hit_special_event
+			owner_user_id, name, description, action_type, attack_modifier, reach, action_range, miss_effect, hit_special_event
 		)
-		values ($1, $2, $3, $4, $5, $6, 'none', 'none')
+		values ($1, $2, $3, $4, $5, $6, $7, 'none', 'none')
 		returning id
-	`, action.name, action.description, action.actionType, action.attack, action.reach, action.actionRange).Scan(&id); err != nil {
+	`, ownerUserID, action.name, action.description, action.actionType, action.attack, action.reach, action.actionRange).Scan(&id); err != nil {
 		return "", err
 	}
 	_, err = tx.Exec(ctx, `
@@ -172,9 +177,9 @@ func seedDemoActionTemplate(ctx context.Context, tx pgx.Tx, action demoAction) (
 	return id, err
 }
 
-func seedDemoCreature(ctx context.Context, tx pgx.Tx, campaignID string, templateIDs map[string]string, creature demoCreature) (string, error) {
+func seedDemoCreature(ctx context.Context, tx pgx.Tx, ownerUserID string, campaignID string, templateIDs map[string]string, creature demoCreature) (string, error) {
 	var id string
-	err := tx.QueryRow(ctx, `select id from creatures where name = $1 limit 1`, creature.name).Scan(&id)
+	err := tx.QueryRow(ctx, `select id from creatures where owner_user_id = $1 and name = $2 limit 1`, ownerUserID, creature.name).Scan(&id)
 	if err != nil && err != pgx.ErrNoRows {
 		return "", err
 	}
@@ -191,11 +196,11 @@ func seedDemoCreature(ctx context.Context, tx pgx.Tx, campaignID string, templat
 	if err == pgx.ErrNoRows {
 		if err := tx.QueryRow(ctx, `
 			insert into creatures (
-				name, description, size, creature_type, alignment, armor_class, hit_points, hit_dice, challenge_rating, xp, stat_block
+				owner_user_id, name, description, size, creature_type, alignment, armor_class, hit_points, hit_dice, challenge_rating, xp, stat_block
 			)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 			returning id
-		`, creature.name, creature.description, creature.size, creature.creatureType, creature.alignment, creature.ac, creature.hp, creature.hitDice, creature.cr, creature.xp, statJSON).Scan(&id); err != nil {
+		`, ownerUserID, creature.name, creature.description, creature.size, creature.creatureType, creature.alignment, creature.ac, creature.hp, creature.hitDice, creature.cr, creature.xp, statJSON).Scan(&id); err != nil {
 			return "", err
 		}
 	}
