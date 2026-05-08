@@ -54,6 +54,7 @@ export function playerPayload(payload: PlayerFormState) {
       level: Number(payload.level),
       species: payload.species,
       background: payload.background,
+      feats: payload.feats,
       speed: Number(payload.speed),
       abilityScores: Object.fromEntries(
         abilities.map((ability) => [ability.key, Number(payload.abilityScores[ability.key])]),

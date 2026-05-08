@@ -414,6 +414,7 @@ export type PlayerFormState = {
   experiencePoints: string;
   species: string;
   background: string;
+  feats: string[];
   speed: string;
   armorClass: string;
   maxHitPoints: string;

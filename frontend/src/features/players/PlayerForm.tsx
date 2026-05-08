@@ -1,6 +1,5 @@
 import { BookOpen, HeartPulse, Shield, Sparkles, Zap } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
-import { AvatarImagePicker } from "../../components/AvatarImagePicker";
 import {
   AbilityInput,
   AbilitySelect,
@@ -9,19 +8,12 @@ import {
   SenseControl,
   SkillsTable,
 } from "../../components/shared/CharacterFormControls";
-import {
-  Button,
-  Field,
-  FormSection,
-  IconNumberField,
-  Input,
-  Select,
-  Textarea,
-} from "../../components/ui";
+import { Button, Field, FormSection, IconNumberField, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { proficiencyBonus } from "../../lib/domain/forms";
 import { abilities, senseTypes } from "../../lib/domain/options";
 import type { Campaign, Player, PlayerFormState } from "../../types";
+import { PlayerBasicsSection } from "./PlayerBasicsSection";
 
 const emptyPlayerForm: PlayerFormState = {
   campaignId: "",
@@ -34,6 +26,7 @@ const emptyPlayerForm: PlayerFormState = {
   experiencePoints: "0",
   species: "",
   background: "",
+  feats: [],
   speed: "30",
   armorClass: "10",
   maxHitPoints: "1",
@@ -99,6 +92,7 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
     experiencePoints: String(player.experiencePoints ?? 0),
     species: typeof sheet.species === "string" ? sheet.species : "",
     background: typeof sheet.background === "string" ? sheet.background : "",
+    feats: list("feats"),
     speed: String(typeof sheet.speed === "number" ? sheet.speed : 30),
     passivePerception: String(
       typeof sheet.passivePerception === "number" ? sheet.passivePerception : 10,
@@ -194,7 +188,7 @@ export function PlayerForm({
 
   return (
     <form className="grid gap-5" onSubmit={handleCreate}>
-      <PlayerBasics form={form} campaigns={campaigns} setForm={setForm} />
+      <PlayerBasicsSection form={form} campaigns={campaigns} setForm={setForm} />
       <PlayerVitals form={form} setForm={setForm} />
       <PlayerAbilitySections form={form} setForm={setForm} toggleList={toggleList} />
       <PlayerDefenses form={form} setForm={setForm} toggleList={toggleList} />
@@ -218,91 +212,6 @@ type TogglePlayerList = (
   value: string,
   checked: boolean,
 ) => void;
-
-function PlayerBasics({
-  campaigns,
-  form,
-  setForm,
-}: {
-  campaigns: Campaign[];
-  form: PlayerFormState;
-  setForm: PlayerFormSetter;
-}) {
-  return (
-    <FormSection title="Basic Info">
-      <AvatarImagePicker
-        label="Character avatar"
-        name={form.characterName}
-        assetId={form.avatarAssetId}
-        url={form.avatarUrl}
-        uploadImage={(file) => api.uploadImage(file)}
-        onChange={(avatar) =>
-          setForm({ ...form, avatarAssetId: avatar.assetId, avatarUrl: avatar.url })
-        }
-      />
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Character Name">
-          <Input
-            value={form.characterName}
-            onChange={(event) => setForm({ ...form, characterName: event.target.value })}
-            required
-          />
-        </Field>
-        <Field label="Player Name">
-          <Input
-            value={form.playerName}
-            onChange={(event) => setForm({ ...form, playerName: event.target.value })}
-          />
-        </Field>
-      </div>
-      <Field label="Campaign">
-        <Select
-          options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
-          placeholder="Select campaign"
-          value={form.campaignId}
-          onValueChange={(value) => setForm({ ...form, campaignId: value })}
-        />
-      </Field>
-      <div className="flex flex-wrap gap-4">
-        <Field className="w-60" label="Class">
-          <Input
-            value={form.className}
-            onChange={(event) => setForm({ ...form, className: event.target.value })}
-          />
-        </Field>
-        <Field className="w-24" label="Level">
-          <Input
-            type="number"
-            min={1}
-            max={20}
-            value={form.level}
-            onChange={(event) => setForm({ ...form, level: event.target.value })}
-          />
-        </Field>
-        <Field className="w-32" label="XP">
-          <Input
-            type="number"
-            min={0}
-            value={form.experiencePoints}
-            onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
-          />
-        </Field>
-        <Field className="w-56" label="Species">
-          <Input
-            value={form.species}
-            onChange={(event) => setForm({ ...form, species: event.target.value })}
-          />
-        </Field>
-        <Field className="w-64" label="Background">
-          <Input
-            value={form.background}
-            onChange={(event) => setForm({ ...form, background: event.target.value })}
-          />
-        </Field>
-      </div>
-    </FormSection>
-  );
-}
 
 function PlayerVitals({ form, setForm }: { form: PlayerFormState; setForm: PlayerFormSetter }) {
   return (
