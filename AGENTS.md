@@ -53,6 +53,8 @@ cd backend && go vet ./...
 docker compose config
 ```
 
+Run `node scripts/check-file-size.mjs` from the repository root before pushing; do not substitute the frontend-only size script because it will miss backend ratchet failures.
+
 For security-sensitive backend changes, also run:
 
 ```sh
