@@ -14,6 +14,7 @@ function App() {
   const [providers, setProviders] = useState<AuthProvider[]>([]);
   const [error, setError] = useState("");
   const { theme, setTheme, resolvedTheme } = useThemeMode();
+  const authError = authErrorFromURL();
 
   async function refreshAuth() {
     setError("");
@@ -66,7 +67,7 @@ function App() {
   if (!auth.authenticated) {
     return (
       <AuthLanding
-        error={error}
+        error={error || authError}
         localAuthEnabled={auth.localAuthEnabled}
         providers={providers}
         setupRequired={auth.setupRequired}
@@ -111,3 +112,11 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </React.StrictMode>,
 );
+
+function authErrorFromURL() {
+  const code = new URLSearchParams(window.location.search).get("authError");
+  if (code === "oauth_email_exists") {
+    return "An account already exists with that email. Sign in with your password first, then link Google or Discord from User settings.";
+  }
+  return "";
+}

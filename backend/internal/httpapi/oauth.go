@@ -166,7 +166,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	user, err := s.findOrCreateOAuthUser(r.Context(), providerName, identity.Subject, identity.Email, identity.EmailVerified)
 	if err != nil {
 		if errors.Is(err, errOAuthEmailAlreadyRegistered) {
-			writeError(w, http.StatusConflict, "an account already exists for that email; sign in with your password and link this provider from settings")
+			redirectWithAuthError(w, r, "oauth_email_exists")
 			return
 		}
 		writeError(w, http.StatusInternalServerError, "could not create user")
@@ -177,6 +177,11 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, saved.ReturnTo, http.StatusFound)
+}
+
+func redirectWithAuthError(w http.ResponseWriter, r *http.Request, code string) {
+	target := "/?authError=" + url.QueryEscape(code)
+	http.Redirect(w, r, target, http.StatusFound)
 }
 
 type oauthIdentity struct {

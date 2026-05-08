@@ -106,8 +106,27 @@ export function AuthLanding({
 
         <aside className="grid gap-4">
           {error && (
-            <div className="rounded-lg border border-destructive bg-card p-4 text-sm font-semibold text-destructive">
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive shadow-sm">
               {error}
+            </div>
+          )}
+
+          {localAuthEnabled && !setupRequired && (
+            <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-card p-2 shadow-sm">
+              <Button
+                type="button"
+                variant={localMode === "login" ? "primary" : "ghost"}
+                onClick={() => setLocalMode("login")}
+              >
+                Sign in
+              </Button>
+              <Button
+                type="button"
+                variant={localMode === "register" ? "primary" : "ghost"}
+                onClick={() => setLocalMode("register")}
+              >
+                Sign up
+              </Button>
             </div>
           )}
 
@@ -118,36 +137,6 @@ export function AuthLanding({
             localAuthEnabled={localAuthEnabled}
             providers={providers}
           />
-
-          {localAuthEnabled && !setupRequired && (
-            <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
-              {localMode === "login" ? (
-                <>
-                  <p>Need a local account for this self-hosted table?</p>
-                  <Button
-                    className="mt-3"
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setLocalMode("register")}
-                  >
-                    Create username and password
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p>Already have an account?</p>
-                  <Button
-                    className="mt-3"
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setLocalMode("login")}
-                  >
-                    Sign in instead
-                  </Button>
-                </>
-              )}
-            </div>
-          )}
 
           {providers.length === 0 && (
             <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
