@@ -1,0 +1,15 @@
+<type>(optional-scope): <short summary>
+
+<why this change is needed, important tradeoffs, or context>
+
+Refs #<issue>
+
+# Conventional commit types:
+# feat, fix, refactor, test, docs, chore, ci, perf, style
+#
+# Branch naming:
+# issue-<number>-short-kebab-case-summary
+#
+# Examples:
+# feat(combat): add death save controls
+# fix(auth): scope campaign queries by user
