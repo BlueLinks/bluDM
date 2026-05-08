@@ -22,6 +22,7 @@ create table campaigns (
     id uuid primary key default gen_random_uuid(),
     name text not null,
     description text not null default '',
+    allowed_standard_sources text[] not null default array['srd-2014']::text[],
     archived_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()

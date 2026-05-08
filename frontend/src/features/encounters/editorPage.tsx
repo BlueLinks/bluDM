@@ -15,7 +15,6 @@ import {
   PageHeader,
   SectionPanel,
   Select,
-  StatPill,
   Textarea,
   ToastViewport,
   useToasts,
@@ -31,8 +30,8 @@ import type {
   EncounterCombatant,
   Player,
 } from "../../types";
-import { DifficultyPill } from "./DifficultyPill";
 import { CombatantEditSheet, CombatantList, CreatureEncounterAddRow } from "./editorComponents";
+import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
 import {
   combatantChanged,
   draftFromCreature,
@@ -97,11 +96,14 @@ export function EncounterEditPage() {
     setLoading(true);
     setError("");
     try {
-      const [campaignPayload, encounterPayload, creaturePayload] = await Promise.all([
+      const [campaignPayload, encounterPayload] = await Promise.all([
         api.campaign(campaignID),
         api.encounter(encounterID),
-        api.creatures({ includeStandard: true }),
       ]);
+      const creaturePayload = await api.creatures({
+        includeStandard: true,
+        source: campaignPayload.campaign.allowedStandardSources,
+      });
       setDetail(campaignPayload);
       setEncounter(encounterPayload.encounter);
       setEncounterMeta({
@@ -473,27 +475,5 @@ export function EncounterEditPage() {
         )}
       </Page>
     </div>
-  );
-}
-
-function EncounterDifficultyPanel({
-  difficulty,
-}: {
-  difficulty: ReturnType<typeof calculateEncounterDifficulty>;
-}) {
-  return (
-    <SectionPanel title="Difficulty" icon={Swords}>
-      <div className="grid gap-3 md:grid-cols-4">
-        <DifficultyPill difficulty={difficulty} />
-        <StatPill label="Enemy XP" value={difficulty.enemyXP} />
-        <StatPill label="Adjusted XP" value={difficulty.adjustedXP} />
-        <StatPill label="Multiplier" value={`${difficulty.multiplier}x`} />
-      </div>
-      <p className="mt-3 text-sm text-muted-foreground">
-        Thresholds for this party: Easy {difficulty.thresholds.easy}, Medium{" "}
-        {difficulty.thresholds.medium}, Hard {difficulty.thresholds.hard}, Deadly{" "}
-        {difficulty.thresholds.deadly}.
-      </p>
-    </SectionPanel>
   );
 }

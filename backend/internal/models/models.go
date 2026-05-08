@@ -18,11 +18,12 @@ type Session struct {
 }
 
 type Campaign struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedAt   time.Time `json:"createdAt"`
-	UpdatedAt   time.Time `json:"updatedAt"`
+	ID                     string    `json:"id"`
+	Name                   string    `json:"name"`
+	Description            string    `json:"description"`
+	AllowedStandardSources []string  `json:"allowedStandardSources"`
+	CreatedAt              time.Time `json:"createdAt"`
+	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
 type Encounter struct {
@@ -157,6 +158,7 @@ type Creature struct {
 	AvatarURL       string         `json:"avatarUrl"`
 	LibrarySource   string         `json:"librarySource"`
 	ReadOnly        bool           `json:"readOnly"`
+	SourceKey       string         `json:"sourceKey"`
 	SourceLabel     string         `json:"sourceLabel"`
 	StatBlock       map[string]any `json:"statBlock"`
 	CreatedAt       time.Time      `json:"createdAt"`
@@ -260,8 +262,35 @@ type Spell struct {
 	SourceNote    string         `json:"sourceNote"`
 	LibrarySource string         `json:"librarySource"`
 	ReadOnly      bool           `json:"readOnly"`
+	SourceKey     string         `json:"sourceKey"`
 	SourceLabel   string         `json:"sourceLabel"`
 	Mechanics     map[string]any `json:"mechanics"`
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`
+}
+
+type StandardSource struct {
+	Key         string    `json:"key"`
+	Label       string    `json:"label"`
+	Ruleset     string    `json:"ruleset"`
+	LicenseName string    `json:"licenseName"`
+	SourceURL   string    `json:"sourceUrl"`
+	Attribution string    `json:"attribution"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+type StandardLibraryEntry struct {
+	ID          string         `json:"id"`
+	SourceKey   string         `json:"sourceKey"`
+	SourceLabel string         `json:"sourceLabel"`
+	Category    string         `json:"category"`
+	Slug        string         `json:"slug"`
+	Name        string         `json:"name"`
+	Summary     string         `json:"summary"`
+	Description string         `json:"description"`
+	ReadOnly    bool           `json:"readOnly"`
+	Data        map[string]any `json:"data"`
+	CreatedAt   time.Time      `json:"createdAt"`
+	UpdatedAt   time.Time      `json:"updatedAt"`
 }

@@ -16,6 +16,7 @@ var standardCreaturesJSON []byte
 var standardSpellsJSON []byte
 
 type standardCreatureSeed struct {
+	SourceKey       string          `json:"sourceKey"`
 	Slug            string          `json:"slug"`
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
@@ -35,6 +36,7 @@ type standardCreatureSeed struct {
 }
 
 type standardSpellSeed struct {
+	SourceKey     string          `json:"sourceKey"`
 	Slug          string          `json:"slug"`
 	Name          string          `json:"name"`
 	Level         int             `json:"level"`
@@ -55,6 +57,9 @@ type standardSpellSeed struct {
 }
 
 func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
+	if _, err := pool.Exec(ctx, standardLibrarySchemaSQL); err != nil {
+		return err
+	}
 	if _, err := pool.Exec(ctx, standardCreaturesSchemaSQL); err != nil {
 		return err
 	}
@@ -70,6 +75,10 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 	if err != nil {
 		return err
 	}
+	entries, err := parseStandardLibraryEntries()
+	if err != nil {
+		return err
+	}
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -77,8 +86,21 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	defer tx.Rollback(ctx)
 
+	for _, source := range standardSources {
+		if _, err := tx.Exec(ctx, upsertStandardSourceSQL,
+			source.Key,
+			source.Label,
+			source.Ruleset,
+			source.LicenseName,
+			source.SourceURL,
+			source.Attribution,
+		); err != nil {
+			return fmt.Errorf("seed standard source %q: %w", source.Key, err)
+		}
+	}
 	for _, creature := range creatures {
 		if _, err := tx.Exec(ctx, upsertStandardCreatureSQL,
+			creature.SourceKey,
 			creature.Slug,
 			creature.Name,
 			creature.Description,
@@ -101,6 +123,7 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 	for _, spell := range spells {
 		if _, err := tx.Exec(ctx, upsertStandardSpellSQL,
+			spell.SourceKey,
 			spell.Slug,
 			spell.Name,
 			spell.Level,
@@ -122,6 +145,19 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 			return fmt.Errorf("seed standard spell %q: %w", spell.Slug, err)
 		}
 	}
+	for _, entry := range entries {
+		if _, err := tx.Exec(ctx, upsertStandardLibraryEntrySQL,
+			entry.SourceKey,
+			entry.Category,
+			entry.Slug,
+			entry.Name,
+			entry.Summary,
+			entry.Description,
+			entry.Data,
+		); err != nil {
+			return fmt.Errorf("seed standard library entry %q/%q: %w", entry.Category, entry.Slug, err)
+		}
+	}
 
 	return tx.Commit(ctx)
 }
@@ -134,6 +170,9 @@ func parseStandardCreatures() ([]standardCreatureSeed, error) {
 	for index, creature := range creatures {
 		if creature.Slug == "" || creature.Name == "" {
 			return nil, fmt.Errorf("standard creature at index %d is missing slug or name", index)
+		}
+		if creature.SourceKey == "" {
+			creatures[index].SourceKey = "srd-2014"
 		}
 		if len(creature.StatBlock) == 0 {
 			creatures[index].StatBlock = json.RawMessage(`{}`)
@@ -151,6 +190,9 @@ func parseStandardSpells() ([]standardSpellSeed, error) {
 		if spell.Slug == "" || spell.Name == "" {
 			return nil, fmt.Errorf("standard spell at index %d is missing slug or name", index)
 		}
+		if spell.SourceKey == "" {
+			spells[index].SourceKey = "srd-2014"
+		}
 		if len(spell.Components) == 0 {
 			spells[index].Components = json.RawMessage(`{}`)
 		}
@@ -164,7 +206,8 @@ func parseStandardSpells() ([]standardSpellSeed, error) {
 const standardCreaturesSchemaSQL = `
 create table if not exists standard_creatures (
     id uuid primary key default gen_random_uuid(),
-    slug text not null unique,
+    source_key text not null default 'srd-2014' references standard_sources(source_key) on delete restrict,
+    slug text not null,
     name text not null,
     description text not null default '',
     size text not null default '',
@@ -184,14 +227,19 @@ create table if not exists standard_creatures (
     updated_at timestamptz not null default now()
 );
 
+alter table standard_creatures add column if not exists source_key text not null default 'srd-2014';
+alter table standard_creatures drop constraint if exists standard_creatures_slug_key;
 create index if not exists standard_creatures_name_idx on standard_creatures(name);
 create index if not exists standard_creatures_type_idx on standard_creatures(creature_type, challenge_rating);
+create index if not exists standard_creatures_source_key_idx on standard_creatures(source_key, name);
+create unique index if not exists standard_creatures_source_slug_idx on standard_creatures(source_key, slug);
 `
 
 const standardSpellsSchemaSQL = `
 create table if not exists standard_spells (
     id uuid primary key default gen_random_uuid(),
-    slug text not null unique,
+    source_key text not null default 'srd-2014' references standard_sources(source_key) on delete restrict,
+    slug text not null,
     name text not null,
     level integer not null default 0,
     school text not null default '',
@@ -212,19 +260,24 @@ create table if not exists standard_spells (
     updated_at timestamptz not null default now()
 );
 
+alter table standard_spells add column if not exists source_key text not null default 'srd-2014';
+alter table standard_spells drop constraint if exists standard_spells_slug_key;
 create index if not exists standard_spells_name_idx on standard_spells(name);
 create index if not exists standard_spells_level_name_idx on standard_spells(level, name);
 create index if not exists standard_spells_school_idx on standard_spells(school);
+create index if not exists standard_spells_source_key_idx on standard_spells(source_key, level, name);
+create unique index if not exists standard_spells_source_slug_idx on standard_spells(source_key, slug);
 `
 
 const upsertStandardCreatureSQL = `
 insert into standard_creatures (
-    slug, name, description, size, creature_type, alignment, armor_class, hit_points, hit_dice,
+    source_key, slug, name, description, size, creature_type, alignment, armor_class, hit_points, hit_dice,
     challenge_rating, xp, avatar_url, source_label, source_url, license_name, stat_block
 ) values (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
-on conflict (slug) do update set
+on conflict (source_key, slug) do update set
+    source_key = excluded.source_key,
     name = excluded.name,
     description = excluded.description,
     size = excluded.size,
@@ -245,13 +298,14 @@ on conflict (slug) do update set
 
 const upsertStandardSpellSQL = `
 insert into standard_spells (
-    slug, name, level, school, casting_time, spell_range, components, duration, ritual,
+    source_key, slug, name, level, school, casting_time, spell_range, components, duration, ritual,
     concentration, description, higher_level, source_note, source_label, source_url,
     license_name, mechanics
 ) values (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 )
-on conflict (slug) do update set
+on conflict (source_key, slug) do update set
+    source_key = excluded.source_key,
     name = excluded.name,
     level = excluded.level,
     school = excluded.school,

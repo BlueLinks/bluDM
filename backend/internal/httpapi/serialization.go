@@ -114,6 +114,7 @@ func scanStandardCreature(row scanner) (models.Creature, error) {
 		&creature.ChallengeRating,
 		&creature.XP,
 		&creature.AvatarURL,
+		&creature.SourceKey,
 		&creature.SourceLabel,
 		&statBlockBytes,
 		&creature.CreatedAt,

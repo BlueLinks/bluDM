@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { CreatureSourceFilter } from "../../components/shared/CreatureSourceFilter";
+import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
   Button,
   Callout,
@@ -35,6 +36,7 @@ export function NpcsPage() {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [showUserCreatures, setShowUserCreatures] = useState(true);
   const [showStandardCreatures, setShowStandardCreatures] = useState(false);
+  const [selectedSources, setSelectedSources] = useState(["srd-2014", "srd-5-2-1"]);
   const [creatureSearch, setCreatureSearch] = useState("");
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
   const [error, setError] = useState("");
@@ -49,14 +51,17 @@ export function NpcsPage() {
   const toast = useToasts();
 
   useEffect(() => {
-    Promise.all([api.creatures({ includeStandard: true }), api.actionTemplates()])
+    Promise.all([
+      api.creatures({ includeStandard: true, source: selectedSources }),
+      api.actionTemplates(),
+    ])
       .then(([creaturePayload, templatePayload]) => {
         setCreatures(creaturePayload.creatures);
         setTemplates(templatePayload.actionTemplates);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load NPCs"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedSources]);
 
   async function handleCreateTemplate(event: FormEvent) {
     event.preventDefault();
@@ -147,6 +152,11 @@ export function NpcsPage() {
               onShowUserChange={setShowUserCreatures}
             />
           </div>
+          {showStandardCreatures && (
+            <div className="mb-4">
+              <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
+            </div>
+          )}
           <div className="mb-4">
             <FloatingInput
               icon={Search}

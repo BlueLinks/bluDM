@@ -22,7 +22,6 @@ import {
   Button,
   Callout,
   ConfirmDialog,
-  DashboardCard,
   EmptyMini,
   EmptyState,
   Field,
@@ -42,6 +41,8 @@ import { encounterStatusOptions } from "../../lib/domain/options";
 import type { Campaign, CampaignDetail, Creature, Encounter, Player } from "../../types";
 import { CampaignNpcDialog, CampaignPartyDialog } from "./CampaignDialogs";
 import { CampaignForm } from "./CampaignForm";
+import { CampaignOverviewCards } from "./CampaignOverviewCards";
+import { CampaignSourceSettings } from "./CampaignSourceSettings";
 
 function encounterStatusLabel(status: string) {
   return encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
@@ -308,26 +309,13 @@ export function CampaignDetailPage() {
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="grid gap-4 xl:grid-cols-3">
-        <DashboardCard
-          icon={UsersRound}
-          title="Player Characters"
-          value={detail.playerCount}
-          copy="Character cards will show portrait, AC, current HP, temporary HP, and key passives."
-        />
-        <DashboardCard
-          icon={ClipboardList}
-          title="Encounters"
-          value={detail.encounterCount}
-          copy="Prepared encounters will appear here with start and duplicate actions."
-        />
-        <DashboardCard
-          icon={Swords}
-          title="Campaign NPCs"
-          value={detail.npcs.length}
-          copy="Friendly NPCs, rivals, and recurring monsters linked to this campaign."
-        />
-      </div>
+      <CampaignOverviewCards detail={detail} />
+      <CampaignSourceSettings
+        campaign={detail.campaign}
+        onSaved={(campaign) =>
+          setDetail((current) => (current ? { ...current, campaign } : current))
+        }
+      />
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionPanel title="Party" icon={UsersRound}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">

@@ -47,6 +47,7 @@ export type Campaign = {
   id: string;
   name: string;
   description: string;
+  allowedStandardSources: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -192,6 +193,7 @@ export type Creature = {
   avatarUrl: string;
   librarySource: "user" | "standard";
   readOnly: boolean;
+  sourceKey: string;
   sourceLabel: string;
   statBlock: Record<string, unknown>;
   createdAt: string;
@@ -289,6 +291,7 @@ export type Spell = {
   sourceNote: string;
   librarySource: "user" | "standard";
   readOnly: boolean;
+  sourceKey: string;
   sourceLabel: string;
   mechanics: Record<string, unknown>;
   createdAt: string;
@@ -297,6 +300,32 @@ export type Spell = {
 
 export type ApiError = {
   error: string;
+};
+
+export type StandardSource = {
+  key: string;
+  label: string;
+  ruleset: string;
+  licenseName: string;
+  sourceUrl: string;
+  attribution: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StandardLibraryEntry = {
+  id: string;
+  sourceKey: string;
+  sourceLabel: string;
+  category: string;
+  slug: string;
+  name: string;
+  summary: string;
+  description: string;
+  readOnly: boolean;
+  data: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AbilityKey = "str" | "dex" | "con" | "int" | "wis" | "cha";

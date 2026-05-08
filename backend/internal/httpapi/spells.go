@@ -12,6 +12,7 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	includeUser := queryBool(r, "includeUser", true)
 	includeStandard := queryBool(r, "includeStandard", false)
+	sources := querySources(r)
 	levelFilter := strings.TrimSpace(r.URL.Query().Get("level"))
 	level, levelErr := strconv.Atoi(levelFilter)
 	if levelFilter == "" {
@@ -56,13 +57,14 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 	if includeStandard {
 		rows, err := s.db.Query(r.Context(), `
 			select id, name, level, school, casting_time, spell_range, components, duration,
-				ritual, concentration, description, higher_level, source_note, source_label, mechanics, created_at, updated_at
+				ritual, concentration, description, higher_level, source_note, source_key, source_label, mechanics, created_at, updated_at
 			from standard_spells
 			where ($1 = '' or name ilike '%' || $1 || '%' or school ilike '%' || $1 || '%')
 				and ($2 = -1 or level = $2)
+				and (cardinality($3::text[]) = 0 or source_key = any($3::text[]))
 			order by level asc, name asc
 			limit 500
-		`, q, level)
+		`, q, level, sources)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list standard spells")
 			return
@@ -183,6 +185,7 @@ func scanStandardSpell(row scanner) (models.Spell, error) {
 		&spell.Description,
 		&spell.HigherLevel,
 		&spell.SourceNote,
+		&spell.SourceKey,
 		&spell.SourceLabel,
 		&mechanicsBytes,
 		&spell.CreatedAt,

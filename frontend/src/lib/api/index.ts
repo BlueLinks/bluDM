@@ -20,6 +20,8 @@ import type {
   RollMode,
   Spell,
   SpellFormState,
+  StandardLibraryEntry,
+  StandardSource,
   User,
 } from "../../types";
 import { actionPayload, creaturePayload, parseJSONField, playerPayload } from "./payloads";
@@ -76,10 +78,22 @@ export const api = {
 
   campaigns: () => request<{ campaigns: Campaign[] }>("/api/campaigns"),
   campaign: (id: string) => request<CampaignDetail>(`/api/campaigns/${id}`),
-  createCampaign: (name: string, description: string) =>
+  createCampaign: (payload: {
+    name: string;
+    description: string;
+    allowedStandardSources?: string[];
+  }) =>
     request<{ campaign: Campaign }>("/api/campaigns", {
       method: "POST",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify(payload),
+    }),
+  updateCampaign: (
+    id: string,
+    payload: { name: string; description: string; allowedStandardSources: string[] },
+  ) =>
+    request<{ campaign: Campaign }>(`/api/campaigns/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
     }),
   linkCampaignNpc: (campaignId: string, creatureId: string) =>
     request<void>(`/api/campaigns/${campaignId}/npcs`, {
@@ -325,7 +339,12 @@ export const api = {
   deletePlayer: (id: string) => request<void>(`/api/players/${id}`, { method: "DELETE" }),
 
   creatures: (
-    options: { includeUser?: boolean; includeStandard?: boolean; query?: string } = {},
+    options: {
+      includeUser?: boolean;
+      includeStandard?: boolean;
+      query?: string;
+      source?: string[];
+    } = {},
   ) => {
     const params = new URLSearchParams();
     if (options.includeUser !== undefined) params.set("includeUser", String(options.includeUser));
@@ -333,6 +352,7 @@ export const api = {
       params.set("includeStandard", String(options.includeStandard));
     }
     if (options.query) params.set("q", options.query);
+    if (options.source?.length) params.set("source", options.source.join(","));
     const suffix = params.toString() ? `?${params.toString()}` : "";
     return request<{ creatures: Creature[] }>(`/api/library/creatures${suffix}`);
   },
@@ -428,6 +448,7 @@ export const api = {
     includeUser?: boolean;
     q?: string;
     level?: number;
+    source?: string[];
   }) => {
     const params = new URLSearchParams();
     if (options?.includeStandard !== undefined) {
@@ -436,8 +457,20 @@ export const api = {
     if (options?.includeUser !== undefined) params.set("includeUser", String(options.includeUser));
     if (options?.q) params.set("q", options.q);
     if (options?.level !== undefined) params.set("level", String(options.level));
+    if (options?.source?.length) params.set("source", options.source.join(","));
     const query = params.toString();
     return request<{ spells: Spell[] }>(`/api/library/spells${query ? `?${query}` : ""}`);
+  },
+  standardSources: () => request<{ sources: StandardSource[] }>("/api/library/sources"),
+  standardLibraryEntries: (options?: { category?: string; source?: string[]; q?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.category) params.set("category", options.category);
+    if (options?.source?.length) params.set("source", options.source.join(","));
+    if (options?.q) params.set("q", options.q);
+    const query = params.toString();
+    return request<{ entries: StandardLibraryEntry[] }>(
+      `/api/library/entries${query ? `?${query}` : ""}`,
+    );
   },
   createSpell: (payload: SpellFormState) =>
     request<{ spell: Spell }>("/api/library/spells", {

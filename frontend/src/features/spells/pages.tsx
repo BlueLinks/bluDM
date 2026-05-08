@@ -1,6 +1,7 @@
 import { BookOpen, Eye, Plus, Search } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
+import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
   Badge,
   Button,
@@ -41,6 +42,7 @@ export function SpellsPage() {
   const [spells, setSpells] = useState<Spell[]>([]);
   const [showUserSpells, setShowUserSpells] = useState(true);
   const [showStandardSpells, setShowStandardSpells] = useState(true);
+  const [selectedSources, setSelectedSources] = useState(["srd-2014", "srd-5-2-1"]);
   const [search, setSearch] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [previewSpell, setPreviewSpell] = useState<Spell | null>(null);
@@ -50,11 +52,11 @@ export function SpellsPage() {
   useEffect(() => {
     setLoading(true);
     api
-      .spells({ includeStandard: true })
+      .spells({ includeStandard: true, source: selectedSources })
       .then((payload) => setSpells(payload.spells))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load spells"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedSources]);
 
   const visibleSpells = spells.filter((spell) =>
     spellVisible(spell, {
@@ -100,6 +102,9 @@ export function SpellsPage() {
           onShowStandardChange={setShowStandardSpells}
           onShowUserChange={setShowUserSpells}
         />
+        {showStandardSpells && (
+          <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
+        )}
         <FloatingInput icon={Search} label="Search spells" value={search} onChange={setSearch} />
       </div>
       {loading && <MutedPanel>Loading spells...</MutedPanel>}

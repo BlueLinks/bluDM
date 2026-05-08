@@ -1,8 +1,6 @@
-import { Package } from "lucide-react";
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { StatusPanel } from "../components/ui";
-import { ComingSoonPage } from "../pages/ComingSoonPage";
 import { api } from "../lib/api";
 
 const ImportPage = lazy(() =>
@@ -31,6 +29,12 @@ const PlayersPage = lazy(() =>
 );
 const SpellsPage = lazy(() =>
   import("../features/spells/pages").then((module) => ({ default: module.SpellsPage })),
+);
+const ItemsPage = lazy(() =>
+  import("../features/items/pages").then((module) => ({ default: module.ItemsPage })),
+);
+const RulesPage = lazy(() =>
+  import("../features/library/RulesPage").then((module) => ({ default: module.RulesPage })),
 );
 const EncounterInitiativePage = lazy(() =>
   import("../features/combat/initiativePage").then((module) => ({
@@ -89,16 +93,8 @@ export function AppRoutes() {
         <Route path="/npcs/new" element={<NpcCreatePage />} />
         <Route path="/npcs/:creatureID/edit" element={<NpcEditPage />} />
         <Route path="/spells" element={<SpellsPage />} />
-        <Route
-          path="/items"
-          element={
-            <ComingSoonPage
-              icon={Package}
-              title="Items"
-              copy="Magic items and mundane gear will live here once item tracking is in scope."
-            />
-          }
-        />
+        <Route path="/items" element={<ItemsPage />} />
+        <Route path="/rules" element={<RulesPage />} />
         <Route path="/import" element={<ImportPage seedTestData={api.seedTestData} />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />

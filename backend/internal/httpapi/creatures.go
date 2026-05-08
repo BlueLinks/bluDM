@@ -13,6 +13,7 @@ func (s *Server) listCreatures(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	includeUser := queryBool(r, "includeUser", true)
 	includeStandard := queryBool(r, "includeStandard", false)
+	sources := querySources(r)
 
 	creatures := []models.Creature{}
 	if includeUser {
@@ -45,12 +46,13 @@ func (s *Server) listCreatures(w http.ResponseWriter, r *http.Request) {
 	if includeStandard {
 		rows, err := s.db.Query(r.Context(), `
 			select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-				hit_dice, challenge_rating, xp, avatar_url, source_label, stat_block, created_at, updated_at
+				hit_dice, challenge_rating, xp, avatar_url, source_key, source_label, stat_block, created_at, updated_at
 			from standard_creatures
-			where $1 = '' or name ilike '%' || $1 || '%' or creature_type ilike '%' || $1 || '%'
+			where ($1 = '' or name ilike '%' || $1 || '%' or creature_type ilike '%' || $1 || '%')
+				and (cardinality($2::text[]) = 0 or source_key = any($2::text[]))
 			order by name asc
 			limit 500
-		`, q)
+		`, q, sources)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list standard creatures")
 			return
@@ -237,7 +239,7 @@ func (s *Server) creatureByID(ctx context.Context, creatureID string) (models.Cr
 func (s *Server) standardCreatureByID(ctx context.Context, creatureID string) (models.Creature, error) {
 	row := s.db.QueryRow(ctx, `
 		select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, avatar_url, source_label, stat_block, created_at, updated_at
+			hit_dice, challenge_rating, xp, avatar_url, source_key, source_label, stat_block, created_at, updated_at
 		from standard_creatures
 		where id = $1
 	`, strings.TrimSpace(creatureID))
