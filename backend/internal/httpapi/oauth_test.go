@@ -34,3 +34,12 @@ func TestEmailVerifiedBool(t *testing.T) {
 		t.Fatal("string false should not be verified")
 	}
 }
+
+func TestValidatePassword(t *testing.T) {
+	if err := validatePassword("twelve-chars"); err != nil {
+		t.Fatalf("expected password to be valid: %v", err)
+	}
+	if err := validatePassword("too-short"); err == nil {
+		t.Fatal("expected short password to be rejected")
+	}
+}

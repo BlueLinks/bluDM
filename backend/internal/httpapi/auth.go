@@ -373,7 +373,14 @@ func validateAuthRequest(req authRequest) error {
 	if req.Email == "" || !strings.Contains(req.Email, "@") {
 		return errors.New("valid email is required")
 	}
-	if len(req.Password) < 12 {
+	if err := validatePassword(req.Password); err != nil {
+		return err
+	}
+	return nil
+}
+
+func validatePassword(password string) error {
+	if len(password) < 12 {
 		return errors.New("password must be at least 12 characters")
 	}
 	return nil

@@ -2,6 +2,7 @@ import type {
   ActionFormState,
   ActionTemplate,
   ActionTemplateUsage,
+  AccountInfo,
   AuthStatus,
   AuthProvider,
   Campaign,
@@ -50,6 +51,12 @@ export const api = {
     request<void>("/api/auth/account", {
       method: "DELETE",
       body: JSON.stringify({ password, confirm }),
+    }),
+  account: () => request<AccountInfo>("/api/auth/account"),
+  setPassword: (currentPassword: string, newPassword: string) =>
+    request<AccountInfo>("/api/auth/password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
     }),
   uploadImage(file: Blob, filename = "avatar.png"): Promise<{ assetId: string; url: string }> {
     const formData = new FormData();

@@ -93,6 +93,8 @@ function App() {
           await api.logout();
           await refreshAuth();
         }}
+        onLoadAccount={api.account}
+        onSetPassword={api.setPassword}
         onDeleteAccount={async (password, confirm) => {
           await api.deleteAccount(password, confirm);
           await refreshAuth();

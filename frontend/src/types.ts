@@ -4,6 +4,20 @@ export type User = {
   createdAt: string;
 };
 
+export type AccountIdentity = {
+  provider: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string;
+};
+
+export type AccountInfo = {
+  email: string;
+  hasPassword: boolean;
+  identities: AccountIdentity[];
+};
+
 export type AuthStatus = {
   setupRequired: boolean;
   authenticated: boolean;
