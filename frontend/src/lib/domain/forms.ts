@@ -1,4 +1,13 @@
-import type { ActionFormState, ActionRollFormState, ActionTemplate, ActionRollPart, CommonWeapon, Creature, CreatureAction, CreatureFormState } from "../../types";
+import type {
+  ActionFormState,
+  ActionRollFormState,
+  ActionTemplate,
+  ActionRollPart,
+  CommonWeapon,
+  Creature,
+  CreatureAction,
+  CreatureFormState,
+} from "../../types";
 import { createId } from "./ids";
 import { abilities, creatureEnvironments, creatureTypes } from "./options";
 
@@ -32,7 +41,7 @@ export function blankRoll(): ActionRollFormState {
     magical: false,
     diceCount: "",
     dieSize: "6",
-    fixedValue: ""
+    fixedValue: "",
   };
 }
 
@@ -52,7 +61,7 @@ export function blankAction(): ActionFormState {
     attackModifier: "",
     missEffect: "none",
     hitSpecialEvent: "none",
-    rolls: [blankRoll()]
+    rolls: [blankRoll()],
   };
 }
 
@@ -64,9 +73,23 @@ export function spiderStaffAction(): ActionFormState {
     description: "A melee weapon attack with a venomous follow-up.",
     attackModifier: "4",
     rolls: [
-      { ...blankRoll(), id: createId(), damageType: "bludgeoning", diceCount: "2", dieSize: "6", fixedValue: "-1" },
-      { ...blankRoll(), id: createId(), damageType: "poison", diceCount: "3", dieSize: "6", fixedValue: "0" }
-    ]
+      {
+        ...blankRoll(),
+        id: createId(),
+        damageType: "bludgeoning",
+        diceCount: "2",
+        dieSize: "6",
+        fixedValue: "-1",
+      },
+      {
+        ...blankRoll(),
+        id: createId(),
+        damageType: "poison",
+        diceCount: "3",
+        dieSize: "6",
+        fixedValue: "0",
+      },
+    ],
   };
 }
 
@@ -86,15 +109,18 @@ export function actionFormFromTemplate(template: ActionTemplate): ActionFormStat
     attackModifier: String(template.attackModifier),
     missEffect: template.missEffect || "none",
     hitSpecialEvent: template.hitSpecialEvent || "none",
-    rolls: template.rolls.length > 0 ? template.rolls.map((roll) => ({
-      id: createId(),
-      rollKind: roll.rollKind,
-      damageType: roll.damageType,
-      magical: roll.magical,
-      diceCount: String(roll.diceCount),
-      dieSize: String(roll.dieSize),
-      fixedValue: String(roll.fixedValue)
-    })) : [blankRoll()]
+    rolls:
+      template.rolls.length > 0
+        ? template.rolls.map((roll) => ({
+            id: createId(),
+            rollKind: roll.rollKind,
+            damageType: roll.damageType,
+            magical: roll.magical,
+            diceCount: String(roll.diceCount),
+            dieSize: String(roll.dieSize),
+            fixedValue: String(roll.fixedValue),
+          }))
+        : [blankRoll()],
   };
 }
 
@@ -107,7 +133,12 @@ export function weaponAction(weapon: CommonWeapon, form: CreatureFormState): Act
   const dex = Number(form.abilityScores.dex) || 10;
   const strMod = abilityModifier(str);
   const dexMod = abilityModifier(dex);
-  const abilityMod = weapon.ability === "dex" ? dexMod : weapon.ability === "finesse" ? Math.max(strMod, dexMod) : strMod;
+  const abilityMod =
+    weapon.ability === "dex"
+      ? dexMod
+      : weapon.ability === "finesse"
+        ? Math.max(strMod, dexMod)
+        : strMod;
   const prof = Math.max(2, Math.ceil((Number(form.xp) || 0) / 2900));
   return {
     ...blankAction(),
@@ -118,14 +149,16 @@ export function weaponAction(weapon: CommonWeapon, form: CreatureFormState): Act
     reach: String(weapon.reach),
     range: String(weapon.range),
     description: `${weapon.name} attack generated from current creature ability scores.`,
-    rolls: [{
-      ...blankRoll(),
-      id: createId(),
-      damageType: weapon.damageType,
-      diceCount: String(weapon.diceCount),
-      dieSize: String(weapon.dieSize),
-      fixedValue: String(abilityMod)
-    }]
+    rolls: [
+      {
+        ...blankRoll(),
+        id: createId(),
+        damageType: weapon.damageType,
+        diceCount: String(weapon.diceCount),
+        dieSize: String(weapon.dieSize),
+        fixedValue: String(abilityMod),
+      },
+    ],
   };
 }
 
@@ -144,13 +177,24 @@ function stringFromUnknown(value: unknown, fallback: string) {
   return typeof value === "string" || typeof value === "number" ? String(value) : fallback;
 }
 
-export function creatureToForm(creature: Creature | undefined, emptyCreatureForm: CreatureFormState): CreatureFormState {
+export function creatureToForm(
+  creature: Creature | undefined,
+  emptyCreatureForm: CreatureFormState,
+): CreatureFormState {
   if (!creature) return emptyCreatureForm;
   const stat = creature.statBlock ?? {};
-  const speed = typeof stat.speed === "object" && stat.speed ? stat.speed as Record<string, unknown> : {};
-  const abilityScores = typeof stat.abilityScores === "object" && stat.abilityScores ? stat.abilityScores as Record<string, unknown> : {};
-  const senses = typeof stat.senses === "object" && stat.senses ? stat.senses as CreatureFormState["senses"] : emptyCreatureForm.senses;
-  const asStrings = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const speed =
+    typeof stat.speed === "object" && stat.speed ? (stat.speed as Record<string, unknown>) : {};
+  const abilityScores =
+    typeof stat.abilityScores === "object" && stat.abilityScores
+      ? (stat.abilityScores as Record<string, unknown>)
+      : {};
+  const senses =
+    typeof stat.senses === "object" && stat.senses
+      ? (stat.senses as CreatureFormState["senses"])
+      : emptyCreatureForm.senses;
+  const asStrings = (value: unknown) =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
   return {
     ...emptyCreatureForm,
     imageAssetId: creature.imageAssetId ?? "",
@@ -161,7 +205,10 @@ export function creatureToForm(creature: Creature | undefined, emptyCreatureForm
     creatureType: creatureTypes.includes(creature.creatureType) ? creature.creatureType : "",
     creatureSubtype: typeof stat.creatureSubtype === "string" ? stat.creatureSubtype : "",
     alignment: creature.alignment,
-    environment: typeof stat.environment === "string" && creatureEnvironments.includes(stat.environment) ? stat.environment : "",
+    environment:
+      typeof stat.environment === "string" && creatureEnvironments.includes(stat.environment)
+        ? stat.environment
+        : "",
     defaultDisposition: stat.defaultDisposition === "friendly" ? "friendly" : "enemy",
     armorClass: String(creature.armorClass),
     hitPoints: String(creature.hitPoints),
@@ -177,7 +224,12 @@ export function creatureToForm(creature: Creature | undefined, emptyCreatureForm
     passivePerception: stringFromUnknown(stat.passivePerception, "10"),
     passiveInvestigation: stringFromUnknown(stat.passiveInvestigation, "10"),
     passiveInsight: stringFromUnknown(stat.passiveInsight, "10"),
-    abilityScores: Object.fromEntries(abilities.map((ability) => [ability.key, stringFromUnknown(abilityScores[ability.key], "10")])) as CreatureFormState["abilityScores"],
+    abilityScores: Object.fromEntries(
+      abilities.map((ability) => [
+        ability.key,
+        stringFromUnknown(abilityScores[ability.key], "10"),
+      ]),
+    ) as CreatureFormState["abilityScores"],
     savingThrowProficiencies: asStrings(stat.savingThrowProficiencies),
     skillProficiencies: asStrings(stat.skillProficiencies),
     skillExpertise: asStrings(stat.skillExpertise),
@@ -186,12 +238,14 @@ export function creatureToForm(creature: Creature | undefined, emptyCreatureForm
     damageImmunities: asStrings(stat.damageImmunities),
     conditionImmunities: asStrings(stat.conditionImmunities),
     senses,
-    spellcastingAbility: typeof stat.spellcastingAbility === "string" ? stat.spellcastingAbility : "",
-    innateSpellcastingAbility: typeof stat.innateSpellcastingAbility === "string" ? stat.innateSpellcastingAbility : "",
+    spellcastingAbility:
+      typeof stat.spellcastingAbility === "string" ? stat.spellcastingAbility : "",
+    innateSpellcastingAbility:
+      typeof stat.innateSpellcastingAbility === "string" ? stat.innateSpellcastingAbility : "",
     casterLevel: stringFromUnknown(stat.casterLevel, "0"),
     spellSaveDC: stringFromUnknown(stat.spellSaveDC, "10"),
     spellAttackBonus: stringFromUnknown(stat.spellAttackBonus, "0"),
-    statBlock: JSON.stringify(stat, null, 2)
+    statBlock: JSON.stringify(stat, null, 2),
   };
 }
 

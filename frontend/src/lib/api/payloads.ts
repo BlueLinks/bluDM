@@ -32,8 +32,8 @@ export function actionPayload(action: ActionFormState) {
       magical: roll.magical,
       diceCount: Number(roll.diceCount) || 1,
       dieSize: Number(roll.dieSize) || 6,
-      fixedValue: Number(roll.fixedValue) || 0
-    }))
+      fixedValue: Number(roll.fixedValue) || 0,
+    })),
   };
 }
 
@@ -55,7 +55,9 @@ export function playerPayload(payload: PlayerFormState) {
       species: payload.species,
       background: payload.background,
       speed: Number(payload.speed),
-      abilityScores: Object.fromEntries(abilities.map((ability) => [ability.key, Number(payload.abilityScores[ability.key])])),
+      abilityScores: Object.fromEntries(
+        abilities.map((ability) => [ability.key, Number(payload.abilityScores[ability.key])]),
+      ),
       savingThrowProficiencies: payload.savingThrowProficiencies,
       skillProficiencies: payload.skillProficiencies,
       skillExpertise: payload.skillExpertise,
@@ -70,8 +72,8 @@ export function playerPayload(payload: PlayerFormState) {
       senses: payload.senses,
       spellcastingAbility: payload.spellcastingAbility,
       innateSpellcastingAbility: payload.innateSpellcastingAbility,
-      notes: payload.notes
-    }
+      notes: payload.notes,
+    },
   };
 }
 
@@ -96,7 +98,7 @@ export function creaturePayload(payload: CreatureFormState) {
         swim: Number(payload.swimSpeed) || 0,
         fly: Number(payload.flySpeed) || 0,
         burrow: Number(payload.burrowSpeed) || 0,
-        climb: Number(payload.climbSpeed) || 0
+        climb: Number(payload.climbSpeed) || 0,
       },
       creatureSubtype: payload.creatureSubtype,
       environment: payload.environment,
@@ -105,7 +107,9 @@ export function creaturePayload(payload: CreatureFormState) {
       passivePerception: Number(payload.passivePerception),
       passiveInvestigation: Number(payload.passiveInvestigation),
       passiveInsight: Number(payload.passiveInsight),
-      abilityScores: Object.fromEntries(abilities.map((ability) => [ability.key, Number(payload.abilityScores[ability.key])])),
+      abilityScores: Object.fromEntries(
+        abilities.map((ability) => [ability.key, Number(payload.abilityScores[ability.key])]),
+      ),
       savingThrowProficiencies: payload.savingThrowProficiencies,
       skillProficiencies: payload.skillProficiencies,
       skillExpertise: payload.skillExpertise,
@@ -118,7 +122,7 @@ export function creaturePayload(payload: CreatureFormState) {
       innateSpellcastingAbility: payload.innateSpellcastingAbility,
       casterLevel: Number(payload.casterLevel),
       spellSaveDC: Number(payload.spellSaveDC),
-      spellAttackBonus: Number(payload.spellAttackBonus)
-    }
+      spellAttackBonus: Number(payload.spellAttackBonus),
+    },
   };
 }

@@ -31,12 +31,21 @@ export function draftFromPlayer(encounterID: string, player: Player): DraftComba
     snapshot: { player },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    pendingAdd: { sourceType: "player", playerId: player.id, rolledHp: false }
+    pendingAdd: { sourceType: "player", playerId: player.id, rolledHp: false },
   };
 }
 
-export function draftFromCreature(encounterID: string, creature: Creature, side: "friendly" | "enemy", rolledHp: boolean, index: number, count: number): DraftCombatant {
-  const hp = rolledHp ? rollHitDiceClient(creature.hitDice, creature.hitPoints) : creature.hitPoints;
+export function draftFromCreature(
+  encounterID: string,
+  creature: Creature,
+  side: "friendly" | "enemy",
+  rolledHp: boolean,
+  index: number,
+  count: number,
+): DraftCombatant {
+  const hp = rolledHp
+    ? rollHitDiceClient(creature.hitDice, creature.hitPoints)
+    : creature.hitPoints;
   const displayName = count > 1 ? `${creature.name} (${index + 1})` : creature.name;
   return {
     id: `draft-creature-${creature.id}-${createId("draft")}`,
@@ -56,23 +65,27 @@ export function draftFromCreature(encounterID: string, creature: Creature, side:
     snapshot: { creature },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    pendingAdd: { sourceType: "creature", creatureId: creature.id, rolledHp }
+    pendingAdd: { sourceType: "creature", creatureId: creature.id, rolledHp },
   };
 }
 
 export function encounterDirty(saved: EncounterCombatant[], draft: DraftCombatant[]) {
   if (saved.length !== draft.length) return true;
   const savedByID = new Map(saved.map((combatant) => [combatant.id, combatant]));
-  return draft.some((combatant) => combatant.pendingAdd || combatantChanged(savedByID.get(combatant.id), combatant));
+  return draft.some(
+    (combatant) => combatant.pendingAdd || combatantChanged(savedByID.get(combatant.id), combatant),
+  );
 }
 
 export function encounterMetaChanged(encounter: Encounter | null, meta: EncounterMetaDraft) {
   if (!encounter) return false;
-  return encounter.name !== meta.name ||
+  return (
+    encounter.name !== meta.name ||
     encounter.description !== meta.description ||
     encounter.status !== meta.status ||
     encounter.location !== meta.location ||
-    encounter.roomNumber !== meta.roomNumber;
+    encounter.roomNumber !== meta.roomNumber
+  );
 }
 
 export function combatantChanged(saved: EncounterCombatant | undefined, draft: EncounterCombatant) {
@@ -94,24 +107,34 @@ export function creatureSummary(creature: Creature, campaignLinked: boolean) {
     creature.creatureType.trim(),
     creature.challengeRating.trim() ? `CR ${creature.challengeRating.trim()}` : "",
     `${creature.xp} XP`,
-    campaignLinked ? "Campaign NPC" : ""
+    campaignLinked ? "Campaign NPC" : "",
   ].filter(Boolean);
   return parts.join(" · ");
 }
 
 export function playerClassLevel(player: Player) {
-  const className = typeof player.characterSheet.className === "string" ? player.characterSheet.className : "";
-  const level = typeof player.characterSheet.level === "number" ? player.characterSheet.level : undefined;
+  const className =
+    typeof player.characterSheet.className === "string" ? player.characterSheet.className : "";
+  const level =
+    typeof player.characterSheet.level === "number" ? player.characterSheet.level : undefined;
   return [level ? `Level ${level}` : "", className].filter(Boolean).join(" ") || "Character sheet";
 }
 
 export function combatantPlayerClassLevel(combatant: EncounterCombatant) {
   const player = combatant.snapshot?.player;
-  if (player && typeof player === "object" && "characterSheet" in player && player.characterSheet && typeof player.characterSheet === "object") {
+  if (
+    player &&
+    typeof player === "object" &&
+    "characterSheet" in player &&
+    player.characterSheet &&
+    typeof player.characterSheet === "object"
+  ) {
     const sheet = player.characterSheet as Record<string, unknown>;
     const className = typeof sheet.className === "string" ? sheet.className : "";
     const level = typeof sheet.level === "number" ? sheet.level : undefined;
-    return [level ? `Level ${level}` : "", className].filter(Boolean).join(" ") || "Player character";
+    return (
+      [level ? `Level ${level}` : "", className].filter(Boolean).join(" ") || "Player character"
+    );
   }
   return "Player character";
 }

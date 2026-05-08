@@ -27,7 +27,11 @@ export function CampaignForm({ onCreated }: { onCreated: (campaign: Campaign) =>
         <Input value={name} onChange={(event) => setName(event.target.value)} required />
       </Field>
       <Field label="Description">
-        <Textarea value={description} onChange={(event) => setDescription(event.target.value)} rows={5} />
+        <Textarea
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={5}
+        />
       </Field>
       {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
       <Button type="submit">Create campaign</Button>

@@ -13,5 +13,5 @@ export const damageTypes = [
   { id: "psychic", label: "Psychic", icon: Sparkles },
   { id: "thunder", label: "Thunder", icon: Zap },
   { id: "slashing", label: "Slashing", icon: Swords },
-  { id: "radiant", label: "Radiant", icon: Sun }
+  { id: "radiant", label: "Radiant", icon: Sun },
 ];

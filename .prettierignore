@@ -1,0 +1,9 @@
+backend/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+postgres_data/
+backups/
+.git/
+.github/workflows/
+*.dump

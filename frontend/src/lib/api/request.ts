@@ -4,11 +4,13 @@ export async function request<T>(url: string, init: RequestInit = {}): Promise<T
   const isFormData = init.body instanceof FormData;
   const response = await fetch(url, {
     credentials: "same-origin",
-    headers: isFormData ? init.headers : {
-      "Content-Type": "application/json",
-      ...init.headers
-    },
-    ...init
+    headers: isFormData
+      ? init.headers
+      : {
+          "Content-Type": "application/json",
+          ...init.headers,
+        },
+    ...init,
   });
 
   if (!response.ok) {

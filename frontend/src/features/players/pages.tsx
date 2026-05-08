@@ -13,7 +13,7 @@ import {
   PageHeader,
   SectionPanel,
   ToastViewport,
-  useToasts
+  useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { Campaign, Player } from "../../types";
@@ -62,16 +62,27 @@ export function PlayersPage() {
       {error && <Callout tone="danger">{error}</Callout>}
       <SectionPanel title="Saved Characters" icon={UsersRound}>
         {loading && <p className="text-sm text-muted-foreground">Loading players...</p>}
-        {!loading && players.length === 0 && <EmptyMini copy="No saved players yet. Create a full player record from the Add player page." />}
+        {!loading && players.length === 0 && (
+          <EmptyMini copy="No saved players yet. Create a full player record from the Add player page." />
+        )}
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {players.map((player) => (
             <div className="grid gap-2" key={player.id}>
               <PlayerCard player={player} />
               <div className="grid grid-cols-2 gap-2">
                 <Link to={`/players/${player.id}/edit`}>
-                  <Button type="button" icon={Pencil} variant="secondary" className="w-full">Edit character</Button>
+                  <Button type="button" icon={Pencil} variant="secondary" className="w-full">
+                    Edit character
+                  </Button>
                 </Link>
-                <Button type="button" icon={Trash2} variant="danger" onClick={() => setRemovePlayer(player)}>Remove</Button>
+                <Button
+                  type="button"
+                  icon={Trash2}
+                  variant="danger"
+                  onClick={() => setRemovePlayer(player)}
+                >
+                  Remove
+                </Button>
               </div>
             </div>
           ))}
@@ -84,7 +95,8 @@ export function PlayersPage() {
         onCancel={() => setRemovePlayer(null)}
         onConfirm={() => void confirmRemovePlayer()}
       >
-        This will remove {removePlayer?.characterName ?? "this character"} from the character sheet page and any campaign party lists.
+        This will remove {removePlayer?.characterName ?? "this character"} from the character sheet
+        page and any campaign party lists.
       </ConfirmDialog>
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
     </Page>
@@ -147,7 +159,9 @@ export function PlayerEditPage() {
       <Page>
         <Callout tone="danger">{error || "Player not found"}</Callout>
         <Link to="/players">
-          <Button type="button" variant="secondary">Back to players</Button>
+          <Button type="button" variant="secondary">
+            Back to players
+          </Button>
         </Link>
       </Page>
     );
@@ -156,7 +170,13 @@ export function PlayerEditPage() {
   return (
     <Page>
       <BackButton to="/players">Back to players</BackButton>
-      <Breadcrumbs items={[{ label: "Players", to: "/players" }, { label: player.characterName }, { label: "Edit" }]} />
+      <Breadcrumbs
+        items={[
+          { label: "Players", to: "/players" },
+          { label: player.characterName },
+          { label: "Edit" },
+        ]}
+      />
       <PageHeader
         eyebrow="Players"
         title={`Edit ${player.characterName}`}

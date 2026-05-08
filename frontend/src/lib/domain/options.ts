@@ -7,29 +7,35 @@ export const actionTypes = [
   { value: "save", label: "Save" },
   { value: "damage", label: "Damage" },
   { value: "healing", label: "Healing" },
-  { value: "other", label: "Other" }
+  { value: "other", label: "Other" },
 ];
 
 export const missEffects = [
   { value: "none", label: "No effect" },
   { value: "half", label: "Half damage" },
-  { value: "full", label: "Full damage" }
+  { value: "full", label: "Full damage" },
 ];
 
 export const hitSpecialEvents = [
   { value: "none", label: "No effect" },
   { value: "heal_caster_full", label: "Heal caster full" },
   { value: "heal_caster_half", label: "Heal caster half" },
-  { value: "reduce_max_hp", label: "Reduce max HP" }
+  { value: "reduce_max_hp", label: "Reduce max HP" },
 ];
 
 export const encounterStatusOptions = [
   { value: "planned", label: "Planned" },
   { value: "completed", label: "Completed" },
-  { value: "skipped", label: "Skipped" }
+  { value: "skipped", label: "Skipped" },
 ];
 
-export const challengeRatings = ["0", "1/8", "1/4", "1/2", ...Array.from({ length: 30 }, (_, index) => String(index + 1))];
+export const challengeRatings = [
+  "0",
+  "1/8",
+  "1/4",
+  "1/2",
+  ...Array.from({ length: 30 }, (_, index) => String(index + 1)),
+];
 
 export const creatureSizes = ["Tiny", "Small", "Medium", "Large", "Huge", "Gargantuan"];
 
@@ -48,14 +54,29 @@ export const creatureTypes = [
   "Ooze",
   "Plant",
   "Swarm of tiny beasts",
-  "Undead"
+  "Undead",
 ];
 
 export const creatureSubtypes: Record<string, string[]> = {
   Fiend: ["Demon", "Devil", "Shapechanger"],
-  Humanoid: ["Any race", "Dwarf", "Elf", "Gnoll", "Gnome", "Goblinoid", "Grimlock", "Human", "Shapechanger", "Kobold", "Lizardfolk", "Merfolk", "Orc", "Sahuagin"],
+  Humanoid: [
+    "Any race",
+    "Dwarf",
+    "Elf",
+    "Gnoll",
+    "Gnome",
+    "Goblinoid",
+    "Grimlock",
+    "Human",
+    "Shapechanger",
+    "Kobold",
+    "Lizardfolk",
+    "Merfolk",
+    "Orc",
+    "Sahuagin",
+  ],
   Monstrosity: ["Shapechanger", "Titan"],
-  Undead: ["Shapechanger"]
+  Undead: ["Shapechanger"],
 };
 
 export const creatureEnvironments = [
@@ -69,14 +90,14 @@ export const creatureEnvironments = [
   "swamp",
   "underdark",
   "underwater",
-  "urban"
+  "urban",
 ];
 
 export const diceSizes = [4, 6, 8, 10, 12, 20];
 
 export const creatureDispositionOptions = [
   { value: "enemy", label: "Enemy by default" },
-  { value: "friendly", label: "Friendly by default" }
+  { value: "friendly", label: "Friendly by default" },
 ];
 
 export const alignments = [
@@ -89,7 +110,7 @@ export const alignments = [
   "Lawful Evil",
   "Neutral Evil",
   "Chaotic Evil",
-  "Unaligned"
+  "Unaligned",
 ];
 
 export const abilities: Array<{ key: AbilityKey; label: string }> = [
@@ -98,7 +119,7 @@ export const abilities: Array<{ key: AbilityKey; label: string }> = [
   { key: "con", label: "CON" },
   { key: "int", label: "INT" },
   { key: "wis", label: "WIS" },
-  { key: "cha", label: "CHA" }
+  { key: "cha", label: "CHA" },
 ];
 
 export const skillDefinitions: Array<{ name: string; ability: AbilityKey }> = [
@@ -119,7 +140,7 @@ export const skillDefinitions: Array<{ name: string; ability: AbilityKey }> = [
   { name: "Religion", ability: "int" },
   { name: "Sleight Of Hand", ability: "dex" },
   { name: "Stealth", ability: "dex" },
-  { name: "Survival", ability: "wis" }
+  { name: "Survival", ability: "wis" },
 ];
 
 export const conditionImmunities = [
@@ -137,18 +158,66 @@ export const conditionImmunities = [
   "Prone",
   "Restrained",
   "Stunned",
-  "Unconscious"
+  "Unconscious",
 ];
 
 export const senseTypes: SenseName[] = ["Blindsight", "Darkvision", "Tremorsense", "Truesight"];
 
 export const commonWeapons: CommonWeapon[] = [
-  { name: "Dagger", ability: "finesse", diceCount: 1, dieSize: 4, damageType: "piercing", range: 20, reach: 5 },
-  { name: "Shortsword", ability: "finesse", diceCount: 1, dieSize: 6, damageType: "piercing", range: 0, reach: 5 },
-  { name: "Longsword", ability: "str", diceCount: 1, dieSize: 8, damageType: "slashing", range: 0, reach: 5 },
-  { name: "Shortbow", ability: "dex", diceCount: 1, dieSize: 6, damageType: "piercing", range: 80, reach: 0 },
-  { name: "Light Crossbow", ability: "dex", diceCount: 1, dieSize: 8, damageType: "piercing", range: 80, reach: 0 },
-  { name: "Club", ability: "str", diceCount: 1, dieSize: 4, damageType: "bludgeoning", range: 0, reach: 5 }
+  {
+    name: "Dagger",
+    ability: "finesse",
+    diceCount: 1,
+    dieSize: 4,
+    damageType: "piercing",
+    range: 20,
+    reach: 5,
+  },
+  {
+    name: "Shortsword",
+    ability: "finesse",
+    diceCount: 1,
+    dieSize: 6,
+    damageType: "piercing",
+    range: 0,
+    reach: 5,
+  },
+  {
+    name: "Longsword",
+    ability: "str",
+    diceCount: 1,
+    dieSize: 8,
+    damageType: "slashing",
+    range: 0,
+    reach: 5,
+  },
+  {
+    name: "Shortbow",
+    ability: "dex",
+    diceCount: 1,
+    dieSize: 6,
+    damageType: "piercing",
+    range: 80,
+    reach: 0,
+  },
+  {
+    name: "Light Crossbow",
+    ability: "dex",
+    diceCount: 1,
+    dieSize: 8,
+    damageType: "piercing",
+    range: 80,
+    reach: 0,
+  },
+  {
+    name: "Club",
+    ability: "str",
+    diceCount: 1,
+    dieSize: 4,
+    damageType: "bludgeoning",
+    range: 0,
+    reach: 5,
+  },
 ];
 
 export const combatantColors = [
@@ -158,7 +227,7 @@ export const combatantColors = [
   { label: "Green", value: "#16a34a" },
   { label: "Amber", value: "#d97706" },
   { label: "Red", value: "#dc2626" },
-  { label: "Violet", value: "#7c3aed" }
+  { label: "Violet", value: "#7c3aed" },
 ];
 
 export const defaultCombatantColor = "default";
