@@ -59,8 +59,12 @@ $motion-long: 1800ms;
 html,
 body,
 #root {
-  height: 100%;
-  overflow: hidden;
+  min-height: 100%;
+}
+
+html,
+body {
+  overflow-x: hidden;
 }
 
 * {
