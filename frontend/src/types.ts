@@ -190,6 +190,9 @@ export type Creature = {
   xp: number;
   imageAssetId?: string;
   avatarUrl: string;
+  librarySource: "user" | "standard";
+  readOnly: boolean;
+  sourceLabel: string;
   statBlock: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -423,6 +426,7 @@ export type DraftCombatant = EncounterCombatant & {
     sourceType: "player" | "creature";
     playerId?: string;
     creatureId?: string;
+    standardCreatureId?: string;
     rolledHp: boolean;
   };
 };

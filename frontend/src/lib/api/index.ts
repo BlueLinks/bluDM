@@ -178,7 +178,8 @@ export const api = {
   addRunCombatants: (
     runId: string,
     payload: {
-      creatureId: string;
+      creatureId?: string;
+      standardCreatureId?: string;
       side: "friendly" | "enemy";
       quantity: number;
       rolledHp: boolean;
@@ -272,6 +273,7 @@ export const api = {
       sourceType: "player" | "creature";
       playerId?: string;
       creatureId?: string;
+      standardCreatureId?: string;
       side: "player" | "friendly" | "enemy";
       displayName?: string;
       colorLabel?: string;
@@ -322,7 +324,18 @@ export const api = {
     }),
   deletePlayer: (id: string) => request<void>(`/api/players/${id}`, { method: "DELETE" }),
 
-  creatures: () => request<{ creatures: Creature[] }>("/api/library/creatures"),
+  creatures: (
+    options: { includeUser?: boolean; includeStandard?: boolean; query?: string } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.includeUser !== undefined) params.set("includeUser", String(options.includeUser));
+    if (options.includeStandard !== undefined) {
+      params.set("includeStandard", String(options.includeStandard));
+    }
+    if (options.query) params.set("q", options.query);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
+    return request<{ creatures: Creature[] }>(`/api/library/creatures${suffix}`);
+  },
   creature: (id: string) => request<{ creature: Creature }>(`/api/library/creatures/${id}`),
   creatureCampaigns: (id: string) =>
     request<{ campaigns: Campaign[] }>(`/api/library/creatures/${id}/campaigns`),

@@ -88,11 +88,13 @@ func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID str
 		side = "player"
 	} else {
 		sourceType = "creature"
-		creature, err := s.creatureByID(ctx, strings.TrimSpace(req.CreatureID))
+		creature, isStandard, err := s.creatureFromCombatantRequest(ctx, req)
 		if err != nil {
 			return models.EncounterCombatant{}, errors.New("creature not found")
 		}
-		creatureID = creature.ID
+		if !isStandard {
+			creatureID = creature.ID
+		}
 		displayName = creature.Name
 		avatarURL = assetOrExternalURL(creature.ImageAssetID, creature.AvatarURL)
 		ac = creature.ArmorClass
@@ -102,6 +104,9 @@ func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID str
 		}
 		currentHP = maxHP
 		snapshot = map[string]any{"creature": creature}
+		if isStandard {
+			snapshot["standardCreatureId"] = creature.ID
+		}
 	}
 	if req.DisplayName != "" {
 		displayName = strings.TrimSpace(req.DisplayName)
@@ -131,6 +136,15 @@ func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID str
 			rolled_hp, sort_order, snapshot, created_at, updated_at
 	`, encounterID, sourceType, playerID, creatureID, side, displayName, strings.TrimSpace(req.ColorLabel), avatarURL, ac, maxHP, currentHP, req.RolledHP, nextOrder, snapshotBytes)
 	return scanEncounterCombatant(row)
+}
+
+func (s *Server) creatureFromCombatantRequest(ctx context.Context, req addCombatantRequest) (models.Creature, bool, error) {
+	if strings.TrimSpace(req.StandardCreatureID) != "" {
+		creature, err := s.standardCreatureByID(ctx, req.StandardCreatureID)
+		return creature, true, err
+	}
+	creature, err := s.creatureByID(ctx, strings.TrimSpace(req.CreatureID))
+	return creature, false, err
 }
 
 func scanEncounter(row scanner) (models.Encounter, error) {

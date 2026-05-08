@@ -65,7 +65,12 @@ export function draftFromCreature(
     snapshot: { creature },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    pendingAdd: { sourceType: "creature", creatureId: creature.id, rolledHp },
+    pendingAdd: {
+      sourceType: "creature",
+      creatureId: creature.librarySource === "standard" ? "" : creature.id,
+      standardCreatureId: creature.librarySource === "standard" ? creature.id : "",
+      rolledHp,
+    },
   };
 }
 
@@ -107,6 +112,7 @@ export function creatureSummary(creature: Creature, campaignLinked: boolean) {
     creature.creatureType.trim(),
     creature.challengeRating.trim() ? `CR ${creature.challengeRating.trim()}` : "",
     `${creature.xp} XP`,
+    creature.librarySource === "standard" ? creature.sourceLabel || "Standard" : "",
     campaignLinked ? "Campaign NPC" : "",
   ].filter(Boolean);
   return parts.join(" · ");

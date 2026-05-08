@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"context"
 	"encoding/json"
 	"net/http"
 	"strconv"
@@ -19,7 +20,8 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	req.CreatureID = strings.TrimSpace(req.CreatureID)
-	if req.CreatureID == "" {
+	req.StandardCreatureID = strings.TrimSpace(req.StandardCreatureID)
+	if req.CreatureID == "" && req.StandardCreatureID == "" {
 		writeError(w, http.StatusBadRequest, "creatureId is required")
 		return
 	}
@@ -30,7 +32,7 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 	if side == "player" {
 		side = "friendly"
 	}
-	creature, err := s.creatureByID(r.Context(), req.CreatureID)
+	creature, isStandard, err := s.runAddCreatureByRequest(r.Context(), req)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "creature not found")
 		return
@@ -58,8 +60,9 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 			avatarURL = assetOrExternalURL(creature.ImageAssetID, creature.AvatarURL)
 		}
 		snapshotBytes, err := json.Marshal(map[string]any{
-			"creature":      creature,
-			"addedMidFight": true,
+			"creature":           creature,
+			"standardCreatureId": req.StandardCreatureID,
+			"addedMidFight":      true,
 		})
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not add combatants")
@@ -70,7 +73,7 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 				encounter_run_id, source_type, creature_id, side, display_name, color_label, avatar_url,
 				armor_class, max_hit_points, current_hit_points, initiative, initiative_set, sort_order, snapshot
 			)
-			values ($1, 'creature', $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12)
+			values ($1, 'creature', nullif($2, '')::uuid, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12)
 			returning id, encounter_run_id, coalesce(source_combatant_id::text, ''), source_type,
 				coalesce(player_id::text, ''), coalesce(creature_id::text, ''), side, display_name,
 				color_label, avatar_url, armor_class, max_hit_points, current_hit_points,
@@ -78,7 +81,7 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 				max_hit_points_override, current_hit_points_override, coalesce(initiative, 0), initiative_set,
 				sort_order, defeated, conditions, damage_dealt, damage_taken, healing_done,
 				healing_received, kills, death_save_successes, death_save_failures, stable, snapshot
-		`, runID, creature.ID, side, name, strings.TrimSpace(req.ColorLabel), avatarURL,
+		`, runID, nullableUserCreatureID(creature.ID, isStandard), side, name, strings.TrimSpace(req.ColorLabel), avatarURL,
 			creature.ArmorClass, maxHP, req.Initiative, req.InitiativeSet, nextOrder+index, snapshotBytes)
 		combatant, err := scanEncounterRunCombatant(row)
 		if err != nil {
@@ -90,4 +93,20 @@ func (s *Server) addRunCombatants(w http.ResponseWriter, r *http.Request) {
 	_ = s.appendCombatLogEvent(r.Context(), runID, "combatants_added", "", "", map[string]any{"combatants": created})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusCreated, map[string]any{"combatants": created, "run": run})
+}
+
+func (s *Server) runAddCreatureByRequest(ctx context.Context, req addRunCombatantRequest) (models.Creature, bool, error) {
+	if strings.TrimSpace(req.StandardCreatureID) != "" {
+		creature, err := s.standardCreatureByID(ctx, req.StandardCreatureID)
+		return creature, true, err
+	}
+	creature, err := s.creatureByID(ctx, req.CreatureID)
+	return creature, false, err
+}
+
+func nullableUserCreatureID(creatureID string, isStandard bool) string {
+	if isStandard {
+		return ""
+	}
+	return creatureID
 }

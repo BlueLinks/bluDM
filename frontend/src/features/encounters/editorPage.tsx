@@ -2,6 +2,7 @@ import { ClipboardList, FlaskConical, Plus, Search, Swords, UsersRound } from "l
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { CreatureSourceFilter } from "../../components/shared/CreatureSourceFilter";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
   Button,
@@ -57,6 +58,8 @@ export function EncounterEditPage() {
   const [savedCombatants, setSavedCombatants] = useState<EncounterCombatant[]>([]);
   const [draftCombatants, setDraftCombatants] = useState<DraftCombatant[]>([]);
   const [creatures, setCreatures] = useState<Creature[]>([]);
+  const [showUserCreatures, setShowUserCreatures] = useState(true);
+  const [showStandardCreatures, setShowStandardCreatures] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -75,6 +78,8 @@ export function EncounterEditPage() {
   const campaignCreatureIds = new Set((detail?.npcs ?? []).map((creature) => creature.id));
   const filteredCreatures = creatures.filter((creature) => {
     const query = search.trim().toLowerCase();
+    if (creature.librarySource === "standard" && !showStandardCreatures) return false;
+    if (creature.librarySource !== "standard" && !showUserCreatures) return false;
     return (
       !query ||
       creature.name.toLowerCase().includes(query) ||
@@ -95,7 +100,7 @@ export function EncounterEditPage() {
       const [campaignPayload, encounterPayload, creaturePayload] = await Promise.all([
         api.campaign(campaignID),
         api.encounter(encounterID),
-        api.creatures(),
+        api.creatures({ includeStandard: true }),
       ]);
       setDetail(campaignPayload);
       setEncounter(encounterPayload.encounter);
@@ -213,6 +218,7 @@ export function EncounterEditPage() {
           sourceType: pending.sourceType,
           playerId: pending.playerId,
           creatureId: pending.creatureId,
+          standardCreatureId: pending.standardCreatureId,
           side: combatant.side,
           displayName: combatant.displayName,
           colorLabel: combatant.colorLabel,
@@ -342,19 +348,7 @@ export function EncounterEditPage() {
             />
           </Field>
         </SectionPanel>
-        <SectionPanel title="Difficulty" icon={Swords}>
-          <div className="grid gap-3 md:grid-cols-4">
-            <DifficultyPill difficulty={difficulty} />
-            <StatPill label="Enemy XP" value={difficulty.enemyXP} />
-            <StatPill label="Adjusted XP" value={difficulty.adjustedXP} />
-            <StatPill label="Multiplier" value={`${difficulty.multiplier}x`} />
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Thresholds for this party: Easy {difficulty.thresholds.easy}, Medium{" "}
-            {difficulty.thresholds.medium}, Hard {difficulty.thresholds.hard}, Deadly{" "}
-            {difficulty.thresholds.deadly}.
-          </p>
-        </SectionPanel>
+        <EncounterDifficultyPanel difficulty={difficulty} />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
           <SectionPanel title="Add Enemies Or Allies" icon={Search}>
             <div className="grid gap-3">
@@ -363,6 +357,12 @@ export function EncounterEditPage() {
                 label="Search creatures"
                 value={search}
                 onChange={setSearch}
+              />
+              <CreatureSourceFilter
+                showStandard={showStandardCreatures}
+                showUser={showUserCreatures}
+                onShowStandardChange={setShowStandardCreatures}
+                onShowUserChange={setShowUserCreatures}
               />
               <div className="grid max-h-[65vh] gap-2 overflow-y-auto pr-1">
                 {filteredCreatures.map((creature) => (
@@ -473,5 +473,27 @@ export function EncounterEditPage() {
         )}
       </Page>
     </div>
+  );
+}
+
+function EncounterDifficultyPanel({
+  difficulty,
+}: {
+  difficulty: ReturnType<typeof calculateEncounterDifficulty>;
+}) {
+  return (
+    <SectionPanel title="Difficulty" icon={Swords}>
+      <div className="grid gap-3 md:grid-cols-4">
+        <DifficultyPill difficulty={difficulty} />
+        <StatPill label="Enemy XP" value={difficulty.enemyXP} />
+        <StatPill label="Adjusted XP" value={difficulty.adjustedXP} />
+        <StatPill label="Multiplier" value={`${difficulty.multiplier}x`} />
+      </div>
+      <p className="mt-3 text-sm text-muted-foreground">
+        Thresholds for this party: Easy {difficulty.thresholds.easy}, Medium{" "}
+        {difficulty.thresholds.medium}, Hard {difficulty.thresholds.hard}, Deadly{" "}
+        {difficulty.thresholds.deadly}.
+      </p>
+    </SectionPanel>
   );
 }

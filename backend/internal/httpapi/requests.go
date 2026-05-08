@@ -76,18 +76,19 @@ type replaceActionsRequest struct {
 }
 
 type addCombatantRequest struct {
-	SourceType       string `json:"sourceType"`
-	PlayerID         string `json:"playerId"`
-	CreatureID       string `json:"creatureId"`
-	Side             string `json:"side"`
-	DisplayName      string `json:"displayName"`
-	ColorLabel       string `json:"colorLabel"`
-	AvatarURL        string `json:"avatarUrl"`
-	ArmorClass       int    `json:"armorClass"`
-	MaxHitPoints     int    `json:"maxHitPoints"`
-	CurrentHitPoints int    `json:"currentHitPoints"`
-	RolledHP         bool   `json:"rolledHp"`
-	Quantity         int    `json:"quantity"`
+	SourceType         string `json:"sourceType"`
+	PlayerID           string `json:"playerId"`
+	CreatureID         string `json:"creatureId"`
+	StandardCreatureID string `json:"standardCreatureId"`
+	Side               string `json:"side"`
+	DisplayName        string `json:"displayName"`
+	ColorLabel         string `json:"colorLabel"`
+	AvatarURL          string `json:"avatarUrl"`
+	ArmorClass         int    `json:"armorClass"`
+	MaxHitPoints       int    `json:"maxHitPoints"`
+	CurrentHitPoints   int    `json:"currentHitPoints"`
+	RolledHP           bool   `json:"rolledHp"`
+	Quantity           int    `json:"quantity"`
 }
 
 type updateCombatantRequest struct {
@@ -189,15 +190,16 @@ type rollCheckRequest struct {
 }
 
 type addRunCombatantRequest struct {
-	CreatureID    string `json:"creatureId"`
-	Side          string `json:"side"`
-	Quantity      int    `json:"quantity"`
-	RolledHP      bool   `json:"rolledHp"`
-	Initiative    int    `json:"initiative"`
-	InitiativeSet bool   `json:"initiativeSet"`
-	DisplayName   string `json:"displayName"`
-	ColorLabel    string `json:"colorLabel"`
-	AvatarURL     string `json:"avatarUrl"`
+	CreatureID         string `json:"creatureId"`
+	StandardCreatureID string `json:"standardCreatureId"`
+	Side               string `json:"side"`
+	Quantity           int    `json:"quantity"`
+	RolledHP           bool   `json:"rolledHp"`
+	Initiative         int    `json:"initiative"`
+	InitiativeSet      bool   `json:"initiativeSet"`
+	DisplayName        string `json:"displayName"`
+	ColorLabel         string `json:"colorLabel"`
+	AvatarURL          string `json:"avatarUrl"`
 }
 
 type deathSaveRequest struct {

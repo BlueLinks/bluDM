@@ -478,5 +478,8 @@ begin
     end if;
 end $$;
 `)
-	return err
+	if err != nil {
+		return err
+	}
+	return seedStandardContent(ctx, pool)
 }

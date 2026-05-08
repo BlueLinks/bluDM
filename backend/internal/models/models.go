@@ -155,6 +155,9 @@ type Creature struct {
 	XP              int            `json:"xp"`
 	ImageAssetID    string         `json:"imageAssetId,omitempty"`
 	AvatarURL       string         `json:"avatarUrl"`
+	LibrarySource   string         `json:"librarySource"`
+	ReadOnly        bool           `json:"readOnly"`
+	SourceLabel     string         `json:"sourceLabel"`
 	StatBlock       map[string]any `json:"statBlock"`
 	CreatedAt       time.Time      `json:"createdAt"`
 	UpdatedAt       time.Time      `json:"updatedAt"`

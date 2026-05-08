@@ -175,7 +175,7 @@ func encounterCombatantDisplayName(ctx context.Context, s *Server, req addCombat
 			return player.CharacterName
 		}
 	}
-	creature, err := s.creatureByID(ctx, strings.TrimSpace(req.CreatureID))
+	creature, _, err := s.creatureFromCombatantRequest(ctx, req)
 	if err != nil {
 		return strings.TrimSpace(req.DisplayName)
 	}
