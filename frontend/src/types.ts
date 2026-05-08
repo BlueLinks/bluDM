@@ -1,13 +1,46 @@
 export type User = {
   id: string;
   email: string;
+  avatarAssetId?: string;
+  avatarUrl: string;
   createdAt: string;
+};
+
+export type AccountIdentity = {
+  provider: string;
+  email: string;
+  emailVerified: boolean;
+  createdAt: string;
+  lastLoginAt: string;
+};
+
+export type AccountInfo = {
+  email: string;
+  avatarAssetId?: string;
+  avatarUrl: string;
+  hasPassword: boolean;
+  identities: AccountIdentity[];
+  stats: {
+    campaigns: number;
+    playerCharacters: number;
+    creatures: number;
+    spells: number;
+    actionTemplates: number;
+    encounters: number;
+  };
 };
 
 export type AuthStatus = {
   setupRequired: boolean;
   authenticated: boolean;
+  localAuthEnabled: boolean;
   user?: User | null;
+};
+
+export type AuthProvider = {
+  id: string;
+  label: string;
+  url: string;
 };
 
 export type Campaign = {

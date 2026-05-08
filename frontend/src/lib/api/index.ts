@@ -2,7 +2,9 @@ import type {
   ActionFormState,
   ActionTemplate,
   ActionTemplateUsage,
+  AccountInfo,
   AuthStatus,
+  AuthProvider,
   Campaign,
   CampaignDetail,
   Creature,
@@ -25,8 +27,15 @@ import { request } from "./request";
 
 export const api = {
   status: () => request<AuthStatus>("/api/auth/status"),
+  authProviders: () =>
+    request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
   setup: (email: string, password: string) =>
     request<{ user: User }>("/api/auth/setup", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+  register: (email: string, password: string) =>
+    request<{ user: User }>("/api/auth/register", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
@@ -38,6 +47,27 @@ export const api = {
   async logout(): Promise<void> {
     await fetch("/api/auth/logout", { method: "POST" });
   },
+  deleteAccount: (password: string, confirm: string) =>
+    request<void>("/api/auth/account", {
+      method: "DELETE",
+      body: JSON.stringify({ password, confirm }),
+    }),
+  account: () => request<AccountInfo>("/api/auth/account"),
+  updateAccountAvatar: (avatarAssetId: string, avatarUrl: string) =>
+    request<AccountInfo>("/api/auth/account/avatar", {
+      method: "PUT",
+      body: JSON.stringify({ avatarAssetId, avatarUrl }),
+    }),
+  setPassword: (currentPassword: string, newPassword: string) =>
+    request<AccountInfo>("/api/auth/password", {
+      method: "PUT",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
+  unlinkIdentity: (provider: string, password: string) =>
+    request<AccountInfo>(`/api/auth/identities/${provider}`, {
+      method: "DELETE",
+      body: JSON.stringify({ password }),
+    }),
   uploadImage(file: Blob, filename = "avatar.png"): Promise<{ assetId: string; url: string }> {
     const formData = new FormData();
     formData.append("image", file, filename);

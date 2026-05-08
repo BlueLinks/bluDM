@@ -51,6 +51,19 @@ type scanner interface {
 	Scan(dest ...any) error
 }
 
+func scanUser(row scanner) (models.User, error) {
+	var user models.User
+	err := row.Scan(
+		&user.ID,
+		&user.Email,
+		&user.PasswordHash,
+		&user.AvatarAssetID,
+		&user.AvatarURL,
+		&user.CreatedAt,
+	)
+	return user, err
+}
+
 func scanCreature(row scanner) (models.Creature, error) {
 	var creature models.Creature
 	var statBlockBytes []byte

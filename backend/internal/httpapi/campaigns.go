@@ -3,16 +3,19 @@ package httpapi
 import (
 	"bludm/backend/internal/models"
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 )
 
 func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	rows, err := s.db.Query(r.Context(), `
 		select id, name, description, created_at, updated_at
 		from campaigns
+		where owner_user_id = $1
 		order by updated_at desc
-	`)
+	`, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list campaigns")
 		return
@@ -37,6 +40,7 @@ func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	var req campaignRequest
 	if !decodeJSON(w, r, &req) {
 		return
@@ -50,10 +54,10 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 
 	var campaign models.Campaign
 	err := s.db.QueryRow(r.Context(), `
-		insert into campaigns (name, description)
-		values ($1, $2)
+		insert into campaigns (owner_user_id, name, description)
+		values ($1, $2, $3)
 		returning id, name, description, created_at, updated_at
-	`, req.Name, req.Description).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
+	`, user.ID, req.Name, req.Description).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create campaign")
 		return
@@ -182,6 +186,10 @@ func (s *Server) linkCampaignCreature(w http.ResponseWriter, r *http.Request) {
 func (s *Server) unlinkCampaignCreature(w http.ResponseWriter, r *http.Request) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
 	creatureID := strings.TrimSpace(r.PathValue("creatureID"))
+	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+		writeError(w, http.StatusNotFound, "campaign NPC link not found")
+		return
+	}
 	tag, err := s.db.Exec(r.Context(), `delete from campaign_creatures where campaign_id = $1 and creature_id = $2`, campaignID, creatureID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not unlink NPC from campaign")
@@ -281,12 +289,16 @@ func (s *Server) undoLongRestCampaign(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) campaignByID(ctx context.Context, campaignID string) (models.Campaign, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.Campaign{}, errors.New("authentication required")
+	}
 	var campaign models.Campaign
 	err := s.db.QueryRow(ctx, `
 		select id, name, description, created_at, updated_at
 		from campaigns
-		where id = $1 and archived_at is null
-	`, campaignID).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
+		where id = $1 and owner_user_id = $2 and archived_at is null
+	`, campaignID, userID).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
 	return campaign, err
 }
 
@@ -322,7 +334,8 @@ func (s *Server) creaturesForCampaign(ctx context.Context, campaignID string) ([
 	rows, err := s.db.Query(ctx, `
 		select creatures.id, creatures.name, creatures.description, creatures.size, creatures.creature_type,
 			creatures.alignment, creatures.armor_class, creatures.hit_points, creatures.hit_dice,
-			creatures.challenge_rating, creatures.xp, creatures.stat_block, creatures.created_at, creatures.updated_at
+			creatures.challenge_rating, creatures.xp, coalesce(creatures.image_asset_id::text, ''),
+			creatures.avatar_url, creatures.stat_block, creatures.created_at, creatures.updated_at
 		from campaign_creatures
 		join creatures on creatures.id = campaign_creatures.creature_id
 		where campaign_creatures.campaign_id = $1
@@ -344,13 +357,17 @@ func (s *Server) creaturesForCampaign(ctx context.Context, campaignID string) ([
 }
 
 func (s *Server) campaignsForCreature(ctx context.Context, creatureID string) ([]models.Campaign, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return nil, errors.New("authentication required")
+	}
 	rows, err := s.db.Query(ctx, `
 		select campaigns.id, campaigns.name, campaigns.description, campaigns.created_at, campaigns.updated_at
 		from campaign_creatures
 		join campaigns on campaigns.id = campaign_creatures.campaign_id
-		where campaign_creatures.creature_id = $1 and campaigns.archived_at is null
+		where campaign_creatures.creature_id = $1 and campaigns.owner_user_id = $2 and campaigns.archived_at is null
 		order by campaigns.name asc
-	`, creatureID)
+	`, creatureID, userID)
 	if err != nil {
 		return nil, err
 	}

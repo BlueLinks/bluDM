@@ -11,14 +11,14 @@ import {
   Sparkles,
   Sun,
   Swords,
-  UserRound,
   UsersRound,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
 import { Button } from "../components/ui";
-import type { User } from "../types";
+import type { AccountInfo, User } from "../types";
+import { AccountMenu } from "./AccountMenu";
 
 const navItems = [
   { to: "/campaigns", label: "Campaigns", icon: Castle },
@@ -70,6 +70,8 @@ export function WorkspaceShell({
   resolvedTheme,
   onThemeChange,
   onLogout,
+  onLoadAccount,
+  onSetPassword,
 }: {
   children: React.ReactNode;
   user?: User;
@@ -77,6 +79,8 @@ export function WorkspaceShell({
   resolvedTheme: "light" | "dark";
   onThemeChange: (theme: "system" | "light" | "dark") => void;
   onLogout: () => Promise<void>;
+  onLoadAccount: () => Promise<AccountInfo>;
+  onSetPassword: (currentPassword: string, newPassword: string) => Promise<AccountInfo>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -176,7 +180,12 @@ export function WorkspaceShell({
                 theme={theme}
                 onThemeChange={onThemeChange}
               />
-              <UserMenu user={user} onLogout={onLogout} />
+              <AccountMenu
+                user={user}
+                onLoadAccount={onLoadAccount}
+                onLogout={onLogout}
+                onSetPassword={onSetPassword}
+              />
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
@@ -294,32 +303,6 @@ function ThemeMenu({
               {option}
             </button>
           ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function UserMenu({ user, onLogout }: { user?: User; onLogout: () => Promise<void> }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        icon={UserRound}
-        onClick={() => setOpen((current) => !current)}
-      >
-        Account
-      </Button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
-          <div className="font-semibold">{user?.email ?? "DM"}</div>
-          <div className="text-xs text-muted-foreground">Single DM workspace</div>
-          <Button className="mt-3 w-full" variant="ghost" onClick={() => void onLogout()}>
-            Log out
-          </Button>
         </div>
       )}
     </div>

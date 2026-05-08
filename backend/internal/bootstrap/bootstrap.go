@@ -12,7 +12,7 @@ import (
 )
 
 func EnsureAdmin(ctx context.Context, pool *pgxpool.Pool, cfg config.Config, logger *slog.Logger) error {
-	if cfg.AdminEmail == "" {
+	if !cfg.LocalAuthEnabled || cfg.AdminEmail == "" {
 		return nil
 	}
 

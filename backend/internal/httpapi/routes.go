@@ -7,9 +7,20 @@ func (s *Server) Routes() http.Handler {
 
 	mux.HandleFunc("GET /api/health", s.health)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
+	mux.HandleFunc("GET /api/auth/providers", s.authProviders)
+	mux.HandleFunc("GET /api/auth/{provider}/start", s.oauthStart)
+	mux.HandleFunc("GET /api/auth/{provider}/callback", s.oauthCallback)
+	mux.HandleFunc("POST /api/auth/{provider}/callback", s.oauthCallback)
 	mux.HandleFunc("POST /api/auth/setup", s.setup)
+	mux.HandleFunc("POST /api/auth/register", s.register)
 	mux.HandleFunc("POST /api/auth/login", s.login)
 	mux.HandleFunc("POST /api/auth/logout", s.logout)
+	mux.Handle("GET /api/auth/account", s.requireAuth(http.HandlerFunc(s.getAccount)))
+	mux.Handle("PUT /api/auth/account/avatar", s.requireAuth(http.HandlerFunc(s.updateAccountAvatar)))
+	mux.Handle("PUT /api/auth/password", s.requireAuth(http.HandlerFunc(s.setPassword)))
+	mux.Handle("GET /api/auth/{provider}/link/start", s.requireAuth(http.HandlerFunc(s.oauthLinkStart)))
+	mux.Handle("DELETE /api/auth/identities/{provider}", s.requireAuth(http.HandlerFunc(s.unlinkOAuthIdentity)))
+	mux.Handle("DELETE /api/auth/account", s.requireAuth(http.HandlerFunc(s.deleteAccount)))
 	mux.Handle("POST /api/assets/images", s.requireAuth(http.HandlerFunc(s.uploadImageAsset)))
 	mux.Handle("GET /api/assets/image-proxy", s.requireAuth(http.HandlerFunc(s.proxyImageURL)))
 	mux.Handle("GET /api/assets/{assetID}", s.requireAuth(http.HandlerFunc(s.getAsset)))
@@ -74,5 +85,5 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /api/encounter-runs/{runID}/end", s.requireAuth(http.HandlerFunc(s.endEncounterRun)))
 	mux.Handle("POST /api/dev/seed-test-data", s.requireAuth(http.HandlerFunc(s.seedTestData)))
 
-	return withJSON(withRecover(s.log, mux))
+	return s.withCSRF(withJSON(withRecover(s.log, mux)))
 }

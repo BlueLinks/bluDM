@@ -264,12 +264,13 @@ func publicIP(ip net.IP) bool {
 }
 
 func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
+	user, _ := s.currentUser(r)
 	assetID := strings.TrimSpace(r.PathValue("assetID"))
 	var contentType string
 	var data []byte
 	if err := s.db.QueryRow(r.Context(), `
-		select content_type, data from uploaded_assets where id = $1
-	`, assetID).Scan(&contentType, &data); err != nil {
+		select content_type, data from uploaded_assets where id = $1 and owner_user_id = $2
+	`, assetID, user.ID).Scan(&contentType, &data); err != nil {
 		writeError(w, http.StatusNotFound, "asset not found")
 		return
 	}
@@ -277,4 +278,25 @@ func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "private, max-age=86400")
 	// nosemgrep: go.lang.security.audit.xss.no-direct-write-to-responsewriter.no-direct-write-to-responsewriter -- This endpoint serves stored image bytes with an image content type, not HTML.
 	_, _ = w.Write(data)
+}
+
+func (s *Server) validateOwnedAsset(ctx context.Context, assetID string) error {
+	assetID = strings.TrimSpace(assetID)
+	if assetID == "" {
+		return nil
+	}
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return errors.New("authentication required")
+	}
+	var exists bool
+	if err := s.db.QueryRow(ctx, `
+		select exists(select 1 from uploaded_assets where id = $1 and owner_user_id = $2)
+	`, assetID, userID).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("asset not found")
+	}
+	return nil
 }

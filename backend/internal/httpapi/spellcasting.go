@@ -75,12 +75,18 @@ func (s *Server) upsertCreatureSpellcasting(w http.ResponseWriter, r *http.Reque
 		if strings.TrimSpace(spell.SpellID) == "" {
 			continue
 		}
-		_, err := tx.Exec(r.Context(), `
+		tag, err := tx.Exec(r.Context(), `
 			insert into creature_spells (creature_id, spell_id, spell_level, prepared, innate, sort_order)
-			values ($1, $2, $3, $4, $5, $6)
-		`, creatureID, strings.TrimSpace(spell.SpellID), spell.SpellLevel, spell.Prepared, spell.Innate, index)
+			select $1, spells.id, $3, $4, $5, $6
+			from spells
+			where spells.id = $2 and spells.owner_user_id = $7
+		`, creatureID, strings.TrimSpace(spell.SpellID), spell.SpellLevel, spell.Prepared, spell.Innate, index, currentUserIDMust(r.Context()))
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not save creature spells")
+			return
+		}
+		if tag.RowsAffected() == 0 {
+			writeError(w, http.StatusNotFound, "spell not found")
 			return
 		}
 	}
