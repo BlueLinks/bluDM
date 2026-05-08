@@ -2,8 +2,11 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"net/http"
+	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -19,11 +22,25 @@ type accountResponse struct {
 	Email       string            `json:"email"`
 	HasPassword bool              `json:"hasPassword"`
 	Identities  []accountIdentity `json:"identities"`
+	Stats       accountStats      `json:"stats"`
+}
+
+type accountStats struct {
+	Campaigns        int `json:"campaigns"`
+	PlayerCharacters int `json:"playerCharacters"`
+	Creatures        int `json:"creatures"`
+	Spells           int `json:"spells"`
+	ActionTemplates  int `json:"actionTemplates"`
+	Encounters       int `json:"encounters"`
 }
 
 type setPasswordRequest struct {
 	CurrentPassword string `json:"currentPassword"`
 	NewPassword     string `json:"newPassword"`
+}
+
+type unlinkIdentityRequest struct {
+	Password string `json:"password"`
 }
 
 func (s *Server) getAccount(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +92,51 @@ func (s *Server) setPassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, account)
 }
 
+func (s *Server) unlinkOAuthIdentity(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	provider := strings.TrimSpace(strings.ToLower(r.PathValue("provider")))
+	if provider != oauthGoogle && provider != oauthDiscord {
+		writeError(w, http.StatusNotFound, "auth provider is not configured")
+		return
+	}
+	var req unlinkIdentityRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if user.PasswordHash != "" && bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+		writeError(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+	account, err := s.accountForUser(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load account")
+		return
+	}
+	if !account.HasPassword && len(account.Identities) <= 1 {
+		writeError(w, http.StatusBadRequest, "set a password before unlinking your last sign-in provider")
+		return
+	}
+	tag, err := s.db.Exec(r.Context(), `delete from auth_identities where user_id = $1 and provider = $2`, user.ID, provider)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not unlink account")
+		return
+	}
+	if tag.RowsAffected() == 0 {
+		writeError(w, http.StatusNotFound, "linked account not found")
+		return
+	}
+	account, err = s.accountForUser(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load account")
+		return
+	}
+	writeJSON(w, http.StatusOK, account)
+}
+
 func (s *Server) accountForUser(ctx context.Context, userID string) (accountResponse, error) {
 	var account accountResponse
 	var passwordHash string
@@ -88,6 +150,24 @@ func (s *Server) accountForUser(ctx context.Context, userID string) (accountResp
 	}
 	account.HasPassword = passwordHash != ""
 	account.Identities = []accountIdentity{}
+	if err := s.db.QueryRow(ctx, `
+		select
+			(select count(*) from campaigns where owner_user_id = $1),
+			(select count(*) from players join campaigns on campaigns.id = players.campaign_id where campaigns.owner_user_id = $1),
+			(select count(*) from creatures where owner_user_id = $1),
+			(select count(*) from spells where owner_user_id = $1),
+			(select count(*) from action_templates where owner_user_id = $1),
+			(select count(*) from encounters join campaigns on campaigns.id = encounters.campaign_id where campaigns.owner_user_id = $1)
+	`, userID).Scan(
+		&account.Stats.Campaigns,
+		&account.Stats.PlayerCharacters,
+		&account.Stats.Creatures,
+		&account.Stats.Spells,
+		&account.Stats.ActionTemplates,
+		&account.Stats.Encounters,
+	); err != nil {
+		return accountResponse{}, err
+	}
 	rows, err := s.db.Query(ctx, `
 		select provider, email, email_verified, created_at::text, last_login_at::text
 		from auth_identities
@@ -106,4 +186,48 @@ func (s *Server) accountForUser(ctx context.Context, userID string) (accountResp
 		account.Identities = append(account.Identities, identity)
 	}
 	return account, rows.Err()
+}
+
+func (s *Server) linkOAuthIdentity(ctx context.Context, userID, provider string, identity oauthIdentity) error {
+	identity.Email = strings.TrimSpace(strings.ToLower(identity.Email))
+	var accountEmail string
+	if err := s.db.QueryRow(ctx, `select email from users where id = $1`, userID).Scan(&accountEmail); err != nil {
+		return err
+	}
+	if !strings.EqualFold(accountEmail, identity.Email) {
+		return errors.New("provider email must match this account before it can be linked")
+	}
+	var linkedUserID string
+	err := s.db.QueryRow(ctx, `
+		select user_id::text
+		from auth_identities
+		where provider = $1 and provider_subject = $2
+	`, provider, identity.Subject).Scan(&linkedUserID)
+	if err == nil && linkedUserID != userID {
+		return errOAuthIdentityAlreadyLinked
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	var existingSubject string
+	err = s.db.QueryRow(ctx, `
+		select provider_subject
+		from auth_identities
+		where user_id = $1 and provider = $2
+	`, userID, provider).Scan(&existingSubject)
+	if err == nil && existingSubject != identity.Subject {
+		return errors.New("this account already has a different identity for that provider")
+	}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return err
+	}
+	_, err = s.db.Exec(ctx, `
+		insert into auth_identities (user_id, provider, provider_subject, email, email_verified, last_login_at)
+		values ($1, $2, $3, $4, $5, now())
+		on conflict (provider, provider_subject) do update
+		set email = excluded.email,
+			email_verified = excluded.email_verified,
+			last_login_at = now()
+	`, userID, provider, identity.Subject, identity.Email, identity.EmailVerified)
+	return err
 }

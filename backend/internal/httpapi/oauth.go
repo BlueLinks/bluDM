@@ -17,6 +17,8 @@ import (
 const (
 	oauthGoogle  = "google"
 	oauthDiscord = "discord"
+	oauthLogin   = "login"
+	oauthLink    = "link"
 )
 
 type authProviderInfo struct {
@@ -42,6 +44,20 @@ func (s *Server) authProviders(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 	providerName := strings.TrimSpace(strings.ToLower(r.PathValue("provider")))
+	s.startOAuthFlow(w, r, providerName, oauthLogin, "", sanitizeReturnTo(r.URL.Query().Get("returnTo")))
+}
+
+func (s *Server) oauthLinkStart(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	providerName := strings.TrimSpace(strings.ToLower(r.PathValue("provider")))
+	s.startOAuthFlow(w, r, providerName, oauthLink, user.ID, "/settings")
+}
+
+func (s *Server) startOAuthFlow(w http.ResponseWriter, r *http.Request, providerName, purpose, userID, returnTo string) {
 	oauthConfig, verifier, err := s.oauthConfig(r.Context(), providerName)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "auth provider is not configured")
@@ -57,16 +73,15 @@ func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
-	returnTo := sanitizeReturnTo(r.URL.Query().Get("returnTo"))
 	if _, err := s.db.Exec(r.Context(), `delete from oauth_states where expires_at < now()`); err != nil {
 		s.log.Error("oauth state cleanup failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
 	if _, err := s.db.Exec(r.Context(), `
-		insert into oauth_states (state_hash, provider, nonce, pkce_verifier, return_to, expires_at)
-		values ($1, $2, $3, $4, $5, now() + interval '10 minutes')
-	`, hashToken(state), providerName, nonce, verifier, returnTo); err != nil {
+		insert into oauth_states (state_hash, provider, nonce, pkce_verifier, purpose, user_id, return_to, expires_at)
+		values ($1, $2, $3, $4, $5, nullif($6, '')::uuid, $7, now() + interval '10 minutes')
+	`, hashToken(state), providerName, nonce, verifier, purpose, userID, returnTo); err != nil {
 		s.log.Error("oauth state insert failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
@@ -101,12 +116,14 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		Nonce    string
 		Verifier string
 		ReturnTo string
+		Purpose  string
+		UserID   string
 	}
 	err := s.db.QueryRow(r.Context(), `
 		delete from oauth_states
 		where state_hash = $1 and expires_at > now()
-		returning provider, nonce, pkce_verifier, return_to
-	`, hashToken(state)).Scan(&saved.Provider, &saved.Nonce, &saved.Verifier, &saved.ReturnTo)
+		returning provider, nonce, pkce_verifier, return_to, purpose, coalesce(user_id::text, '')
+	`, hashToken(state)).Scan(&saved.Provider, &saved.Nonce, &saved.Verifier, &saved.ReturnTo, &saved.Purpose, &saved.UserID)
 	if err != nil || saved.Provider != providerName {
 		s.log.Warn("oauth callback state lookup failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusBadRequest, "sign-in session expired")
@@ -129,8 +146,29 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "could not verify identity")
 		return
 	}
+	if saved.Purpose == oauthLink {
+		user, ok := s.currentUser(r)
+		if !ok || user.ID != saved.UserID {
+			writeError(w, http.StatusUnauthorized, "sign-in session changed during account linking")
+			return
+		}
+		if err := s.linkOAuthIdentity(r.Context(), user.ID, providerName, identity); err != nil {
+			status := http.StatusBadRequest
+			if errors.Is(err, errOAuthIdentityAlreadyLinked) {
+				status = http.StatusConflict
+			}
+			writeError(w, status, err.Error())
+			return
+		}
+		http.Redirect(w, r, saved.ReturnTo, http.StatusFound)
+		return
+	}
 	user, err := s.findOrCreateOAuthUser(r.Context(), providerName, identity.Subject, identity.Email, identity.EmailVerified)
 	if err != nil {
+		if errors.Is(err, errOAuthEmailAlreadyRegistered) {
+			writeError(w, http.StatusConflict, "an account already exists for that email; sign in with your password and link this provider from settings")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not create user")
 		return
 	}

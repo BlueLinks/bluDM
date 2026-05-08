@@ -16,6 +16,14 @@ export type AccountInfo = {
   email: string;
   hasPassword: boolean;
   identities: AccountIdentity[];
+  stats: {
+    campaigns: number;
+    playerCharacters: number;
+    creatures: number;
+    spells: number;
+    actionTemplates: number;
+    encounters: number;
+  };
 };
 
 export type AuthStatus = {

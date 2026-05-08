@@ -39,11 +39,15 @@ create table if not exists oauth_states (
     provider text not null,
     nonce text not null,
     pkce_verifier text not null,
+    purpose text not null default 'login',
+    user_id uuid references users(id) on delete cascade,
     return_to text not null default '/',
     expires_at timestamptz not null,
     created_at timestamptz not null default now()
 );
 
+alter table oauth_states add column if not exists purpose text not null default 'login';
+alter table oauth_states add column if not exists user_id uuid references users(id) on delete cascade;
 create index if not exists oauth_states_expires_at_idx on oauth_states(expires_at);
 
 create table if not exists sessions (

@@ -58,6 +58,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ currentPassword, newPassword }),
     }),
+  unlinkIdentity: (provider: string, password: string) =>
+    request<AccountInfo>(`/api/auth/identities/${provider}`, {
+      method: "DELETE",
+      body: JSON.stringify({ password }),
+    }),
   uploadImage(file: Blob, filename = "avatar.png"): Promise<{ assetId: string; url: string }> {
     const formData = new FormData();
     formData.append("image", file, filename);

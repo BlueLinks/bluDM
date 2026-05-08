@@ -12,8 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
+)
+
+var (
+	errOAuthEmailAlreadyRegistered = errors.New("email is already registered")
+	errOAuthIdentityAlreadyLinked  = errors.New("that sign-in account is already linked to another user")
 )
 
 func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
@@ -255,6 +261,14 @@ func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, e
 		`, provider, subject, email, emailVerified)
 		return user, nil
 	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return models.User{}, err
+	}
+	if existing, err := s.userByEmail(ctx, email); err == nil && existing.ID != "" {
+		return models.User{}, errOAuthEmailAlreadyRegistered
+	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return models.User{}, err
+	}
 
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -264,22 +278,22 @@ func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, e
 	err = tx.QueryRow(ctx, `
 		insert into users (email, password_hash)
 		values ($1, null)
-		on conflict (email) do update set email = excluded.email
 		returning id, email, coalesce(password_hash, ''), created_at
 	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return models.User{}, errOAuthEmailAlreadyRegistered
+		}
 		return models.User{}, err
 	}
 	_, err = tx.Exec(ctx, `
 		insert into auth_identities (user_id, provider, provider_subject, email, email_verified, last_login_at)
 		values ($1, $2, $3, $4, $5, now())
-		on conflict (provider, provider_subject) do update
-		set user_id = excluded.user_id,
-			email = excluded.email,
-			email_verified = excluded.email_verified,
-			last_login_at = now()
 	`, user.ID, provider, subject, email, emailVerified)
 	if err != nil {
+		if isUniqueViolation(err) {
+			return models.User{}, errOAuthIdentityAlreadyLinked
+		}
 		return models.User{}, err
 	}
 	if err := tx.Commit(ctx); err != nil {

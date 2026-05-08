@@ -1,5 +1,6 @@
 import { KeyRound, Trash2, UserRound } from "lucide-react";
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 
@@ -83,6 +84,13 @@ export function AccountMenu({
           <Button className="mt-2 w-full" variant="ghost" onClick={() => void onLogout()}>
             Log out
           </Button>
+          <Link
+            className="mt-2 block rounded-md px-3 py-2 text-center text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            to="/settings"
+            onClick={() => setOpen(false)}
+          >
+            User settings
+          </Link>
           <Button
             className="mt-2 w-full"
             icon={Trash2}

@@ -11,6 +11,9 @@ const ImportPage = lazy(() =>
 const PrivacyPage = lazy(() =>
   import("../pages/PrivacyPage").then((module) => ({ default: module.PrivacyPage })),
 );
+const SettingsPage = lazy(() =>
+  import("../pages/SettingsPage").then((module) => ({ default: module.SettingsPage })),
+);
 const CampaignsPage = lazy(() =>
   import("../features/campaigns/pages").then((module) => ({ default: module.CampaignsPage })),
 );
@@ -97,6 +100,7 @@ export function AppRoutes() {
           }
         />
         <Route path="/import" element={<ImportPage seedTestData={api.seedTestData} />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate replace to="/campaigns" />} />
       </Routes>

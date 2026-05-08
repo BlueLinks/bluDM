@@ -17,6 +17,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/logout", s.logout)
 	mux.Handle("GET /api/auth/account", s.requireAuth(http.HandlerFunc(s.getAccount)))
 	mux.Handle("PUT /api/auth/password", s.requireAuth(http.HandlerFunc(s.setPassword)))
+	mux.Handle("GET /api/auth/{provider}/link/start", s.requireAuth(http.HandlerFunc(s.oauthLinkStart)))
+	mux.Handle("DELETE /api/auth/identities/{provider}", s.requireAuth(http.HandlerFunc(s.unlinkOAuthIdentity)))
 	mux.Handle("DELETE /api/auth/account", s.requireAuth(http.HandlerFunc(s.deleteAccount)))
 	mux.Handle("POST /api/assets/images", s.requireAuth(http.HandlerFunc(s.uploadImageAsset)))
 	mux.Handle("GET /api/assets/image-proxy", s.requireAuth(http.HandlerFunc(s.proxyImageURL)))
