@@ -98,7 +98,7 @@ export function WorkspaceShell({
   }, [sidebarCollapsed]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <div className="flex min-h-screen">
         <aside
           className={[

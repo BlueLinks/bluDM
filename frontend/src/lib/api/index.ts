@@ -462,11 +462,17 @@ export const api = {
     return request<{ spells: Spell[] }>(`/api/library/spells${query ? `?${query}` : ""}`);
   },
   standardSources: () => request<{ sources: StandardSource[] }>("/api/library/sources"),
-  standardLibraryEntries: (options?: { category?: string; source?: string[]; q?: string }) => {
+  standardLibraryEntries: (options?: {
+    category?: string;
+    source?: string[];
+    q?: string;
+    compact?: boolean;
+  }) => {
     const params = new URLSearchParams();
     if (options?.category) params.set("category", options.category);
     if (options?.source?.length) params.set("source", options.source.join(","));
     if (options?.q) params.set("q", options.q);
+    if (options?.compact) params.set("compact", "true");
     const query = params.toString();
     return request<{ entries: StandardLibraryEntry[] }>(
       `/api/library/entries${query ? `?${query}` : ""}`,

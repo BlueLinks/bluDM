@@ -27,15 +27,37 @@ export function PlayerBasicsSection({
     : ["srd-2014"];
 
   useEffect(() => {
-    if (!form.campaignId) return;
+    let cancelled = false;
+
+    async function loadEntries(sourceKeys: string[]) {
+      const payloads = await Promise.all(
+        pickerCategories.map((category) =>
+          api.standardLibraryEntries({ category, source: sourceKeys, compact: true }),
+        ),
+      );
+      return payloads.flatMap((payload) => payload.entries);
+    }
+
     setLoadingEntries(true);
-    void Promise.all(
-      pickerCategories.map((category) => api.standardLibraryEntries({ category, source: sources })),
-    )
-      .then((payloads) => setEntries(payloads.flatMap((payload) => payload.entries)))
-      .catch(() => setEntries([]))
-      .finally(() => setLoadingEntries(false));
-  }, [form.campaignId, sources.join(",")]);
+    void loadEntries(sources)
+      .then(async (loadedEntries) => {
+        const shouldFallbackTo2014 = loadedEntries.length === 0 && !sources.includes("srd-2014");
+        return shouldFallbackTo2014 ? loadEntries(["srd-2014"]) : loadedEntries;
+      })
+      .then((loadedEntries) => {
+        if (!cancelled) setEntries(loadedEntries);
+      })
+      .catch(() => {
+        if (!cancelled) setEntries([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingEntries(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sources.join(",")]);
 
   const optionsByCategory = useMemo(
     () => ({
@@ -89,7 +111,7 @@ export function PlayerBasicsSection({
           onValueChange={(value) => setForm({ ...form, campaignId: value })}
         />
       </Field>
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
         <LibraryTextPicker
           label="Class"
           value={form.className}
@@ -97,7 +119,7 @@ export function PlayerBasicsSection({
           loading={loadingEntries}
           onChange={(className) => setForm({ ...form, className })}
         />
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid min-w-0 grid-cols-2 gap-3">
           <Field className="min-w-0" label="Level">
             <Input
               type="number"
@@ -117,7 +139,7 @@ export function PlayerBasicsSection({
           </Field>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2">
         <LibraryTextPicker
           label="Species"
           value={form.species}
@@ -151,7 +173,7 @@ export function PlayerBasicsSection({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <LibraryTextPicker
               label="Add feat"
               value={featInput}
@@ -189,7 +211,7 @@ function LibraryTextPicker({
 
   return (
     <Field className="min-w-0" label={label}>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
         {useCustomInput ? (
           <Input
             className="min-w-0"

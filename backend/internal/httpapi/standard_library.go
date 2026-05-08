@@ -48,11 +48,15 @@ func (s *Server) listStandardLibraryEntries(w http.ResponseWriter, r *http.Reque
 	category := strings.TrimSpace(r.URL.Query().Get("category"))
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	sources := querySources(r)
+	dataExpression := "standard_library_entries.data"
+	if strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("compact")), "true") {
+		dataExpression = "'{}'::jsonb"
+	}
 
-	rows, err := s.db.Query(r.Context(), `
+	query := strings.Replace(`
 		select standard_library_entries.id, standard_library_entries.source_key, standard_sources.label,
 			standard_library_entries.category, standard_library_entries.slug, standard_library_entries.name,
-			standard_library_entries.summary, standard_library_entries.description, standard_library_entries.data,
+			standard_library_entries.summary, standard_library_entries.description, {{DATA}},
 			standard_library_entries.created_at, standard_library_entries.updated_at
 		from standard_library_entries
 		join standard_sources on standard_sources.source_key = standard_library_entries.source_key
@@ -62,7 +66,9 @@ func (s *Server) listStandardLibraryEntries(w http.ResponseWriter, r *http.Reque
 				or standard_library_entries.summary ilike '%' || $3 || '%')
 		order by standard_library_entries.category asc, standard_library_entries.name asc
 		limit 1000
-	`, category, sources, q)
+	`, "{{DATA}}", dataExpression, 1)
+
+	rows, err := s.db.Query(r.Context(), query, category, sources, q)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list standard library entries")
 		return
