@@ -49,7 +49,7 @@ func (s *Server) listCreatures(w http.ResponseWriter, r *http.Request) {
 			from standard_creatures
 			where $1 = '' or name ilike '%' || $1 || '%' or creature_type ilike '%' || $1 || '%'
 			order by name asc
-			limit 200
+			limit 500
 		`, q)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list standard creatures")

@@ -192,6 +192,15 @@ function CreaturePreviewSheet({ creature }: { creature: Creature }) {
           value={recordFromStatBlock(creature, "spellcasting")}
         />
       </div>
+      <PreviewFeatureBlock
+        title="Special Abilities"
+        value={arrayFromStatBlock(creature, "specialAbilities")}
+      />
+      <PreviewFeatureBlock title="Actions" value={arrayFromStatBlock(creature, "actions")} />
+      <PreviewFeatureBlock
+        title="Legendary Actions"
+        value={arrayFromStatBlock(creature, "legendaryActions")}
+      />
     </div>
   );
 }
@@ -214,6 +223,43 @@ function PreviewJsonBlock({ title, value }: { title: string; value: Record<strin
         </dl>
       )}
     </div>
+  );
+}
+
+function PreviewFeatureBlock({ title, value }: { title: string; value: unknown[] }) {
+  return (
+    <div className="rounded-md border border-border bg-background p-3">
+      <h4 className="font-semibold">{title}</h4>
+      {value.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">None listed.</p>
+      ) : (
+        <div className="mt-3 grid gap-3">
+          {value.map((item, index) => (
+            <PreviewFeatureItem item={item} key={featureKey(item, index)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PreviewFeatureItem({ item }: { item: unknown }) {
+  const feature = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
+  const damage = Array.isArray(feature.damage) ? feature.damage : [];
+  const name = stringFromFeature(feature.name, "Feature");
+  const description = stringFromFeature(feature.description);
+  return (
+    <article className="rounded-md border border-border bg-muted/20 p-3">
+      <div className="font-semibold">{name}</div>
+      {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
+      {damage.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {damage.map((part, index) => (
+            <Badge key={featureKey(part, index)}>{formatPreviewValue(part)}</Badge>
+          ))}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -241,6 +287,11 @@ function recordFromStatBlock(creature: Creature, key: string): Record<string, un
     : {};
 }
 
+function arrayFromStatBlock(creature: Creature, key: string): unknown[] {
+  const value = creature.statBlock[key];
+  return Array.isArray(value) ? value : [];
+}
+
 function numberFromRecord(record: Record<string, unknown>, key: string) {
   const value = record[key];
   return typeof value === "number" ? value : 10;
@@ -255,4 +306,15 @@ function formatPreviewValue(value: unknown): string {
   if (Array.isArray(value)) return value.join(", ");
   if (typeof value === "object" && value) return Object.values(value).flat().join(", ");
   return String(value);
+}
+
+function stringFromFeature(value: unknown, fallback = ""): string {
+  return typeof value === "string" && value ? value : fallback;
+}
+
+function featureKey(value: unknown, index: number): string {
+  if (value && typeof value === "object" && "name" in value) {
+    return `${String((value as { name?: unknown }).name)}-${index}`;
+  }
+  return String(index);
 }
