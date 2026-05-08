@@ -1,14 +1,16 @@
-import { KeyRound, Link2, ShieldCheck, UserRound } from "lucide-react";
+import { Image, KeyRound, Link2, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AvatarImagePicker, avatarImageSrc } from "../components/AvatarImagePicker";
 import { Button, DashboardCard, Page, PageHeader, SectionPanel } from "../components/ui";
 import { api } from "../lib/api";
 import type { AccountInfo, AuthProvider } from "../types";
-import { PasswordSettings, UnlinkProvider } from "./settingsComponents";
+import { DeleteAccountSettings, PasswordSettings, UnlinkProvider } from "./settingsComponents";
 
 export function SettingsPage() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [providers, setProviders] = useState<AuthProvider[]>([]);
   const [error, setError] = useState(accountErrorFromURL());
+  const [avatarMessage, setAvatarMessage] = useState("");
 
   async function load() {
     setError(accountErrorFromURL());
@@ -28,6 +30,19 @@ export function SettingsPage() {
     void load();
   }, []);
 
+  async function saveAvatar(next: { assetId: string; url: string }) {
+    setError("");
+    setAvatarMessage("");
+    try {
+      setAccount(await api.updateAccountAvatar(next.assetId, next.url));
+      setAvatarMessage(
+        next.assetId || next.url ? "Account avatar saved" : "Account avatar cleared",
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update account avatar");
+    }
+  }
+
   return (
     <Page>
       <PageHeader
@@ -40,6 +55,42 @@ export function SettingsPage() {
       )}
       {account && (
         <>
+          <SectionPanel title="Profile" icon={Image}>
+            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-full border border-border bg-muted text-xl font-bold uppercase text-muted-foreground">
+                  {avatarImageSrc(account.avatarAssetId, account.avatarUrl) ? (
+                    <img
+                      alt=""
+                      className="h-full w-full object-cover"
+                      src={avatarImageSrc(account.avatarAssetId, account.avatarUrl)}
+                    />
+                  ) : (
+                    account.email.slice(0, 2)
+                  )}
+                </div>
+                <div>
+                  <div className="font-semibold">{account.email}</div>
+                  <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">
+                    This avatar is used for your account menu. Uploaded images are stored as private
+                    account assets and are deleted with the account.
+                  </p>
+                  {avatarMessage && (
+                    <p className="mt-2 text-sm font-semibold text-accent">{avatarMessage}</p>
+                  )}
+                </div>
+              </div>
+              <AvatarImagePicker
+                assetId={account.avatarAssetId ?? ""}
+                label="Account avatar"
+                name="account-avatar"
+                uploadImage={(file, filename) => api.uploadImage(file, filename)}
+                url={account.avatarUrl}
+                onChange={(next) => void saveAvatar(next)}
+              />
+            </div>
+          </SectionPanel>
+
           <div className="grid gap-4 md:grid-cols-3">
             <DashboardCard
               icon={UserRound}
@@ -110,6 +161,10 @@ export function SettingsPage() {
                 })}
               </div>
             </div>
+          </SectionPanel>
+
+          <SectionPanel title="Danger zone" icon={Trash2}>
+            <DeleteAccountSettings account={account} />
           </SectionPanel>
         </>
       )}

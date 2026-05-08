@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	neturl "net/url"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -19,10 +20,12 @@ type accountIdentity struct {
 }
 
 type accountResponse struct {
-	Email       string            `json:"email"`
-	HasPassword bool              `json:"hasPassword"`
-	Identities  []accountIdentity `json:"identities"`
-	Stats       accountStats      `json:"stats"`
+	Email         string            `json:"email"`
+	AvatarAssetID string            `json:"avatarAssetId,omitempty"`
+	AvatarURL     string            `json:"avatarUrl"`
+	HasPassword   bool              `json:"hasPassword"`
+	Identities    []accountIdentity `json:"identities"`
+	Stats         accountStats      `json:"stats"`
 }
 
 type accountStats struct {
@@ -41,6 +44,11 @@ type setPasswordRequest struct {
 
 type unlinkIdentityRequest struct {
 	Password string `json:"password"`
+}
+
+type updateAccountAvatarRequest struct {
+	AvatarAssetID string `json:"avatarAssetId"`
+	AvatarURL     string `json:"avatarUrl"`
 }
 
 func (s *Server) getAccount(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +100,52 @@ func (s *Server) setPassword(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, account)
 }
 
+func (s *Server) updateAccountAvatar(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	var req updateAccountAvatarRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.AvatarAssetID = strings.TrimSpace(req.AvatarAssetID)
+	req.AvatarURL = strings.TrimSpace(req.AvatarURL)
+	if req.AvatarAssetID != "" && req.AvatarURL != "" {
+		writeError(w, http.StatusBadRequest, "choose an uploaded avatar or an avatar URL, not both")
+		return
+	}
+	if req.AvatarURL != "" && !validExternalAvatarURL(req.AvatarURL) {
+		writeError(w, http.StatusBadRequest, "avatar URL must start with http:// or https://")
+		return
+	}
+	if err := s.validateOwnedAsset(r.Context(), req.AvatarAssetID); err != nil {
+		writeError(w, http.StatusNotFound, "avatar image not found")
+		return
+	}
+	if _, err := s.db.Exec(r.Context(), `
+		update users
+		set avatar_asset_id = nullif($2, '')::uuid,
+			avatar_url = $3
+		where id = $1
+	`, user.ID, req.AvatarAssetID, req.AvatarURL); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not update avatar")
+		return
+	}
+	account, err := s.accountForUser(r.Context(), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load account")
+		return
+	}
+	writeJSON(w, http.StatusOK, account)
+}
+
+func validExternalAvatarURL(rawURL string) bool {
+	parsed, err := neturl.ParseRequestURI(rawURL)
+	return err == nil && (parsed.Scheme == "http" || parsed.Scheme == "https") && parsed.Host != ""
+}
+
 func (s *Server) unlinkOAuthIdentity(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentUserFromContext(r.Context())
 	if !ok {
@@ -141,10 +195,10 @@ func (s *Server) accountForUser(ctx context.Context, userID string) (accountResp
 	var account accountResponse
 	var passwordHash string
 	err := s.db.QueryRow(ctx, `
-		select email, coalesce(password_hash, '')
+		select email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url
 		from users
 		where id = $1
-	`, userID).Scan(&account.Email, &passwordHash)
+	`, userID).Scan(&account.Email, &passwordHash, &account.AvatarAssetID, &account.AvatarURL)
 	if err != nil {
 		return accountResponse{}, err
 	}

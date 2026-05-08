@@ -14,10 +14,14 @@ create table if not exists users (
     id uuid primary key default gen_random_uuid(),
     email text not null unique,
     password_hash text,
+    avatar_asset_id uuid,
+    avatar_url text not null default '',
     created_at timestamptz not null default now()
 );
 
 alter table users alter column password_hash drop not null;
+alter table users add column if not exists avatar_asset_id uuid;
+alter table users add column if not exists avatar_url text not null default '';
 
 create table if not exists auth_identities (
     id uuid primary key default gen_random_uuid(),

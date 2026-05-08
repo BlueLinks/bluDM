@@ -1,5 +1,5 @@
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { Button } from "../components/ui";
 import { api } from "../lib/api";
 import type { AccountInfo } from "../types";
@@ -18,7 +18,7 @@ export function PasswordSettings({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function submit(event: React.FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     setError("");
     setMessage("");
@@ -78,6 +78,66 @@ export function PasswordSettings({
           type="submit"
         >
           {busy ? "Saving..." : "Save password"}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+export function DeleteAccountSettings({ account }: { account: AccountInfo }) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      await api.deleteAccount(password, confirm);
+      window.location.href = "/";
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form
+      className="grid gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-4"
+      onSubmit={(event) => void submit(event)}
+    >
+      <div>
+        <h3 className="font-semibold text-destructive">Delete account</h3>
+        <p className="text-sm leading-6 text-muted-foreground">
+          This permanently deletes your account and every campaign, character, creature, spell,
+          action, encounter, combat log, and uploaded image owned by it. Type{" "}
+          <span className="font-semibold text-foreground">DELETE</span> to confirm.
+        </p>
+      </div>
+      {account.hasPassword ? (
+        <PasswordInput label="Current password" value={password} onChange={setPassword} />
+      ) : (
+        <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          This account currently signs in with OAuth only, so no password is required for deletion
+          while you are signed in.
+        </p>
+      )}
+      <label className="grid gap-2 text-sm font-medium">
+        Confirmation
+        <input
+          className="rounded-md border border-border bg-background px-3 py-2"
+          placeholder="DELETE"
+          value={confirm}
+          onChange={(event) => setConfirm(event.target.value)}
+        />
+      </label>
+      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+      <div>
+        <Button disabled={busy || confirm !== "DELETE"} type="submit" variant="danger">
+          {busy ? "Deleting..." : "Delete account"}
         </Button>
       </div>
     </form>

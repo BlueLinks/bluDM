@@ -235,24 +235,21 @@ func (s *Server) hasUser(ctx context.Context) (bool, error) {
 }
 
 func (s *Server) createUser(ctx context.Context, email, passwordHash string) (models.User, error) {
-	var user models.User
-	err := s.db.QueryRow(ctx, `
+	return scanUser(s.db.QueryRow(ctx, `
 		insert into users (email, password_hash)
 		values ($1, $2)
-		returning id, email, password_hash, created_at
-	`, email, passwordHash).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
-	return user, err
+		returning id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
+	`, email, passwordHash))
 }
 
 func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, email string, emailVerified bool) (models.User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
-	var user models.User
-	err := s.db.QueryRow(ctx, `
-		select users.id, users.email, coalesce(users.password_hash, ''), users.created_at
+	user, err := scanUser(s.db.QueryRow(ctx, `
+		select users.id, users.email, coalesce(users.password_hash, ''), coalesce(users.avatar_asset_id::text, ''), users.avatar_url, users.created_at
 		from auth_identities
 		join users on users.id = auth_identities.user_id
 		where auth_identities.provider = $1 and auth_identities.provider_subject = $2
-	`, provider, subject).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	`, provider, subject))
 	if err == nil {
 		_, _ = s.db.Exec(ctx, `
 			update auth_identities
@@ -275,11 +272,11 @@ func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, e
 		return models.User{}, err
 	}
 	defer tx.Rollback(ctx)
-	err = tx.QueryRow(ctx, `
+	user, err = scanUser(tx.QueryRow(ctx, `
 		insert into users (email, password_hash)
 		values ($1, null)
-		returning id, email, coalesce(password_hash, ''), created_at
-	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
+		returning id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
+	`, email))
 	if err != nil {
 		if isUniqueViolation(err) {
 			return models.User{}, errOAuthEmailAlreadyRegistered
@@ -303,25 +300,21 @@ func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, e
 }
 
 func (s *Server) userByEmail(ctx context.Context, email string) (models.User, error) {
-	var user models.User
-	err := s.db.QueryRow(ctx, `
-		select id, email, coalesce(password_hash, ''), created_at
+	return scanUser(s.db.QueryRow(ctx, `
+		select id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
 		from users
 		where email = $1
-	`, email).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
-	return user, err
+	`, email))
 }
 
 func (s *Server) userBySessionToken(ctx context.Context, token string) (models.User, error) {
 	tokenHash := hashToken(token)
-	var user models.User
-	err := s.db.QueryRow(ctx, `
-		select users.id, users.email, coalesce(users.password_hash, ''), users.created_at
+	return scanUser(s.db.QueryRow(ctx, `
+		select users.id, users.email, coalesce(users.password_hash, ''), coalesce(users.avatar_asset_id::text, ''), users.avatar_url, users.created_at
 		from sessions
 		join users on users.id = sessions.user_id
 		where sessions.token_hash = $1 and sessions.expires_at > now()
-	`, tokenHash).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.CreatedAt)
-	return user, err
+	`, tokenHash))
 }
 
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID string) error {

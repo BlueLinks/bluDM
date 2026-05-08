@@ -1,6 +1,8 @@
 export type User = {
   id: string;
   email: string;
+  avatarAssetId?: string;
+  avatarUrl: string;
   createdAt: string;
 };
 
@@ -14,6 +16,8 @@ export type AccountIdentity = {
 
 export type AccountInfo = {
   email: string;
+  avatarAssetId?: string;
+  avatarUrl: string;
   hasPassword: boolean;
   identities: AccountIdentity[];
   stats: {

@@ -96,10 +96,6 @@ function App() {
         }}
         onLoadAccount={api.account}
         onSetPassword={api.setPassword}
-        onDeleteAccount={async (password, confirm) => {
-          await api.deleteAccount(password, confirm);
-          await refreshAuth();
-        }}
       >
         <AppRoutes />
       </WorkspaceShell>

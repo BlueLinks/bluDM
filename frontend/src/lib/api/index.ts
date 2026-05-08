@@ -53,6 +53,11 @@ export const api = {
       body: JSON.stringify({ password, confirm }),
     }),
   account: () => request<AccountInfo>("/api/auth/account"),
+  updateAccountAvatar: (avatarAssetId: string, avatarUrl: string) =>
+    request<AccountInfo>("/api/auth/account/avatar", {
+      method: "PUT",
+      body: JSON.stringify({ avatarAssetId, avatarUrl }),
+    }),
   setPassword: (currentPassword: string, newPassword: string) =>
     request<AccountInfo>("/api/auth/password", {
       method: "PUT",

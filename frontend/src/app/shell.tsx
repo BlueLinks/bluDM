@@ -72,7 +72,6 @@ export function WorkspaceShell({
   onLogout,
   onLoadAccount,
   onSetPassword,
-  onDeleteAccount,
 }: {
   children: React.ReactNode;
   user?: User;
@@ -82,7 +81,6 @@ export function WorkspaceShell({
   onLogout: () => Promise<void>;
   onLoadAccount: () => Promise<AccountInfo>;
   onSetPassword: (currentPassword: string, newPassword: string) => Promise<AccountInfo>;
-  onDeleteAccount: (password: string, confirm: string) => Promise<void>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -184,7 +182,6 @@ export function WorkspaceShell({
               />
               <AccountMenu
                 user={user}
-                onDeleteAccount={onDeleteAccount}
                 onLoadAccount={onLoadAccount}
                 onLogout={onLogout}
                 onSetPassword={onSetPassword}

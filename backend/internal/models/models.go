@@ -3,10 +3,12 @@ package models
 import "time"
 
 type User struct {
-	ID           string    `json:"id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	CreatedAt    time.Time `json:"createdAt"`
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	PasswordHash  string    `json:"-"`
+	AvatarAssetID string    `json:"avatarAssetId,omitempty"`
+	AvatarURL     string    `json:"avatarUrl"`
+	CreatedAt     time.Time `json:"createdAt"`
 }
 
 type Session struct {
