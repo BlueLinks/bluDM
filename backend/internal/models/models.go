@@ -258,6 +258,9 @@ type Spell struct {
 	Description   string         `json:"description"`
 	HigherLevel   string         `json:"higherLevel"`
 	SourceNote    string         `json:"sourceNote"`
+	LibrarySource string         `json:"librarySource"`
+	ReadOnly      bool           `json:"readOnly"`
+	SourceLabel   string         `json:"sourceLabel"`
 	Mechanics     map[string]any `json:"mechanics"`
 	CreatedAt     time.Time      `json:"createdAt"`
 	UpdatedAt     time.Time      `json:"updatedAt"`

@@ -423,7 +423,22 @@ export const api = {
       body: JSON.stringify(actionPayload(payload)),
     }),
 
-  spells: () => request<{ spells: Spell[] }>("/api/library/spells"),
+  spells: (options?: {
+    includeStandard?: boolean;
+    includeUser?: boolean;
+    q?: string;
+    level?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (options?.includeStandard !== undefined) {
+      params.set("includeStandard", String(options.includeStandard));
+    }
+    if (options?.includeUser !== undefined) params.set("includeUser", String(options.includeUser));
+    if (options?.q) params.set("q", options.q);
+    if (options?.level !== undefined) params.set("level", String(options.level));
+    const query = params.toString();
+    return request<{ spells: Spell[] }>(`/api/library/spells${query ? `?${query}` : ""}`);
+  },
   createSpell: (payload: SpellFormState) =>
     request<{ spell: Spell }>("/api/library/spells", {
       method: "POST",

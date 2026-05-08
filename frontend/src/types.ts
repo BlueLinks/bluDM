@@ -287,6 +287,9 @@ export type Spell = {
   description: string;
   higherLevel: string;
   sourceNote: string;
+  librarySource: "user" | "standard";
+  readOnly: boolean;
+  sourceLabel: string;
   mechanics: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
