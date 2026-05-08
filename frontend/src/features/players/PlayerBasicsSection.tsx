@@ -19,15 +19,22 @@ export function PlayerBasicsSection({
   setForm: PlayerFormSetter;
 }) {
   const [entries, setEntries] = useState<StandardLibraryEntry[]>([]);
+  const [loadingEntries, setLoadingEntries] = useState(false);
   const [featInput, setFeatInput] = useState("");
   const selectedCampaign = campaigns.find((campaign) => campaign.id === form.campaignId);
-  const sources = selectedCampaign?.allowedStandardSources ?? ["srd-2014"];
+  const sources = selectedCampaign?.allowedStandardSources?.length
+    ? selectedCampaign.allowedStandardSources
+    : ["srd-2014"];
 
   useEffect(() => {
     if (!form.campaignId) return;
+    setLoadingEntries(true);
     void Promise.all(
       pickerCategories.map((category) => api.standardLibraryEntries({ category, source: sources })),
-    ).then((payloads) => setEntries(payloads.flatMap((payload) => payload.entries)));
+    )
+      .then((payloads) => setEntries(payloads.flatMap((payload) => payload.entries)))
+      .catch(() => setEntries([]))
+      .finally(() => setLoadingEntries(false));
   }, [form.campaignId, sources.join(",")]);
 
   const optionsByCategory = useMemo(
@@ -82,42 +89,47 @@ export function PlayerBasicsSection({
           onValueChange={(value) => setForm({ ...form, campaignId: value })}
         />
       </Field>
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_120px_140px]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
         <LibraryTextPicker
           label="Class"
           value={form.className}
           options={optionsByCategory.classes}
+          loading={loadingEntries}
           onChange={(className) => setForm({ ...form, className })}
         />
-        <Field label="Level">
-          <Input
-            type="number"
-            min={1}
-            max={20}
-            value={form.level}
-            onChange={(event) => setForm({ ...form, level: event.target.value })}
-          />
-        </Field>
-        <Field label="XP">
-          <Input
-            type="number"
-            min={0}
-            value={form.experiencePoints}
-            onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
-          />
-        </Field>
+        <div className="grid grid-cols-2 gap-3">
+          <Field className="min-w-0" label="Level">
+            <Input
+              type="number"
+              min={1}
+              max={20}
+              value={form.level}
+              onChange={(event) => setForm({ ...form, level: event.target.value })}
+            />
+          </Field>
+          <Field className="min-w-0" label="XP">
+            <Input
+              type="number"
+              min={0}
+              value={form.experiencePoints}
+              onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
+            />
+          </Field>
+        </div>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <LibraryTextPicker
           label="Species"
           value={form.species}
           options={optionsByCategory.species}
+          loading={loadingEntries}
           onChange={(species) => setForm({ ...form, species })}
         />
         <LibraryTextPicker
           label="Background / Origin"
           value={form.background}
           options={optionsByCategory.backgrounds}
+          loading={loadingEntries}
           onChange={(background) => setForm({ ...form, background })}
         />
       </div>
@@ -144,6 +156,7 @@ export function PlayerBasicsSection({
               label="Add feat"
               value={featInput}
               options={optionsByCategory.feats}
+              loading={loadingEntries}
               onChange={setFeatInput}
             />
             <Button type="button" icon={Plus} variant="success" onClick={addFeat}>
@@ -160,11 +173,13 @@ function LibraryTextPicker({
   label,
   value,
   options,
+  loading = false,
   onChange,
 }: {
   label: string;
   value: string;
   options: string[];
+  loading?: boolean;
   onChange: (value: string) => void;
 }) {
   const [customMode, setCustomMode] = useState(false);
@@ -185,7 +200,7 @@ function LibraryTextPicker({
         ) : (
           <Select
             options={normalizedOptions}
-            placeholder={options.length > 0 ? `Choose ${label}` : "Loading SRD choices..."}
+            placeholder={pickerPlaceholder(label, options.length, loading)}
             value={options.includes(value) ? value : ""}
             onValueChange={onChange}
           />
@@ -214,6 +229,12 @@ function LibraryTextPicker({
       )}
     </Field>
   );
+}
+
+function pickerPlaceholder(label: string, optionCount: number, loading: boolean) {
+  if (optionCount > 0) return `Choose ${label}`;
+  if (loading) return "Loading SRD choices...";
+  return `No SRD ${label.toLowerCase()} found`;
 }
 
 function entryNames(entries: StandardLibraryEntry[], category: string) {
