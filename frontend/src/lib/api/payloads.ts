@@ -1,5 +1,6 @@
 import type { ActionFormState, CreatureFormState, PlayerFormState } from "../../types";
 import { abilities } from "../domain/options";
+import { effectiveCharacterLevel } from "../domain/progression";
 
 export function parseJSONField(value: string): Record<string, unknown> {
   const trimmed = value.trim();
@@ -38,6 +39,10 @@ export function actionPayload(action: ActionFormState) {
 }
 
 export function playerPayload(payload: PlayerFormState) {
+  const trimmedLevelOverride = payload.level.trim();
+  const levelOverride = trimmedLevelOverride === "" ? null : Number(trimmedLevelOverride);
+  const level = effectiveCharacterLevel(payload.level, payload.experiencePoints);
+
   return {
     campaignId: payload.campaignId,
     characterName: payload.characterName,
@@ -51,7 +56,8 @@ export function playerPayload(payload: PlayerFormState) {
     experiencePoints: Number(payload.experiencePoints) || 0,
     characterSheet: {
       className: payload.className,
-      level: Number(payload.level),
+      level,
+      levelOverride,
       species: payload.species,
       background: payload.background,
       feats: payload.feats,

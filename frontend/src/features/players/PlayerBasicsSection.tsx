@@ -5,15 +5,12 @@ import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
+import { effectiveCharacterLevel, levelFromExperience } from "../../lib/domain/progression";
 import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../types";
 
 type PlayerFormSetter = Dispatch<SetStateAction<PlayerFormState>>;
 
 const pickerCategories = ["classes", "species", "backgrounds", "feats"];
-const levelXpThresholds = [
-  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000,
-  195000, 225000, 265000, 305000, 355000,
-];
 
 export function PlayerBasicsSection({
   campaigns,
@@ -224,20 +221,37 @@ function CharacterProgressFields({
   form: PlayerFormState;
   setForm: PlayerFormSetter;
 }) {
-  const suggestedLevel = levelFromXP(Number(form.experiencePoints) || 0);
-  const currentLevel = Number(form.level) || 1;
+  const xpLevel = levelFromExperience(Number(form.experiencePoints) || 0);
+  const effectiveLevel = effectiveCharacterLevel(form.level, form.experiencePoints);
+  const overrideActive = form.level.trim() !== "";
   const setLevel = (level: number) =>
     setForm({ ...form, level: String(Math.min(20, Math.max(1, level))) });
 
   return (
-    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(150px,180px)_minmax(160px,220px)_minmax(180px,1fr)]">
-      <Field className="min-w-0" label="Level">
-        <div className="inline-flex max-w-[180px] overflow-hidden rounded-md border border-border bg-background">
+    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,220px)_minmax(150px,190px)_minmax(210px,1fr)]">
+      <Field className="min-w-0" label="XP">
+        <Input
+          type="number"
+          min={0}
+          disabled={overrideActive}
+          value={form.experiencePoints}
+          onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
+        />
+      </Field>
+      <div className="self-end rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+        XP level <span className="font-semibold text-foreground">{xpLevel}</span>
+      </div>
+      <div className="grid min-w-0 gap-2">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[0.82rem] font-semibold text-muted-foreground">Level override</span>
+          <span className="text-xs text-muted-foreground">Using level {effectiveLevel}</span>
+        </div>
+        <div className="grid max-w-[172px] grid-cols-[2.25rem_4rem_2.25rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
           <button
-            className="grid h-10 w-9 appearance-none place-items-center border-r border-border p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-r border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
-            onClick={() => setLevel(currentLevel - 1)}
-            aria-label="Decrease level"
+            onClick={() => setLevel(effectiveLevel - 1)}
+            aria-label="Decrease level override"
           >
             <Minus className="h-4 w-4" />
           </button>
@@ -247,37 +261,34 @@ function CharacterProgressFields({
             min={1}
             max={20}
             value={form.level}
-            onChange={(event) => setLevel(Number(event.target.value) || 1)}
+            placeholder="Auto"
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === "") {
+                setForm({ ...form, level: "" });
+                return;
+              }
+              setLevel(Number(value) || 1);
+            }}
           />
           <button
-            className="grid h-10 w-9 appearance-none place-items-center border-l border-border p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
-            onClick={() => setLevel(currentLevel + 1)}
-            aria-label="Increase level"
+            onClick={() => setLevel(effectiveLevel + 1)}
+            aria-label="Increase level override"
           >
             <Plus className="h-4 w-4" />
           </button>
-        </div>
-      </Field>
-      <Field className="min-w-0" label="XP">
-        <Input
-          type="number"
-          min={0}
-          value={form.experiencePoints}
-          onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
-        />
-      </Field>
-      <div className="self-end rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-        XP suggests level <span className="font-semibold text-foreground">{suggestedLevel}</span>
-        {suggestedLevel !== currentLevel && (
           <button
+            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
             type="button"
-            className="ml-2 font-semibold text-primary hover:underline"
-            onClick={() => setLevel(suggestedLevel)}
+            disabled={!overrideActive}
+            onClick={() => setForm({ ...form, level: "" })}
+            aria-label="Clear level override"
           >
-            Apply
+            <X className="h-4 w-4" />
           </button>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -302,7 +313,10 @@ function LibraryTextPicker({
   const normalizedOptions = options.map((option) => ({ label: option, value: option }));
 
   return (
-    <Field className="min-w-0" label={label}>
+    <div className="grid min-w-0 gap-2 text-sm font-medium">
+      <span className="inline-flex items-center gap-2 text-[0.82rem] font-semibold text-muted-foreground">
+        {label}
+      </span>
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
         {useCustomInput ? (
           <Input
@@ -360,7 +374,7 @@ function LibraryTextPicker({
           Pick from SRD list
         </button>
       )}
-    </Field>
+    </div>
   );
 }
 
@@ -375,13 +389,4 @@ function entryNames(entries: StandardLibraryEntry[], category: string) {
     .filter((entry) => entry.category === category)
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
-}
-
-function levelFromXP(xp: number) {
-  const boundedXP = Math.max(0, xp);
-  let level = 1;
-  for (const [index, threshold] of levelXpThresholds.entries()) {
-    if (boundedXP >= threshold) level = index + 1;
-  }
-  return Math.min(20, level);
 }

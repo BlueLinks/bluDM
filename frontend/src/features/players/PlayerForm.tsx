@@ -12,6 +12,7 @@ import { Button, Field, FormSection, IconNumberField, Textarea } from "../../com
 import { api } from "../../lib/api";
 import { proficiencyBonus } from "../../lib/domain/forms";
 import { abilities, senseTypes } from "../../lib/domain/options";
+import { effectiveCharacterLevel } from "../../lib/domain/progression";
 import type { Campaign, Player, PlayerFormState } from "../../types";
 import { PlayerBasicsSection } from "./PlayerBasicsSection";
 
@@ -22,7 +23,7 @@ const emptyPlayerForm: PlayerFormState = {
   characterName: "",
   playerName: "",
   className: "",
-  level: "1",
+  level: "",
   experiencePoints: "0",
   species: "",
   background: "",
@@ -88,7 +89,12 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
     temporaryHitPoints: String(player.temporaryHitPoints),
     temporaryMaxHitPoints: String(player.temporaryMaxHitPoints),
     className: typeof sheet.className === "string" ? sheet.className : "",
-    level: String(typeof sheet.level === "number" ? sheet.level : 1),
+    level:
+      typeof sheet.levelOverride === "number"
+        ? String(sheet.levelOverride)
+        : typeof sheet.levelOverride === "string"
+          ? sheet.levelOverride
+          : "",
     experiencePoints: String(player.experiencePoints ?? 0),
     species: typeof sheet.species === "string" ? sheet.species : "",
     background: typeof sheet.background === "string" ? sheet.background : "",
@@ -279,6 +285,8 @@ function PlayerAbilitySections({
   setForm: PlayerFormSetter;
   toggleList: TogglePlayerList;
 }) {
+  const characterLevel = effectiveCharacterLevel(form.level, form.experiencePoints);
+
   return (
     <>
       <FormSection title="Ability Scores">
@@ -306,7 +314,7 @@ function PlayerAbilitySections({
         <SkillsTable
           abilityScores={form.abilityScores}
           expertise={form.skillExpertise}
-          proficiencyBonus={proficiencyBonus(form.level)}
+          proficiencyBonus={proficiencyBonus(String(characterLevel))}
           proficiencies={form.skillProficiencies}
           onExpertiseChange={(skill, checked) => toggleList("skillExpertise", skill, checked)}
           onProficiencyChange={(skill, checked) => toggleList("skillProficiencies", skill, checked)}

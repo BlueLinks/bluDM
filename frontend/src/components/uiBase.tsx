@@ -357,7 +357,7 @@ export function Select({
   const selected = options.find((option) => option.value === value);
   const SelectedIcon = selected?.icon;
   return (
-    <SelectPrimitive.Root value={value || undefined} onValueChange={onValueChange}>
+    <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
       <SelectPrimitive.Trigger className="inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm outline-none ring-primary/30 transition hover:bg-muted/60 focus:ring-2">
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {SelectedIcon && <SelectedIcon className="h-4 w-4 shrink-0 text-muted-foreground" />}
