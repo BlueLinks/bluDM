@@ -51,7 +51,11 @@ function App() {
         localAuthEnabled={auth.localAuthEnabled}
         providers={providers}
         setupRequired={auth.setupRequired}
-        onLocalSubmit={async (email, password) => {
+        onLocalLogin={async (email, password) => {
+          await api.login(email, password);
+          await refreshAuth();
+        }}
+        onLocalRegister={async (email, password) => {
           await api.setup(email, password);
           await refreshAuth();
         }}
@@ -66,8 +70,12 @@ function App() {
         localAuthEnabled={auth.localAuthEnabled}
         providers={providers}
         setupRequired={auth.setupRequired}
-        onLocalSubmit={async (email, password) => {
+        onLocalLogin={async (email, password) => {
           await api.login(email, password);
+          await refreshAuth();
+        }}
+        onLocalRegister={async (email, password) => {
+          await api.register(email, password);
           await refreshAuth();
         }}
       />
@@ -83,6 +91,10 @@ function App() {
         onThemeChange={setTheme}
         onLogout={async () => {
           await api.logout();
+          await refreshAuth();
+        }}
+        onDeleteAccount={async (password, confirm) => {
+          await api.deleteAccount(password, confirm);
           await refreshAuth();
         }}
       >

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -107,10 +108,73 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"user": user})
 }
 
+func (s *Server) register(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.LocalAuthEnabled {
+		writeError(w, http.StatusNotFound, "local auth is disabled")
+		return
+	}
+	var req authRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.Email = strings.TrimSpace(strings.ToLower(req.Email))
+	if err := validateAuthRequest(req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not hash password")
+		return
+	}
+	user, err := s.createUser(r.Context(), req.Email, string(hash))
+	if err != nil {
+		if isUniqueViolation(err) {
+			writeError(w, http.StatusConflict, "an account already exists for that email")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "could not create account")
+		return
+	}
+	if err := s.startSession(w, r, user.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not start session")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, map[string]any{"user": user})
+}
+
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("bludm_session")
 	if err == nil {
 		_ = s.deleteSession(r.Context(), cookie.Value)
+	}
+	s.clearSessionCookie(w)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) deleteAccount(w http.ResponseWriter, r *http.Request) {
+	user, ok := currentUserFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	var req deleteAccountRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.Confirm) != "DELETE" {
+		writeError(w, http.StatusBadRequest, "type DELETE to confirm account deletion")
+		return
+	}
+	if user.PasswordHash != "" && bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+		writeError(w, http.StatusUnauthorized, "current password is required to delete this account")
+		return
+	}
+	if _, err := s.db.Exec(r.Context(), `delete from users where id = $1`, user.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not delete account")
+		return
 	}
 	s.clearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
@@ -315,8 +379,18 @@ func validateAuthRequest(req authRequest) error {
 	return nil
 }
 
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == "23505"
+}
+
 type authRequest struct {
 	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type deleteAccountRequest struct {
+	Confirm  string `json:"confirm"`
 	Password string `json:"password"`
 }
 

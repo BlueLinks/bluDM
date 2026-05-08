@@ -33,6 +33,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  register: (email: string, password: string) =>
+    request<{ user: User }>("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
   login: (email: string, password: string) =>
     request<{ user: User }>("/api/auth/login", {
       method: "POST",
@@ -41,6 +46,11 @@ export const api = {
   async logout(): Promise<void> {
     await fetch("/api/auth/logout", { method: "POST" });
   },
+  deleteAccount: (password: string, confirm: string) =>
+    request<void>("/api/auth/account", {
+      method: "DELETE",
+      body: JSON.stringify({ password, confirm }),
+    }),
   uploadImage(file: Blob, filename = "avatar.png"): Promise<{ assetId: string; url: string }> {
     const formData = new FormData();
     formData.append("image", file, filename);

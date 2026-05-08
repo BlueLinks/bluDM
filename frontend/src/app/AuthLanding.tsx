@@ -9,13 +9,15 @@ import {
 } from "lucide-react";
 import { AuthCard, Button } from "../components/ui";
 import type { AuthProvider } from "../types";
+import { useState } from "react";
 
 type AuthLandingProps = {
   error?: string;
   localAuthEnabled: boolean;
   providers: AuthProvider[];
   setupRequired: boolean;
-  onLocalSubmit: (email: string, password: string) => Promise<void>;
+  onLocalLogin: (email: string, password: string) => Promise<void>;
+  onLocalRegister: (email: string, password: string) => Promise<void>;
 };
 
 const features = [
@@ -41,10 +43,14 @@ export function AuthLanding({
   localAuthEnabled,
   providers,
   setupRequired,
-  onLocalSubmit,
+  onLocalLogin,
+  onLocalRegister,
 }: AuthLandingProps) {
-  const authTitle = setupRequired ? "Create your DM account" : "Sign in to bluDM";
-  const submitLabel = setupRequired ? "Create account" : "Sign in";
+  const [localMode, setLocalMode] = useState<"login" | "register">(
+    setupRequired ? "register" : "login",
+  );
+  const authTitle = localMode === "register" ? "Create your DM account" : "Sign in to your table";
+  const submitLabel = localMode === "register" ? "Create account" : "Sign in";
 
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -108,10 +114,40 @@ export function AuthLanding({
           <AuthCard
             title={authTitle}
             submitLabel={submitLabel}
-            onSubmit={onLocalSubmit}
+            onSubmit={localMode === "register" ? onLocalRegister : onLocalLogin}
             localAuthEnabled={localAuthEnabled}
             providers={providers}
           />
+
+          {localAuthEnabled && !setupRequired && (
+            <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">
+              {localMode === "login" ? (
+                <>
+                  <p>Need a local account for this self-hosted table?</p>
+                  <Button
+                    className="mt-3"
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setLocalMode("register")}
+                  >
+                    Create username and password
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p>Already have an account?</p>
+                  <Button
+                    className="mt-3"
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setLocalMode("login")}
+                  >
+                    Sign in instead
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
 
           {providers.length === 0 && (
             <div className="rounded-lg border border-border bg-card p-4 text-sm text-muted-foreground">

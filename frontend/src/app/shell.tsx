@@ -11,6 +11,7 @@ import {
   Sparkles,
   Sun,
   Swords,
+  Trash2,
   UserRound,
   UsersRound,
 } from "lucide-react";
@@ -70,6 +71,7 @@ export function WorkspaceShell({
   resolvedTheme,
   onThemeChange,
   onLogout,
+  onDeleteAccount,
 }: {
   children: React.ReactNode;
   user?: User;
@@ -77,6 +79,7 @@ export function WorkspaceShell({
   resolvedTheme: "light" | "dark";
   onThemeChange: (theme: "system" | "light" | "dark") => void;
   onLogout: () => Promise<void>;
+  onDeleteAccount: (password: string, confirm: string) => Promise<void>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
@@ -176,7 +179,7 @@ export function WorkspaceShell({
                 theme={theme}
                 onThemeChange={onThemeChange}
               />
-              <UserMenu user={user} onLogout={onLogout} />
+              <UserMenu user={user} onDeleteAccount={onDeleteAccount} onLogout={onLogout} />
             </div>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
@@ -300,8 +303,37 @@ function ThemeMenu({
   );
 }
 
-function UserMenu({ user, onLogout }: { user?: User; onLogout: () => Promise<void> }) {
+function UserMenu({
+  user,
+  onLogout,
+  onDeleteAccount,
+}: {
+  user?: User;
+  onLogout: () => Promise<void>;
+  onDeleteAccount: (password: string, confirm: string) => Promise<void>;
+}) {
   const [open, setOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  async function confirmDeleteAccount(event: React.FormEvent) {
+    event.preventDefault();
+    setDeleteError("");
+    setDeleteBusy(true);
+    try {
+      await onDeleteAccount(deletePassword, deleteConfirm);
+      setDeleteOpen(false);
+      setOpen(false);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Could not delete account");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
+
   return (
     <div className="relative">
       <Button
@@ -316,10 +348,77 @@ function UserMenu({ user, onLogout }: { user?: User; onLogout: () => Promise<voi
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
           <div className="font-semibold">{user?.email ?? "DM"}</div>
-          <div className="text-xs text-muted-foreground">Single DM workspace</div>
+          <div className="text-xs text-muted-foreground">Private DM workspace</div>
           <Button className="mt-3 w-full" variant="ghost" onClick={() => void onLogout()}>
             Log out
           </Button>
+          <Button
+            className="mt-2 w-full"
+            icon={Trash2}
+            variant="danger"
+            onClick={() => setDeleteOpen(true)}
+          >
+            Delete account
+          </Button>
+        </div>
+      )}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-[60] grid place-items-center bg-black/45 px-4">
+          <form
+            className="modal-content grid w-full max-w-lg gap-4 rounded-lg border border-border bg-card p-6 shadow-xl"
+            data-state="open"
+            onSubmit={(event) => void confirmDeleteAccount(event)}
+          >
+            <div>
+              <h2 className="text-xl font-semibold text-destructive">Delete account</h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                This permanently deletes your account and every campaign, character, creature,
+                spell, action, encounter, combat log, and uploaded image owned by it. Type{" "}
+                <span className="font-semibold text-foreground">DELETE</span> to confirm.
+              </p>
+            </div>
+            <label className="grid gap-2 text-sm font-medium">
+              Current password
+              <input
+                className="rounded-md border border-border bg-background px-3 py-2"
+                placeholder="Required for local password accounts"
+                type="password"
+                value={deletePassword}
+                onChange={(event) => setDeletePassword(event.target.value)}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium">
+              Confirmation
+              <input
+                className="rounded-md border border-border bg-background px-3 py-2"
+                placeholder="DELETE"
+                value={deleteConfirm}
+                onChange={(event) => setDeleteConfirm(event.target.value)}
+              />
+            </label>
+            {deleteError && <p className="text-sm font-semibold text-destructive">{deleteError}</p>}
+            <div className="flex justify-end gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setDeleteOpen(false);
+                  setDeleteError("");
+                  setDeletePassword("");
+                  setDeleteConfirm("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                disabled={deleteBusy || deleteConfirm !== "DELETE"}
+                type="submit"
+                variant="danger"
+              >
+                {deleteBusy ? "Deleting..." : "Delete everything"}
+              </Button>
+            </div>
+          </form>
         </div>
       )}
     </div>
