@@ -1,6 +1,6 @@
 ## Summary
 
-- 
+-
 
 ## Why
 
@@ -13,6 +13,7 @@ Refs #
 ## Verification
 
 - [ ] `cd frontend && npm run lint`
+- [ ] `cd frontend && npm run format:check`
 - [ ] `cd frontend && npm run test`
 - [ ] `cd frontend && npm run build`
 - [ ] `node scripts/check-file-size.mjs`

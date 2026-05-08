@@ -1,10 +1,18 @@
 import { Import, Plus } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Callout, Page, PageHeader, SectionPanel, ToastViewport, useToasts } from "../components/ui";
+import {
+  Button,
+  Callout,
+  Page,
+  PageHeader,
+  SectionPanel,
+  ToastViewport,
+  useToasts,
+} from "../components/ui";
 
 export function ImportPage({
-  seedTestData
+  seedTestData,
 }: {
   seedTestData: () => Promise<{ campaignId: string; message: string }>;
 }) {
@@ -45,10 +53,17 @@ export function ImportPage({
           <div>
             <h3 className="font-semibold">Greenhill Ambush</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Adds three player characters, two friendly NPCs, several enemies, weapon and spell-like action templates, and a prepared encounter.
+              Adds three player characters, two friendly NPCs, several enemies, weapon and
+              spell-like action templates, and a prepared encounter.
             </p>
           </div>
-          <Button type="button" icon={Plus} variant="success" disabled={seeding} onClick={() => void seedDemo()}>
+          <Button
+            type="button"
+            icon={Plus}
+            variant="success"
+            disabled={seeding}
+            onClick={() => void seedDemo()}
+          >
             {seeding ? "Seeding..." : "Seed test data"}
           </Button>
         </div>

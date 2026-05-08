@@ -1,6 +1,6 @@
-.PHONY: lint lint-frontend lint-backend check-size test test-frontend test-backend verify
+.PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend verify
 
-lint: lint-frontend lint-backend check-size
+lint: lint-frontend lint-backend format-check check-size
 
 lint-frontend:
 	cd frontend && npm run lint
@@ -10,6 +10,12 @@ lint-backend:
 
 check-size:
 	node scripts/check-file-size.mjs
+
+format:
+	cd frontend && npm run format
+
+format-check:
+	cd frontend && npm run format:check
 
 test: test-frontend test-backend
 

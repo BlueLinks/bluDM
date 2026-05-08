@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { EncounterCombatant, EncounterRunCombatant, Player } from "../../types";
-import { calculateEncounterDifficulty, effectiveAC, effectiveMaxHP, encounterMultiplier, hpBarColor, hpPercent, isDownEnemy } from "./combat";
+import {
+  calculateEncounterDifficulty,
+  effectiveAC,
+  effectiveMaxHP,
+  encounterMultiplier,
+  hpBarColor,
+  hpPercent,
+  isDownEnemy,
+} from "./combat";
 import { createId } from "./ids";
 
 function player(level: number): Player {
@@ -18,7 +26,7 @@ function player(level: number): Player {
     experiencePoints: 0,
     characterSheet: { level },
     createdAt: "",
-    updatedAt: ""
+    updatedAt: "",
   };
 }
 
@@ -39,7 +47,7 @@ function enemy(xp: number): EncounterCombatant {
     sortOrder: 0,
     snapshot: { creature: { xp } },
     createdAt: "",
-    updatedAt: ""
+    updatedAt: "",
   };
 }
 
@@ -75,7 +83,7 @@ function runCombatant(overrides: Partial<EncounterRunCombatant> = {}): Encounter
     deathSaveFailures: 0,
     stable: false,
     snapshot: {},
-    ...overrides
+    ...overrides,
   };
 }
 

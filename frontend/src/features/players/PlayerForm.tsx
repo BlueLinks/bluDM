@@ -1,8 +1,23 @@
 import { BookOpen, HeartPulse, Shield, Sparkles, Zap } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
-import { AbilityInput, AbilitySelect, ConditionImmunityChecklist, DamageDefenseGroup, SenseControl, SkillsTable } from "../../components/shared/CharacterFormControls";
-import { Button, Field, FormSection, IconNumberField, Input, Select, Textarea } from "../../components/ui";
+import {
+  AbilityInput,
+  AbilitySelect,
+  ConditionImmunityChecklist,
+  DamageDefenseGroup,
+  SenseControl,
+  SkillsTable,
+} from "../../components/shared/CharacterFormControls";
+import {
+  Button,
+  Field,
+  FormSection,
+  IconNumberField,
+  Input,
+  Select,
+  Textarea,
+} from "../../components/ui";
 import { api } from "../../lib/api";
 import { proficiencyBonus } from "../../lib/domain/forms";
 import { abilities, senseTypes } from "../../lib/domain/options";
@@ -34,7 +49,7 @@ const emptyPlayerForm: PlayerFormState = {
     con: "10",
     int: "10",
     wis: "10",
-    cha: "10"
+    cha: "10",
   },
   savingThrowProficiencies: [],
   skillProficiencies: [],
@@ -47,18 +62,27 @@ const emptyPlayerForm: PlayerFormState = {
     Blindsight: { enabled: false, range: "" },
     Darkvision: { enabled: false, range: "" },
     Tremorsense: { enabled: false, range: "" },
-    Truesight: { enabled: false, range: "" }
+    Truesight: { enabled: false, range: "" },
   },
   spellcastingAbility: "",
   innateSpellcastingAbility: "",
-  notes: ""
+  notes: "",
 };
 
 function playerFormFromPlayer(player: Player): PlayerFormState {
   const sheet = player.characterSheet;
-  const abilityScores = sheet.abilityScores && typeof sheet.abilityScores === "object" ? sheet.abilityScores as Record<string, unknown> : {};
-  const senses = sheet.senses && typeof sheet.senses === "object" ? sheet.senses as PlayerFormState["senses"] : emptyPlayerForm.senses;
-  const list = (key: string) => Array.isArray(sheet[key]) ? sheet[key].filter((item): item is string => typeof item === "string") : [];
+  const abilityScores =
+    sheet.abilityScores && typeof sheet.abilityScores === "object"
+      ? (sheet.abilityScores as Record<string, unknown>)
+      : {};
+  const senses =
+    sheet.senses && typeof sheet.senses === "object"
+      ? (sheet.senses as PlayerFormState["senses"])
+      : emptyPlayerForm.senses;
+  const list = (key: string) =>
+    Array.isArray(sheet[key])
+      ? sheet[key].filter((item): item is string => typeof item === "string")
+      : [];
   return {
     ...emptyPlayerForm,
     campaignId: player.campaignId,
@@ -76,11 +100,20 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
     species: typeof sheet.species === "string" ? sheet.species : "",
     background: typeof sheet.background === "string" ? sheet.background : "",
     speed: String(typeof sheet.speed === "number" ? sheet.speed : 30),
-    passivePerception: String(typeof sheet.passivePerception === "number" ? sheet.passivePerception : 10),
-    passiveInvestigation: String(typeof sheet.passiveInvestigation === "number" ? sheet.passiveInvestigation : 10),
+    passivePerception: String(
+      typeof sheet.passivePerception === "number" ? sheet.passivePerception : 10,
+    ),
+    passiveInvestigation: String(
+      typeof sheet.passiveInvestigation === "number" ? sheet.passiveInvestigation : 10,
+    ),
     passiveInsight: String(typeof sheet.passiveInsight === "number" ? sheet.passiveInsight : 10),
     spellSaveDC: String(typeof sheet.spellSaveDC === "number" ? sheet.spellSaveDC : 10),
-    abilityScores: Object.fromEntries(abilities.map((ability) => [ability.key, String(typeof abilityScores[ability.key] === "number" ? abilityScores[ability.key] : 10)])) as PlayerFormState["abilityScores"],
+    abilityScores: Object.fromEntries(
+      abilities.map((ability) => [
+        ability.key,
+        String(typeof abilityScores[ability.key] === "number" ? abilityScores[ability.key] : 10),
+      ]),
+    ) as PlayerFormState["abilityScores"],
     savingThrowProficiencies: list("savingThrowProficiencies"),
     skillProficiencies: list("skillProficiencies"),
     skillExpertise: list("skillExpertise"),
@@ -89,9 +122,11 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
     damageImmunities: list("damageImmunities"),
     conditionImmunities: list("conditionImmunities"),
     senses,
-    spellcastingAbility: typeof sheet.spellcastingAbility === "string" ? sheet.spellcastingAbility : "",
-    innateSpellcastingAbility: typeof sheet.innateSpellcastingAbility === "string" ? sheet.innateSpellcastingAbility : "",
-    notes: typeof sheet.notes === "string" ? sheet.notes : ""
+    spellcastingAbility:
+      typeof sheet.spellcastingAbility === "string" ? sheet.spellcastingAbility : "",
+    innateSpellcastingAbility:
+      typeof sheet.innateSpellcastingAbility === "string" ? sheet.innateSpellcastingAbility : "",
+    notes: typeof sheet.notes === "string" ? sheet.notes : "",
   };
 }
 
@@ -99,14 +134,16 @@ export function PlayerForm({
   campaigns,
   onCreated,
   initialPlayer,
-  submitLabel = "Create player"
+  submitLabel = "Create player",
 }: {
   campaigns: Campaign[];
   onCreated: (player: Player) => void;
   initialPlayer?: Player;
   submitLabel?: string;
 }) {
-  const [form, setForm] = useState<PlayerFormState>(() => initialPlayer ? playerFormFromPlayer(initialPlayer) : { ...emptyPlayerForm });
+  const [form, setForm] = useState<PlayerFormState>(() =>
+    initialPlayer ? playerFormFromPlayer(initialPlayer) : { ...emptyPlayerForm },
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -125,11 +162,13 @@ export function PlayerForm({
       | "damageImmunities"
       | "conditionImmunities",
     value: string,
-    checked: boolean
+    checked: boolean,
   ) {
     setForm((current) => ({
       ...current,
-      [field]: checked ? [...current[field], value] : current[field].filter((item) => item !== value)
+      [field]: checked
+        ? [...current[field], value]
+        : current[field].filter((item) => item !== value),
     }));
   }
 
@@ -141,7 +180,9 @@ export function PlayerForm({
       return;
     }
     try {
-      const payload = initialPlayer ? await api.updatePlayer(initialPlayer.id, form) : await api.createPlayer(form);
+      const payload = initialPlayer
+        ? await api.updatePlayer(initialPlayer.id, form)
+        : await api.createPlayer(form);
       onCreated(payload.player);
       if (!initialPlayer) {
         setForm({ ...emptyPlayerForm, campaignId: form.campaignId });
@@ -166,26 +207,98 @@ export function PlayerForm({
 
 type PlayerFormSetter = Dispatch<SetStateAction<PlayerFormState>>;
 type TogglePlayerList = (
-  field: "savingThrowProficiencies" | "skillProficiencies" | "skillExpertise" | "damageVulnerabilities" | "damageResistances" | "damageImmunities" | "conditionImmunities",
+  field:
+    | "savingThrowProficiencies"
+    | "skillProficiencies"
+    | "skillExpertise"
+    | "damageVulnerabilities"
+    | "damageResistances"
+    | "damageImmunities"
+    | "conditionImmunities",
   value: string,
-  checked: boolean
+  checked: boolean,
 ) => void;
 
-function PlayerBasics({ campaigns, form, setForm }: { campaigns: Campaign[]; form: PlayerFormState; setForm: PlayerFormSetter }) {
+function PlayerBasics({
+  campaigns,
+  form,
+  setForm,
+}: {
+  campaigns: Campaign[];
+  form: PlayerFormState;
+  setForm: PlayerFormSetter;
+}) {
   return (
     <FormSection title="Basic Info">
-      <AvatarImagePicker label="Character avatar" name={form.characterName} assetId={form.avatarAssetId} url={form.avatarUrl} uploadImage={(file) => api.uploadImage(file)} onChange={(avatar) => setForm({ ...form, avatarAssetId: avatar.assetId, avatarUrl: avatar.url })} />
+      <AvatarImagePicker
+        label="Character avatar"
+        name={form.characterName}
+        assetId={form.avatarAssetId}
+        url={form.avatarUrl}
+        uploadImage={(file) => api.uploadImage(file)}
+        onChange={(avatar) =>
+          setForm({ ...form, avatarAssetId: avatar.assetId, avatarUrl: avatar.url })
+        }
+      />
       <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Character Name"><Input value={form.characterName} onChange={(event) => setForm({ ...form, characterName: event.target.value })} required /></Field>
-        <Field label="Player Name"><Input value={form.playerName} onChange={(event) => setForm({ ...form, playerName: event.target.value })} /></Field>
+        <Field label="Character Name">
+          <Input
+            value={form.characterName}
+            onChange={(event) => setForm({ ...form, characterName: event.target.value })}
+            required
+          />
+        </Field>
+        <Field label="Player Name">
+          <Input
+            value={form.playerName}
+            onChange={(event) => setForm({ ...form, playerName: event.target.value })}
+          />
+        </Field>
       </div>
-      <Field label="Campaign"><Select options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))} placeholder="Select campaign" value={form.campaignId} onValueChange={(value) => setForm({ ...form, campaignId: value })} /></Field>
+      <Field label="Campaign">
+        <Select
+          options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
+          placeholder="Select campaign"
+          value={form.campaignId}
+          onValueChange={(value) => setForm({ ...form, campaignId: value })}
+        />
+      </Field>
       <div className="flex flex-wrap gap-4">
-        <Field className="w-60" label="Class"><Input value={form.className} onChange={(event) => setForm({ ...form, className: event.target.value })} /></Field>
-        <Field className="w-24" label="Level"><Input type="number" min={1} max={20} value={form.level} onChange={(event) => setForm({ ...form, level: event.target.value })} /></Field>
-        <Field className="w-32" label="XP"><Input type="number" min={0} value={form.experiencePoints} onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })} /></Field>
-        <Field className="w-56" label="Species"><Input value={form.species} onChange={(event) => setForm({ ...form, species: event.target.value })} /></Field>
-        <Field className="w-64" label="Background"><Input value={form.background} onChange={(event) => setForm({ ...form, background: event.target.value })} /></Field>
+        <Field className="w-60" label="Class">
+          <Input
+            value={form.className}
+            onChange={(event) => setForm({ ...form, className: event.target.value })}
+          />
+        </Field>
+        <Field className="w-24" label="Level">
+          <Input
+            type="number"
+            min={1}
+            max={20}
+            value={form.level}
+            onChange={(event) => setForm({ ...form, level: event.target.value })}
+          />
+        </Field>
+        <Field className="w-32" label="XP">
+          <Input
+            type="number"
+            min={0}
+            value={form.experiencePoints}
+            onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
+          />
+        </Field>
+        <Field className="w-56" label="Species">
+          <Input
+            value={form.species}
+            onChange={(event) => setForm({ ...form, species: event.target.value })}
+          />
+        </Field>
+        <Field className="w-64" label="Background">
+          <Input
+            value={form.background}
+            onChange={(event) => setForm({ ...form, background: event.target.value })}
+          />
+        </Field>
       </div>
     </FormSection>
   );
@@ -195,43 +308,188 @@ function PlayerVitals({ form, setForm }: { form: PlayerFormState; setForm: Playe
   return (
     <FormSection title="Health and AC">
       <div className="flex flex-wrap gap-3">
-        <IconNumberField icon={Shield} label="AC" value={form.armorClass} onChange={(value) => setForm({ ...form, armorClass: value })} />
-        <IconNumberField icon={HeartPulse} label="Max HP" value={form.maxHitPoints} onChange={(value) => setForm({ ...form, maxHitPoints: value })} />
-        <IconNumberField icon={HeartPulse} label="Temp HP" value={form.temporaryHitPoints} onChange={(value) => setForm({ ...form, temporaryHitPoints: value })} />
-        <IconNumberField icon={HeartPulse} label="Temp Max HP" value={form.temporaryMaxHitPoints} onChange={(value) => setForm({ ...form, temporaryMaxHitPoints: value })} />
-        <IconNumberField icon={Zap} label="Speed" value={form.speed} onChange={(value) => setForm({ ...form, speed: value })} />
-        <IconNumberField icon={BookOpen} label="Passive Perception" value={form.passivePerception} onChange={(value) => setForm({ ...form, passivePerception: value })} />
-        <IconNumberField icon={BookOpen} label="Passive Investigation" value={form.passiveInvestigation} onChange={(value) => setForm({ ...form, passiveInvestigation: value })} />
-        <IconNumberField icon={BookOpen} label="Passive Insight" value={form.passiveInsight} onChange={(value) => setForm({ ...form, passiveInsight: value })} />
+        <IconNumberField
+          icon={Shield}
+          label="AC"
+          value={form.armorClass}
+          onChange={(value) => setForm({ ...form, armorClass: value })}
+        />
+        <IconNumberField
+          icon={HeartPulse}
+          label="Max HP"
+          value={form.maxHitPoints}
+          onChange={(value) => setForm({ ...form, maxHitPoints: value })}
+        />
+        <IconNumberField
+          icon={HeartPulse}
+          label="Temp HP"
+          value={form.temporaryHitPoints}
+          onChange={(value) => setForm({ ...form, temporaryHitPoints: value })}
+        />
+        <IconNumberField
+          icon={HeartPulse}
+          label="Temp Max HP"
+          value={form.temporaryMaxHitPoints}
+          onChange={(value) => setForm({ ...form, temporaryMaxHitPoints: value })}
+        />
+        <IconNumberField
+          icon={Zap}
+          label="Speed"
+          value={form.speed}
+          onChange={(value) => setForm({ ...form, speed: value })}
+        />
+        <IconNumberField
+          icon={BookOpen}
+          label="Passive Perception"
+          value={form.passivePerception}
+          onChange={(value) => setForm({ ...form, passivePerception: value })}
+        />
+        <IconNumberField
+          icon={BookOpen}
+          label="Passive Investigation"
+          value={form.passiveInvestigation}
+          onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
+        />
+        <IconNumberField
+          icon={BookOpen}
+          label="Passive Insight"
+          value={form.passiveInsight}
+          onChange={(value) => setForm({ ...form, passiveInsight: value })}
+        />
       </div>
     </FormSection>
   );
 }
 
-function PlayerAbilitySections({ form, setForm, toggleList }: { form: PlayerFormState; setForm: PlayerFormSetter; toggleList: TogglePlayerList }) {
+function PlayerAbilitySections({
+  form,
+  setForm,
+  toggleList,
+}: {
+  form: PlayerFormState;
+  setForm: PlayerFormSetter;
+  toggleList: TogglePlayerList;
+}) {
   return (
     <>
-      <FormSection title="Ability Scores"><div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{abilities.map((ability) => <AbilityInput key={ability.key} label={ability.label} value={Number(form.abilityScores[ability.key])} saveProficient={form.savingThrowProficiencies.includes(ability.key)} onSaveProficiencyChange={(checked) => toggleList("savingThrowProficiencies", ability.key, checked)} onChange={(next) => setForm((current) => ({ ...current, abilityScores: { ...current.abilityScores, [ability.key]: String(next) } }))} />)}</div></FormSection>
-      <FormSection title="Skills"><SkillsTable abilityScores={form.abilityScores} expertise={form.skillExpertise} proficiencyBonus={proficiencyBonus(form.level)} proficiencies={form.skillProficiencies} onExpertiseChange={(skill, checked) => toggleList("skillExpertise", skill, checked)} onProficiencyChange={(skill, checked) => toggleList("skillProficiencies", skill, checked)} /></FormSection>
+      <FormSection title="Ability Scores">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {abilities.map((ability) => (
+            <AbilityInput
+              key={ability.key}
+              label={ability.label}
+              value={Number(form.abilityScores[ability.key])}
+              saveProficient={form.savingThrowProficiencies.includes(ability.key)}
+              onSaveProficiencyChange={(checked) =>
+                toggleList("savingThrowProficiencies", ability.key, checked)
+              }
+              onChange={(next) =>
+                setForm((current) => ({
+                  ...current,
+                  abilityScores: { ...current.abilityScores, [ability.key]: String(next) },
+                }))
+              }
+            />
+          ))}
+        </div>
+      </FormSection>
+      <FormSection title="Skills">
+        <SkillsTable
+          abilityScores={form.abilityScores}
+          expertise={form.skillExpertise}
+          proficiencyBonus={proficiencyBonus(form.level)}
+          proficiencies={form.skillProficiencies}
+          onExpertiseChange={(skill, checked) => toggleList("skillExpertise", skill, checked)}
+          onProficiencyChange={(skill, checked) => toggleList("skillProficiencies", skill, checked)}
+        />
+      </FormSection>
     </>
   );
 }
 
-function PlayerDefenses({ form, setForm, toggleList }: { form: PlayerFormState; setForm: PlayerFormSetter; toggleList: TogglePlayerList }) {
+function PlayerDefenses({
+  form,
+  setForm,
+  toggleList,
+}: {
+  form: PlayerFormState;
+  setForm: PlayerFormSetter;
+  toggleList: TogglePlayerList;
+}) {
   return (
     <>
-      <FormSection title="Senses"><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{senseTypes.map((sense) => <SenseControl key={sense} label={sense} value={form.senses[sense]} onChange={(next) => setForm((current) => ({ ...current, senses: { ...current.senses, [sense]: next } }))} />)}</div></FormSection>
-      <FormSection title="Resistances & Vulnerabilities"><DamageDefenseGroup damageImmunities={form.damageImmunities} damageResistances={form.damageResistances} damageVulnerabilities={form.damageVulnerabilities} onChange={toggleList} /></FormSection>
-      <FormSection title="Condition Immunities"><ConditionImmunityChecklist selected={form.conditionImmunities} onChange={(condition, checked) => toggleList("conditionImmunities", condition, checked)} /></FormSection>
+      <FormSection title="Senses">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {senseTypes.map((sense) => (
+            <SenseControl
+              key={sense}
+              label={sense}
+              value={form.senses[sense]}
+              onChange={(next) =>
+                setForm((current) => ({ ...current, senses: { ...current.senses, [sense]: next } }))
+              }
+            />
+          ))}
+        </div>
+      </FormSection>
+      <FormSection title="Resistances & Vulnerabilities">
+        <DamageDefenseGroup
+          damageImmunities={form.damageImmunities}
+          damageResistances={form.damageResistances}
+          damageVulnerabilities={form.damageVulnerabilities}
+          onChange={toggleList}
+        />
+      </FormSection>
+      <FormSection title="Condition Immunities">
+        <ConditionImmunityChecklist
+          selected={form.conditionImmunities}
+          onChange={(condition, checked) => toggleList("conditionImmunities", condition, checked)}
+        />
+      </FormSection>
     </>
   );
 }
 
-function PlayerSpellAndNotes({ form, setForm }: { form: PlayerFormState; setForm: PlayerFormSetter }) {
+function PlayerSpellAndNotes({
+  form,
+  setForm,
+}: {
+  form: PlayerFormState;
+  setForm: PlayerFormSetter;
+}) {
   return (
     <>
-      <FormSection title="Spellcasting"><div className="grid gap-4 sm:grid-cols-[220px_220px_140px]"><Field label="Spellcasting Ability"><AbilitySelect value={form.spellcastingAbility} onChange={(value) => setForm({ ...form, spellcastingAbility: value })} /></Field><Field label="Innate Spellcasting Ability"><AbilitySelect value={form.innateSpellcastingAbility} onChange={(value) => setForm({ ...form, innateSpellcastingAbility: value })} /></Field><IconNumberField icon={Sparkles} label="Spell Save DC" value={form.spellSaveDC} onChange={(value) => setForm({ ...form, spellSaveDC: value })} /></div></FormSection>
-      <FormSection title="Notes"><Field label="Character Notes"><Textarea value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} rows={4} /></Field></FormSection>
+      <FormSection title="Spellcasting">
+        <div className="grid gap-4 sm:grid-cols-[220px_220px_140px]">
+          <Field label="Spellcasting Ability">
+            <AbilitySelect
+              value={form.spellcastingAbility}
+              onChange={(value) => setForm({ ...form, spellcastingAbility: value })}
+            />
+          </Field>
+          <Field label="Innate Spellcasting Ability">
+            <AbilitySelect
+              value={form.innateSpellcastingAbility}
+              onChange={(value) => setForm({ ...form, innateSpellcastingAbility: value })}
+            />
+          </Field>
+          <IconNumberField
+            icon={Sparkles}
+            label="Spell Save DC"
+            value={form.spellSaveDC}
+            onChange={(value) => setForm({ ...form, spellSaveDC: value })}
+          />
+        </div>
+      </FormSection>
+      <FormSection title="Notes">
+        <Field label="Character Notes">
+          <Textarea
+            value={form.notes}
+            onChange={(event) => setForm({ ...form, notes: event.target.value })}
+            rows={4}
+          />
+        </Field>
+      </FormSection>
     </>
   );
 }

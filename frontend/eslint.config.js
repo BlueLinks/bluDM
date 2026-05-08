@@ -12,7 +12,7 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: {
         projectService: true,
-        tsconfigRootDir: import.meta.dirname
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         Blob: "readonly",
@@ -34,46 +34,58 @@ export default tseslint.config(
         localStorage: "readonly",
         setInterval: "readonly",
         setTimeout: "readonly",
-        window: "readonly"
-      }
+        window: "readonly",
+      },
     },
     plugins: {
       "react-hooks": reactHooks,
-      "react-refresh": reactRefresh
+      "react-refresh": reactRefresh,
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "off",
-      "@typescript-eslint/no-misused-promises": ["error", { checksVoidReturn: { attributes: false } }],
+      "@typescript-eslint/no-misused-promises": [
+        "error",
+        { checksVoidReturn: { attributes: false } },
+      ],
       "react-hooks/exhaustive-deps": "off",
       "react-hooks/set-state-in-effect": "off",
       "no-empty": ["error", { allowEmptyCatch: true }],
       "prefer-const": "error",
-      "react-refresh/only-export-components": "off"
-    }
+      "react-refresh/only-export-components": "off",
+    },
   },
   {
     files: ["src/lib/domain/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", {
-        patterns: ["react", "react-dom", "../../components/*", "../../app/*", "../api/*"]
-      }]
-    }
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["react", "react-dom", "../../components/*", "../../app/*", "../api/*"],
+        },
+      ],
+    },
   },
   {
     files: ["src/lib/api/**/*.{ts,tsx}"],
     rules: {
-      "no-restricted-imports": ["error", {
-        patterns: ["react", "react-dom", "../../components/*", "../../app/*"]
-      }]
-    }
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["react", "react-dom", "../../components/*", "../../app/*"],
+        },
+      ],
+    },
   },
   {
     files: ["src/components/ui.tsx"],
     rules: {
-      "no-restricted-imports": ["error", {
-        patterns: ["../app/*", "../features/*", "../lib/api/*"]
-      }]
-    }
-  }
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: ["../app/*", "../features/*", "../lib/api/*"],
+        },
+      ],
+    },
+  },
 );

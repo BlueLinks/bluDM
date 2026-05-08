@@ -14,7 +14,7 @@ bluDM uses issue-led development, conventional commits, and pull requests into `
    ```
 
 4. Keep the change focused on the issue.
-5. Run the relevant checks before pushing.
+5. Run Prettier and the relevant checks before pushing.
 6. Push the branch and open a PR into `main`.
 
 ## Branch Names
@@ -105,6 +105,7 @@ Frontend:
 
 ```sh
 cd frontend && npm run lint
+cd frontend && npm run format:check
 cd frontend && npm run test
 cd frontend && npm run build
 node scripts/check-file-size.mjs
@@ -130,7 +131,13 @@ Security-sensitive backend changes:
 cd backend && gosec -exclude=G404 ./...
 ```
 
-Run the configured formatter before pushing when a formatter exists for the files you changed. Avoid unrelated formatting churn.
+Run Prettier before pushing frontend, Markdown, JSON, CSS, or Sass changes:
+
+```sh
+cd frontend && npm run format
+```
+
+Avoid unrelated formatting churn.
 
 ## Code Standards
 

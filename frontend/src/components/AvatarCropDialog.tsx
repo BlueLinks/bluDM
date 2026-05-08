@@ -1,5 +1,10 @@
 import { RotateCw, ZoomIn, ZoomOut } from "lucide-react";
-import { type CSSProperties, type PointerEvent as ReactPointerEvent, type RefObject, type WheelEvent as ReactWheelEvent } from "react";
+import {
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
+  type WheelEvent as ReactWheelEvent,
+} from "react";
 import { Button, Field, Input } from "./ui";
 
 export function AvatarDialogBody({
@@ -30,7 +35,7 @@ export function AvatarDialogBody({
   onSave,
   onURLChange,
   onWheel,
-  onZoom
+  onZoom,
 }: {
   canSave: boolean;
   cropActive: boolean;
@@ -80,10 +85,26 @@ export function AvatarDialogBody({
         onPointerUp={onPointerUp}
         onWheel={onWheel}
       />
-      <AvatarCropTools enabled={Boolean(sourceSrc)} onFlipX={onFlipX} onFlipY={onFlipY} onRotate={onRotate} onZoom={onZoom} />
+      <AvatarCropTools
+        enabled={Boolean(sourceSrc)}
+        onFlipX={onFlipX}
+        onFlipY={onFlipY}
+        onRotate={onRotate}
+        onZoom={onZoom}
+      />
       <AvatarInputs imageURL={imageURL} onFile={onFile} onURLChange={onURLChange} />
-      {error && <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</p>}
-      <AvatarDialogActions canSave={canSave} uploading={uploading} onCancel={onCancel} onClear={onClear} onSave={onSave} />
+      {error && (
+        <p className="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+      <AvatarDialogActions
+        canSave={canSave}
+        uploading={uploading}
+        onCancel={onCancel}
+        onClear={onClear}
+        onSave={onSave}
+      />
     </section>
   );
 }
@@ -103,7 +124,7 @@ function AvatarCropPreview({
   onPointerDown,
   onPointerMove,
   onPointerUp,
-  onWheel
+  onWheel,
 }: {
   cropActive: boolean;
   cropSize: number;
@@ -144,11 +165,17 @@ function AvatarCropPreview({
             onError={onImageError}
           />
         ) : (
-          <span className="absolute inset-0 grid place-items-center">{name.slice(0, 2).toUpperCase() || "AV"}</span>
+          <span className="absolute inset-0 grid place-items-center">
+            {name.slice(0, 2).toUpperCase() || "AV"}
+          </span>
         )}
         {sourceSrc && cropActive && <AvatarCropMask cropSize={cropSize} stageSize={stageSize} />}
       </div>
-      <p className="text-sm text-muted-foreground">{sourceSrc ? "Scroll over the image to zoom, drag to pan, or use the rotate and flip tools." : "Preview your avatar here before saving it."}</p>
+      <p className="text-sm text-muted-foreground">
+        {sourceSrc
+          ? "Scroll over the image to zoom, drag to pan, or use the rotate and flip tools."
+          : "Preview your avatar here before saving it."}
+      </p>
     </section>
   );
 }
@@ -157,11 +184,26 @@ function AvatarCropMask({ cropSize, stageSize }: { cropSize: number; stageSize: 
   const cropInset = (stageSize - cropSize) / 2;
   return (
     <>
-      <div className="pointer-events-none absolute left-0 top-0 bg-black/45" style={{ width: "100%", height: cropInset }} />
-      <div className="pointer-events-none absolute left-0 bg-black/45" style={{ top: cropInset, width: cropInset, height: cropSize }} />
-      <div className="pointer-events-none absolute right-0 bg-black/45" style={{ top: cropInset, width: cropInset, height: cropSize }} />
-      <div className="pointer-events-none absolute bottom-0 left-0 bg-black/45" style={{ width: "100%", height: cropInset }} />
-      <div className="pointer-events-none absolute border-2 border-sky-400 shadow-[0_0_0_1px_rgba(255,255,255,0.7)]" style={{ left: cropInset, top: cropInset, width: cropSize, height: cropSize }} />
+      <div
+        className="pointer-events-none absolute left-0 top-0 bg-black/45"
+        style={{ width: "100%", height: cropInset }}
+      />
+      <div
+        className="pointer-events-none absolute left-0 bg-black/45"
+        style={{ top: cropInset, width: cropInset, height: cropSize }}
+      />
+      <div
+        className="pointer-events-none absolute right-0 bg-black/45"
+        style={{ top: cropInset, width: cropInset, height: cropSize }}
+      />
+      <div
+        className="pointer-events-none absolute bottom-0 left-0 bg-black/45"
+        style={{ width: "100%", height: cropInset }}
+      />
+      <div
+        className="pointer-events-none absolute border-2 border-sky-400 shadow-[0_0_0_1px_rgba(255,255,255,0.7)]"
+        style={{ left: cropInset, top: cropInset, width: cropSize, height: cropSize }}
+      />
     </>
   );
 }
@@ -171,7 +213,7 @@ function AvatarCropTools({
   onFlipX,
   onFlipY,
   onRotate,
-  onZoom
+  onZoom,
 }: {
   enabled: boolean;
   onFlipX: () => false | void;
@@ -182,16 +224,46 @@ function AvatarCropTools({
   if (!enabled) return null;
   return (
     <div className="flex flex-wrap items-center justify-center gap-2">
-      <Button type="button" size="sm" variant="secondary" icon={ZoomOut} onClick={() => onZoom(-0.03)}>Less</Button>
-      <Button type="button" size="sm" variant="secondary" onClick={onFlipX}>Flip H</Button>
-      <Button type="button" size="sm" variant="secondary" icon={RotateCw} onClick={onRotate}>Rotate</Button>
-      <Button type="button" size="sm" variant="secondary" onClick={onFlipY}>Flip V</Button>
-      <Button type="button" size="sm" variant="secondary" icon={ZoomIn} onClick={() => onZoom(0.03)}>More</Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        icon={ZoomOut}
+        onClick={() => onZoom(-0.03)}
+      >
+        Less
+      </Button>
+      <Button type="button" size="sm" variant="secondary" onClick={onFlipX}>
+        Flip H
+      </Button>
+      <Button type="button" size="sm" variant="secondary" icon={RotateCw} onClick={onRotate}>
+        Rotate
+      </Button>
+      <Button type="button" size="sm" variant="secondary" onClick={onFlipY}>
+        Flip V
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="secondary"
+        icon={ZoomIn}
+        onClick={() => onZoom(0.03)}
+      >
+        More
+      </Button>
     </div>
   );
 }
 
-function AvatarInputs({ imageURL, onFile, onURLChange }: { imageURL: string; onFile: (file: File) => void; onURLChange: (value: string) => void }) {
+function AvatarInputs({
+  imageURL,
+  onFile,
+  onURLChange,
+}: {
+  imageURL: string;
+  onFile: (file: File) => void;
+  onURLChange: (value: string) => void;
+}) {
   return (
     <>
       <Field label="Upload image">
@@ -204,9 +276,15 @@ function AvatarInputs({ imageURL, onFile, onURLChange }: { imageURL: string; onF
           }}
         />
       </Field>
-      <p className="text-sm text-muted-foreground">Uploaded images are saved as a cropped square avatar.</p>
+      <p className="text-sm text-muted-foreground">
+        Uploaded images are saved as a cropped square avatar.
+      </p>
       <Field label="Image URL">
-        <Input value={imageURL} onChange={(event) => onURLChange(event.target.value)} placeholder="https://..." />
+        <Input
+          value={imageURL}
+          onChange={(event) => onURLChange(event.target.value)}
+          placeholder="https://..."
+        />
       </Field>
     </>
   );
@@ -217,7 +295,7 @@ function AvatarDialogActions({
   uploading,
   onCancel,
   onClear,
-  onSave
+  onSave,
 }: {
   canSave: boolean;
   uploading: boolean;
@@ -227,10 +305,16 @@ function AvatarDialogActions({
 }) {
   return (
     <footer className="flex justify-between gap-2">
-      <Button type="button" variant="danger" onClick={onClear}>Clear image</Button>
+      <Button type="button" variant="danger" onClick={onClear}>
+        Clear image
+      </Button>
       <div className="flex gap-2">
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
-        <Button type="button" disabled={uploading || !canSave} onClick={onSave}>{uploading ? "Saving..." : "Save avatar"}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="button" disabled={uploading || !canSave} onClick={onSave}>
+          {uploading ? "Saving..." : "Save avatar"}
+        </Button>
       </div>
     </footer>
   );

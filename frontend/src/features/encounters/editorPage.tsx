@@ -3,11 +3,33 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
-import { Button, Callout, EmptyMini, Field, FloatingInput, MutedPanel, Page, PageHeader, SectionPanel, Select, StatPill, Textarea, ToastViewport, useToasts } from "../../components/ui";
+import {
+  Button,
+  Callout,
+  EmptyMini,
+  Field,
+  FloatingInput,
+  MutedPanel,
+  Page,
+  PageHeader,
+  SectionPanel,
+  Select,
+  StatPill,
+  Textarea,
+  ToastViewport,
+  useToasts,
+} from "../../components/ui";
 import { api } from "../../lib/api";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
 import { encounterStatusOptions } from "../../lib/domain/options";
-import type { CampaignDetail, Creature, DraftCombatant, Encounter, EncounterCombatant, Player } from "../../types";
+import type {
+  CampaignDetail,
+  Creature,
+  DraftCombatant,
+  Encounter,
+  EncounterCombatant,
+  Player,
+} from "../../types";
 import { DifficultyPill } from "./DifficultyPill";
 import { CombatantEditSheet, CombatantList, CreatureEncounterAddRow } from "./editorComponents";
 import {
@@ -16,7 +38,7 @@ import {
   draftFromPlayer,
   encounterDirty,
   encounterMetaChanged,
-  playerClassLevel
+  playerClassLevel,
 } from "./domain";
 
 export function EncounterEditPage() {
@@ -25,7 +47,13 @@ export function EncounterEditPage() {
   const toast = useToasts();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [encounter, setEncounter] = useState<Encounter | null>(null);
-  const [encounterMeta, setEncounterMeta] = useState({ name: "", description: "", status: "planned", location: "", roomNumber: "" });
+  const [encounterMeta, setEncounterMeta] = useState({
+    name: "",
+    description: "",
+    status: "planned",
+    location: "",
+    roomNumber: "",
+  });
   const [savedCombatants, setSavedCombatants] = useState<EncounterCombatant[]>([]);
   const [draftCombatants, setDraftCombatants] = useState<DraftCombatant[]>([]);
   const [creatures, setCreatures] = useState<Creature[]>([]);
@@ -38,14 +66,26 @@ export function EncounterEditPage() {
   const playerCombatants = combatants.filter((combatant) => combatant.side === "player");
   const friendlyCombatants = combatants.filter((combatant) => combatant.side === "friendly");
   const enemyCombatants = combatants.filter((combatant) => combatant.side === "enemy");
-  const addedPlayerIds = new Set(playerCombatants.map((combatant) => combatant.playerId).filter(Boolean));
-  const availablePlayers = (detail?.players ?? []).filter((player) => !addedPlayerIds.has(player.id));
+  const addedPlayerIds = new Set(
+    playerCombatants.map((combatant) => combatant.playerId).filter(Boolean),
+  );
+  const availablePlayers = (detail?.players ?? []).filter(
+    (player) => !addedPlayerIds.has(player.id),
+  );
   const campaignCreatureIds = new Set((detail?.npcs ?? []).map((creature) => creature.id));
   const filteredCreatures = creatures.filter((creature) => {
     const query = search.trim().toLowerCase();
-    return !query || creature.name.toLowerCase().includes(query) || creature.creatureType.toLowerCase().includes(query) || creature.challengeRating.toLowerCase().includes(query);
+    return (
+      !query ||
+      creature.name.toLowerCase().includes(query) ||
+      creature.creatureType.toLowerCase().includes(query) ||
+      creature.challengeRating.toLowerCase().includes(query)
+    );
   });
-  const difficulty = useMemo(() => calculateEncounterDifficulty(detail?.players ?? [], enemyCombatants), [detail?.players, enemyCombatants]);
+  const difficulty = useMemo(
+    () => calculateEncounterDifficulty(detail?.players ?? [], enemyCombatants),
+    [detail?.players, enemyCombatants],
+  );
 
   async function load() {
     if (!campaignID || !encounterID) return;
@@ -55,7 +95,7 @@ export function EncounterEditPage() {
       const [campaignPayload, encounterPayload, creaturePayload] = await Promise.all([
         api.campaign(campaignID),
         api.encounter(encounterID),
-        api.creatures()
+        api.creatures(),
       ]);
       setDetail(campaignPayload);
       setEncounter(encounterPayload.encounter);
@@ -64,7 +104,7 @@ export function EncounterEditPage() {
         description: encounterPayload.encounter.description,
         status: encounterPayload.encounter.status,
         location: encounterPayload.encounter.location,
-        roomNumber: encounterPayload.encounter.roomNumber
+        roomNumber: encounterPayload.encounter.roomNumber,
       });
       setSavedCombatants(encounterPayload.encounter.combatants ?? []);
       setDraftCombatants(encounterPayload.encounter.combatants ?? []);
@@ -82,7 +122,10 @@ export function EncounterEditPage() {
 
   function addAllPlayers() {
     if (!encounter || availablePlayers.length === 0) return;
-    setDraftCombatants((current) => [...current, ...availablePlayers.map((player) => draftFromPlayer(encounter.id, player))]);
+    setDraftCombatants((current) => [
+      ...current,
+      ...availablePlayers.map((player) => draftFromPlayer(encounter.id, player)),
+    ]);
     toast.push("Party staged for encounter");
   }
 
@@ -92,18 +135,27 @@ export function EncounterEditPage() {
     toast.push(`${player.characterName} staged`);
   }
 
-  function addCreature(creature: Creature, side: "friendly" | "enemy", quantity: number, rolledHp: boolean) {
+  function addCreature(
+    creature: Creature,
+    side: "friendly" | "enemy",
+    quantity: number,
+    rolledHp: boolean,
+  ) {
     if (!encounter) return;
     const count = Math.max(1, quantity || 1);
     setDraftCombatants((current) => [
       ...current,
-      ...Array.from({ length: count }, (_, index) => draftFromCreature(encounter.id, creature, side, rolledHp, index, count))
+      ...Array.from({ length: count }, (_, index) =>
+        draftFromCreature(encounter.id, creature, side, rolledHp, index, count),
+      ),
     ]);
     toast.push(`${creature.name} staged`);
   }
 
   function saveCombatant(combatant: DraftCombatant) {
-    setDraftCombatants((current) => current.map((item) => item.id === combatant.id ? combatant : item));
+    setDraftCombatants((current) =>
+      current.map((item) => (item.id === combatant.id ? combatant : item)),
+    );
     toast.push(`${combatant.displayName} staged`);
     setEditing(null);
   }
@@ -121,7 +173,7 @@ export function EncounterEditPage() {
         description: encounter.description,
         status: encounter.status,
         location: encounter.location,
-        roomNumber: encounter.roomNumber
+        roomNumber: encounter.roomNumber,
       });
     }
     setEditing(null);
@@ -133,10 +185,17 @@ export function EncounterEditPage() {
     setSaving(true);
     setError("");
     try {
-      const draftByID = new Map(draftCombatants.filter((combatant) => !combatant.pendingAdd).map((combatant) => [combatant.id, combatant]));
+      const draftByID = new Map(
+        draftCombatants
+          .filter((combatant) => !combatant.pendingAdd)
+          .map((combatant) => [combatant.id, combatant]),
+      );
       const savedByID = new Map(savedCombatants.map((combatant) => [combatant.id, combatant]));
       const removals = savedCombatants.filter((combatant) => !draftByID.has(combatant.id));
-      const updates = draftCombatants.filter((combatant) => !combatant.pendingAdd && combatantChanged(savedByID.get(combatant.id), combatant));
+      const updates = draftCombatants.filter(
+        (combatant) =>
+          !combatant.pendingAdd && combatantChanged(savedByID.get(combatant.id), combatant),
+      );
       const additions = draftCombatants.filter((combatant) => combatant.pendingAdd);
       if (encounterMetaChanged(encounter, encounterMeta)) {
         await api.updateEncounter(encounter.id, encounterMeta);
@@ -161,7 +220,7 @@ export function EncounterEditPage() {
           armorClass: combatant.armorClass,
           maxHitPoints: combatant.maxHitPoints,
           currentHitPoints: combatant.currentHitPoints,
-          rolledHp: pending.rolledHp
+          rolledHp: pending.rolledHp,
         });
       }
       toast.push("Encounter changes saved");
@@ -189,7 +248,9 @@ export function EncounterEditPage() {
     }
   }
 
-  const dirty = encounterDirty(savedCombatants, draftCombatants) || encounterMetaChanged(encounter, encounterMeta);
+  const dirty =
+    encounterDirty(savedCombatants, draftCombatants) ||
+    encounterMetaChanged(encounter, encounterMeta);
 
   if (loading) {
     return <MutedPanel>Loading encounter builder...</MutedPanel>;
@@ -198,7 +259,13 @@ export function EncounterEditPage() {
     return (
       <Page>
         <Callout tone="danger">{error || "Encounter not found"}</Callout>
-        <Button type="button" variant="secondary" onClick={() => void navigate(`/campaigns/${campaignID}`)}>Back to campaign</Button>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => void navigate(`/campaigns/${campaignID}`)}
+        >
+          Back to campaign
+        </Button>
       </Page>
     );
   }
@@ -208,14 +275,30 @@ export function EncounterEditPage() {
       <Page>
         <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
         <BackButton to={`/campaigns/${detail.campaign.id}`}>Back to campaign</BackButton>
-        <Breadcrumbs items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name, to: `/campaigns/${detail.campaign.id}` }, { label: encounter.name }, { label: "Edit" }]} />
+        <Breadcrumbs
+          items={[
+            { label: "Campaigns", to: "/campaigns" },
+            { label: detail.campaign.name, to: `/campaigns/${detail.campaign.id}` },
+            { label: encounter.name },
+            { label: "Edit" },
+          ]}
+        />
         <PageHeader
           eyebrow={detail.campaign.name}
           title={encounterMeta.name || encounter.name}
-          copy={encounterMeta.description || "Build the encounter roster, split sides, and tune difficulty before running combat."}
+          copy={
+            encounterMeta.description ||
+            "Build the encounter roster, split sides, and tune difficulty before running combat."
+          }
           action={
             <div className="flex flex-wrap gap-2">
-              <Button type="button" icon={FlaskConical} variant="success" disabled={saving} onClick={() => void saveAndTest()}>
+              <Button
+                type="button"
+                icon={FlaskConical}
+                variant="success"
+                disabled={saving}
+                onClick={() => void saveAndTest()}
+              >
                 {saving ? "Saving..." : "Save and test"}
               </Button>
             </div>
@@ -224,15 +307,39 @@ export function EncounterEditPage() {
         {error && <Callout tone="danger">{error}</Callout>}
         <SectionPanel title="Encounter Details" icon={ClipboardList}>
           <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
-            <FloatingInput label="Name" value={encounterMeta.name} onChange={(name) => setEncounterMeta((current) => ({ ...current, name }))} required />
-            <FloatingInput label="Location" value={encounterMeta.location} onChange={(location) => setEncounterMeta((current) => ({ ...current, location }))} />
-            <FloatingInput label="Room" value={encounterMeta.roomNumber} onChange={(roomNumber) => setEncounterMeta((current) => ({ ...current, roomNumber }))} />
+            <FloatingInput
+              label="Name"
+              value={encounterMeta.name}
+              onChange={(name) => setEncounterMeta((current) => ({ ...current, name }))}
+              required
+            />
+            <FloatingInput
+              label="Location"
+              value={encounterMeta.location}
+              onChange={(location) => setEncounterMeta((current) => ({ ...current, location }))}
+            />
+            <FloatingInput
+              label="Room"
+              value={encounterMeta.roomNumber}
+              onChange={(roomNumber) => setEncounterMeta((current) => ({ ...current, roomNumber }))}
+            />
             <Field label="Status">
-              <Select value={encounterMeta.status} placeholder="Status" options={encounterStatusOptions} onValueChange={(status) => setEncounterMeta((current) => ({ ...current, status }))} />
+              <Select
+                value={encounterMeta.status}
+                placeholder="Status"
+                options={encounterStatusOptions}
+                onValueChange={(status) => setEncounterMeta((current) => ({ ...current, status }))}
+              />
             </Field>
           </div>
           <Field className="mt-3" label="Description">
-            <Textarea rows={3} value={encounterMeta.description} onChange={(event) => setEncounterMeta((current) => ({ ...current, description: event.target.value }))} />
+            <Textarea
+              rows={3}
+              value={encounterMeta.description}
+              onChange={(event) =>
+                setEncounterMeta((current) => ({ ...current, description: event.target.value }))
+              }
+            />
           </Field>
         </SectionPanel>
         <SectionPanel title="Difficulty" icon={Swords}>
@@ -243,52 +350,109 @@ export function EncounterEditPage() {
             <StatPill label="Multiplier" value={`${difficulty.multiplier}x`} />
           </div>
           <p className="mt-3 text-sm text-muted-foreground">
-            Thresholds for this party: Easy {difficulty.thresholds.easy}, Medium {difficulty.thresholds.medium}, Hard {difficulty.thresholds.hard}, Deadly {difficulty.thresholds.deadly}.
+            Thresholds for this party: Easy {difficulty.thresholds.easy}, Medium{" "}
+            {difficulty.thresholds.medium}, Hard {difficulty.thresholds.hard}, Deadly{" "}
+            {difficulty.thresholds.deadly}.
           </p>
         </SectionPanel>
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
           <SectionPanel title="Add Enemies Or Allies" icon={Search}>
             <div className="grid gap-3">
-              <FloatingInput icon={Search} label="Search creatures" value={search} onChange={setSearch} />
+              <FloatingInput
+                icon={Search}
+                label="Search creatures"
+                value={search}
+                onChange={setSearch}
+              />
               <div className="grid max-h-[65vh] gap-2 overflow-y-auto pr-1">
                 {filteredCreatures.map((creature) => (
                   <CreatureEncounterAddRow
                     key={creature.id}
                     creature={creature}
                     campaignLinked={campaignCreatureIds.has(creature.id)}
-                    onAdd={(side, rowQuantity, rowRolledHp) => addCreature(creature, side, rowQuantity, rowRolledHp)}
+                    onAdd={(side, rowQuantity, rowRolledHp) =>
+                      addCreature(creature, side, rowQuantity, rowRolledHp)
+                    }
                   />
                 ))}
-                {filteredCreatures.length === 0 && <EmptyMini copy="No creatures match that search." />}
+                {filteredCreatures.length === 0 && (
+                  <EmptyMini copy="No creatures match that search." />
+                )}
               </div>
             </div>
           </SectionPanel>
           <div className="grid gap-4">
             <SectionPanel title="Players And Friendlies" icon={UsersRound}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">Add or remove player characters here. Full player editing stays in the Players section.</p>
-                <Button type="button" icon={Plus} size="sm" variant="success" disabled={availablePlayers.length === 0} onClick={() => void addAllPlayers()}>Add all players</Button>
+                <p className="text-sm text-muted-foreground">
+                  Add or remove player characters here. Full player editing stays in the Players
+                  section.
+                </p>
+                <Button
+                  type="button"
+                  icon={Plus}
+                  size="sm"
+                  variant="success"
+                  disabled={availablePlayers.length === 0}
+                  onClick={() => void addAllPlayers()}
+                >
+                  Add all players
+                </Button>
               </div>
               {availablePlayers.length > 0 && (
                 <div className="mb-4 grid gap-2">
                   {availablePlayers.map((player) => (
-                    <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2" key={player.id}>
+                    <div
+                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
+                      key={player.id}
+                    >
                       <div className="min-w-0">
                         <div className="truncate text-sm font-medium">{player.characterName}</div>
-                        <div className="text-xs text-muted-foreground">{playerClassLevel(player)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {playerClassLevel(player)}
+                        </div>
                       </div>
-                      <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={() => void addPlayer(player)}>Add</Button>
+                      <Button
+                        type="button"
+                        icon={Plus}
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => void addPlayer(player)}
+                      >
+                        Add
+                      </Button>
                     </div>
                   ))}
                 </div>
               )}
-              <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">Players</h4>
-              <CombatantList combatants={playerCombatants} empty="No players added yet." sideTone="player" onRemove={removeCombatant} />
-              <h4 className="mb-2 mt-5 text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Friendlies</h4>
-              <CombatantList combatants={friendlyCombatants} empty="No friendly NPCs or monsters yet." sideTone="friendly" onEdit={setEditing} onRemove={removeCombatant} />
+              <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+                Players
+              </h4>
+              <CombatantList
+                combatants={playerCombatants}
+                empty="No players added yet."
+                sideTone="player"
+                onRemove={removeCombatant}
+              />
+              <h4 className="mb-2 mt-5 text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                Friendlies
+              </h4>
+              <CombatantList
+                combatants={friendlyCombatants}
+                empty="No friendly NPCs or monsters yet."
+                sideTone="friendly"
+                onEdit={setEditing}
+                onRemove={removeCombatant}
+              />
             </SectionPanel>
             <SectionPanel title="Enemies" icon={Swords}>
-              <CombatantList combatants={enemyCombatants} empty="No enemies yet." sideTone="enemy" onEdit={setEditing} onRemove={removeCombatant} />
+              <CombatantList
+                combatants={enemyCombatants}
+                empty="No enemies yet."
+                sideTone="enemy"
+                onEdit={setEditing}
+                onRemove={removeCombatant}
+              />
             </SectionPanel>
           </div>
         </div>

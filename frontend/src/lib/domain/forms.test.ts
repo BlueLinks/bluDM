@@ -18,9 +18,25 @@ describe("character form domain helpers", () => {
   });
 
   it("formats multi-part action rolls", () => {
-    expect(formatRolls([
-      { rollKind: "damage", damageType: "bludgeoning", magical: false, diceCount: 2, dieSize: 6, fixedValue: -1 },
-      { rollKind: "damage", damageType: "poison", magical: false, diceCount: 3, dieSize: 6, fixedValue: 0 }
-    ])).toBe("2d6-1 bludgeoning + 3d6 poison");
+    expect(
+      formatRolls([
+        {
+          rollKind: "damage",
+          damageType: "bludgeoning",
+          magical: false,
+          diceCount: 2,
+          dieSize: 6,
+          fixedValue: -1,
+        },
+        {
+          rollKind: "damage",
+          damageType: "poison",
+          magical: false,
+          diceCount: 3,
+          dieSize: 6,
+          fixedValue: 0,
+        },
+      ]),
+    ).toBe("2d6-1 bludgeoning + 3d6 poison");
   });
 });

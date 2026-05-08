@@ -9,7 +9,7 @@ export function UnsavedChangesBar({
   savingLabel = "Saving...",
   onCancel,
   onRevert,
-  onSave
+  onSave,
 }: {
   title?: string;
   copy?: string;
@@ -27,9 +27,17 @@ export function UnsavedChangesBar({
         {copy && <div className="text-xs text-muted-foreground">{copy}</div>}
       </div>
       <div className="flex flex-wrap gap-2">
-        <Button type="button" variant="secondary" disabled={saving} onClick={onRevert}>Revert changes</Button>
-        {onCancel && <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>Cancel</Button>}
-        <Button type="button" icon={Check} variant="success" disabled={saving} onClick={onSave}>{saving ? savingLabel : saveLabel}</Button>
+        <Button type="button" variant="secondary" disabled={saving} onClick={onRevert}>
+          Revert changes
+        </Button>
+        {onCancel && (
+          <Button type="button" variant="ghost" disabled={saving} onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button type="button" icon={Check} variant="success" disabled={saving} onClick={onSave}>
+          {saving ? savingLabel : saveLabel}
+        </Button>
       </div>
     </div>
   );
