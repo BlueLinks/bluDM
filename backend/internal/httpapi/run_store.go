@@ -5,8 +5,26 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 )
+
+func runCombatantSelect(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return fmt.Sprintf(`
+		select %[1]sid, %[1]sencounter_run_id, coalesce(%[1]ssource_combatant_id::text, ''), %[1]ssource_type,
+			coalesce(%[1]splayer_id::text, ''), coalesce(%[1]screature_id::text, ''), %[1]sside, %[1]sdisplay_name,
+			%[1]scolor_label, %[1]savatar_url, %[1]sarmor_class, %[1]smax_hit_points, %[1]scurrent_hit_points,
+			%[1]stemporary_hit_points, %[1]smax_hit_points_modifier, %[1]sarmor_class_bonus, %[1]sarmor_class_override,
+			%[1]smax_hit_points_override, %[1]scurrent_hit_points_override, coalesce(%[1]sinitiative, 0), %[1]sinitiative_set,
+			%[1]ssort_order, %[1]sdefeated, %[1]sconditions, %[1]sdamage_dealt, %[1]sdamage_taken,
+			%[1]shealing_done, %[1]shealing_received, %[1]skills, %[1]sdeath_save_successes,
+			%[1]sdeath_save_failures, %[1]sstable, %[1]ssnapshot
+	`, prefix)
+}
 
 func (s *Server) encounterRunByID(ctx context.Context, runID string) (models.EncounterRun, error) {
 	userID, ok := currentUserID(ctx)
@@ -37,14 +55,7 @@ func (s *Server) encounterRunByID(ctx context.Context, runID string) (models.Enc
 }
 
 func (s *Server) runCombatantsForRun(ctx context.Context, runID string) ([]models.EncounterRunCombatant, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, encounter_run_id, coalesce(source_combatant_id::text, ''), source_type,
-			coalesce(player_id::text, ''), coalesce(creature_id::text, ''), side, display_name,
-			color_label, avatar_url, armor_class, max_hit_points, current_hit_points,
-			temporary_hit_points, max_hit_points_modifier, armor_class_bonus, armor_class_override,
-			max_hit_points_override, current_hit_points_override, coalesce(initiative, 0), initiative_set,
-			sort_order, defeated, conditions, damage_dealt, damage_taken, healing_done,
-			healing_received, kills, death_save_successes, death_save_failures, stable, snapshot
+	rows, err := s.db.Query(ctx, runCombatantSelect("")+`
 		from encounter_run_combatants
 		where encounter_run_id = $1
 		order by initiative desc nulls last, sort_order asc, display_name asc
@@ -65,14 +76,7 @@ func (s *Server) runCombatantsForRun(ctx context.Context, runID string) ([]model
 }
 
 func (s *Server) runCombatantByID(ctx context.Context, runID, combatantID string) (models.EncounterRunCombatant, error) {
-	row := s.db.QueryRow(ctx, `
-		select id, encounter_run_id, coalesce(source_combatant_id::text, ''), source_type,
-			coalesce(player_id::text, ''), coalesce(creature_id::text, ''), side, display_name,
-			color_label, avatar_url, armor_class, max_hit_points, current_hit_points,
-			temporary_hit_points, max_hit_points_modifier, armor_class_bonus, armor_class_override,
-			max_hit_points_override, current_hit_points_override, coalesce(initiative, 0), initiative_set,
-			sort_order, defeated, conditions, damage_dealt, damage_taken, healing_done,
-			healing_received, kills, death_save_successes, death_save_failures, stable, snapshot
+	row := s.db.QueryRow(ctx, runCombatantSelect("")+`
 		from encounter_run_combatants
 		where encounter_run_id = $1 and id = $2
 	`, runID, combatantID)
@@ -84,28 +88,15 @@ func (s *Server) runCombatantOwnedByID(ctx context.Context, combatantID string) 
 	if !ok {
 		return models.EncounterRunCombatant{}, errors.New("authentication required")
 	}
-	row := s.db.QueryRow(ctx, `
-		select encounter_run_combatants.id, encounter_run_combatants.encounter_run_id,
-			coalesce(encounter_run_combatants.source_combatant_id::text, ''), encounter_run_combatants.source_type,
-			coalesce(encounter_run_combatants.player_id::text, ''), coalesce(encounter_run_combatants.creature_id::text, ''),
-			encounter_run_combatants.side, encounter_run_combatants.display_name, encounter_run_combatants.color_label,
-			encounter_run_combatants.avatar_url, encounter_run_combatants.armor_class,
-			encounter_run_combatants.max_hit_points, encounter_run_combatants.current_hit_points,
-			encounter_run_combatants.temporary_hit_points, encounter_run_combatants.max_hit_points_modifier,
-			encounter_run_combatants.armor_class_bonus, encounter_run_combatants.armor_class_override,
-			encounter_run_combatants.max_hit_points_override, encounter_run_combatants.current_hit_points_override,
-			coalesce(encounter_run_combatants.initiative, 0), encounter_run_combatants.initiative_set,
-			encounter_run_combatants.sort_order, encounter_run_combatants.defeated, encounter_run_combatants.conditions,
-			encounter_run_combatants.damage_dealt, encounter_run_combatants.damage_taken,
-			encounter_run_combatants.healing_done, encounter_run_combatants.healing_received,
-			encounter_run_combatants.kills, encounter_run_combatants.death_save_successes,
-			encounter_run_combatants.death_save_failures, encounter_run_combatants.stable,
-			encounter_run_combatants.snapshot
-		from encounter_run_combatants
-		join encounter_runs on encounter_runs.id = encounter_run_combatants.encounter_run_id
-		join encounters on encounters.id = encounter_runs.encounter_id
-		join campaigns on campaigns.id = encounters.campaign_id
-		where encounter_run_combatants.id = $1 and campaigns.owner_user_id = $2
+	row := s.db.QueryRow(ctx, runCombatantSelect("erc")+`
+		from encounter_run_combatants erc
+		where erc.id = $1 and exists (
+			select 1
+			from encounter_runs
+			join encounters on encounters.id = encounter_runs.encounter_id
+			join campaigns on campaigns.id = encounters.campaign_id
+			where encounter_runs.id = erc.encounter_run_id and campaigns.owner_user_id = $2
+		)
 	`, combatantID, userID)
 	return scanEncounterRunCombatant(row)
 }
