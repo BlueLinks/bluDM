@@ -42,8 +42,13 @@ export function CreatureEncounterAddRow({
           <CreatureAvatar creature={creature} />
           <div className="min-w-0">
             <div className="truncate font-semibold">{creature.name}</div>
-            <div className="text-xs text-muted-foreground">
-              {creatureSummary(creature, campaignLinked)}
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>{creatureSummary(creature, campaignLinked)}</span>
+              {creature.readOnly && (
+                <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 font-semibold text-sky-800 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                  Read-only
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -357,14 +357,14 @@ export function Select({
   const selected = options.find((option) => option.value === value);
   const SelectedIcon = selected?.icon;
   return (
-    <SelectPrimitive.Root value={value || undefined} onValueChange={onValueChange}>
-      <SelectPrimitive.Trigger className="inline-flex min-h-10 w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm outline-none ring-primary/30 transition hover:bg-muted/60 focus:ring-2">
-        <span className="flex min-w-0 items-center gap-2">
+    <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
+      <SelectPrimitive.Trigger className="inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm outline-none ring-primary/30 transition hover:bg-muted/60 focus:ring-2">
+        <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {SelectedIcon && <SelectedIcon className="h-4 w-4 shrink-0 text-muted-foreground" />}
-          <SelectPrimitive.Value placeholder={placeholder} />
+          <SelectPrimitive.Value className="truncate" placeholder={placeholder} />
         </span>
         <SelectPrimitive.Icon asChild>
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground" />
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -372,7 +372,7 @@ export function Select({
           <SelectPrimitive.Viewport className="p-1">
             {options.map((option) => (
               <SelectPrimitive.Item
-                className="relative flex cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-sm outline-none hover:bg-muted focus:bg-muted data-[state=checked]:font-semibold"
+                className="relative flex min-w-0 cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-sm outline-none hover:bg-muted focus:bg-muted data-[state=checked]:font-semibold"
                 key={option.value}
                 value={option.value}
               >

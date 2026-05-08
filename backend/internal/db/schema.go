@@ -70,6 +70,7 @@ create table if not exists campaigns (
     owner_user_id uuid references users(id) on delete cascade,
     name text not null,
     description text not null default '',
+    allowed_standard_sources text[] not null default array['srd-2014']::text[],
     archived_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
@@ -146,6 +147,7 @@ create table if not exists action_templates (
 );
 
 alter table campaigns add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table campaigns add column if not exists allowed_standard_sources text[] not null default array['srd-2014']::text[];
 alter table uploaded_assets add column if not exists owner_user_id uuid references users(id) on delete cascade;
 alter table uploaded_assets drop constraint if exists uploaded_assets_owner_user_id_fkey;
 alter table uploaded_assets add constraint uploaded_assets_owner_user_id_fkey foreign key (owner_user_id) references users(id) on delete cascade;
@@ -478,5 +480,8 @@ begin
     end if;
 end $$;
 `)
-	return err
+	if err != nil {
+		return err
+	}
+	return seedStandardContent(ctx, pool)
 }

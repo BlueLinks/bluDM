@@ -7,6 +7,7 @@ import {
   Package,
   PanelLeftClose,
   PanelLeftOpen,
+  ScrollText,
   Shield,
   Sparkles,
   Sun,
@@ -26,6 +27,7 @@ const navItems = [
   { to: "/npcs", label: "NPCs", icon: Swords },
   { to: "/spells", label: "Spells", icon: Sparkles },
   { to: "/items", label: "Items", icon: Package },
+  { to: "/rules", label: "Rules", icon: ScrollText },
   { to: "/import", label: "Import", icon: Import },
 ];
 
@@ -96,7 +98,7 @@ export function WorkspaceShell({
   }, [sidebarCollapsed]);
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="h-screen overflow-hidden bg-background text-foreground">
       <div className="flex min-h-screen">
         <aside
           className={[

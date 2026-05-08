@@ -10,8 +10,8 @@
     "check:size": "node ../scripts/check-file-size.mjs",
     "test": "vitest run",
     "preview": "vite preview --host 0.0.0.0",
-    "format": "prettier --ignore-path ../.prettierignore --ignore-unknown --write . ../AGENTS.md ../CODEX_PROMPTS.md ../CONTRIBUTING.md ../scripts/check-file-size.mjs ../.github/pull_request_template.md ../.prettierrc.json",
-    "format:check": "prettier --ignore-path ../.prettierignore --ignore-unknown --check . ../AGENTS.md ../CODEX_PROMPTS.md ../CONTRIBUTING.md ../scripts/check-file-size.mjs ../.github/pull_request_template.md ../.prettierrc.json"
+    "format": "prettier --ignore-path ../.prettierignore --ignore-unknown --write . ../AGENTS.md ../CODEX_PROMPTS.md ../CONTRIBUTING.md ../scripts/*.mjs ../.github/pull_request_template.md ../.prettierrc.json",
+    "format:check": "prettier --ignore-path ../.prettierignore --ignore-unknown --check . ../AGENTS.md ../CODEX_PROMPTS.md ../CONTRIBUTING.md ../scripts/*.mjs ../.github/pull_request_template.md ../.prettierrc.json"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

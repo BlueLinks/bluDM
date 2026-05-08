@@ -11,7 +11,7 @@ import (
 func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
 	user, _ := s.currentUser(r)
 	rows, err := s.db.Query(r.Context(), `
-		select id, name, description, created_at, updated_at
+		select id, name, description, allowed_standard_sources, created_at, updated_at
 		from campaigns
 		where owner_user_id = $1
 		order by updated_at desc
@@ -25,7 +25,7 @@ func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
 	campaigns := []models.Campaign{}
 	for rows.Next() {
 		var campaign models.Campaign
-		if err := rows.Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt); err != nil {
+		if err := scanCampaign(rows, &campaign); err != nil {
 			writeError(w, http.StatusInternalServerError, "could not read campaigns")
 			return
 		}
@@ -47,6 +47,7 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 	}
 	req.Name = strings.TrimSpace(req.Name)
 	req.Description = strings.TrimSpace(req.Description)
+	sources := normalizeStandardSources(req.AllowedStandardSources)
 	if req.Name == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
@@ -54,16 +55,60 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 
 	var campaign models.Campaign
 	err := s.db.QueryRow(r.Context(), `
-		insert into campaigns (owner_user_id, name, description)
-		values ($1, $2, $3)
-		returning id, name, description, created_at, updated_at
-	`, user.ID, req.Name, req.Description).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
+		insert into campaigns (owner_user_id, name, description, allowed_standard_sources)
+		values ($1, $2, $3, $4)
+		returning id, name, description, allowed_standard_sources, created_at, updated_at
+	`, user.ID, req.Name, req.Description, sources).Scan(
+		&campaign.ID,
+		&campaign.Name,
+		&campaign.Description,
+		&campaign.AllowedStandardSources,
+		&campaign.CreatedAt,
+		&campaign.UpdatedAt,
+	)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create campaign")
 		return
 	}
 
 	writeJSON(w, http.StatusCreated, map[string]any{"campaign": campaign})
+}
+
+func (s *Server) updateCampaign(w http.ResponseWriter, r *http.Request) {
+	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
+	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+		writeError(w, http.StatusNotFound, "campaign not found")
+		return
+	}
+	var req campaignRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	req.Description = strings.TrimSpace(req.Description)
+	if req.Name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	var campaign models.Campaign
+	err := s.db.QueryRow(r.Context(), `
+		update campaigns
+		set name = $2, description = $3, allowed_standard_sources = $4, updated_at = now()
+		where id = $1
+		returning id, name, description, allowed_standard_sources, created_at, updated_at
+	`, campaignID, req.Name, req.Description, normalizeStandardSources(req.AllowedStandardSources)).Scan(
+		&campaign.ID,
+		&campaign.Name,
+		&campaign.Description,
+		&campaign.AllowedStandardSources,
+		&campaign.CreatedAt,
+		&campaign.UpdatedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not update campaign")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"campaign": campaign})
 }
 
 func (s *Server) getCampaign(w http.ResponseWriter, r *http.Request) {
@@ -288,20 +333,6 @@ func (s *Server) undoLongRestCampaign(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"restoredPlayers": restored})
 }
 
-func (s *Server) campaignByID(ctx context.Context, campaignID string) (models.Campaign, error) {
-	userID, ok := currentUserID(ctx)
-	if !ok {
-		return models.Campaign{}, errors.New("authentication required")
-	}
-	var campaign models.Campaign
-	err := s.db.QueryRow(ctx, `
-		select id, name, description, created_at, updated_at
-		from campaigns
-		where id = $1 and owner_user_id = $2 and archived_at is null
-	`, campaignID, userID).Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt)
-	return campaign, err
-}
-
 func (s *Server) playersForCampaign(ctx context.Context, campaignID string) ([]models.Player, error) {
 	rows, err := s.db.Query(ctx, `
 		select players.id, players.campaign_id, campaigns.name, players.character_name, players.player_name,
@@ -362,7 +393,8 @@ func (s *Server) campaignsForCreature(ctx context.Context, creatureID string) ([
 		return nil, errors.New("authentication required")
 	}
 	rows, err := s.db.Query(ctx, `
-		select campaigns.id, campaigns.name, campaigns.description, campaigns.created_at, campaigns.updated_at
+		select campaigns.id, campaigns.name, campaigns.description, campaigns.allowed_standard_sources,
+			campaigns.created_at, campaigns.updated_at
 		from campaign_creatures
 		join campaigns on campaigns.id = campaign_creatures.campaign_id
 		where campaign_creatures.creature_id = $1 and campaigns.owner_user_id = $2 and campaigns.archived_at is null
@@ -375,7 +407,7 @@ func (s *Server) campaignsForCreature(ctx context.Context, creatureID string) ([
 	campaigns := []models.Campaign{}
 	for rows.Next() {
 		var campaign models.Campaign
-		if err := rows.Scan(&campaign.ID, &campaign.Name, &campaign.Description, &campaign.CreatedAt, &campaign.UpdatedAt); err != nil {
+		if err := scanCampaign(rows, &campaign); err != nil {
 			return nil, err
 		}
 		campaigns = append(campaigns, campaign)
@@ -416,32 +448,4 @@ func (s *Server) countCampaignRows(ctx context.Context, tableName string, campai
 	query := "select count(*) from " + tableName + " where campaign_id = $1"
 	err := s.db.QueryRow(ctx, query, campaignID).Scan(&count)
 	return count, err
-}
-
-type campaignRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type encounterRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Location    string `json:"location"`
-	RoomNumber  string `json:"roomNumber"`
-}
-
-type campaignCreatureRequest struct {
-	CreatureID  string `json:"creatureId"`
-	Disposition string `json:"disposition"`
-}
-
-func normalizeEncounterStatus(status string) string {
-	status = strings.TrimSpace(strings.ToLower(status))
-	switch status {
-	case "completed", "skipped":
-		return status
-	default:
-		return "planned"
-	}
 }

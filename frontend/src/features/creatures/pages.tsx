@@ -1,14 +1,15 @@
-import { Archive, Castle, Pencil, Plus, Swords, Trash2 } from "lucide-react";
+import { Archive, Castle, Plus, Search, Swords } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { avatarImageSrc } from "../../components/AvatarImagePicker";
+import { CreatureSourceFilter } from "../../components/shared/CreatureSourceFilter";
+import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
-  Badge,
   Button,
   Callout,
   ConfirmDialog,
   EmptyMini,
+  FloatingInput,
   Modal,
   MutedPanel,
   Page,
@@ -18,12 +19,7 @@ import {
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import {
-  actionFormFromTemplate,
-  blankAction,
-  creatureDefaultDisposition,
-  spiderStaffAction,
-} from "../../lib/domain/forms";
+import { actionFormFromTemplate, blankAction, spiderStaffAction } from "../../lib/domain/forms";
 import type {
   ActionFormState,
   ActionTemplate,
@@ -34,9 +30,14 @@ import type {
 } from "../../types";
 import { ActionMiniFields, ActionSummary } from "./actionEditors";
 import { CreatureForm } from "./CreatureForm";
+import { CreatureLibraryList, CreaturePreviewModal } from "./CreatureLibraryList";
 
 export function NpcsPage() {
   const [creatures, setCreatures] = useState<Creature[]>([]);
+  const [showUserCreatures, setShowUserCreatures] = useState(true);
+  const [showStandardCreatures, setShowStandardCreatures] = useState(false);
+  const [selectedSources, setSelectedSources] = useState(["srd-2014", "srd-5-2-1"]);
+  const [creatureSearch, setCreatureSearch] = useState("");
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -44,19 +45,23 @@ export function NpcsPage() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ActionTemplate | null>(null);
   const [deleteCreature, setDeleteCreature] = useState<Creature | null>(null);
+  const [previewCreature, setPreviewCreature] = useState<Creature | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<ActionTemplate | null>(null);
   const [templateUsage, setTemplateUsage] = useState<ActionTemplateUsage[]>([]);
   const toast = useToasts();
 
   useEffect(() => {
-    Promise.all([api.creatures(), api.actionTemplates()])
+    Promise.all([
+      api.creatures({ includeStandard: true, source: selectedSources }),
+      api.actionTemplates(),
+    ])
       .then(([creaturePayload, templatePayload]) => {
         setCreatures(creaturePayload.creatures);
         setTemplates(templatePayload.actionTemplates);
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load NPCs"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectedSources]);
 
   async function handleCreateTemplate(event: FormEvent) {
     event.preventDefault();
@@ -139,63 +144,39 @@ export function NpcsPage() {
       {error && <Callout tone="danger">{error}</Callout>}
       <div className="grid gap-4 xl:grid-cols-[1fr_460px]">
         <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
-          {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
-          <div className="grid gap-3">
-            {creatures.map((creature) => (
-              <div className="rounded-lg border border-border bg-background p-4" key={creature.id}>
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-muted text-sm font-bold text-muted-foreground">
-                      {avatarImageSrc(creature.imageAssetId, creature.avatarUrl) ? (
-                        <img
-                          className="h-full w-full object-cover"
-                          src={avatarImageSrc(creature.imageAssetId, creature.avatarUrl)}
-                          alt=""
-                        />
-                      ) : (
-                        creature.name.slice(0, 2).toUpperCase()
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="truncate font-semibold">{creature.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {[creature.size, creature.creatureType, creature.alignment]
-                          .filter(Boolean)
-                          .join(" · ") || "Creature"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link to={`/npcs/${creature.id}/edit`}>
-                      <Button icon={Pencil} size="sm" variant="secondary">
-                        Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      icon={Trash2}
-                      size="sm"
-                      variant="danger"
-                      onClick={() => setDeleteCreature(creature)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <Badge>AC {creature.armorClass}</Badge>
-                  <Badge>HP {creature.hitPoints}</Badge>
-                  <Badge>CR {creature.challengeRating || "-"}</Badge>
-                  <Badge
-                    tone={
-                      creatureDefaultDisposition(creature) === "friendly" ? "friendly" : "default"
-                    }
-                  >
-                    Default: {creatureDefaultDisposition(creature)}
-                  </Badge>
-                </div>
-              </div>
-            ))}
+          <div className="mb-4">
+            <CreatureSourceFilter
+              showStandard={showStandardCreatures}
+              showUser={showUserCreatures}
+              onShowStandardChange={setShowStandardCreatures}
+              onShowUserChange={setShowUserCreatures}
+            />
           </div>
+          {showStandardCreatures && (
+            <div className="mb-4">
+              <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
+            </div>
+          )}
+          <div className="mb-4">
+            <FloatingInput
+              icon={Search}
+              label="Search creatures"
+              value={creatureSearch}
+              onChange={setCreatureSearch}
+            />
+          </div>
+          {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
+          <CreatureLibraryList
+            creatures={creatures.filter((creature) =>
+              creatureVisible(creature, {
+                query: creatureSearch,
+                showStandard: showStandardCreatures,
+                showUser: showUserCreatures,
+              }),
+            )}
+            onPreview={setPreviewCreature}
+            onRemove={setDeleteCreature}
+          />
         </SectionPanel>
         <SectionPanel title="Action Bank" icon={Archive}>
           <p className="mb-4 text-sm text-muted-foreground">
@@ -280,8 +261,23 @@ export function NpcsPage() {
           </div>
         )}
       </ConfirmDialog>
+      <CreaturePreviewModal creature={previewCreature} onClose={() => setPreviewCreature(null)} />
     </Page>
   );
+}
+
+function creatureVisible(
+  creature: Creature,
+  options: { query: string; showStandard: boolean; showUser: boolean },
+) {
+  if (creature.librarySource === "standard" && !options.showStandard) return false;
+  if (creature.librarySource !== "standard" && !options.showUser) return false;
+  const query = options.query.trim().toLowerCase();
+  if (!query) return true;
+  return [creature.name, creature.size, creature.creatureType, creature.challengeRating]
+    .join(" ")
+    .toLowerCase()
+    .includes(query);
 }
 
 export function NpcCreatePage() {

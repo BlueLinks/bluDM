@@ -88,6 +88,43 @@ func scanCreature(row scanner) (models.Creature, error) {
 	if err != nil {
 		return models.Creature{}, err
 	}
+	if creature.LibrarySource == "" {
+		creature.LibrarySource = "user"
+	}
+	creature.StatBlock, err = unmarshalJSONMap(statBlockBytes)
+	if err != nil {
+		return models.Creature{}, err
+	}
+	return creature, nil
+}
+
+func scanStandardCreature(row scanner) (models.Creature, error) {
+	var creature models.Creature
+	var statBlockBytes []byte
+	err := row.Scan(
+		&creature.ID,
+		&creature.Name,
+		&creature.Description,
+		&creature.Size,
+		&creature.CreatureType,
+		&creature.Alignment,
+		&creature.ArmorClass,
+		&creature.HitPoints,
+		&creature.HitDice,
+		&creature.ChallengeRating,
+		&creature.XP,
+		&creature.AvatarURL,
+		&creature.SourceKey,
+		&creature.SourceLabel,
+		&statBlockBytes,
+		&creature.CreatedAt,
+		&creature.UpdatedAt,
+	)
+	if err != nil {
+		return models.Creature{}, err
+	}
+	creature.LibrarySource = "standard"
+	creature.ReadOnly = true
 	creature.StatBlock, err = unmarshalJSONMap(statBlockBytes)
 	if err != nil {
 		return models.Creature{}, err
