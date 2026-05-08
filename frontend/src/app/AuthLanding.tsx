@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { AuthCard, Button } from "../components/ui";
 import type { AuthProvider } from "../types";
-import { useState } from "react";
 
 type AuthLandingProps = {
   error?: string;
@@ -46,12 +45,6 @@ export function AuthLanding({
   onLocalLogin,
   onLocalRegister,
 }: AuthLandingProps) {
-  const [localMode, setLocalMode] = useState<"login" | "register">(
-    setupRequired ? "register" : "login",
-  );
-  const authTitle = localMode === "register" ? "Create your DM account" : "Sign in to your table";
-  const submitLabel = localMode === "register" ? "Create account" : "Sign in";
-
   return (
     <main className="min-h-screen bg-background text-foreground">
       <section className="mx-auto grid min-h-screen w-full max-w-6xl items-center gap-8 px-5 py-10 lg:grid-cols-[1.15fr_0.85fr]">
@@ -111,29 +104,12 @@ export function AuthLanding({
             </div>
           )}
 
-          {localAuthEnabled && !setupRequired && (
-            <div className="grid grid-cols-2 gap-2 rounded-lg border border-border bg-card p-2 shadow-sm">
-              <Button
-                type="button"
-                variant={localMode === "login" ? "primary" : "ghost"}
-                onClick={() => setLocalMode("login")}
-              >
-                Sign in
-              </Button>
-              <Button
-                type="button"
-                variant={localMode === "register" ? "primary" : "ghost"}
-                onClick={() => setLocalMode("register")}
-              >
-                Sign up
-              </Button>
-            </div>
-          )}
-
           <AuthCard
-            title={authTitle}
-            submitLabel={submitLabel}
-            onSubmit={localMode === "register" ? onLocalRegister : onLocalLogin}
+            title={setupRequired ? "Create your DM account" : "Sign in to your table"}
+            submitLabel={setupRequired ? "Create account" : "Sign in"}
+            onSubmit={setupRequired ? onLocalRegister : onLocalLogin}
+            onSecondarySubmit={setupRequired ? undefined : onLocalRegister}
+            secondaryLabel={setupRequired ? undefined : "Sign up"}
             localAuthEnabled={localAuthEnabled}
             providers={providers}
           />

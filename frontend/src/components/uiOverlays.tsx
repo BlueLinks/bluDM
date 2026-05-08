@@ -319,12 +319,16 @@ export function AuthCard({
   title,
   submitLabel,
   onSubmit,
+  onSecondarySubmit,
+  secondaryLabel,
   localAuthEnabled = true,
   providers = [],
 }: {
   title: string;
   submitLabel: string;
   onSubmit: (email: string, password: string) => Promise<void>;
+  onSecondarySubmit?: (email: string, password: string) => Promise<void>;
+  secondaryLabel?: string;
   localAuthEnabled?: boolean;
   providers?: AuthProvider[];
 }) {
@@ -333,17 +337,21 @@ export function AuthCard({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function submitWith(handler: (email: string, password: string) => Promise<void>) {
     setError("");
     setBusy(true);
     try {
-      await onSubmit(email, password);
+      await handler(email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    await submitWith(onSubmit);
   }
 
   return (
@@ -394,9 +402,21 @@ export function AuthCard({
       )}
       {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
       {localAuthEnabled ? (
-        <Button disabled={busy} type="submit">
-          {busy ? "Working..." : submitLabel}
-        </Button>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Button disabled={busy} type="submit">
+            {busy ? "Working..." : submitLabel}
+          </Button>
+          {onSecondarySubmit && secondaryLabel && (
+            <Button
+              disabled={busy}
+              type="button"
+              variant="secondary"
+              onClick={() => void submitWith(onSecondarySubmit)}
+            >
+              {secondaryLabel}
+            </Button>
+          )}
+        </div>
       ) : (
         providers.length === 0 && (
           <p className="text-sm text-muted-foreground">
