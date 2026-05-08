@@ -1,6 +1,7 @@
-import { Pencil, Plus, Wand2, X } from "lucide-react";
+import { Minus, Pencil, Plus, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
+import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -126,12 +127,24 @@ export function PlayerBasicsSection({
         />
       </Field>
       <section className="grid gap-2 rounded-lg border border-border bg-card p-3">
-        <div>
-          <h3 className="text-sm font-semibold">Browse standard character options</h3>
-          <p className="text-xs text-muted-foreground">
-            Campaign settings choose the default SRD sources, but you can browse another source
-            while creating or editing this character.
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold">Browse standard character options</h3>
+            <p className="text-xs text-muted-foreground">
+              Campaign settings choose the default SRD sources, but you can browse another source
+              while creating or editing this character.
+            </p>
+          </div>
+          <InfoHelpButton title="SRD 2014 vs SRD 5.2.1">
+            <p>
+              SRD 2014 reflects the older fifth-edition rules reference. It is well structured in
+              the current API, but has sparse character-origin data: one background and one feat.
+            </p>
+            <p>
+              SRD 5.2.1 reflects the newer 2024 rules reference. bluDM keeps it separate so a
+              campaign can opt into 2014, 2024, or both without mixing rules by accident.
+            </p>
+          </InfoHelpButton>
         </div>
         <StandardSourceToggles selected={browseSources} onChange={setBrowseSources} />
         {hasCampaignSourceMismatch && selectedCampaign && (
@@ -213,17 +226,38 @@ function CharacterProgressFields({
 }) {
   const suggestedLevel = levelFromXP(Number(form.experiencePoints) || 0);
   const currentLevel = Number(form.level) || 1;
+  const setLevel = (level: number) =>
+    setForm({ ...form, level: String(Math.min(20, Math.max(1, level))) });
 
   return (
-    <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(88px,120px)_minmax(140px,180px)_auto]">
+    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(150px,180px)_minmax(160px,220px)_minmax(180px,1fr)]">
       <Field className="min-w-0" label="Level">
-        <Input
-          type="number"
-          min={1}
-          max={20}
-          value={form.level}
-          onChange={(event) => setForm({ ...form, level: event.target.value })}
-        />
+        <div className="inline-flex max-w-[180px] overflow-hidden rounded-md border border-border bg-background">
+          <button
+            className="grid h-10 w-10 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            type="button"
+            onClick={() => setLevel(currentLevel - 1)}
+            aria-label="Decrease level"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <Input
+            className="h-10 min-h-0 w-16 rounded-none border-0 text-center font-semibold focus:ring-0"
+            type="number"
+            min={1}
+            max={20}
+            value={form.level}
+            onChange={(event) => setLevel(Number(event.target.value) || 1)}
+          />
+          <button
+            className="grid h-10 w-10 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            type="button"
+            onClick={() => setLevel(currentLevel + 1)}
+            aria-label="Increase level"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </Field>
       <Field className="min-w-0" label="XP">
         <Input
@@ -233,17 +267,17 @@ function CharacterProgressFields({
           onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
         />
       </Field>
-      <div className="self-end">
-        <Button
-          type="button"
-          className="whitespace-nowrap"
-          icon={Wand2}
-          size="sm"
-          variant={suggestedLevel === currentLevel ? "secondary" : "success"}
-          onClick={() => setForm({ ...form, level: String(suggestedLevel) })}
-        >
-          XP says {suggestedLevel}
-        </Button>
+      <div className="self-end rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+        XP suggests level <span className="font-semibold text-foreground">{suggestedLevel}</span>
+        {suggestedLevel !== currentLevel && (
+          <button
+            type="button"
+            className="ml-2 font-semibold text-primary hover:underline"
+            onClick={() => setLevel(suggestedLevel)}
+          >
+            Apply
+          </button>
+        )}
       </div>
     </div>
   );
@@ -269,7 +303,7 @@ function LibraryTextPicker({
 
   return (
     <Field className="min-w-0" label={label}>
-      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] gap-2">
+      <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_auto] gap-2">
         {useCustomInput ? (
           <Input
             className="min-w-0"
@@ -293,6 +327,16 @@ function LibraryTextPicker({
           onClick={() => setCustomMode((current) => !current)}
         >
           <span className="sr-only">{useCustomInput ? "Use SRD list" : "Enter custom text"}</span>
+        </Button>
+        <Button
+          type="button"
+          icon={X}
+          size="sm"
+          variant="ghost"
+          disabled={!value}
+          onClick={() => onChange("")}
+        >
+          <span className="sr-only">Clear {label}</span>
         </Button>
       </div>
       {useCustomInput && options.length > 0 && (
