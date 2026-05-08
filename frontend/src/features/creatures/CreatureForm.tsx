@@ -81,6 +81,7 @@ import type {
   Spell,
 } from "../../types";
 import { SortableActionEditor, WeaponMenu } from "./actionEditors";
+import { CreatureSpellPickerModal } from "./CreatureSpellPickerModal";
 const emptyCreatureForm: CreatureFormState = {
   imageAssetId: "",
   avatarUrl: "",
@@ -174,6 +175,7 @@ export function CreatureForm({
   const [error, setError] = useState("");
   const [spellModalOpen, setSpellModalOpen] = useState(false);
   const [spellSearch, setSpellSearch] = useState("");
+  const [spellSources, setSpellSources] = useState(["srd-2014"]);
   const [actionBankOpen, setActionBankOpen] = useState(false);
   const [actionSearch, setActionSearch] = useState("");
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
@@ -203,7 +205,10 @@ export function CreatureForm({
   );
 
   useEffect(() => {
-    Promise.all([api.actionTemplates(), api.spells()])
+    Promise.all([
+      api.actionTemplates(),
+      api.spells({ includeStandard: true, source: spellSources }),
+    ])
       .then(([templatePayload, spellPayload]) => {
         setTemplates(templatePayload.actionTemplates);
         setSpells(spellPayload.spells);
@@ -211,7 +216,7 @@ export function CreatureForm({
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Could not load action or spell libraries"),
       );
-  }, []);
+  }, [spellSources.join(",")]);
 
   function toggleList(
     field:
@@ -313,6 +318,8 @@ export function CreatureForm({
         setSpellModalOpen={setSpellModalOpen}
         spellSearch={spellSearch}
         setSpellSearch={setSpellSearch}
+        spellSources={spellSources}
+        setSpellSources={setSpellSources}
         filteredSpells={filteredSpells}
         spells={spells}
       />
@@ -646,8 +653,10 @@ function CreatureSpellcastingSection({
   setForm,
   setSpellModalOpen,
   setSpellSearch,
+  setSpellSources,
   spellModalOpen,
   spellSearch,
+  spellSources,
   spells,
 }: {
   filteredSpells: Spell[];
@@ -655,8 +664,10 @@ function CreatureSpellcastingSection({
   setForm: CreatureFormSetter;
   setSpellModalOpen: (open: boolean) => void;
   setSpellSearch: (search: string) => void;
+  setSpellSources: (sources: string[]) => void;
   spellModalOpen: boolean;
   spellSearch: string;
+  spellSources: string[];
   spells: Spell[];
 }) {
   return (
@@ -721,12 +732,14 @@ function CreatureSpellcastingSection({
               spend.
             </p>
           </div>
-          <SpellPickerModal
+          <CreatureSpellPickerModal
             open={spellModalOpen}
             search={spellSearch}
             spells={filteredSpells}
             selectedIds={form.spellIds}
+            spellSources={spellSources}
             setForm={setForm}
+            setSpellSources={setSpellSources}
             onOpenChange={setSpellModalOpen}
             onSearch={setSpellSearch}
           />
@@ -740,73 +753,6 @@ function CreatureSpellcastingSection({
         </div>
       </div>
     </FormSection>
-  );
-}
-
-function SpellPickerModal({
-  onOpenChange,
-  onSearch,
-  open,
-  search,
-  selectedIds,
-  setForm,
-  spells,
-}: {
-  onOpenChange: (open: boolean) => void;
-  onSearch: (search: string) => void;
-  open: boolean;
-  search: string;
-  selectedIds: string[];
-  setForm: CreatureFormSetter;
-  spells: Spell[];
-}) {
-  return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Add spells"
-      trigger={
-        <Button type="button" icon={Plus} variant="success">
-          Add spells
-        </Button>
-      }
-    >
-      <div className="grid gap-4">
-        <FloatingInput icon={Search} label="Search spells" value={search} onChange={onSearch} />
-        <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
-          {spells.map((spell) => (
-            <label
-              className="flex items-start justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm"
-              key={spell.id}
-            >
-              <span>
-                <span className="block font-semibold">{spell.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {spell.level === 0 ? "Cantrip" : `Level ${spell.level}`}{" "}
-                  {spell.school && `· ${spell.school}`}
-                </span>
-              </span>
-              <input
-                className="mt-1 h-4 w-4 accent-primary"
-                checked={selectedIds.includes(spell.id)}
-                type="checkbox"
-                onChange={(event) =>
-                  setForm((current) => ({
-                    ...current,
-                    spellIds: event.target.checked
-                      ? [...current.spellIds, spell.id]
-                      : current.spellIds.filter((id) => id !== spell.id),
-                  }))
-                }
-              />
-            </label>
-          ))}
-          {spells.length === 0 && (
-            <EmptyMini copy="No spells match that search. Add spells to the spell library first, then link them here." />
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 }
 

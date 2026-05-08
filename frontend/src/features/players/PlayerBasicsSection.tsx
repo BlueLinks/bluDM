@@ -1,7 +1,8 @@
 import { Pencil, Plus, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
-import { Button, Field, FormSection, Input, Select } from "../../components/ui";
+import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
+import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../types";
 
@@ -22,9 +23,17 @@ export function PlayerBasicsSection({
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [featInput, setFeatInput] = useState("");
   const selectedCampaign = campaigns.find((campaign) => campaign.id === form.campaignId);
-  const sources = selectedCampaign?.allowedStandardSources?.length
+  const campaignSources = selectedCampaign?.allowedStandardSources?.length
     ? selectedCampaign.allowedStandardSources
     : ["srd-2014"];
+  const [browseSources, setBrowseSources] = useState(campaignSources);
+
+  useEffect(() => {
+    setBrowseSources(campaignSources);
+  }, [campaignSources.join(",")]);
+
+  const hasCampaignSourceMismatch =
+    Boolean(selectedCampaign) && browseSources.some((source) => !campaignSources.includes(source));
 
   useEffect(() => {
     let cancelled = false;
@@ -39,9 +48,10 @@ export function PlayerBasicsSection({
     }
 
     setLoadingEntries(true);
-    void loadEntries(sources)
+    void loadEntries(browseSources)
       .then(async (loadedEntries) => {
-        const shouldFallbackTo2014 = loadedEntries.length === 0 && !sources.includes("srd-2014");
+        const shouldFallbackTo2014 =
+          loadedEntries.length === 0 && !browseSources.includes("srd-2014");
         return shouldFallbackTo2014 ? loadEntries(["srd-2014"]) : loadedEntries;
       })
       .then((loadedEntries) => {
@@ -57,7 +67,7 @@ export function PlayerBasicsSection({
     return () => {
       cancelled = true;
     };
-  }, [sources.join(",")]);
+  }, [browseSources.join(",")]);
 
   const optionsByCategory = useMemo(
     () => ({
@@ -111,6 +121,23 @@ export function PlayerBasicsSection({
           onValueChange={(value) => setForm({ ...form, campaignId: value })}
         />
       </Field>
+      <section className="grid gap-2 rounded-lg border border-border bg-card p-3">
+        <div>
+          <h3 className="text-sm font-semibold">Browse standard character options</h3>
+          <p className="text-xs text-muted-foreground">
+            Campaign settings choose the default SRD sources, but you can browse another source
+            while creating or editing this character.
+          </p>
+        </div>
+        <StandardSourceToggles selected={browseSources} onChange={setBrowseSources} />
+        {hasCampaignSourceMismatch && selectedCampaign && (
+          <Callout>
+            This character can still be saved to {selectedCampaign.name}, but your browse filters
+            include SRD content that campaign does not currently allow. Update the campaign sources
+            if that is intentional.
+          </Callout>
+        )}
+      </section>
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
         <LibraryTextPicker
           label="Class"

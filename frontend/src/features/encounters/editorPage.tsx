@@ -1,13 +1,11 @@
-import { ClipboardList, FlaskConical, Plus, Search, Swords, UsersRound } from "lucide-react";
+import { ClipboardList, FlaskConical, Plus, Swords, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { CreatureSourceFilter } from "../../components/shared/CreatureSourceFilter";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
   Button,
   Callout,
-  EmptyMini,
   Field,
   FloatingInput,
   MutedPanel,
@@ -30,7 +28,8 @@ import type {
   EncounterCombatant,
   Player,
 } from "../../types";
-import { CombatantEditSheet, CombatantList, CreatureEncounterAddRow } from "./editorComponents";
+import { CombatantEditSheet, CombatantList } from "./editorComponents";
+import { EncounterCreatureAddPanel } from "./EncounterCreatureAddPanel";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
 import {
   combatantChanged,
@@ -59,6 +58,7 @@ export function EncounterEditPage() {
   const [creatures, setCreatures] = useState<Creature[]>([]);
   const [showUserCreatures, setShowUserCreatures] = useState(true);
   const [showStandardCreatures, setShowStandardCreatures] = useState(true);
+  const [creatureSources, setCreatureSources] = useState(["srd-2014"]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -75,6 +75,11 @@ export function EncounterEditPage() {
     (player) => !addedPlayerIds.has(player.id),
   );
   const campaignCreatureIds = new Set((detail?.npcs ?? []).map((creature) => creature.id));
+  const campaignSources = detail?.campaign.allowedStandardSources?.length
+    ? detail.campaign.allowedStandardSources
+    : ["srd-2014"];
+  const hasCreatureSourceMismatch =
+    Boolean(detail) && creatureSources.some((source) => !campaignSources.includes(source));
   const filteredCreatures = creatures.filter((creature) => {
     const query = search.trim().toLowerCase();
     if (creature.librarySource === "standard" && !showStandardCreatures) return false;
@@ -100,10 +105,14 @@ export function EncounterEditPage() {
         api.campaign(campaignID),
         api.encounter(encounterID),
       ]);
+      const allowedSources = campaignPayload.campaign.allowedStandardSources?.length
+        ? campaignPayload.campaign.allowedStandardSources
+        : ["srd-2014"];
       const creaturePayload = await api.creatures({
         includeStandard: true,
-        source: campaignPayload.campaign.allowedStandardSources,
+        source: allowedSources,
       });
+      setCreatureSources(allowedSources);
       setDetail(campaignPayload);
       setEncounter(encounterPayload.encounter);
       setEncounterMeta({
@@ -126,6 +135,14 @@ export function EncounterEditPage() {
   useEffect(() => {
     void load();
   }, [campaignID, encounterID]);
+
+  useEffect(() => {
+    if (!detail) return;
+    api
+      .creatures({ includeStandard: true, source: creatureSources })
+      .then((payload) => setCreatures(payload.creatures))
+      .catch((err) => setError(err instanceof Error ? err.message : "Could not load creatures"));
+  }, [detail?.campaign.id, creatureSources.join(",")]);
 
   function addAllPlayers() {
     if (!encounter || availablePlayers.length === 0) return;
@@ -352,37 +369,21 @@ export function EncounterEditPage() {
         </SectionPanel>
         <EncounterDifficultyPanel difficulty={difficulty} />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
-          <SectionPanel title="Add Enemies Or Allies" icon={Search}>
-            <div className="grid gap-3">
-              <FloatingInput
-                icon={Search}
-                label="Search creatures"
-                value={search}
-                onChange={setSearch}
-              />
-              <CreatureSourceFilter
-                showStandard={showStandardCreatures}
-                showUser={showUserCreatures}
-                onShowStandardChange={setShowStandardCreatures}
-                onShowUserChange={setShowUserCreatures}
-              />
-              <div className="grid max-h-[65vh] gap-2 overflow-y-auto pr-1">
-                {filteredCreatures.map((creature) => (
-                  <CreatureEncounterAddRow
-                    key={creature.id}
-                    creature={creature}
-                    campaignLinked={campaignCreatureIds.has(creature.id)}
-                    onAdd={(side, rowQuantity, rowRolledHp) =>
-                      addCreature(creature, side, rowQuantity, rowRolledHp)
-                    }
-                  />
-                ))}
-                {filteredCreatures.length === 0 && (
-                  <EmptyMini copy="No creatures match that search." />
-                )}
-              </div>
-            </div>
-          </SectionPanel>
+          <EncounterCreatureAddPanel
+            campaignCreatureIds={campaignCreatureIds}
+            campaignName={detail?.campaign.name}
+            creatureSources={creatureSources}
+            filteredCreatures={filteredCreatures}
+            hasCreatureSourceMismatch={hasCreatureSourceMismatch}
+            search={search}
+            setCreatureSources={setCreatureSources}
+            setSearch={setSearch}
+            setShowStandardCreatures={setShowStandardCreatures}
+            setShowUserCreatures={setShowUserCreatures}
+            showStandardCreatures={showStandardCreatures}
+            showUserCreatures={showUserCreatures}
+            onAddCreature={addCreature}
+          />
           <div className="grid gap-4">
             <SectionPanel title="Players And Friendlies" icon={UsersRound}>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
