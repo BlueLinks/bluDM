@@ -19,6 +19,7 @@ export function EncounterCreatureAddPanel({
   setShowUserCreatures,
   showStandardCreatures,
   showUserCreatures,
+  usingFallbackCreatures,
 }: {
   campaignCreatureIds: Set<string>;
   campaignName?: string;
@@ -38,6 +39,7 @@ export function EncounterCreatureAddPanel({
   setShowUserCreatures: (show: boolean) => void;
   showStandardCreatures: boolean;
   showUserCreatures: boolean;
+  usingFallbackCreatures: boolean;
 }) {
   return (
     <SectionPanel title="Add Enemies Or Allies" icon={Search}>
@@ -63,6 +65,12 @@ export function EncounterCreatureAddPanel({
               <Callout>
                 This encounter belongs to {campaignName}, but your browse filters include SRD
                 content that campaign does not currently allow.
+              </Callout>
+            )}
+            {usingFallbackCreatures && (
+              <Callout>
+                SRD 5.2.1 creature stat blocks are not available yet, so bluDM is showing SRD 2014
+                combat creatures as a temporary encounter-building fallback.
               </Callout>
             )}
           </section>
