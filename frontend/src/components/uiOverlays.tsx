@@ -2,6 +2,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronDown, ChevronUp, X } from "lucide-react";
 import React, { type FormEvent, useState } from "react";
 import { createId } from "../lib/domain/ids";
+import type { AuthProvider } from "../types";
+import { AuthProviderButton } from "./AuthProviderButton";
 import { Button, Field, Input } from "./uiBase";
 
 export function Sheet({
@@ -324,7 +326,7 @@ export function AuthCard({
   submitLabel: string;
   onSubmit: (email: string, password: string) => Promise<void>;
   localAuthEnabled?: boolean;
-  providers?: { id: string; label: string; url: string }[];
+  providers?: AuthProvider[];
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -356,16 +358,7 @@ export function AuthCard({
       {providers.length > 0 && (
         <div className="grid gap-2">
           {providers.map((provider) => (
-            <Button
-              key={provider.id}
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                window.location.href = `${provider.url}?returnTo=${encodeURIComponent(window.location.pathname)}`;
-              }}
-            >
-              {provider.label}
-            </Button>
+            <AuthProviderButton key={provider.id} provider={provider} />
           ))}
         </div>
       )}

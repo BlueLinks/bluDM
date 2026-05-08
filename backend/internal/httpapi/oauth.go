@@ -58,11 +58,16 @@ func (s *Server) oauthStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	returnTo := sanitizeReturnTo(r.URL.Query().Get("returnTo"))
+	if _, err := s.db.Exec(r.Context(), `delete from oauth_states where expires_at < now()`); err != nil {
+		s.log.Error("oauth state cleanup failed", "provider", providerName, "error", err)
+		writeError(w, http.StatusInternalServerError, "could not start sign-in")
+		return
+	}
 	if _, err := s.db.Exec(r.Context(), `
-		delete from oauth_states where expires_at < now();
 		insert into oauth_states (state_hash, provider, nonce, pkce_verifier, return_to, expires_at)
 		values ($1, $2, $3, $4, $5, now() + interval '10 minutes')
 	`, hashToken(state), providerName, nonce, verifier, returnTo); err != nil {
+		s.log.Error("oauth state insert failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
@@ -103,6 +108,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		returning provider, nonce, pkce_verifier, return_to
 	`, hashToken(state)).Scan(&saved.Provider, &saved.Nonce, &saved.Verifier, &saved.ReturnTo)
 	if err != nil || saved.Provider != providerName {
+		s.log.Warn("oauth callback state lookup failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusBadRequest, "sign-in session expired")
 		return
 	}
@@ -113,11 +119,13 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	token, err := oauthConfig.Exchange(r.Context(), code, oauth2.SetAuthURLParam("code_verifier", saved.Verifier))
 	if err != nil {
+		s.log.Warn("oauth code exchange failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusBadRequest, "could not exchange sign-in code")
 		return
 	}
 	identity, err := s.verifyOAuthIdentity(r.Context(), providerName, token, oauthConfig.ClientID, saved.Nonce)
 	if err != nil {
+		s.log.Warn("oauth identity verification failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusBadRequest, "could not verify identity")
 		return
 	}
@@ -270,9 +278,9 @@ func (s *Server) enabledOAuthProviders() []string {
 func providerLabel(provider string) string {
 	switch provider {
 	case oauthGoogle:
-		return "Continue with Google"
+		return "Sign in with Google"
 	case oauthDiscord:
-		return "Continue with Discord"
+		return "Sign in with Discord"
 	default:
 		return "Continue"
 	}
