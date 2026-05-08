@@ -1,4 +1,4 @@
-import { Pencil, Plus, X } from "lucide-react";
+import { Pencil, Plus, Wand2, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
@@ -9,6 +9,10 @@ import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../type
 type PlayerFormSetter = Dispatch<SetStateAction<PlayerFormState>>;
 
 const pickerCategories = ["classes", "species", "backgrounds", "feats"];
+const levelXpThresholds = [
+  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000,
+  195000, 225000, 265000, 305000, 355000,
+];
 
 export function PlayerBasicsSection({
   campaigns,
@@ -138,7 +142,7 @@ export function PlayerBasicsSection({
           </Callout>
         )}
       </section>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(220px,280px)]">
+      <div className="grid min-w-0 gap-4">
         <LibraryTextPicker
           label="Class"
           value={form.className}
@@ -146,25 +150,7 @@ export function PlayerBasicsSection({
           loading={loadingEntries}
           onChange={(className) => setForm({ ...form, className })}
         />
-        <div className="grid min-w-0 grid-cols-2 gap-3">
-          <Field className="min-w-0" label="Level">
-            <Input
-              type="number"
-              min={1}
-              max={20}
-              value={form.level}
-              onChange={(event) => setForm({ ...form, level: event.target.value })}
-            />
-          </Field>
-          <Field className="min-w-0" label="XP">
-            <Input
-              type="number"
-              min={0}
-              value={form.experiencePoints}
-              onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
-            />
-          </Field>
-        </div>
+        <CharacterProgressFields form={form} setForm={setForm} />
       </div>
       <div className="grid min-w-0 gap-4 md:grid-cols-2">
         <LibraryTextPicker
@@ -215,6 +201,51 @@ export function PlayerBasicsSection({
         </div>
       </section>
     </FormSection>
+  );
+}
+
+function CharacterProgressFields({
+  form,
+  setForm,
+}: {
+  form: PlayerFormState;
+  setForm: PlayerFormSetter;
+}) {
+  const suggestedLevel = levelFromXP(Number(form.experiencePoints) || 0);
+  const currentLevel = Number(form.level) || 1;
+
+  return (
+    <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(88px,120px)_minmax(140px,180px)_auto]">
+      <Field className="min-w-0" label="Level">
+        <Input
+          type="number"
+          min={1}
+          max={20}
+          value={form.level}
+          onChange={(event) => setForm({ ...form, level: event.target.value })}
+        />
+      </Field>
+      <Field className="min-w-0" label="XP">
+        <Input
+          type="number"
+          min={0}
+          value={form.experiencePoints}
+          onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
+        />
+      </Field>
+      <div className="self-end">
+        <Button
+          type="button"
+          className="whitespace-nowrap"
+          icon={Wand2}
+          size="sm"
+          variant={suggestedLevel === currentLevel ? "secondary" : "success"}
+          onClick={() => setForm({ ...form, level: String(suggestedLevel) })}
+        >
+          XP says {suggestedLevel}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -291,4 +322,13 @@ function entryNames(entries: StandardLibraryEntry[], category: string) {
     .filter((entry) => entry.category === category)
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
+}
+
+function levelFromXP(xp: number) {
+  const boundedXP = Math.max(0, xp);
+  let level = 1;
+  for (const [index, threshold] of levelXpThresholds.entries()) {
+    if (boundedXP >= threshold) level = index + 1;
+  }
+  return Math.min(20, level);
 }

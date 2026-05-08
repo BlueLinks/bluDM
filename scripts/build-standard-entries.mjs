@@ -136,6 +136,7 @@ function srd521Entries() {
         "The SRD 5.2.1 is the official Creative Commons rules reference for the 2024 version of the fifth edition rules. bluDM tracks it separately from SRD 2014 so campaigns can choose which standard source versions are visible.",
       data: { source },
     },
+    ...srd521CharacterOptions(source),
     {
       sourceKey: "srd-5-2-1",
       category: "glossary",
@@ -147,4 +148,77 @@ function srd521Entries() {
       data: { source },
     },
   ];
+}
+
+function srd521CharacterOptions(source) {
+  const classes = [
+    "Barbarian",
+    "Bard",
+    "Cleric",
+    "Druid",
+    "Fighter",
+    "Monk",
+    "Paladin",
+    "Ranger",
+    "Rogue",
+    "Sorcerer",
+    "Warlock",
+    "Wizard",
+  ];
+  const species = [
+    "Dragonborn",
+    "Dwarf",
+    "Elf",
+    "Gnome",
+    "Goliath",
+    "Halfling",
+    "Human",
+    "Orc",
+    "Tiefling",
+  ];
+  const backgrounds = ["Acolyte", "Criminal", "Sage", "Soldier"];
+  const feats = [
+    "Ability Score Improvement",
+    "Alert",
+    "Archery",
+    "Boon of Combat Prowess",
+    "Boon of Dimensional Travel",
+    "Boon of Fate",
+    "Boon of Irresistible Offense",
+    "Boon of the Night Spirit",
+    "Boon of Spell Recall",
+    "Boon of Truesight",
+    "Defense",
+    "Grappler",
+    "Great Weapon Fighting",
+    "Magic Initiate",
+    "Savage Attacker",
+    "Two-Weapon Fighting",
+  ];
+  return [
+    ...characterOptionEntries("classes", classes, "SRD 5.2.1 class option", source),
+    ...characterOptionEntries("species", species, "SRD 5.2.1 species option", source),
+    ...characterOptionEntries("backgrounds", backgrounds, "SRD 5.2.1 background option", source),
+    ...characterOptionEntries("feats", feats, "SRD 5.2.1 feat option", source),
+  ];
+}
+
+function characterOptionEntries(category, names, summary, source) {
+  return names.map((name) => ({
+    sourceKey: "srd-5-2-1",
+    category,
+    slug: `srd-5-2-1-${category}-${slugify(name)}`,
+    name,
+    summary,
+    description:
+      "This lightweight picker entry identifies a character option present in SRD 5.2.1. Full rules text will be added when the SRD 5.2.1 parser is expanded.",
+    data: { source, category },
+  }));
+}
+
+function slugify(value) {
+  return String(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }

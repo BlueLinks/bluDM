@@ -56,6 +56,13 @@ $motion-long: 1800ms;
   --destructive-foreground: 220 20% 10%;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
 * {
   box-sizing: border-box;
 }
