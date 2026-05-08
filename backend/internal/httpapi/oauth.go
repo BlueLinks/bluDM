@@ -153,11 +153,11 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if err := s.linkOAuthIdentity(r.Context(), user.ID, providerName, identity); err != nil {
-			status := http.StatusBadRequest
 			if errors.Is(err, errOAuthIdentityAlreadyLinked) {
-				status = http.StatusConflict
+				redirectWithSettingsError(w, r, "provider_already_linked")
+				return
 			}
-			writeError(w, status, err.Error())
+			redirectWithSettingsError(w, r, "provider_link_failed")
 			return
 		}
 		http.Redirect(w, r, saved.ReturnTo, http.StatusFound)
@@ -181,6 +181,11 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 
 func redirectWithAuthError(w http.ResponseWriter, r *http.Request, code string) {
 	target := "/?authError=" + url.QueryEscape(code)
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func redirectWithSettingsError(w http.ResponseWriter, r *http.Request, code string) {
+	target := "/settings?accountError=" + url.QueryEscape(code)
 	http.Redirect(w, r, target, http.StatusFound)
 }
 

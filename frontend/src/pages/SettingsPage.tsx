@@ -8,10 +8,10 @@ import { PasswordSettings, UnlinkProvider } from "./settingsComponents";
 export function SettingsPage() {
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [providers, setProviders] = useState<AuthProvider[]>([]);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(accountErrorFromURL());
 
   async function load() {
-    setError("");
+    setError(accountErrorFromURL());
     try {
       const [accountPayload, providerPayload] = await Promise.all([
         api.account(),
@@ -115,4 +115,15 @@ export function SettingsPage() {
       )}
     </Page>
   );
+}
+
+function accountErrorFromURL() {
+  const code = new URLSearchParams(window.location.search).get("accountError");
+  if (code === "provider_already_linked") {
+    return "That Google or Discord account is already linked to another bluDM account.";
+  }
+  if (code === "provider_link_failed") {
+    return "That sign-in provider could not be linked. Try again or use a different provider account.";
+  }
+  return "";
 }

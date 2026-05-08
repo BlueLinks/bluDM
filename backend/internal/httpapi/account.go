@@ -190,13 +190,6 @@ func (s *Server) accountForUser(ctx context.Context, userID string) (accountResp
 
 func (s *Server) linkOAuthIdentity(ctx context.Context, userID, provider string, identity oauthIdentity) error {
 	identity.Email = strings.TrimSpace(strings.ToLower(identity.Email))
-	var accountEmail string
-	if err := s.db.QueryRow(ctx, `select email from users where id = $1`, userID).Scan(&accountEmail); err != nil {
-		return err
-	}
-	if !strings.EqualFold(accountEmail, identity.Email) {
-		return errors.New("provider email must match this account before it can be linked")
-	}
 	var linkedUserID string
 	err := s.db.QueryRow(ctx, `
 		select user_id::text

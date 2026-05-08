@@ -19,7 +19,7 @@ import (
 
 var (
 	errOAuthEmailAlreadyRegistered = errors.New("email is already registered")
-	errOAuthIdentityAlreadyLinked  = errors.New("that sign-in account is already linked to another user")
+	errOAuthIdentityAlreadyLinked  = errors.New("that provider account is already linked to another bluDM account")
 )
 
 func (s *Server) authStatus(w http.ResponseWriter, r *http.Request) {
