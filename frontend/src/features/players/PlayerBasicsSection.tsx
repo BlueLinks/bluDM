@@ -234,7 +234,7 @@ function CharacterProgressFields({
       <Field className="min-w-0" label="Level">
         <div className="inline-flex max-w-[180px] overflow-hidden rounded-md border border-border bg-background">
           <button
-            className="grid h-10 w-10 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="grid h-10 w-9 appearance-none place-items-center border-r border-border p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
             onClick={() => setLevel(currentLevel - 1)}
             aria-label="Decrease level"
@@ -250,7 +250,7 @@ function CharacterProgressFields({
             onChange={(event) => setLevel(Number(event.target.value) || 1)}
           />
           <button
-            className="grid h-10 w-10 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="grid h-10 w-9 appearance-none place-items-center border-l border-border p-0 text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
             onClick={() => setLevel(currentLevel + 1)}
             aria-label="Increase level"
@@ -334,7 +334,16 @@ function LibraryTextPicker({
           size="sm"
           variant="ghost"
           disabled={!value}
-          onClick={() => onChange("")}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setCustomMode(false);
+            onChange("");
+          }}
         >
           <span className="sr-only">Clear {label}</span>
         </Button>
