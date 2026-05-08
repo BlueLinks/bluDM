@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import "./styles.scss";
+import { AuthLanding } from "./app/AuthLanding";
 import { AppRoutes } from "./app/routes";
 import { AuthShell, useThemeMode, WorkspaceShell } from "./app/shell";
-import { AuthCard, StatusPanel } from "./components/ui";
+import { StatusPanel } from "./components/ui";
 import { api } from "./lib/api";
 import type { AuthProvider, AuthStatus } from "./types";
 
@@ -45,33 +46,31 @@ function App() {
 
   if (auth.setupRequired) {
     return (
-      <AuthShell>
-        <AuthCard
-          title="Create the DM account"
-          submitLabel="Create account"
-          onSubmit={async (email, password) => {
-            await api.setup(email, password);
-            await refreshAuth();
-          }}
-        />
-      </AuthShell>
+      <AuthLanding
+        error={error}
+        localAuthEnabled={auth.localAuthEnabled}
+        providers={providers}
+        setupRequired={auth.setupRequired}
+        onLocalSubmit={async (email, password) => {
+          await api.setup(email, password);
+          await refreshAuth();
+        }}
+      />
     );
   }
 
   if (!auth.authenticated) {
     return (
-      <AuthShell>
-        <AuthCard
-          title="Log in"
-          submitLabel="Log in"
-          onSubmit={async (email, password) => {
-            await api.login(email, password);
-            await refreshAuth();
-          }}
-          localAuthEnabled={auth.localAuthEnabled}
-          providers={providers}
-        />
-      </AuthShell>
+      <AuthLanding
+        error={error}
+        localAuthEnabled={auth.localAuthEnabled}
+        providers={providers}
+        setupRequired={auth.setupRequired}
+        onLocalSubmit={async (email, password) => {
+          await api.login(email, password);
+          await refreshAuth();
+        }}
+      />
     );
   }
 
