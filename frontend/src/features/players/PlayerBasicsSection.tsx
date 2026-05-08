@@ -1,7 +1,7 @@
-import { Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
-import { Badge, Button, Field, FormSection, Input, Select } from "../../components/ui";
+import { Button, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../types";
 
@@ -82,7 +82,7 @@ export function PlayerBasicsSection({
           onValueChange={(value) => setForm({ ...form, campaignId: value })}
         />
       </Field>
-      <div className="grid gap-4 md:grid-cols-[minmax(180px,1fr)_120px_140px]">
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_120px_140px]">
         <LibraryTextPicker
           label="Class"
           value={form.className}
@@ -129,19 +129,17 @@ export function PlayerBasicsSection({
               <button
                 key={feat}
                 type="button"
-                className="inline-flex items-center gap-2"
+                className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
                 onClick={() =>
                   setForm({ ...form, feats: form.feats.filter((current) => current !== feat) })
                 }
               >
-                <Badge>
-                  {feat}
-                  <X className="ml-1 inline h-3 w-3" />
-                </Badge>
+                <span className="min-w-0 truncate">{feat}</span>
+                <X className="h-3 w-3 shrink-0" />
               </button>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
             <LibraryTextPicker
               label="Add feat"
               value={featInput}
@@ -169,15 +167,51 @@ function LibraryTextPicker({
   options: string[];
   onChange: (value: string) => void;
 }) {
-  const listID = `player-${label.toLowerCase().replace(/\W+/g, "-")}`;
+  const [customMode, setCustomMode] = useState(false);
+  const isCustomValue = Boolean(value && !options.includes(value));
+  const useCustomInput = customMode || isCustomValue;
+  const normalizedOptions = options.map((option) => ({ label: option, value: option }));
+
   return (
     <Field className="min-w-0" label={label}>
-      <Input list={listID} value={value} onChange={(event) => onChange(event.target.value)} />
-      <datalist id={listID}>
-        {options.map((option) => (
-          <option key={option} value={option} />
-        ))}
-      </datalist>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        {useCustomInput ? (
+          <Input
+            className="min-w-0"
+            value={value}
+            placeholder={`Custom ${label.toLowerCase()}`}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        ) : (
+          <Select
+            options={normalizedOptions}
+            placeholder={options.length > 0 ? `Choose ${label}` : "Loading SRD choices..."}
+            value={options.includes(value) ? value : ""}
+            onValueChange={onChange}
+          />
+        )}
+        <Button
+          type="button"
+          icon={Pencil}
+          size="sm"
+          variant={useCustomInput ? "secondary" : "ghost"}
+          onClick={() => setCustomMode((current) => !current)}
+        >
+          <span className="sr-only">{useCustomInput ? "Use SRD list" : "Enter custom text"}</span>
+        </Button>
+      </div>
+      {useCustomInput && options.length > 0 && (
+        <button
+          type="button"
+          className="justify-self-start text-xs font-semibold text-primary hover:underline"
+          onClick={() => {
+            setCustomMode(false);
+            if (!options.includes(value)) onChange("");
+          }}
+        >
+          Pick from SRD list
+        </button>
+      )}
     </Field>
   );
 }
