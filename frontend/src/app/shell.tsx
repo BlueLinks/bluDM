@@ -98,11 +98,11 @@ export function WorkspaceShell({
   }, [sidebarCollapsed]);
 
   return (
-    <main className="h-screen overflow-hidden bg-background text-foreground">
-      <div className="flex min-h-screen">
+    <main className="fixed inset-0 overflow-hidden bg-background text-foreground">
+      <div className="flex h-full">
         <aside
           className={[
-            "hidden h-screen shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
+            "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
             sidebarCollapsed ? "w-20" : "w-64",
           ].join(" ")}
         >
@@ -125,7 +125,7 @@ export function WorkspaceShell({
             </aside>
           </div>
         )}
-        <section className="flex h-screen min-w-0 flex-1 flex-col">
+        <section className="flex h-full min-w-0 flex-1 flex-col">
           <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
             <button
               className="inline-flex rounded-md border border-border p-2 lg:hidden"
