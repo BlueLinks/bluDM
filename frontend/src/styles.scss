@@ -18,17 +18,12 @@ $motion-long: 1800ms;
   }
 
   .combat-panel {
-    border-bottom: 1px solid hsl(var(--border)) !important;
     border-color: transparent !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
     border-radius: 0 !important;
     background: transparent !important;
     box-shadow: none !important;
     padding: 0 0 0.375rem !important;
-  }
-
-  .combat-section-panel {
-    border-bottom: 1px solid hsl(var(--border)) !important;
-    border-radius: 0 !important;
   }
 
   .combat-section-panel > div:first-child {
@@ -38,6 +33,13 @@ $motion-long: 1800ms;
   .combat-stack,
   .combat-tracker-page {
     gap: 0.375rem;
+  }
+
+  @media (min-width: 1024px) {
+    .combat-board-grid > .combat-panel + .combat-panel {
+      border-left: 1px solid hsl(var(--border)) !important;
+      padding-left: 0.5rem !important;
+    }
   }
 }
 

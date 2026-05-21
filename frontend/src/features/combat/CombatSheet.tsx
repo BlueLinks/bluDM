@@ -165,7 +165,7 @@ function AbilityTable({
 }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-md border border-border bg-background text-xs">
-      <div className="grid grid-cols-[2rem_2rem_minmax(1.8rem,1fr)_minmax(1.9rem,1fr)] border-b border-border bg-muted/60 text-center text-[0.58rem] font-black uppercase leading-none text-muted-foreground">
+      <div className="grid grid-cols-4 border-b border-border bg-muted/60 text-center text-[0.58rem] font-black uppercase leading-none text-muted-foreground">
         <span className="border-r border-border bg-muted/80 px-0.5 py-1">Stat</span>
         <span className="border-r border-border bg-primary/10 px-0.5 py-1 text-primary">Score</span>
         <span className="py-1">Mod</span>
@@ -178,7 +178,7 @@ function AbilityTable({
         return (
           <div
             key={ability.key}
-            className="grid grid-cols-[2rem_2rem_minmax(1.8rem,1fr)_minmax(1.9rem,1fr)] items-stretch border-b border-border last:border-b-0"
+            className="grid grid-cols-4 items-stretch border-b border-border last:border-b-0"
           >
             <span className="grid place-items-center border-r border-border bg-muted/40 px-1 font-black uppercase text-muted-foreground">
               {ability.key}
