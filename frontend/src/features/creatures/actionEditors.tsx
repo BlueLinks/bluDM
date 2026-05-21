@@ -4,6 +4,7 @@ import {
   Archive,
   ChevronDown,
   ChevronUp,
+  Copy,
   GripVertical,
   Pencil,
   Plus,
@@ -23,6 +24,7 @@ import {
 } from "../../lib/domain/options";
 import { formatRolls } from "../../lib/domain/forms";
 import type { ActionFormState, ActionTemplate, CommonWeapon, CreatureAction } from "../../types";
+import { ActionNumberInput } from "./ActionNumberInput";
 import { ActionRollEditor } from "./ActionRollEditor";
 
 export function ActionMiniFields({
@@ -35,7 +37,7 @@ export function ActionMiniFields({
   return (
     <>
       <FloatingInput
-        label="Template name"
+        label="Custom action name"
         value={value.name}
         onChange={(name) => onChange({ ...value, name })}
         required
@@ -169,10 +171,12 @@ export function WeaponMenu({ onAdd }: { onAdd: (weapon: CommonWeapon) => void })
 
 export function ActionSummary({
   action,
+  onDuplicate,
   onEdit,
   onDelete,
 }: {
   action: ActionTemplate | CreatureAction;
+  onDuplicate?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }) {
@@ -191,6 +195,9 @@ export function ActionSummary({
         <div className="flex items-center gap-2">
           <Badge>{formatRolls(action.rolls)}</Badge>
           {onEdit && <Button icon={Pencil} size="sm" variant="secondary" onClick={onEdit} />}
+          {onDuplicate && (
+            <Button icon={Copy} size="sm" variant="secondary" onClick={onDuplicate} />
+          )}
           {onDelete && <Button icon={Trash2} size="sm" variant="danger" onClick={onDelete} />}
         </div>
       </div>
@@ -413,39 +420,34 @@ function ActionNumberFields({
   onChange: (action: ActionFormState) => void;
 }) {
   return (
-    <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-      <FloatingInput
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <ActionNumberInput
         icon={Swords}
         label="Attack mod"
-        type="number"
         value={action.attackModifier}
         onChange={(attackModifier) => onChange({ ...action, attackModifier })}
       />
-      <FloatingInput
+      <ActionNumberInput
         icon={Zap}
         label="Reach"
-        type="number"
         value={action.reach}
         onChange={(reach) => onChange({ ...action, reach })}
       />
-      <FloatingInput
+      <ActionNumberInput
         icon={Zap}
         label="Range"
-        type="number"
         value={action.range}
         onChange={(range) => onChange({ ...action, range })}
       />
-      <FloatingInput
+      <ActionNumberInput
         icon={Zap}
         label="AOE size"
-        type="number"
         value={action.aoeSize}
         onChange={(aoeSize) => onChange({ ...action, aoeSize })}
       />
-      <FloatingInput
+      <ActionNumberInput
         icon={Archive}
         label="Uses"
-        type="number"
         value={action.limitedUses}
         onChange={(limitedUses) => onChange({ ...action, limitedUses })}
       />

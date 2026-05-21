@@ -83,9 +83,9 @@ export function NpcsPage() {
       setTemplateForm(blankAction());
       setEditingTemplate(null);
       setTemplateModalOpen(false);
-      toast.push(editingTemplate ? "Action template updated" : "Action template saved");
+      toast.push(editingTemplate ? "Custom action updated" : "Custom action saved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create action template");
+      setError(err instanceof Error ? err.message : "Could not create custom action");
     }
   }
 
@@ -104,7 +104,7 @@ export function NpcsPage() {
       const payload = await api.actionTemplateUsage(template.id);
       setTemplateUsage(payload.usage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load action template usage");
+      setError(err instanceof Error ? err.message : "Could not load custom action usage");
     }
   }
 
@@ -113,10 +113,28 @@ export function NpcsPage() {
     const payload = await api.deleteActionTemplate(deleteTemplate.id);
     setTemplates((current) => current.filter((template) => template.id !== deleteTemplate.id));
     toast.push(
-      `Action template removed from bank and ${payload.removedCreatureActions} creature action${payload.removedCreatureActions === 1 ? "" : "s"}`,
+      `Custom action removed from bank and ${payload.removedCreatureActions} creature action${payload.removedCreatureActions === 1 ? "" : "s"}`,
     );
     setDeleteTemplate(null);
     setTemplateUsage([]);
+  }
+
+  async function duplicateTemplate(template: ActionTemplate) {
+    setError("");
+    try {
+      const duplicate = {
+        ...actionFormFromTemplate(template),
+        name: nextActionCopyName(template.name, templates),
+        sourceTemplateId: "",
+      };
+      const payload = await api.createActionTemplate(duplicate);
+      setTemplates((current) =>
+        [...current, payload.actionTemplate].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      toast.push(`${payload.actionTemplate.name} added to custom actions`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not duplicate custom action");
+    }
   }
 
   function openTemplateModal(template?: ActionTemplate) {
@@ -193,7 +211,7 @@ export function NpcsPage() {
                 setTemplateForm(blankAction());
               }
             }}
-            title={editingTemplate ? "Edit action template" : "Add action template"}
+            title={editingTemplate ? "Edit custom action" : "Add custom action"}
             trigger={
               <Button
                 type="button"
@@ -208,7 +226,7 @@ export function NpcsPage() {
             <form className="grid gap-4" onSubmit={handleCreateTemplate}>
               <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
               <Button type="submit" icon={Plus} variant="success">
-                {editingTemplate ? "Update action template" : "Save action template"}
+                {editingTemplate ? "Update custom action" : "Save custom action"}
               </Button>
             </form>
           </Modal>
@@ -218,11 +236,12 @@ export function NpcsPage() {
                 key={template.id}
                 action={template}
                 onEdit={() => openTemplateModal(template)}
+                onDuplicate={() => void duplicateTemplate(template)}
                 onDelete={() => void openDeleteTemplate(template)}
               />
             ))}
             {!loading && templates.length === 0 && (
-              <EmptyMini copy="No action templates yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
+              <EmptyMini copy="No custom actions yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
             )}
           </div>
         </SectionPanel>
@@ -248,7 +267,7 @@ export function NpcsPage() {
         onConfirm={() => void confirmDeleteTemplate()}
       >
         Removing {deleteTemplate?.name} will also remove copied actions that still reference this
-        bank template.
+        custom action.
         {templateUsage.length > 0 && (
           <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm">
             <div className="font-semibold">Affected creatures</div>
@@ -279,6 +298,17 @@ function creatureVisible(
     .join(" ")
     .toLowerCase()
     .includes(query);
+}
+
+function nextActionCopyName(name: string, templates: ActionTemplate[]) {
+  const baseName = `${name} Copy`;
+  const existingNames = new Set(templates.map((template) => template.name.toLowerCase()));
+  if (!existingNames.has(baseName.toLowerCase())) return baseName;
+  let index = 2;
+  while (existingNames.has(`${baseName} ${index}`.toLowerCase())) {
+    index += 1;
+  }
+  return `${baseName} ${index}`;
 }
 
 export function NpcCreatePage() {

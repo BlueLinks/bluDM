@@ -280,8 +280,8 @@ export function CreatureActionsSection({
         onConfirm={() => void confirmOverwrite()}
       >
         Update the Action Bank entry for {overwriteConfirm?.templateName}? This changes the reusable
-        template DMs copy from the bank. Existing NPC action copies keep their current local values,
-        but {overwriteConfirm?.usageCount ?? 0} creature action
+        custom action DMs copy from the bank. Existing NPC action copies keep their current local
+        values, but {overwriteConfirm?.usageCount ?? 0} creature action
         {overwriteConfirm?.usageCount === 1 ? "" : "s"} currently reference this bank entry.
       </ConfirmDialog>
     </FormSection>
@@ -328,7 +328,7 @@ function ActionBankModal({
             </button>
           ))}
           {templates.length === 0 && (
-            <EmptyMini copy="No action templates match that search. Add bank templates from the NPC library page." />
+            <EmptyMini copy="No custom actions match that search. Add reusable custom actions from the NPC library page." />
           )}
         </div>
       </div>
