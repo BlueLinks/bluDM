@@ -131,6 +131,9 @@ const emptyCreatureForm: CreatureFormState = {
   statBlock: "{}",
 };
 
+type SpellSlotLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+type SpellSlotKey = `spellSlots${SpellSlotLevel}`;
+
 function applySpellcastingToForm(
   form: CreatureFormState,
   spellcasting?: CreatureSpellcastingProfile,
@@ -322,11 +325,12 @@ export function CreatureForm({
 
   const filteredSpells = spells.filter((spell) => {
     const query = spellSearch.trim().toLowerCase();
-    return (
+    const hasAvailableSlot = spell.level === 0 || spellSlotCount(form, spell.level) > 0;
+    const matchesQuery =
       !query ||
       spell.name.toLowerCase().includes(query) ||
-      spell.school.toLowerCase().includes(query)
-    );
+      spell.school.toLowerCase().includes(query);
+    return hasAvailableSlot && matchesQuery;
   });
   const filteredTemplates = templates.filter((template) => {
     const query = actionSearch.trim().toLowerCase();
@@ -499,9 +503,7 @@ function CreatureSpellcastingSection({
     const selectedCount = form.spellRefs.filter((spell) => spell.spellLevel === level).length;
     const nextCount = Math.max(0, Number(value) || 0);
     if (nextCount < selectedCount) {
-      notify(
-        `Remove ${selectedCount === 1 ? "the selected spell" : "selected spells"} from ${spellLevelName(level)} before reducing those slots.`,
-      );
+      notify(`Remove a spell from ${spellLevelName(level)} before reducing those slots.`);
       return;
     }
     setForm({ ...form, [`spellSlots${level}`]: String(nextCount) });
@@ -597,6 +599,12 @@ function spellLevelName(level: number) {
   if (level === 2) return "2nd level";
   if (level === 3) return "3rd level";
   return `${level}th level`;
+}
+
+function spellSlotCount(form: CreatureFormState, level: number) {
+  if (level < 1 || level > 9) return 0;
+  const key = `spellSlots${level}` as SpellSlotKey;
+  return Number(form[key]) || 0;
 }
 
 function CompactNumberStepper({
