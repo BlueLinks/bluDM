@@ -87,7 +87,7 @@ export function CombatSheet({
     <SectionPanel
       title={compact ? "Target Sheet" : "Active Sheet"}
       icon={ScrollText}
-      className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+      className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
       bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto px-0.5 pb-1 xl:px-1"
     >
       <div className="grid gap-2 xl:gap-3">

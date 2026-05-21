@@ -33,7 +33,7 @@ export function CombatStatusBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center xl:p-3">
+    <div className="combat-panel grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center xl:p-3">
       <div />
       <div className="flex items-stretch justify-center gap-1 sm:gap-2">
         <Button
@@ -164,7 +164,7 @@ export function CombatControls({
   onManual: (mode: "damage" | "healing") => void;
 }) {
   return (
-    <div className="min-w-0 rounded-lg border border-border bg-background p-2">
+    <div className="combat-panel min-w-0 rounded-lg border border-border bg-background p-2">
       <div className="grid min-w-0 gap-2 sm:grid-cols-[5.25rem_auto_minmax(8rem,1fr)] sm:items-stretch xl:grid-cols-[6.25rem_auto_auto]">
         <div className="flex-none">
           <Input
@@ -537,7 +537,7 @@ export function DamageMeters({ combatants }: { combatants: EncounterRunCombatant
     <SectionPanel
       title="Damage Meters"
       icon={HeartPulse}
-      className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
+      className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
       bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
     >
       <div className="grid gap-2">

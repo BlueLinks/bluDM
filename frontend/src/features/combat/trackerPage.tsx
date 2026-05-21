@@ -250,7 +250,7 @@ export function CombatTrackerPage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1800px] gap-4">
+    <div className="combat-tracker-page mx-auto grid w-full max-w-[1800px] gap-2 sm:gap-4">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
       <Breadcrumbs
         items={[
@@ -259,7 +259,7 @@ export function CombatTrackerPage() {
           { label: "Combat" },
         ]}
       />
-      <div className="grid gap-4">
+      <div className="combat-stack grid gap-2 sm:gap-4">
         <CombatStatusBar
           combatantCount={combatants.length}
           elapsed={elapsed}
@@ -270,7 +270,7 @@ export function CombatTrackerPage() {
           onMove={move}
           onUndo={() => runID && refreshFrom(api.undoRun(runID))}
         />
-        <div className="rounded-lg border border-border bg-card p-3">
+        <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
           <ActiveTurnHeader combatant={active} selected={selected}>
             {active.currentHitPoints <= 0 && active.sourceType !== "player" ? (
               <MutedPanel>Entity is dead</MutedPanel>

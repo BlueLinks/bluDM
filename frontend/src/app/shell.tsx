@@ -93,6 +93,7 @@ export function WorkspaceShell({
   const navigate = useNavigate();
   const crumbs = shellCrumbs(location.pathname);
   const parent = parentPath(location.pathname);
+  const isCombatTracker = /^\/encounter-runs\/[^/]+$/.test(location.pathname);
 
   useEffect(() => {
     localStorage.setItem("bludm-sidebar", sidebarCollapsed ? "collapsed" : "expanded");
@@ -192,7 +193,14 @@ export function WorkspaceShell({
                 />
               </div>
             </header>
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
+            <div
+              className={[
+                "min-h-0 flex-1 overflow-y-auto",
+                isCombatTracker ? "px-1 py-2 sm:px-3 lg:px-6" : "px-4 py-6 lg:px-8",
+              ].join(" ")}
+            >
+              {children}
+            </div>
           </section>
         </div>
       </main>
