@@ -3,11 +3,10 @@ import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState
 import {
   AbilitySelect,
   ConditionImmunityChecklist,
-  CompactAbilityTable,
   DamageDefenseGroup,
   SenseControl,
-  SkillsTable,
 } from "../../components/shared/CharacterFormControls";
+import { CompactAbilityTable, SkillsTable } from "../../components/shared/CharacterSheetTables";
 import { Button, Field, FormSection, IconNumberField, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { proficiencyBonus } from "../../lib/domain/forms";

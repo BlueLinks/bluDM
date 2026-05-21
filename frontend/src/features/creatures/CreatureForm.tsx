@@ -32,8 +32,8 @@ import {
   formatDiceFormula,
   parseDiceFormula,
   SenseControl,
-  SkillsTable,
 } from "../../components/shared/CharacterFormControls";
+import { SkillsTable } from "../../components/shared/CharacterSheetTables";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
   Badge,
