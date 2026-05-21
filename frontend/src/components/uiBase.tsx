@@ -34,20 +34,28 @@ export function SectionPanel({
   icon: Icon,
   action,
   children,
+  className = "",
+  bodyClassName = "",
 }: {
   title: string;
   icon: React.ElementType;
   action?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-5">
+    <section
+      className={["rounded-lg border border-border bg-card p-5", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <div className="mb-4 flex items-center gap-2">
         <Icon className="h-5 w-5 text-accent" />
         <h3 className="font-semibold">{title}</h3>
         {action && <div className="ml-auto">{action}</div>}
       </div>
-      {children}
+      <div className={bodyClassName}>{children}</div>
     </section>
   );
 }

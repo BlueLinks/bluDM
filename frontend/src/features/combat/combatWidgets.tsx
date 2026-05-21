@@ -1,26 +1,15 @@
-import { ChevronDown, HeartPulse, ScrollText, Shield, Skull, Zap } from "lucide-react";
+import { ChevronDown, HeartPulse, ScrollText, Shield, Skull } from "lucide-react";
 import React, { useEffect } from "react";
 import { damageTypes } from "../../components/shared/damageTypes";
 import { Badge, Button, DeathSaveTrack, Input, SectionPanel, Select } from "../../components/ui";
-import { api } from "../../lib/api";
-import { abilities, skillDefinitions } from "../../lib/domain/options";
-import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import {
-  abilityScoresFromSheet,
   actionSummary,
-  combatantSheet,
   effectiveAC,
   effectiveMaxHP,
   hpBarColor,
   hpPercent,
-  proficiencyBonusFromCombatSheet,
-  rollDiceDetail,
-  rollModeLabel,
-  sheetRecord,
-  speedFromSheet,
-  stringArrayFromSheet,
 } from "../../lib/domain/combat";
-import type { CreatureAction, EncounterRun, EncounterRunCombatant, RollMode } from "../../types";
+import type { CreatureAction, EncounterRun, EncounterRunCombatant } from "../../types";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
 export function CombatStatusBar({
@@ -43,9 +32,9 @@ export function CombatStatusBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="grid gap-3 rounded-lg border border-border bg-card p-3 md:grid-cols-[1fr_auto_1fr] md:items-center">
+    <div className="grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center md:p-3">
       <div />
-      <div className="flex items-stretch justify-center gap-2">
+      <div className="flex items-stretch justify-center gap-1 sm:gap-2">
         <Button
           className="self-stretch px-4 text-lg"
           variant="secondary"
@@ -54,18 +43,18 @@ export function CombatStatusBar({
         >
           &larr;
         </Button>
-        <div className="grid min-w-56 grid-cols-3 overflow-hidden rounded-lg border border-border bg-background text-center">
-          <div className="px-4 py-2">
+        <div className="grid min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-border bg-background text-center">
+          <div className="px-2 py-2 sm:px-4">
             <div className="text-xs font-bold uppercase text-muted-foreground">Round</div>
             <div className="text-lg font-black">{run.currentRound}</div>
           </div>
-          <div className="border-x border-border px-4 py-2">
+          <div className="border-x border-border px-2 py-2 sm:px-4">
             <div className="text-xs font-bold uppercase text-muted-foreground">Turn</div>
             <div className="text-lg font-black">
               {run.currentTurnIndex + 1}/{combatantCount}
             </div>
           </div>
-          <div className="px-4 py-2">
+          <div className="px-2 py-2 sm:px-4">
             <div className="text-xs font-bold uppercase text-muted-foreground">Timer</div>
             <div className="text-lg font-black">
               {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
@@ -106,7 +95,7 @@ export function ActiveTurnHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-[auto_1fr] md:items-center xl:grid-cols-[auto_1fr_auto]">
+    <div className="grid gap-2 md:grid-cols-[auto_1fr] md:items-center xl:grid-cols-[auto_1fr_auto]">
       <div className="flex items-center gap-3">
         <Avatar combatant={combatant} />
         <div>
@@ -174,8 +163,8 @@ export function CombatControls({
   onManual: (mode: "damage" | "healing") => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="rounded-lg border border-border bg-background p-2">
+      <div className="flex flex-wrap items-center gap-1.5">
         <Input
           className="w-24 text-center font-semibold"
           type="number"
@@ -263,7 +252,7 @@ function DamageTypeControl({
   disabled?: boolean;
 }) {
   return (
-    <div className="min-w-44" title={disabled ? "Select a target first" : "Damage type"}>
+    <div className="min-w-36" title={disabled ? "Select a target first" : "Damage type"}>
       <Select
         value={value}
         placeholder="Damage type"
@@ -323,7 +312,7 @@ export function TargetRow({
       >
         {combatant.initiativeSet ? combatant.initiative : "-"}
       </div>
-      <div className={["rounded-lg border p-3 transition", sideTone].join(" ")}>
+      <div className={["rounded-lg border p-2 transition", sideTone].join(" ")}>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -394,173 +383,6 @@ export function TargetRow({
           ))}
         </div>
       </div>
-    </div>
-  );
-}
-
-export function CombatSheet({
-  combatant,
-  runID,
-  compact = false,
-  onRoll,
-}: {
-  combatant: EncounterRunCombatant;
-  runID: string;
-  compact?: boolean;
-  onRoll: (
-    message: string,
-    flash: { title: string; total: number; detail: string; subtitle?: string },
-  ) => void;
-}) {
-  const sheet = combatantSheet(combatant);
-  const scores = abilityScoresFromSheet(sheet);
-  const skills = sheetRecord(sheet.skillBonuses);
-  const savingThrows = stringArrayFromSheet(sheet.savingThrowProficiencies);
-  const profBonus = proficiencyBonusFromCombatSheet(sheet);
-  async function roll(
-    event: React.MouseEvent,
-    label: string,
-    ability: string,
-    bonus: number,
-    rollType: "Check" | "Saving Throw" = "Check",
-  ) {
-    const rollMode = rollModeFromEvent(event);
-    const payload = await api.rollCheck(runID, {
-      actorId: combatant.id,
-      label,
-      ability,
-      bonus,
-      rollMode,
-    });
-    const total = Number(payload.result.total) || 0;
-    const d20 = Number(payload.result.d20) || 0;
-    const title = `${label} ${rollType}`;
-    onRoll(
-      `${title}: ${total} (${rollModeLabel(rollMode)} ${d20} ${bonus >= 0 ? "+" : ""}${bonus})`,
-      {
-        title,
-        subtitle: `${combatant.displayName} · ${rollType} · ${rollModeLabel(rollMode)}`,
-        total,
-        detail: `${rollDiceDetail(payload.result)} ${bonus >= 0 ? "+" : ""}${bonus}`,
-      },
-    );
-  }
-  return (
-    <SectionPanel title={compact ? "Target Sheet" : "Active Sheet"} icon={ScrollText}>
-      <div className="grid gap-3">
-        <div className="grid grid-cols-3 gap-2">
-          <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
-          <IconStat
-            icon={HeartPulse}
-            label="HP"
-            value={`${combatant.currentHitPoints}/${effectiveMaxHP(combatant)}`}
-            tone="heart"
-          />
-          <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {abilities.map((ability) => {
-            const score = Number(scores[ability.key]) || 10;
-            const bonus = abilityModifier(score);
-            const saveBonus = bonus + (savingThrows.includes(ability.key) ? profBonus : 0);
-            return (
-              <div
-                key={ability.key}
-                className="rounded-md border border-border bg-background p-2 text-center"
-              >
-                <div className="text-xs font-bold text-muted-foreground">{ability.label}</div>
-                <div className="font-semibold">{score}</div>
-                <div className="mt-2 grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    className="rounded border border-border bg-muted px-1.5 py-1 hover:bg-primary hover:text-primary-foreground"
-                    title="Roll ability check. Shift-click for advantage, Control-click for disadvantage."
-                    onClick={(event) =>
-                      void roll(event, ability.label, ability.key, bonus, "Check")
-                    }
-                  >
-                    <span className="block text-[0.62rem] font-black uppercase text-muted-foreground">
-                      Mod
-                    </span>
-                    <span className={["block text-sm font-black", modifierTone(bonus)].join(" ")}>
-                      {bonus >= 0 ? `+${bonus}` : bonus}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded border border-border bg-muted px-1.5 py-1 hover:bg-primary hover:text-primary-foreground"
-                    title="Roll saving throw. Shift-click for advantage, Control-click for disadvantage."
-                    onClick={(event) =>
-                      void roll(event, ability.label, ability.key, saveBonus, "Saving Throw")
-                    }
-                  >
-                    <span className="block text-[0.62rem] font-black uppercase text-muted-foreground">
-                      Save
-                    </span>
-                    <span
-                      className={["block text-sm font-black", modifierTone(saveBonus)].join(" ")}
-                    >
-                      {saveBonus >= 0 ? `+${saveBonus}` : saveBonus}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        <div className="grid gap-1">
-          {skillDefinitions.map((skill) => {
-            const fallback = abilityModifier(Number(scores[skill.ability]) || 10);
-            const bonus = Number(skills[skill.name]) || fallback;
-            return (
-              <button
-                key={skill.name}
-                type="button"
-                className="flex justify-between rounded-md px-2 py-1 text-left text-sm hover:bg-muted"
-                title="Shift-click for advantage, Control-click for disadvantage."
-                onClick={(event) => void roll(event, skill.name, skill.ability, bonus, "Check")}
-              >
-                <span>{skill.name}</span>
-                <span className={["font-bold", modifierTone(bonus)].join(" ")}>
-                  {bonus >= 0 ? `+${bonus}` : bonus}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </SectionPanel>
-  );
-}
-
-function IconStat({
-  icon: Icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: React.ReactNode;
-  tone: "shield" | "heart" | "speed";
-}) {
-  const tones = {
-    shield: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200",
-    heart: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200",
-    speed: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
-  };
-  return (
-    <div
-      className={[
-        "grid justify-items-center gap-1 rounded-lg border px-2 py-3 text-center",
-        tones[tone],
-      ].join(" ")}
-    >
-      <div className="relative grid h-12 w-12 place-items-center">
-        <Icon className="absolute h-12 w-12 opacity-20" />
-        <div className="text-lg font-black">{value}</div>
-      </div>
-      <div className="text-[0.68rem] font-bold uppercase">{label}</div>
     </div>
   );
 }
@@ -645,7 +467,12 @@ export function RollFlash({
 
 export function DamageMeters({ combatants }: { combatants: EncounterRunCombatant[] }) {
   return (
-    <SectionPanel title="Damage Meters" icon={HeartPulse}>
+    <SectionPanel
+      title="Damage Meters"
+      icon={HeartPulse}
+      className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
+      bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
+    >
       <div className="grid gap-2">
         {[...combatants]
           .sort((a, b) => b.damageDealt - a.damageDealt)
@@ -667,10 +494,4 @@ export function DamageMeters({ combatants }: { combatants: EncounterRunCombatant
       </div>
     </SectionPanel>
   );
-}
-
-function rollModeFromEvent(event?: React.MouseEvent): RollMode {
-  if (event?.shiftKey) return "advantage";
-  if (event?.ctrlKey) return "disadvantage";
-  return "normal";
 }
