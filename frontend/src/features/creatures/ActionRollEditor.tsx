@@ -18,7 +18,7 @@ export function ActionRollEditor({
     <div className="grid gap-2">
       {rolls.map((roll) => (
         <div
-          className="grid gap-3 rounded-md border border-border bg-card p-3 lg:grid-cols-[minmax(150px,1fr)_minmax(280px,1.4fr)_98px_44px]"
+          className="grid items-end gap-3 rounded-md border border-border bg-card p-3 lg:grid-cols-[minmax(150px,1fr)_minmax(280px,1.4fr)_6rem_2.75rem]"
           key={roll.id}
         >
           <Field label="Damage type">
@@ -52,18 +52,21 @@ export function ActionRollEditor({
               }
             />
           </Field>
-          <Checkbox
-            label="Magical"
-            checked={roll.magical}
-            onChange={(magical) =>
-              onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
-            }
-          />
+          <div className="self-end [&>label]:h-10 [&>label]:justify-center [&>label]:px-2">
+            <Checkbox
+              label="Magical"
+              checked={roll.magical}
+              onChange={(magical) =>
+                onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
+              }
+            />
+          </div>
           <Button
             type="button"
             icon={Trash2}
             variant="danger"
             size="sm"
+            className="h-10 w-11 self-end px-0"
             onClick={() => onChange(rolls.filter((item) => item.id !== roll.id))}
           />
         </div>

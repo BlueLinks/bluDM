@@ -413,7 +413,7 @@ function ActionNumberFields({
   onChange: (action: ActionFormState) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+    <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       <FloatingInput
         icon={Swords}
         label="Attack mod"
