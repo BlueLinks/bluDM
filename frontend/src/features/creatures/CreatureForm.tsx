@@ -344,6 +344,7 @@ export function CreatureForm({
       <CreatureSpellcastingSection
         form={form}
         setForm={setForm}
+        notify={notify}
         spellcasting={spellcasting}
         spellModalOpen={spellModalOpen}
         setSpellModalOpen={setSpellModalOpen}
@@ -470,6 +471,7 @@ function CreatureTraitSections({
 function CreatureSpellcastingSection({
   filteredSpells,
   form,
+  notify,
   setForm,
   spellcasting,
   setSpellModalOpen,
@@ -482,6 +484,7 @@ function CreatureSpellcastingSection({
 }: {
   filteredSpells: Spell[];
   form: CreatureFormState;
+  notify: (message: string) => void;
   setForm: CreatureFormSetter;
   spellcasting?: CreatureSpellcastingProfile;
   setSpellModalOpen: (open: boolean) => void;
@@ -492,6 +495,18 @@ function CreatureSpellcastingSection({
   spellSources: string[];
   spells: Spell[];
 }) {
+  function setSpellSlotCount(level: number, value: string) {
+    const selectedCount = form.spellRefs.filter((spell) => spell.spellLevel === level).length;
+    const nextCount = Math.max(0, Number(value) || 0);
+    if (nextCount < selectedCount) {
+      notify(
+        `Remove ${selectedCount === 1 ? "the selected spell" : "selected spells"} from ${spellLevelName(level)} before reducing those slots.`,
+      );
+      return;
+    }
+    setForm({ ...form, [`spellSlots${level}`]: String(nextCount) });
+  }
+
   return (
     <FormSection
       title="Spellcasting"
@@ -540,7 +555,7 @@ function CreatureSpellcastingSection({
               key={level}
               level={level}
               value={form[key]}
-              onChange={(value) => setForm({ ...form, [key]: value })}
+              onChange={(value) => setSpellSlotCount(level, value)}
             />
           );
         })}
@@ -576,6 +591,14 @@ function CreatureSpellcastingSection({
     </FormSection>
   );
 }
+
+function spellLevelName(level: number) {
+  if (level === 1) return "1st level";
+  if (level === 2) return "2nd level";
+  if (level === 3) return "3rd level";
+  return `${level}th level`;
+}
+
 function CompactNumberStepper({
   label,
   value,
