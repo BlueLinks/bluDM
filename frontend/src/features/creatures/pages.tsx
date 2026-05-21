@@ -197,33 +197,40 @@ export function NpcsPage() {
         />
       </SectionPanel>
       <SectionPanel title="Action Bank" icon={Archive}>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Reusable attacks and abilities live here. Adding one to a creature creates an editable
-          copy in that creature's own action list.
-        </p>
-        <Modal
-          open={templateModalOpen}
-          onOpenChange={(open) => {
-            setTemplateModalOpen(open);
-            if (!open) {
-              setEditingTemplate(null);
-              setTemplateForm(blankAction());
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <p className="max-w-3xl text-sm text-muted-foreground">
+            Reusable attacks and abilities live here. Adding one to a creature creates an editable
+            copy in that creature's own action list.
+          </p>
+          <Modal
+            open={templateModalOpen}
+            onOpenChange={(open) => {
+              setTemplateModalOpen(open);
+              if (!open) {
+                setEditingTemplate(null);
+                setTemplateForm(blankAction());
+              }
+            }}
+            title={editingTemplate ? "Edit custom action" : "Add custom action"}
+            trigger={
+              <Button
+                type="button"
+                icon={Plus}
+                variant="success"
+                onClick={() => openTemplateModal()}
+              >
+                Add action
+              </Button>
             }
-          }}
-          title={editingTemplate ? "Edit custom action" : "Add custom action"}
-          trigger={
-            <Button type="button" icon={Plus} variant="success" onClick={() => openTemplateModal()}>
-              Add action
-            </Button>
-          }
-        >
-          <form className="grid gap-4" onSubmit={handleCreateTemplate}>
-            <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
-            <Button type="submit" icon={Plus} variant="success">
-              {editingTemplate ? "Update custom action" : "Save custom action"}
-            </Button>
-          </form>
-        </Modal>
+          >
+            <form className="grid gap-4" onSubmit={handleCreateTemplate}>
+              <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
+              <Button type="submit" icon={Plus} variant="success">
+                {editingTemplate ? "Update custom action" : "Save custom action"}
+              </Button>
+            </form>
+          </Modal>
+        </div>
         <div className="grid gap-2">
           {templates.map((template) => (
             <ActionSummary
