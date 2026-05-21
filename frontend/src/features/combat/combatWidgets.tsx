@@ -165,15 +165,17 @@ export function CombatControls({
   return (
     <div className="rounded-lg border border-border bg-background p-2">
       <div className="flex flex-wrap items-center gap-1.5">
-        <Input
-          className="w-24 text-center font-semibold"
-          type="number"
-          placeholder="Amount"
-          value={hpAmount}
-          onChange={(event) => onAmountChange(event.target.value)}
-          disabled={disabled}
-          title={disabled ? "Select a target first" : ""}
-        />
+        <div className="w-24 flex-none">
+          <Input
+            className="text-center font-semibold"
+            type="number"
+            placeholder="Amount"
+            value={hpAmount}
+            onChange={(event) => onAmountChange(event.target.value)}
+            disabled={disabled}
+            title={disabled ? "Select a target first" : ""}
+          />
+        </div>
         <DamageTypeControl value={damageType} onChange={onDamageTypeChange} disabled={disabled} />
         <Button disabled={disabled} variant="danger" onClick={() => onManual("damage")}>
           Damage
@@ -289,17 +291,20 @@ export function TargetRow({
 }) {
   const pct = hpPercent(combatant);
   const showDeathSaves = combatant.sourceType === "player" && combatant.currentHitPoints <= 0;
-  const sideTone = active
-    ? "border-primary bg-primary/10"
-    : selected
-      ? "border-primary bg-primary/5"
-      : down
-        ? "border-red-500/30 bg-red-950/5 opacity-80"
-        : combatant.side === "enemy"
-          ? "border-red-500/25 bg-red-500/5"
-          : combatant.side === "friendly"
-            ? "border-emerald-500/25 bg-emerald-500/5"
-            : "border-border bg-background";
+  const sideTone =
+    active && selected
+      ? "border-sky-500 bg-sky-500/10 ring-2 ring-amber-400/70"
+      : active
+        ? "border-sky-500 bg-sky-500/10 ring-1 ring-sky-500/40"
+        : selected
+          ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-400/70"
+          : down
+            ? "border-red-500/30 bg-red-950/5 opacity-80"
+            : combatant.side === "enemy"
+              ? "border-red-500/25 bg-red-500/5"
+              : combatant.side === "friendly"
+                ? "border-emerald-500/25 bg-emerald-500/5"
+                : "border-border bg-background";
   return (
     <div className="grid grid-cols-[2.25rem_1fr] items-start gap-1">
       <div
@@ -329,21 +334,26 @@ export function TargetRow({
                   <Shield className="absolute h-8 w-8 opacity-20" />
                   <span className="relative text-lg font-black">{effectiveAC(combatant)}</span>
                 </div>
-                <div
-                  className={[
-                    "truncate font-semibold",
-                    combatant.side === "enemy"
-                      ? "text-red-700 dark:text-red-300"
-                      : combatant.side === "friendly"
-                        ? "text-emerald-700 dark:text-emerald-300"
-                        : "",
-                  ].join(" ")}
-                >
-                  {combatant.displayName}
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <div
+                    className={[
+                      "min-w-0 flex-1 truncate font-semibold",
+                      combatant.side === "enemy"
+                        ? "text-red-700 dark:text-red-300"
+                        : combatant.side === "friendly"
+                          ? "text-emerald-700 dark:text-emerald-300"
+                          : "",
+                    ].join(" ")}
+                  >
+                    {combatant.displayName}
+                  </div>
+                  <div className="ml-auto flex shrink-0 items-center gap-1">
+                    {active && <StateBadge tone="acting">Acting</StateBadge>}
+                    {selected && <StateBadge tone="target">Target</StateBadge>}
+                  </div>
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {active && <Badge tone="friendly">Acting</Badge>}
                 {down && (
                   <span className="inline-flex items-center gap-1 text-red-700 dark:text-red-300">
                     <Skull className="h-3.5 w-3.5" /> Down
@@ -384,6 +394,21 @@ export function TargetRow({
         </div>
       </div>
     </div>
+  );
+}
+
+function StateBadge({ tone, children }: { tone: "acting" | "target"; children: React.ReactNode }) {
+  return (
+    <span
+      className={[
+        "rounded-md px-1.5 py-0.5 text-[0.62rem] font-black uppercase",
+        tone === "acting"
+          ? "bg-sky-500/20 text-sky-800 dark:text-sky-100"
+          : "bg-amber-400/25 text-amber-800 dark:text-amber-100",
+      ].join(" ")}
+    >
+      {children}
+    </span>
   );
 }
 

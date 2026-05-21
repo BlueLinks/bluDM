@@ -37,11 +37,9 @@ export function CombatSheet({
   const skills = sheetRecord(sheet.skillBonuses);
   const savingThrows = stringArrayFromSheet(sheet.savingThrowProficiencies);
   const profBonus = proficiencyBonusFromCombatSheet(sheet);
-  const abilityPairs = [
-    [abilities[0], abilities[3]],
-    [abilities[1], abilities[4]],
-    [abilities[2], abilities[5]],
-  ];
+  const leftAbilities = abilities.slice(0, 3);
+  const rightAbilities = abilities.slice(3, 6);
+  const descriptor = combatantDescriptor(combatant, sheet);
 
   async function roll(
     event: React.MouseEvent,
@@ -79,7 +77,13 @@ export function CombatSheet({
       className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
       bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
     >
-      <div className="grid gap-2">
+      <div className="grid gap-3">
+        <div className="rounded-md border border-border bg-background px-3 py-2">
+          <div className="truncate text-sm font-black">{combatant.displayName}</div>
+          {descriptor && (
+            <div className="mt-0.5 text-xs italic text-muted-foreground">{descriptor}</div>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-1.5">
           <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
           <IconStat
@@ -90,50 +94,16 @@ export function CombatSheet({
           />
           <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
         </div>
-        <div className="overflow-hidden rounded-md border border-border bg-background text-xs">
-          <div className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem_2.1rem_2rem_2.25rem_2.25rem] border-b border-border bg-muted/60 px-1 py-1 text-center font-black uppercase text-muted-foreground">
-            <span />
-            <span />
-            <span>Mod</span>
-            <span>Save</span>
-            <span />
-            <span />
-            <span>Mod</span>
-            <span>Save</span>
-          </div>
-          {abilityPairs.map((pair) => (
-            <div
-              key={pair.map((ability) => ability.key).join("-")}
-              className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem_2.1rem_2rem_2.25rem_2.25rem] items-center border-b border-border px-1 py-1 last:border-b-0"
-            >
-              {pair.map((ability) => {
-                const score = Number(scores[ability.key]) || 10;
-                const bonus = abilityModifier(score);
-                const saveBonus = bonus + (savingThrows.includes(ability.key) ? profBonus : 0);
-                return (
-                  <React.Fragment key={ability.key}>
-                    <span className="font-black uppercase text-muted-foreground">
-                      {ability.key}
-                    </span>
-                    <span className="text-center font-semibold">{score}</span>
-                    <AbilityRollButton
-                      label={`${ability.label} check`}
-                      value={bonus}
-                      onClick={(event) =>
-                        void roll(event, ability.label, ability.key, bonus, "Check")
-                      }
-                    />
-                    <AbilityRollButton
-                      label={`${ability.label} saving throw`}
-                      value={saveBonus}
-                      onClick={(event) =>
-                        void roll(event, ability.label, ability.key, saveBonus, "Saving Throw")
-                      }
-                    />
-                  </React.Fragment>
-                );
-              })}
-            </div>
+        <div className="grid grid-cols-2 gap-2">
+          {[leftAbilities, rightAbilities].map((group) => (
+            <AbilityTable
+              key={group.map((ability) => ability.key).join("-")}
+              abilities={group}
+              scores={scores}
+              savingThrows={savingThrows}
+              proficiencyBonus={profBonus}
+              onRoll={roll}
+            />
           ))}
         </div>
         <div className="grid grid-cols-2 gap-x-2 gap-y-1">
@@ -161,6 +131,63 @@ export function CombatSheet({
   );
 }
 
+function AbilityTable({
+  abilities,
+  scores,
+  savingThrows,
+  proficiencyBonus,
+  onRoll,
+}: {
+  abilities: typeof import("../../lib/domain/options").abilities;
+  scores: Record<string, unknown>;
+  savingThrows: string[];
+  proficiencyBonus: number;
+  onRoll: (
+    event: React.MouseEvent,
+    label: string,
+    ability: string,
+    bonus: number,
+    rollType: "Check" | "Saving Throw",
+  ) => Promise<void>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-md border border-border bg-background text-xs">
+      <div className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem] border-b border-border bg-muted/60 px-1 py-1 text-center font-black uppercase text-muted-foreground">
+        <span />
+        <span />
+        <span>Mod</span>
+        <span>Save</span>
+      </div>
+      {abilities.map((ability) => {
+        const score = Number(scores[ability.key]) || 10;
+        const bonus = abilityModifier(score);
+        const saveBonus = bonus + (savingThrows.includes(ability.key) ? proficiencyBonus : 0);
+        return (
+          <div
+            key={ability.key}
+            className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem] items-center border-b border-border px-1 py-1 last:border-b-0"
+          >
+            <span className="font-black uppercase text-muted-foreground">{ability.key}</span>
+            <span className="text-center font-semibold">{score}</span>
+            <AbilityRollButton
+              label={`${ability.label} check`}
+              value={bonus}
+              onClick={(event) => void onRoll(event, ability.label, ability.key, bonus, "Check")}
+            />
+            <AbilityRollButton
+              label={`${ability.label} saving throw`}
+              value={saveBonus}
+              onClick={(event) =>
+                void onRoll(event, ability.label, ability.key, saveBonus, "Saving Throw")
+              }
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function IconStat({
   icon: Icon,
   label,
@@ -184,9 +211,11 @@ function IconStat({
         tones[tone],
       ].join(" ")}
     >
-      <div className="relative grid h-8 w-10 place-items-center">
+      <div className="relative grid h-8 min-w-12 place-items-center px-0.5">
         <Icon className="absolute h-8 w-8 opacity-20" />
-        <div className="text-sm font-black">{value}</div>
+        <div className="min-w-0 text-center text-xs font-black leading-none tabular-nums sm:text-sm">
+          {value}
+        </div>
       </div>
       <div className="text-[0.6rem] font-bold uppercase">{label}</div>
     </div>
@@ -221,4 +250,34 @@ function rollModeFromEvent(event?: React.MouseEvent): RollMode {
   if (event?.shiftKey) return "advantage";
   if (event?.ctrlKey) return "disadvantage";
   return "normal";
+}
+
+function combatantDescriptor(combatant: EncounterRunCombatant, sheet: Record<string, unknown>) {
+  const source = (combatant.snapshot.player ??
+    combatant.snapshot.creature ??
+    combatant.snapshot) as Record<string, unknown>;
+  if (combatant.sourceType === "player") {
+    return compactJoin([textValue(sheet.species), textValue(sheet.class), levelLabel(sheet.level)]);
+  }
+  const statBlock = sheetRecord(source.statBlock ?? sheet);
+  const size = textValue(source.size ?? statBlock.size);
+  const type = compactJoin([
+    textValue(source.creatureType ?? statBlock.creatureType),
+    textValue(statBlock.creatureSubtype),
+  ]);
+  const alignment = textValue(source.alignment ?? statBlock.alignment);
+  return compactJoin([compactJoin([size, type], " "), alignment], ", ");
+}
+
+function levelLabel(value: unknown) {
+  const level = Number(value);
+  return level > 0 ? `Level ${level}` : "";
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function compactJoin(values: string[], separator = " ") {
+  return values.filter(Boolean).join(separator);
 }
