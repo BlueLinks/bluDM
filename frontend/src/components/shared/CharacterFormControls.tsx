@@ -22,7 +22,7 @@ export function DiceFormulaInput({
     });
   }
   return (
-    <div className="grid gap-2 sm:grid-cols-[minmax(110px,1fr)_110px_minmax(110px,1fr)]">
+    <div className="grid grid-cols-[repeat(auto-fit,minmax(5.75rem,1fr))] gap-2">
       <StepperNumber
         label="Dice"
         value={value.diceCount}
@@ -85,16 +85,16 @@ function StepperNumber({
   return (
     <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">
       {label}
-      <div className="inline-flex overflow-hidden rounded-md border border-border bg-card">
+      <div className="inline-flex min-w-0 overflow-hidden rounded-md border border-border bg-card">
         <button
-          className="grid h-10 w-9 place-items-center border-r border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 w-8 shrink-0 place-items-center border-r border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
           type="button"
           onClick={() => onStep(-1)}
         >
           -
         </button>
         <Input
-          className="h-10 min-h-0 w-full rounded-none border-0 text-center font-semibold focus:ring-0"
+          className="h-10 min-h-0 min-w-0 flex-1 rounded-none border-0 text-center font-semibold focus:ring-0"
           inputMode="numeric"
           type="number"
           min={min}
@@ -102,7 +102,7 @@ function StepperNumber({
           onChange={(event) => onChange(sanitizeInteger(event.target.value, min < 0))}
         />
         <button
-          className="grid h-10 w-9 place-items-center border-l border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 w-8 shrink-0 place-items-center border-l border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
           type="button"
           onClick={() => onStep(1)}
         >
