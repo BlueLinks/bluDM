@@ -272,13 +272,22 @@ export function FormSection({
   title,
   children,
   help,
+  className = "",
 }: {
   title: string;
   children: React.ReactNode;
   help?: string;
+  className?: string;
 }) {
   return (
-    <fieldset className="grid min-w-0 gap-5 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6">
+    <fieldset
+      className={[
+        "grid min-w-0 gap-5 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <legend className="px-2 text-sm font-bold uppercase tracking-wide text-accent">
         <span className="inline-flex items-center gap-2">
           {title}
