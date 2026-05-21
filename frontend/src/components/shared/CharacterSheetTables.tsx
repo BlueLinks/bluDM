@@ -21,13 +21,13 @@ export function CompactAbilityTable({
   }
 
   return (
-    <div className="grid gap-3 xl:grid-cols-2 max-[1133px]:grid-cols-1">
+    <div className="grid justify-start gap-3 xl:grid-cols-[max-content_max-content] max-[1133px]:grid-cols-1">
       {groups.map((group) => (
         <div
-          className="min-w-0 overflow-hidden rounded-lg border border-border bg-background text-sm"
+          className="w-max max-w-full overflow-hidden rounded-lg border border-border bg-background text-sm"
           key={group.map((ability) => ability.key).join("-")}
         >
-          <div className="grid grid-cols-[4rem_7rem_3rem_3.25rem] border-b border-border bg-muted/60 text-center text-[0.62rem] font-black uppercase leading-none text-muted-foreground">
+          <div className="grid grid-cols-[4rem_7rem_3rem_2.75rem] border-b border-border bg-muted/60 text-center text-[0.62rem] font-black uppercase leading-none text-muted-foreground">
             <span className="border-r border-border px-2 py-2 text-left">Ability</span>
             <span className="border-r border-border bg-primary/10 px-2 py-2 text-primary">
               Score
@@ -40,7 +40,7 @@ export function CompactAbilityTable({
             const modifier = abilityModifier(score);
             return (
               <div
-                className="grid grid-cols-[4rem_7rem_3rem_3.25rem] items-stretch border-b border-border last:border-b-0"
+                className="grid grid-cols-[4rem_7rem_3rem_2.75rem] items-stretch border-b border-border last:border-b-0"
                 key={ability.key}
               >
                 <span className="grid items-center border-r border-border bg-muted/30 px-2 font-black uppercase text-muted-foreground">
@@ -115,7 +115,7 @@ export function SkillsTable({
 }) {
   const bonus = proficiencyBonus;
   return (
-    <div className="grid gap-2 2xl:grid-cols-2 max-[1133px]:grid-cols-1">
+    <div className="grid justify-start gap-2 lg:grid-cols-[max-content_max-content] max-[760px]:grid-cols-1">
       {skillDefinitions.map((skill) => {
         const score = Number(abilityScores[skill.ability]) || 10;
         const base = abilityModifier(score);
@@ -124,7 +124,7 @@ export function SkillsTable({
         const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
         return (
           <div
-            className="grid min-w-0 grid-cols-[1.7rem_2rem_minmax(6rem,8.75rem)_2.25rem_3.1rem_3.4rem] items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+            className="grid w-max max-w-full grid-cols-[1.55rem_1.85rem_minmax(6.75rem,8.25rem)_2rem_2.55rem_2.35rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
             key={skill.name}
           >
             <span className="text-xs font-semibold text-muted-foreground">+{bonus}</span>
@@ -135,7 +135,10 @@ export function SkillsTable({
             <span className={["text-right font-bold", modifierTone(total)].join(" ")}>
               {total >= 0 ? `+${total}` : total}
             </span>
-            <label className="flex min-w-0 items-center justify-between gap-1 rounded bg-muted/60 px-1.5 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground">
+            <label
+              className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
+              title={`${skill.name} proficiency`}
+            >
               Prof
               <input
                 className="h-4 w-4 shrink-0 accent-primary"
@@ -144,8 +147,11 @@ export function SkillsTable({
                 onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
               />
             </label>
-            <label className="flex min-w-0 items-center justify-between gap-1 rounded bg-muted/60 px-1.5 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground">
-              Expert
+            <label
+              className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
+              title={`${skill.name} expertise`}
+            >
+              Exp
               <input
                 className="h-4 w-4 shrink-0 accent-primary"
                 checked={isExpert}
