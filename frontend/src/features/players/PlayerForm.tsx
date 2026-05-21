@@ -296,7 +296,7 @@ function PlayerAbilitySections({
 
   return (
     <>
-      <FormSection className="w-fit max-w-full" title="Ability Scores">
+      <FormSection title="Ability Scores">
         <CompactAbilityTable
           abilityScores={form.abilityScores}
           savingThrowProficiencies={form.savingThrowProficiencies}
@@ -311,7 +311,7 @@ function PlayerAbilitySections({
           }
         />
       </FormSection>
-      <FormSection className="w-fit max-w-full" title="Skills">
+      <FormSection title="Skills">
         <SkillsTable
           abilityScores={form.abilityScores}
           expertise={form.skillExpertise}

@@ -14,86 +14,74 @@ export function CompactAbilityTable({
   onScoreChange: (ability: AbilityKey, value: string) => void;
   onSaveProficiencyChange: (ability: AbilityKey, checked: boolean) => void;
 }) {
-  const groups = [abilities.slice(0, 3), abilities.slice(3, 6)];
   function stepScore(ability: AbilityKey, delta: number) {
     const current = Number(abilityScores[ability]) || 10;
     onScoreChange(ability, String(current + delta));
   }
 
   return (
-    <div className="grid justify-start gap-3 xl:grid-cols-[max-content_max-content] max-[1133px]:grid-cols-1">
-      {groups.map((group) => (
-        <div
-          className="w-max max-w-full overflow-hidden rounded-lg border border-border bg-background text-sm"
-          key={group.map((ability) => ability.key).join("-")}
-        >
-          <div className="grid grid-cols-[4rem_7rem_3rem_2.75rem] border-b border-border bg-muted/60 text-center text-[0.62rem] font-black uppercase leading-none text-muted-foreground">
-            <span className="border-r border-border px-2 py-2 text-left">Ability</span>
-            <span className="border-r border-border bg-primary/10 px-2 py-2 text-primary">
-              Score
+    <div className="grid gap-2 sm:grid-cols-2 min-[1280px]:grid-cols-3">
+      {abilities.map((ability) => {
+        const score = Number(abilityScores[ability.key]) || 10;
+        const modifier = abilityModifier(score);
+        return (
+          <div
+            className="grid min-w-0 grid-cols-[3.25rem_minmax(6rem,1fr)_3rem_3rem] overflow-hidden rounded-lg border border-border bg-background text-sm"
+            key={ability.key}
+          >
+            <span className="grid items-center border-r border-border bg-muted/40 px-2 font-black uppercase text-muted-foreground">
+              {ability.label}
             </span>
-            <span className="border-r border-border px-2 py-2">Mod</span>
-            <span className="px-1 py-2">Save</span>
-          </div>
-          {group.map((ability) => {
-            const score = Number(abilityScores[ability.key]) || 10;
-            const modifier = abilityModifier(score);
-            return (
-              <div
-                className="grid grid-cols-[4rem_7rem_3rem_2.75rem] items-stretch border-b border-border last:border-b-0"
-                key={ability.key}
-              >
-                <span className="grid items-center border-r border-border bg-muted/30 px-2 font-black uppercase text-muted-foreground">
-                  {ability.label}
-                </span>
-                <span className="grid place-items-center border-r border-border bg-primary/5 px-1.5">
-                  <span className="grid grid-cols-[1.75rem_2.5rem_1.75rem] overflow-hidden rounded-md border border-border bg-card">
-                    <button
-                      className="grid h-9 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      type="button"
-                      onClick={() => stepScore(ability.key, -1)}
-                      aria-label={`Decrease ${ability.label}`}
-                    >
-                      -
-                    </button>
-                    <Input
-                      className="h-9 min-h-0 rounded-none border-0 px-0 text-center font-semibold focus:ring-0"
-                      type="number"
-                      value={abilityScores[ability.key]}
-                      onChange={(event) => onScoreChange(ability.key, event.target.value)}
-                    />
-                    <button
-                      className="grid h-9 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                      type="button"
-                      onClick={() => stepScore(ability.key, 1)}
-                      aria-label={`Increase ${ability.label}`}
-                    >
-                      +
-                    </button>
-                  </span>
-                </span>
-                <span
-                  className={[
-                    "grid place-items-center border-r border-border px-2 font-black tabular-nums",
-                    modifierTone(modifier),
-                  ].join(" ")}
+            <span className="grid place-items-center border-r border-border bg-primary/5 px-1.5 py-1.5">
+              <span className="grid w-full max-w-28 grid-cols-[1.65rem_1fr_1.65rem] overflow-hidden rounded-md border border-border bg-card">
+                <button
+                  className="grid h-9 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  type="button"
+                  onClick={() => stepScore(ability.key, -1)}
+                  aria-label={`Decrease ${ability.label}`}
                 >
-                  {modifier >= 0 ? `+${modifier}` : modifier}
-                </span>
-                <label className="grid place-items-center px-2">
-                  <span className="sr-only">{ability.label} saving throw proficiency</span>
-                  <input
-                    className="h-4 w-4 accent-primary"
-                    checked={savingThrowProficiencies.includes(ability.key)}
-                    type="checkbox"
-                    onChange={(event) => onSaveProficiencyChange(ability.key, event.target.checked)}
-                  />
-                </label>
-              </div>
-            );
-          })}
-        </div>
-      ))}
+                  -
+                </button>
+                <Input
+                  className="h-9 min-h-0 rounded-none border-0 px-0 text-center font-semibold focus:ring-0"
+                  type="number"
+                  value={abilityScores[ability.key]}
+                  onChange={(event) => onScoreChange(ability.key, event.target.value)}
+                />
+                <button
+                  className="grid h-9 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  type="button"
+                  onClick={() => stepScore(ability.key, 1)}
+                  aria-label={`Increase ${ability.label}`}
+                >
+                  +
+                </button>
+              </span>
+            </span>
+            <span
+              className={[
+                "grid place-items-center border-r border-border px-2 font-black tabular-nums",
+                modifierTone(modifier),
+              ].join(" ")}
+              title="Modifier"
+            >
+              {modifier >= 0 ? `+${modifier}` : modifier}
+            </span>
+            <label
+              className="grid place-items-center px-2"
+              title={`${ability.label} saving throw proficiency`}
+            >
+              <span className="sr-only">{ability.label} saving throw proficiency</span>
+              <input
+                className="h-4 w-4 accent-primary"
+                checked={savingThrowProficiencies.includes(ability.key)}
+                type="checkbox"
+                onChange={(event) => onSaveProficiencyChange(ability.key, event.target.checked)}
+              />
+            </label>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -115,7 +103,7 @@ export function SkillsTable({
 }) {
   const bonus = proficiencyBonus;
   return (
-    <div className="grid justify-start gap-2 lg:grid-cols-[max-content_max-content] max-[760px]:grid-cols-1">
+    <div className="grid gap-2 md:grid-cols-2 min-[1280px]:grid-cols-3">
       {skillDefinitions.map((skill) => {
         const score = Number(abilityScores[skill.ability]) || 10;
         const base = abilityModifier(score);
@@ -124,10 +112,9 @@ export function SkillsTable({
         const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
         return (
           <div
-            className="grid w-max max-w-full grid-cols-[1.55rem_1.85rem_minmax(6.75rem,8.25rem)_2rem_2.55rem_2.35rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
+            className="grid min-w-0 grid-cols-[2rem_minmax(6rem,1fr)_2.25rem_2.55rem_2.35rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
             key={skill.name}
           >
-            <span className="text-xs font-semibold text-muted-foreground">+{bonus}</span>
             <span className="rounded bg-muted px-1.5 py-1 text-center text-xs font-semibold uppercase">
               {skill.ability}
             </span>
