@@ -20,20 +20,20 @@ export function CompactAbilityTable({
   }
 
   return (
-    <div className="grid gap-2 sm:grid-cols-2 min-[1280px]:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
       {abilities.map((ability) => {
         const score = Number(abilityScores[ability.key]) || 10;
         const modifier = abilityModifier(score);
         return (
           <div
-            className="grid min-w-0 grid-cols-[3.25rem_minmax(6rem,1fr)_3rem_3rem] overflow-hidden rounded-lg border border-border bg-background text-sm"
+            className="grid min-w-0 grid-cols-[3rem_minmax(5.5rem,1fr)_2.75rem] overflow-hidden rounded-lg border border-border bg-background text-sm"
             key={ability.key}
           >
-            <span className="grid items-center border-r border-border bg-muted/40 px-2 font-black uppercase text-muted-foreground">
+            <span className="row-span-2 grid items-center border-r border-border bg-muted/40 px-2 font-black uppercase text-muted-foreground">
               {ability.label}
             </span>
             <span className="grid place-items-center border-r border-border bg-primary/5 px-1.5 py-1.5">
-              <span className="grid w-full max-w-28 grid-cols-[1.65rem_1fr_1.65rem] overflow-hidden rounded-md border border-border bg-card">
+              <span className="grid w-full max-w-24 grid-cols-[1.55rem_1fr_1.55rem] overflow-hidden rounded-md border border-border bg-card">
                 <button
                   className="grid h-9 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                   type="button"
@@ -60,7 +60,7 @@ export function CompactAbilityTable({
             </span>
             <span
               className={[
-                "grid place-items-center border-r border-border px-2 font-black tabular-nums",
+                "grid place-items-center px-2 font-black tabular-nums",
                 modifierTone(modifier),
               ].join(" ")}
               title="Modifier"
@@ -68,10 +68,10 @@ export function CompactAbilityTable({
               {modifier >= 0 ? `+${modifier}` : modifier}
             </span>
             <label
-              className="grid place-items-center px-2"
+              className="col-span-2 flex items-center justify-center gap-2 border-t border-border bg-muted/30 px-2 py-1.5 text-[0.62rem] font-bold uppercase text-muted-foreground"
               title={`${ability.label} saving throw proficiency`}
             >
-              <span className="sr-only">{ability.label} saving throw proficiency</span>
+              <span>Save prof</span>
               <input
                 className="h-4 w-4 accent-primary"
                 checked={savingThrowProficiencies.includes(ability.key)}
@@ -103,7 +103,7 @@ export function SkillsTable({
 }) {
   const bonus = proficiencyBonus;
   return (
-    <div className="grid gap-2 md:grid-cols-2 min-[1280px]:grid-cols-3">
+    <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
       {skillDefinitions.map((skill) => {
         const score = Number(abilityScores[skill.ability]) || 10;
         const base = abilityModifier(score);
@@ -112,10 +112,10 @@ export function SkillsTable({
         const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
         return (
           <div
-            className="grid min-w-0 grid-cols-[2rem_minmax(6rem,1fr)_2.25rem_2.55rem_2.35rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
+            className="grid min-w-0 grid-cols-[1.8rem_minmax(4.25rem,1fr)_2rem_2.85rem_2.4rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
             key={skill.name}
           >
-            <span className="rounded bg-muted px-1.5 py-1 text-center text-xs font-semibold uppercase">
+            <span className="rounded bg-muted px-1 py-1 text-center text-[0.62rem] font-bold uppercase">
               {skill.ability}
             </span>
             <span className="min-w-0 truncate font-medium">{skill.name}</span>
@@ -126,7 +126,7 @@ export function SkillsTable({
               className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
               title={`${skill.name} proficiency`}
             >
-              Prof
+              <span className="whitespace-nowrap">Prof</span>
               <input
                 className="h-4 w-4 shrink-0 accent-primary"
                 checked={isProficient}
@@ -138,7 +138,7 @@ export function SkillsTable({
               className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
               title={`${skill.name} expertise`}
             >
-              Exp
+              <span className="whitespace-nowrap">Exp</span>
               <input
                 className="h-4 w-4 shrink-0 accent-primary"
                 checked={isExpert}

@@ -342,7 +342,7 @@ export function ConditionImmunityChecklist({
   onChange: (condition: string, checked: boolean) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {conditionImmunities.map((condition) => (
         <Checkbox
           key={condition}
