@@ -107,7 +107,7 @@ export function CombatSheet({
           />
           <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
         </div>
-        <div className="grid grid-cols-2 gap-1.5 overflow-hidden xl:gap-2">
+        <div className="combat-ability-grid grid grid-cols-2 gap-1.5 overflow-hidden xl:gap-2">
           {[leftAbilities, rightAbilities].map((group) => (
             <AbilityTable
               key={group.map((ability) => ability.key).join("-")}
@@ -165,11 +165,11 @@ function AbilityTable({
 }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-md border border-border bg-background text-xs">
-      <div className="grid grid-cols-[1.35rem_1.35rem_minmax(1.75rem,1fr)_minmax(1.9rem,1fr)] border-b border-border bg-muted/60 py-1 text-center text-[0.58rem] font-black uppercase leading-none text-muted-foreground sm:grid-cols-[1.5rem_1.5rem_minmax(1.9rem,1fr)_minmax(2rem,1fr)]">
-        <span />
-        <span />
-        <span>Mod</span>
-        <span>Save</span>
+      <div className="grid grid-cols-[2rem_2rem_minmax(1.8rem,1fr)_minmax(1.9rem,1fr)] border-b border-border bg-muted/60 text-center text-[0.58rem] font-black uppercase leading-none text-muted-foreground">
+        <span className="border-r border-border bg-muted/80 px-0.5 py-1">Stat</span>
+        <span className="border-r border-border bg-primary/10 px-0.5 py-1 text-primary">Score</span>
+        <span className="py-1">Mod</span>
+        <span className="py-1">Save</span>
       </div>
       {abilities.map((ability) => {
         const score = Number(scores[ability.key]) || 10;
@@ -178,10 +178,14 @@ function AbilityTable({
         return (
           <div
             key={ability.key}
-            className="grid grid-cols-[1.35rem_1.35rem_minmax(1.75rem,1fr)_minmax(1.9rem,1fr)] items-center border-b border-border py-1 last:border-b-0 sm:grid-cols-[1.5rem_1.5rem_minmax(1.9rem,1fr)_minmax(2rem,1fr)]"
+            className="grid grid-cols-[2rem_2rem_minmax(1.8rem,1fr)_minmax(1.9rem,1fr)] items-stretch border-b border-border last:border-b-0"
           >
-            <span className="pl-1 font-black uppercase text-muted-foreground">{ability.key}</span>
-            <span className="text-center font-semibold tabular-nums">{score}</span>
+            <span className="grid place-items-center border-r border-border bg-muted/40 px-1 font-black uppercase text-muted-foreground">
+              {ability.key}
+            </span>
+            <span className="grid place-items-center border-r border-border bg-primary/5 px-1 text-center font-semibold tabular-nums text-primary">
+              {score}
+            </span>
             <AbilityRollButton
               label={`${ability.label} check`}
               value={bonus}
