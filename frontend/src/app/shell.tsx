@@ -121,7 +121,7 @@ export function WorkspaceShell({
           <aside
             className={[
               "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
-              sidebarCollapsed ? "w-20" : "w-64",
+              sidebarCollapsed ? "w-16" : "w-48",
             ].join(" ")}
           >
             <Sidebar
@@ -230,10 +230,10 @@ function Sidebar({
   onToggleCollapsed?: () => void;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col p-4">
+    <div className="flex h-full min-h-0 flex-col p-3">
       <div
         className={[
-          "mb-6 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
+          "mb-5 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
           collapsed ? "justify-center" : "gap-3",
         ].join(" ")}
       >
@@ -249,7 +249,7 @@ function Sidebar({
             <NavLink
               className={({ isActive }) =>
                 [
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
+                  "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition",
                   isActive
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -269,7 +269,7 @@ function Sidebar({
         <button
           type="button"
           className={[
-            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-background px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
             collapsed ? "justify-center" : "gap-3",
           ].join(" ")}
           onClick={onToggleCollapsed}
@@ -280,9 +280,7 @@ function Sidebar({
           ) : (
             <PanelLeftClose className="h-4 w-4" />
           )}
-          <span className={collapsed ? "sr-only" : ""}>
-            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          </span>
+          <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand" : "Collapse"}</span>
         </button>
       )}
     </div>

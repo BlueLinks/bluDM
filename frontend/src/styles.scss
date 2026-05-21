@@ -246,10 +246,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 @media (max-width: 1133px) {
-  .ui-density-auto,
-  .ui-density-compact {
-    @include combat-mini-layout;
-  }
+  @include combat-mini-layout;
 }
 
 @keyframes fade-in {
