@@ -199,48 +199,52 @@ function CreatureHealth({
   const hitDice = parseDiceFormula(form.hitDice);
   return (
     <FormSection title="Health and AC">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <IconNumberField
-          className="w-full"
-          icon={Shield}
-          label="AC"
-          value={form.armorClass}
-          onChange={(value) => setForm({ ...form, armorClass: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={HeartPulse}
-          label="HP"
-          value={form.hitPoints}
-          onChange={(value) => setForm({ ...form, hitPoints: value })}
-        />
+      <div className="grid gap-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <IconNumberField
+            className="w-full"
+            icon={Shield}
+            label="AC"
+            value={form.armorClass}
+            onChange={(value) => setForm({ ...form, armorClass: value })}
+          />
+          <IconNumberField
+            className="w-full"
+            icon={HeartPulse}
+            label="HP"
+            value={form.hitPoints}
+            onChange={(value) => setForm({ ...form, hitPoints: value })}
+          />
+        </div>
         <Field label="Hit Dice">
           <DiceFormulaInput
             value={hitDice}
             onChange={(next) => setForm({ ...form, hitDice: formatDiceFormula(next) })}
           />
         </Field>
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Perception"
-          value={form.passivePerception}
-          onChange={(value) => setForm({ ...form, passivePerception: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Investigation"
-          value={form.passiveInvestigation}
-          onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Insight"
-          value={form.passiveInsight}
-          onChange={(value) => setForm({ ...form, passiveInsight: value })}
-        />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <IconNumberField
+            className="w-full"
+            icon={BookOpen}
+            label="Passive Perception"
+            value={form.passivePerception}
+            onChange={(value) => setForm({ ...form, passivePerception: value })}
+          />
+          <IconNumberField
+            className="w-full"
+            icon={BookOpen}
+            label="Passive Investigation"
+            value={form.passiveInvestigation}
+            onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
+          />
+          <IconNumberField
+            className="w-full"
+            icon={BookOpen}
+            label="Passive Insight"
+            value={form.passiveInsight}
+            onChange={(value) => setForm({ ...form, passiveInsight: value })}
+          />
+        </div>
       </div>
     </FormSection>
   );
