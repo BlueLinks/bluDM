@@ -15,6 +15,7 @@ export function parseJSONField(value: string): Record<string, unknown> {
 export function actionPayload(action: ActionFormState) {
   return {
     name: action.name,
+    sourceTemplateId: action.sourceTemplateId ?? "",
     description: action.description,
     recharge: action.recharge,
     limitedUses: Number(action.limitedUses) || 0,
@@ -27,6 +28,11 @@ export function actionPayload(action: ActionFormState) {
     attackModifier: Number(action.attackModifier) || 0,
     missEffect: action.missEffect,
     hitSpecialEvent: action.hitSpecialEvent,
+    iconSource: action.iconSource,
+    iconKey: action.iconKey,
+    iconAssetId: action.iconAssetId,
+    iconUrl: action.iconUrl,
+    iconAttribution: action.iconAttribution,
     rolls: action.rolls.map((roll) => ({
       rollKind: roll.rollKind,
       damageType: roll.damageType,

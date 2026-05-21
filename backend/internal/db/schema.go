@@ -150,7 +150,7 @@ alter table uploaded_assets add constraint uploaded_assets_owner_user_id_fkey fo
 alter table creatures add column if not exists owner_user_id uuid references users(id) on delete cascade;
 alter table spells add column if not exists owner_user_id uuid references users(id) on delete cascade;
 alter table action_templates add column if not exists owner_user_id uuid references users(id) on delete cascade;
-
+alter table action_templates add column if not exists icon_source text not null default 'none', add column if not exists icon_key text not null default '', add column if not exists icon_asset_id uuid references uploaded_assets(id) on delete set null, add column if not exists icon_url text not null default '', add column if not exists icon_attribution text not null default '';
 with first_user as (select id from users order by created_at asc limit 1)
 update campaigns set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
 with first_user as (select id from users order by created_at asc limit 1)
@@ -210,6 +210,7 @@ create table if not exists creature_actions (
     updated_at timestamptz not null default now()
 );
 
+alter table creature_actions add column if not exists icon_source text not null default 'none', add column if not exists icon_key text not null default '', add column if not exists icon_asset_id uuid references uploaded_assets(id) on delete set null, add column if not exists icon_url text not null default '', add column if not exists icon_attribution text not null default '';
 create index if not exists creature_actions_creature_idx on creature_actions(creature_id, sort_order);
 
 create table if not exists creature_action_roll_parts (

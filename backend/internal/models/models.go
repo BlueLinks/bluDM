@@ -194,6 +194,11 @@ type ActionTemplate struct {
 	AttackModifier  int              `json:"attackModifier"`
 	MissEffect      string           `json:"missEffect"`
 	HitSpecialEvent string           `json:"hitSpecialEvent"`
+	IconSource      string           `json:"iconSource"`
+	IconKey         string           `json:"iconKey"`
+	IconAssetID     string           `json:"iconAssetId,omitempty"`
+	IconURL         string           `json:"iconUrl"`
+	IconAttribution string           `json:"iconAttribution"`
 	Rolls           []ActionRollPart `json:"rolls"`
 	CreatedAt       time.Time        `json:"createdAt"`
 	UpdatedAt       time.Time        `json:"updatedAt"`
@@ -217,6 +222,11 @@ type CreatureAction struct {
 	AttackModifier   int              `json:"attackModifier"`
 	MissEffect       string           `json:"missEffect"`
 	HitSpecialEvent  string           `json:"hitSpecialEvent"`
+	IconSource       string           `json:"iconSource"`
+	IconKey          string           `json:"iconKey"`
+	IconAssetID      string           `json:"iconAssetId,omitempty"`
+	IconURL          string           `json:"iconUrl"`
+	IconAttribution  string           `json:"iconAttribution"`
 	Rolls            []ActionRollPart `json:"rolls"`
 	CreatedAt        time.Time        `json:"createdAt"`
 	UpdatedAt        time.Time        `json:"updatedAt"`

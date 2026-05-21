@@ -1,19 +1,11 @@
 import {
-  closestCenter,
-  DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { Plus, Search } from "lucide-react";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   type Dispatch,
   type FormEvent,
@@ -33,12 +25,9 @@ import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
   Button,
   ConfirmDialog,
-  EmptyMini,
   Field,
-  FloatingInput,
   FormSection,
   Input,
-  Modal,
   SlotStepper,
   Textarea,
 } from "../../components/ui";
@@ -46,9 +35,7 @@ import { api } from "../../lib/api";
 import {
   actionFormFromCreatureAction,
   actionFormFromTemplate,
-  blankAction,
   creatureToForm as creatureToFormState,
-  formatRolls,
   spiderStaffAction,
   weaponAction,
 } from "../../lib/domain/forms";
@@ -63,7 +50,7 @@ import type {
   CreatureSpellcastingProfile,
   Spell,
 } from "../../types";
-import { SortableActionEditor, WeaponMenu } from "./actionEditors";
+import { CreatureActionsSection } from "./CreatureActionsSection";
 import { CreatureIdentitySections } from "./CreatureIdentitySections";
 import { CreatureSpellPickerModal } from "./CreatureSpellPickerModal";
 import { SelectedCreatureSpells } from "./SelectedCreatureSpells";
@@ -191,6 +178,10 @@ export function CreatureForm({
           ? [spiderStaffAction()]
           : [],
     [existingActions, mode],
+  );
+  const persistedActionIds = useMemo(
+    () => new Set(existingActions.map((action) => action.id)),
+    [existingActions],
   );
   const [form, setForm] = useState<CreatureFormState>(initialForm);
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
@@ -367,7 +358,11 @@ export function CreatureForm({
         actionSearch={actionSearch}
         setActionSearch={setActionSearch}
         filteredTemplates={filteredTemplates}
+        creature={creature}
+        notify={notify}
+        persistedActionIds={persistedActionIds}
         sensors={sensors}
+        setTemplates={setTemplates}
         onDragEnd={handleActionDragEnd}
         onCopyTemplate={copyTemplateIntoCreature}
         onAddWeapon={addWeaponAction}
@@ -659,136 +654,6 @@ function CompactNumberStepper({
         </button>
       </div>
     </label>
-  );
-}
-
-function CreatureActionsSection({
-  actionBankOpen,
-  actionSearch,
-  actions,
-  filteredTemplates,
-  onAddWeapon,
-  onCopyTemplate,
-  onDragEnd,
-  sensors,
-  setActionBankOpen,
-  setActionSearch,
-  setActions,
-}: {
-  actionBankOpen: boolean;
-  actionSearch: string;
-  actions: ActionFormState[];
-  filteredTemplates: ActionTemplate[];
-  onAddWeapon: (weapon: CommonWeapon) => void;
-  onCopyTemplate: (template: ActionTemplate) => void;
-  onDragEnd: (event: DragEndEvent) => void;
-  sensors: ReturnType<typeof useSensors>;
-  setActionBankOpen: (open: boolean) => void;
-  setActionSearch: (search: string) => void;
-  setActions: ActionFormSetter;
-}) {
-  return (
-    <FormSection
-      title="Actions & Abilities"
-      help="Creature actions are ordered for this creature only. Banked actions are copied in, so you can customize the copy without changing the bank."
-    >
-      <div className="grid gap-4">
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            icon={Plus}
-            variant="success"
-            onClick={() => setActions((current) => [...current, blankAction()])}
-          >
-            Add custom action
-          </Button>
-          <ActionBankModal
-            open={actionBankOpen}
-            search={actionSearch}
-            templates={filteredTemplates}
-            onCopyTemplate={onCopyTemplate}
-            onOpenChange={setActionBankOpen}
-            onSearch={setActionSearch}
-          />
-          <WeaponMenu onAdd={onAddWeapon} />
-        </div>
-        <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={onDragEnd}>
-          <SortableContext
-            items={actions.map((action) => action.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="grid gap-3">
-              {actions.map((action, index) => (
-                <SortableActionEditor
-                  key={action.id}
-                  action={action}
-                  index={index}
-                  onChange={(next) =>
-                    setActions((current) =>
-                      current.map((item) => (item.id === action.id ? next : item)),
-                    )
-                  }
-                  onRemove={() =>
-                    setActions((current) => current.filter((item) => item.id !== action.id))
-                  }
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      </div>
-    </FormSection>
-  );
-}
-
-function ActionBankModal({
-  onCopyTemplate,
-  onOpenChange,
-  onSearch,
-  open,
-  search,
-  templates,
-}: {
-  onCopyTemplate: (template: ActionTemplate) => void;
-  onOpenChange: (open: boolean) => void;
-  onSearch: (search: string) => void;
-  open: boolean;
-  search: string;
-  templates: ActionTemplate[];
-}) {
-  return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Copy from action bank"
-      trigger={
-        <Button type="button" icon={Search} variant="secondary">
-          Search action bank
-        </Button>
-      }
-    >
-      <div className="grid gap-4">
-        <FloatingInput icon={Search} label="Search actions" value={search} onChange={onSearch} />
-        <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
-          {templates.map((template) => (
-            <button
-              className="rounded-md border border-border bg-background p-3 text-left text-sm transition hover:bg-muted"
-              key={template.id}
-              type="button"
-              onClick={() => onCopyTemplate(template)}
-            >
-              <span className="font-semibold">{template.name}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {formatRolls(template.rolls)}
-              </span>
-            </button>
-          ))}
-          {templates.length === 0 && (
-            <EmptyMini copy="No action templates match that search. Add bank templates from the NPC library page." />
-          )}
-        </div>
-      </div>
-    </Modal>
   );
 }
 

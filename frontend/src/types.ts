@@ -200,80 +200,15 @@ export type Creature = {
   updatedAt: string;
 };
 
-export type ActionRollPart = {
-  id?: string;
-  sortOrder?: number;
-  rollKind: string;
-  damageType: string;
-  magical: boolean;
-  diceCount: number;
-  dieSize: number;
-  fixedValue: number;
-  rolledValue?: number;
-  criticalRolledValue?: number;
-  total?: number;
-};
-
-export type ActionTemplate = {
-  id: string;
-  name: string;
-  description: string;
-  recharge: string;
-  limitedUses: number;
-  limitType: string;
-  reach: number;
-  range: number;
-  aoeType: string;
-  aoeSize: number;
-  actionType: string;
-  attackModifier: number;
-  missEffect: string;
-  hitSpecialEvent: string;
-  rolls: ActionRollPart[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CreatureAction = ActionTemplate & {
-  creatureId: string;
-  sourceTemplateId?: string;
-  sortOrder: number;
-};
-
-export type ActionFormState = {
-  id: string;
-  name: string;
-  description: string;
-  recharge: string;
-  limitedUses: string;
-  limitType: string;
-  reach: string;
-  range: string;
-  aoeType: string;
-  aoeSize: string;
-  actionType: string;
-  attackModifier: string;
-  missEffect: string;
-  hitSpecialEvent: string;
-  rolls: ActionRollFormState[];
-};
-
-export type ActionRollFormState = {
-  id: string;
-  rollKind: string;
-  damageType: string;
-  magical: boolean;
-  diceCount: string;
-  dieSize: string;
-  fixedValue: string;
-};
-
-export type ActionTemplateUsage = {
-  actionId: string;
-  creatureId: string;
-  creatureName: string;
-  actionName: string;
-};
+export type {
+  ActionFormState,
+  ActionIconSource,
+  ActionRollFormState,
+  ActionRollPart,
+  ActionTemplate,
+  ActionTemplateUsage,
+  CreatureAction,
+} from "./types/actions";
 
 export type Spell = {
   id: string;

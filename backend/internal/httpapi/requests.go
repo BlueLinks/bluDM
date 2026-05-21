@@ -38,20 +38,26 @@ type playerRequest struct {
 }
 
 type actionRequest struct {
-	Name            string                  `json:"name"`
-	Description     string                  `json:"description"`
-	Recharge        string                  `json:"recharge"`
-	LimitedUses     int                     `json:"limitedUses"`
-	LimitType       string                  `json:"limitType"`
-	Reach           int                     `json:"reach"`
-	Range           int                     `json:"range"`
-	AOEType         string                  `json:"aoeType"`
-	AOESize         int                     `json:"aoeSize"`
-	ActionType      string                  `json:"actionType"`
-	AttackModifier  int                     `json:"attackModifier"`
-	MissEffect      string                  `json:"missEffect"`
-	HitSpecialEvent string                  `json:"hitSpecialEvent"`
-	Rolls           []actionRollPartRequest `json:"rolls"`
+	Name             string                  `json:"name"`
+	SourceTemplateID string                  `json:"sourceTemplateId"`
+	Description      string                  `json:"description"`
+	Recharge         string                  `json:"recharge"`
+	LimitedUses      int                     `json:"limitedUses"`
+	LimitType        string                  `json:"limitType"`
+	Reach            int                     `json:"reach"`
+	Range            int                     `json:"range"`
+	AOEType          string                  `json:"aoeType"`
+	AOESize          int                     `json:"aoeSize"`
+	ActionType       string                  `json:"actionType"`
+	AttackModifier   int                     `json:"attackModifier"`
+	MissEffect       string                  `json:"missEffect"`
+	HitSpecialEvent  string                  `json:"hitSpecialEvent"`
+	IconSource       string                  `json:"iconSource"`
+	IconKey          string                  `json:"iconKey"`
+	IconAssetID      string                  `json:"iconAssetId"`
+	IconURL          string                  `json:"iconUrl"`
+	IconAttribution  string                  `json:"iconAttribution"`
+	Rolls            []actionRollPartRequest `json:"rolls"`
 }
 
 type actionRollPartRequest struct {
@@ -73,6 +79,15 @@ type reorderActionsRequest struct {
 
 type replaceActionsRequest struct {
 	Actions []actionRequest `json:"actions"`
+}
+
+type actionTemplateFromCreatureActionRequest struct {
+	CreatureActionID string `json:"creatureActionId"`
+	Name             string `json:"name"`
+}
+
+type updateCreatureActionSourceTemplateRequest struct {
+	SourceTemplateID string `json:"sourceTemplateId"`
 }
 
 type addCombatantRequest struct {
@@ -230,6 +245,7 @@ type endEncounterRequest struct {
 
 func (req *actionRequest) normalize() {
 	req.Name = strings.TrimSpace(req.Name)
+	req.SourceTemplateID = strings.TrimSpace(req.SourceTemplateID)
 	req.Description = strings.TrimSpace(req.Description)
 	if len(req.Description) > 2000 {
 		req.Description = req.Description[:2000]
@@ -252,6 +268,14 @@ func (req *actionRequest) normalize() {
 	if req.HitSpecialEvent == "" {
 		req.HitSpecialEvent = "none"
 	}
+	req.IconSource = strings.TrimSpace(req.IconSource)
+	if req.IconSource == "" {
+		req.IconSource = "none"
+	}
+	req.IconKey = strings.TrimSpace(req.IconKey)
+	req.IconAssetID = strings.TrimSpace(req.IconAssetID)
+	req.IconURL = strings.TrimSpace(req.IconURL)
+	req.IconAttribution = strings.TrimSpace(req.IconAttribution)
 	if len(req.Rolls) == 0 {
 		req.Rolls = []actionRollPartRequest{{RollKind: "damage", DamageType: "bludgeoning", DiceCount: 1, DieSize: 6}}
 	}
@@ -272,6 +296,9 @@ func (req actionRequest) validate() error {
 	}
 	if req.MissEffect != "none" && req.MissEffect != "half" && req.MissEffect != "full" {
 		return errors.New("missEffect must be none, half, or full")
+	}
+	if req.IconSource != "none" && req.IconSource != "game-icons" && req.IconSource != "asset" && req.IconSource != "url" {
+		return errors.New("iconSource must be none, game-icons, asset, or url")
 	}
 	return nil
 }

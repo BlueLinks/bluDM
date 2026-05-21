@@ -14,14 +14,14 @@ export function Sheet({
   onOpenChange,
 }: {
   title: string;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
+      {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
       <Dialog.Portal>
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content

@@ -1,7 +1,5 @@
 import type {
   ActionFormState,
-  ActionTemplate,
-  ActionTemplateUsage,
   AccountInfo,
   AuthStatus,
   AuthProvider,
@@ -25,9 +23,11 @@ import type {
   StandardSource,
   User,
 } from "../../types";
+import { actionTemplateApi } from "./actionTemplates";
 import { actionPayload, creaturePayload, parseJSONField, playerPayload } from "./payloads";
 import { request } from "./request";
 export const api = {
+  ...actionTemplateApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
     request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
@@ -430,24 +430,6 @@ export const api = {
           innate: false,
         })),
       }),
-    }),
-  actionTemplates: () => request<{ actionTemplates: ActionTemplate[] }>("/api/action-templates"),
-  actionTemplateUsage: (id: string) =>
-    request<{ usage: ActionTemplateUsage[]; count: number }>(`/api/action-templates/${id}/usage`),
-  deleteActionTemplate: (id: string) =>
-    request<{ usage: ActionTemplateUsage[]; removedCreatureActions: number }>(
-      `/api/action-templates/${id}`,
-      { method: "DELETE" },
-    ),
-  createActionTemplate: (payload: ActionFormState) =>
-    request<{ actionTemplate: ActionTemplate }>("/api/action-templates", {
-      method: "POST",
-      body: JSON.stringify(actionPayload(payload)),
-    }),
-  updateActionTemplate: (id: string, payload: ActionFormState) =>
-    request<{ actionTemplate: ActionTemplate }>(`/api/action-templates/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(actionPayload(payload)),
     }),
   spells: (options?: {
     includeStandard?: boolean;
