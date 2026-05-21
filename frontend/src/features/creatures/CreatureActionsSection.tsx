@@ -261,7 +261,6 @@ export function CreatureActionsSection({
             ? void openOverwriteConfirm(saveDraft.action, conflict.id, "conflict")
             : undefined
         }
-        onReturnToName={() => setConflict(null)}
       />
       <ConfirmDialog
         open={Boolean(overwriteConfirm)}
@@ -334,7 +333,6 @@ function SaveActionDialog({
   onCancel,
   onNameChange,
   onOverwrite,
-  onReturnToName,
   onSubmit,
 }: {
   conflict: TemplateConflict | null;
@@ -343,9 +341,12 @@ function SaveActionDialog({
   onCancel: () => void;
   onNameChange: (name: string) => void;
   onOverwrite: () => void;
-  onReturnToName: () => void;
   onSubmit: () => void;
 }) {
+  const nameMatchesConflict =
+    Boolean(conflict && draft) &&
+    normalizeBankActionName(draft?.name ?? "") === normalizeBankActionName(conflict?.name ?? "");
+
   return (
     <Modal
       open={Boolean(draft)}
@@ -361,19 +362,19 @@ function SaveActionDialog({
             onChange={onNameChange}
             required
           />
-          {conflict && (
+          {conflict && nameMatchesConflict && (
             <Callout>
-              {conflict.name} is already in the Action Bank. Choose a different name to create a
-              second reusable action, or overwrite that bank entry.
+              {conflict.name} is already in the Action Bank. Cancel to keep this NPC action local,
+              or overwrite the reusable bank entry.
             </Callout>
           )}
           <div className="flex flex-wrap justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={conflict ? onReturnToName : onCancel}>
-              {conflict ? "Rename" : "Cancel"}
+            <Button type="button" variant="ghost" onClick={onCancel}>
+              Cancel
             </Button>
-            {conflict ? (
+            {conflict && nameMatchesConflict ? (
               <Button type="button" variant="danger" disabled={saving} onClick={onOverwrite}>
-                Overwrite bank entry
+                Overwrite
               </Button>
             ) : (
               <Button type="button" variant="success" disabled={saving} onClick={onSubmit}>
@@ -385,6 +386,10 @@ function SaveActionDialog({
       )}
     </Modal>
   );
+}
+
+function normalizeBankActionName(name: string) {
+  return name.trim().toLowerCase();
 }
 
 function upsertTemplate(templates: ActionTemplate[], template: ActionTemplate) {
