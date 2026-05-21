@@ -11,6 +11,7 @@ export function CreatureSpellPickerModal({
   open,
   search,
   selectedRefs,
+  slotCounts,
   onSaveSelection,
   setSpellSources,
   spellSources,
@@ -21,6 +22,7 @@ export function CreatureSpellPickerModal({
   open: boolean;
   search: string;
   selectedRefs: CreatureSpellRef[];
+  slotCounts: Record<number, number>;
   onSaveSelection: (refs: CreatureSpellRef[]) => void;
   setSpellSources: (sources: string[]) => void;
   spellSources: string[];
@@ -28,6 +30,14 @@ export function CreatureSpellPickerModal({
 }) {
   const [draftRefs, setDraftRefs] = useState<CreatureSpellRef[]>(selectedRefs);
   const selectedIds = draftRefs.map((ref) => ref.spellId);
+  const selectedCountByLevel = useMemo(
+    () =>
+      draftRefs.reduce<Record<number, number>>((counts, ref) => {
+        counts[ref.spellLevel] = (counts[ref.spellLevel] ?? 0) + 1;
+        return counts;
+      }, {}),
+    [draftRefs],
+  );
   const sortedSpells = useMemo(
     () =>
       [...spells].sort((a, b) => {
@@ -45,6 +55,9 @@ export function CreatureSpellPickerModal({
   }, [open, selectedRefs]);
 
   function toggleSpell(spell: Spell, checked: boolean) {
+    if (checked && isSpellLimitReached(spell, selectedIds, selectedCountByLevel, slotCounts)) {
+      return;
+    }
     setDraftRefs((current) =>
       checked
         ? [
@@ -82,33 +95,43 @@ export function CreatureSpellPickerModal({
         </section>
         <FloatingInput icon={Search} label="Search spells" value={search} onChange={onSearch} />
         <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
-          {sortedSpells.map((spell) => (
-            <label
-              className={[
-                "flex items-start justify-between gap-3 rounded-md border p-3 text-sm",
-                selectedIds.includes(spell.id)
-                  ? "border-primary bg-primary/5"
-                  : "border-border bg-background",
-              ].join(" ")}
-              key={spell.id}
-            >
-              <span>
-                <span className="block font-semibold">{spell.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {spell.level === 0 ? "Cantrip" : `Level ${spell.level}`}{" "}
-                  {spell.school && `· ${spell.school}`}
-                  {spell.librarySource === "standard" &&
-                    ` · ${standardSourceDisplayName({ key: spell.sourceKey, label: spell.sourceLabel })}`}
+          {sortedSpells.map((spell) => {
+            const selected = selectedIds.includes(spell.id);
+            const disabled = isSpellLimitReached(
+              spell,
+              selectedIds,
+              selectedCountByLevel,
+              slotCounts,
+            );
+            return (
+              <label
+                className={[
+                  "flex items-start justify-between gap-3 rounded-md border p-3 text-sm transition",
+                  selected ? "border-primary bg-primary/5" : "border-border bg-background",
+                  disabled && !selected ? "cursor-not-allowed opacity-50" : "",
+                ].join(" ")}
+                key={spell.id}
+                title={disabled && !selected ? spellLimitMessage(spell.level) : undefined}
+              >
+                <span>
+                  <span className="block font-semibold">{spell.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {spell.level === 0 ? "Cantrip" : `Level ${spell.level}`}{" "}
+                    {spell.school && `· ${spell.school}`}
+                    {spell.librarySource === "standard" &&
+                      ` · ${standardSourceDisplayName({ key: spell.sourceKey, label: spell.sourceLabel })}`}
+                  </span>
                 </span>
-              </span>
-              <input
-                className="mt-1 h-4 w-4 accent-primary"
-                checked={selectedIds.includes(spell.id)}
-                type="checkbox"
-                onChange={(event) => toggleSpell(spell, event.target.checked)}
-              />
-            </label>
-          ))}
+                <input
+                  className="mt-1 h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                  checked={selected}
+                  disabled={disabled && !selected}
+                  type="checkbox"
+                  onChange={(event) => toggleSpell(spell, event.target.checked)}
+                />
+              </label>
+            );
+          })}
           {sortedSpells.length === 0 && (
             <EmptyMini copy="No spells match that search. Add spells to the spell library first, then link them here." />
           )}
@@ -131,4 +154,21 @@ export function CreatureSpellPickerModal({
       </div>
     </Modal>
   );
+}
+
+function isSpellLimitReached(
+  spell: Spell,
+  selectedIds: string[],
+  selectedCountByLevel: Record<number, number>,
+  slotCounts: Record<number, number>,
+) {
+  if (spell.level === 0 || selectedIds.includes(spell.id)) return false;
+  return (selectedCountByLevel[spell.level] ?? 0) >= (slotCounts[spell.level] ?? 0);
+}
+
+function spellLimitMessage(level: number) {
+  if (level === 1) return "Remove a spell from 1st level before adding another.";
+  if (level === 2) return "Remove a spell from 2nd level before adding another.";
+  if (level === 3) return "Remove a spell from 3rd level before adding another.";
+  return `Remove a spell from ${level}th level before adding another.`;
 }

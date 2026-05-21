@@ -576,6 +576,7 @@ function CreatureSpellcastingSection({
             search={spellSearch}
             spells={filteredSpells}
             selectedRefs={form.spellRefs}
+            slotCounts={spellSlotCounts(form)}
             spellSources={spellSources}
             onSaveSelection={(spellRefs) => setForm({ ...form, spellRefs })}
             setSpellSources={setSpellSources}
@@ -605,6 +606,12 @@ function spellSlotCount(form: CreatureFormState, level: number) {
   if (level < 1 || level > 9) return 0;
   const key = `spellSlots${level}` as SpellSlotKey;
   return Number(form[key]) || 0;
+}
+
+function spellSlotCounts(form: CreatureFormState) {
+  return Object.fromEntries(
+    ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((level) => [level, spellSlotCount(form, level)]),
+  );
 }
 
 function CompactNumberStepper({
