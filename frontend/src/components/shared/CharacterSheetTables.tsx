@@ -60,7 +60,7 @@ export function CompactAbilityTable({
             </span>
             <span
               className={[
-                "grid place-items-center px-2 font-black tabular-nums",
+                "grid place-items-center px-2 text-lg font-black tabular-nums",
                 modifierTone(modifier),
               ].join(" ")}
               title="Modifier"
@@ -112,40 +112,46 @@ export function SkillsTable({
         const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
         return (
           <div
-            className="grid min-w-0 grid-cols-[1.8rem_minmax(4.25rem,1fr)_2rem_2.85rem_2.4rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
+            className="grid min-w-0 grid-cols-[1.8rem_minmax(4.25rem,1fr)_2.6rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
             key={skill.name}
           >
             <span className="rounded bg-muted px-1 py-1 text-center text-[0.62rem] font-bold uppercase">
               {skill.ability}
             </span>
             <span className="min-w-0 truncate font-medium">{skill.name}</span>
-            <span className={["text-right font-bold", modifierTone(total)].join(" ")}>
+            <span
+              className={["text-right text-lg font-black leading-none", modifierTone(total)].join(
+                " ",
+              )}
+            >
               {total >= 0 ? `+${total}` : total}
             </span>
-            <label
-              className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
-              title={`${skill.name} proficiency`}
-            >
-              <span className="whitespace-nowrap">Prof</span>
-              <input
-                className="h-4 w-4 shrink-0 accent-primary"
-                checked={isProficient}
-                type="checkbox"
-                onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
-              />
-            </label>
-            <label
-              className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
-              title={`${skill.name} expertise`}
-            >
-              <span className="whitespace-nowrap">Exp</span>
-              <input
-                className="h-4 w-4 shrink-0 accent-primary"
-                checked={isExpert}
-                type="checkbox"
-                onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}
-              />
-            </label>
+            <div className="col-span-3 grid grid-cols-2 gap-1 border-t border-border/70 pt-1">
+              <label
+                className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
+                title={`${skill.name} proficiency`}
+              >
+                <span className="whitespace-nowrap">Prof</span>
+                <input
+                  className="h-4 w-4 shrink-0 accent-primary"
+                  checked={isProficient}
+                  type="checkbox"
+                  onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
+                />
+              </label>
+              <label
+                className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
+                title={`${skill.name} expertise`}
+              >
+                <span className="whitespace-nowrap">Exp</span>
+                <input
+                  className="h-4 w-4 shrink-0 accent-primary"
+                  checked={isExpert}
+                  type="checkbox"
+                  onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}
+                />
+              </label>
+            </div>
           </div>
         );
       })}

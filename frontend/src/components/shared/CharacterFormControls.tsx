@@ -283,10 +283,16 @@ function DamageChecklist({
     checked: boolean,
   ) => void;
 }) {
+  const tone = damageDefenseTone(field);
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className={["rounded-lg border p-3", tone.panel].join(" ")}>
       <div className="mb-3 flex items-center gap-3">
-        <span className="grid h-8 w-8 place-items-center rounded bg-muted text-sm font-bold">
+        <span
+          className={[
+            "grid h-8 w-8 place-items-center rounded text-sm font-bold",
+            tone.marker,
+          ].join(" ")}
+        >
           {marker}
         </span>
         <div>
@@ -297,7 +303,10 @@ function DamageChecklist({
       <div className="grid gap-2">
         {damageTypes.map((damage) => (
           <label
-            className="flex items-center justify-between rounded-md border border-border px-2 py-2 text-sm"
+            className={[
+              "flex items-center justify-between rounded-md border px-2 py-2 text-sm",
+              tone.item,
+            ].join(" ")}
             key={damage.id}
           >
             <span className="flex items-center gap-2">
@@ -315,6 +324,31 @@ function DamageChecklist({
       </div>
     </div>
   );
+}
+
+function damageDefenseTone(
+  field: "damageVulnerabilities" | "damageResistances" | "damageImmunities",
+) {
+  switch (field) {
+    case "damageVulnerabilities":
+      return {
+        panel: "border-red-500/25 bg-red-500/5",
+        marker: "bg-red-500/15 text-red-700 dark:text-red-300",
+        item: "border-red-500/20 bg-background/70",
+      };
+    case "damageResistances":
+      return {
+        panel: "border-amber-500/25 bg-amber-500/5",
+        marker: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+        item: "border-amber-500/20 bg-background/70",
+      };
+    case "damageImmunities":
+      return {
+        panel: "border-sky-500/25 bg-sky-500/5",
+        marker: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+        item: "border-sky-500/20 bg-background/70",
+      };
+  }
 }
 
 export function AbilitySelect({
