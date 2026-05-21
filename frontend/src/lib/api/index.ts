@@ -330,7 +330,7 @@ export const api = {
   players: () => request<{ players: Player[] }>("/api/players"),
   player: (id: string) => request<{ player: Player }>(`/api/players/${id}`),
   createPlayer: (payload: PlayerFormState) =>
-    request<{ player: Player }>(`/api/campaigns/${payload.campaignId}/players`, {
+    request<{ player: Player }>("/api/players", {
       method: "POST",
       body: JSON.stringify(playerPayload(payload)),
     }),

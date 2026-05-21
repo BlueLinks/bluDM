@@ -124,7 +124,7 @@ function VitalPill({
   tone,
 }: {
   icon: React.ElementType;
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   tone: "shield" | "heart" | "temp";
 }) {
@@ -305,7 +305,7 @@ export function Field({
   className = "",
   help,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   help?: string;

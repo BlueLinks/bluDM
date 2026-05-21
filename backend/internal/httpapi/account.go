@@ -207,7 +207,7 @@ func (s *Server) accountForUser(ctx context.Context, userID string) (accountResp
 	if err := s.db.QueryRow(ctx, `
 		select
 			(select count(*) from campaigns where owner_user_id = $1),
-			(select count(*) from players join campaigns on campaigns.id = players.campaign_id where campaigns.owner_user_id = $1),
+			(select count(*) from players where owner_user_id = $1),
 			(select count(*) from creatures where owner_user_id = $1),
 			(select count(*) from spells where owner_user_id = $1),
 			(select count(*) from action_templates where owner_user_id = $1),

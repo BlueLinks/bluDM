@@ -257,7 +257,8 @@ create index if not exists creature_spells_creature_level_idx on creature_spells
 
 create table if not exists players (
     id uuid primary key default gen_random_uuid(),
-    campaign_id uuid not null references campaigns(id) on delete cascade,
+    owner_user_id uuid references users(id) on delete cascade,
+    campaign_id uuid references campaigns(id) on delete cascade,
     character_name text not null,
     player_name text not null default '',
     armor_class integer not null default 10,
@@ -275,11 +276,22 @@ create table if not exists players (
 
 create index if not exists players_campaign_id_idx on players(campaign_id);
 
+alter table players add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table players alter column campaign_id drop not null;
 alter table players add column if not exists experience_points integer not null default 0;
 alter table players add column if not exists image_asset_id uuid references uploaded_assets(id) on delete set null;
 alter table players add column if not exists avatar_url text not null default '';
 alter table creatures add column if not exists image_asset_id uuid references uploaded_assets(id) on delete set null;
 alter table creatures add column if not exists avatar_url text not null default '';
+
+update players
+set owner_user_id = campaigns.owner_user_id
+from campaigns
+where players.campaign_id = campaigns.id and players.owner_user_id is null;
+with first_user as (select id from users order by created_at asc limit 1)
+update players set owner_user_id = (select id from first_user) where owner_user_id is null and exists(select 1 from first_user);
+alter table players alter column owner_user_id set not null;
+create index if not exists players_owner_user_id_idx on players(owner_user_id, updated_at desc);
 
 create table if not exists campaign_creatures (
     campaign_id uuid not null references campaigns(id) on delete cascade,
