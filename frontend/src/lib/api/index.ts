@@ -228,6 +228,9 @@ export const api = {
     request<{ run: EncounterRun }>(`/api/encounter-run-combatants/${combatant.id}`, {
       method: "PUT",
       body: JSON.stringify({
+        displayName: combatant.displayName,
+        colorLabel: combatant.colorLabel,
+        avatarUrl: combatant.avatarUrl,
         initiative: combatant.initiative,
         initiativeSet: combatant.initiativeSet,
         armorClassBonus: combatant.armorClassBonus,

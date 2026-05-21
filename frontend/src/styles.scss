@@ -148,6 +148,28 @@ input[type="number"]::-webkit-inner-spin-button {
   animation: list-item-in $motion-standard ease-out both;
 }
 
+.target-row-card {
+  transition:
+    border-color $motion-standard ease,
+    background-color $motion-standard ease,
+    box-shadow $motion-standard ease,
+    transform $motion-fast ease;
+}
+
+.target-row-card:has(.hp-drop-zero) {
+  animation: hp-zero-pulse 520ms ease-out both;
+}
+
+.hp-bar-fill {
+  transition:
+    width 340ms ease,
+    background-color 340ms ease;
+}
+
+.hp-bar-pulse {
+  animation: hp-bar-pulse 360ms ease-out both;
+}
+
 .damage-roll-line {
   animation: damage-roll-pop 320ms ease-out both;
 }
@@ -281,6 +303,34 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+@keyframes hp-bar-pulse {
+  0% {
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+  45% {
+    filter: brightness(1.18);
+    transform: scaleY(1.45);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+}
+
+@keyframes hp-zero-pulse {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    box-shadow: 0 0 0 3px rgb(220 38 38 / 20%);
+    transform: scale(1.012);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
 @keyframes roll-flash {
   0% {
     opacity: 0;
@@ -369,11 +419,18 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .target-row-card:has(.hp-drop-zero) {
+    animation: none !important;
+  }
+
   .dialog-overlay,
   .modal-content,
   .sheet-content,
   .toast-item,
   .combatant-row,
+  .target-row-card,
+  .hp-bar-pulse,
+  .hp-drop-zero,
   .damage-roll-line,
   .roll-flash,
   .action-roll-card,

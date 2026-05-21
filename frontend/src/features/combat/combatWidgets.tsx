@@ -1,7 +1,8 @@
-import { ChevronDown, HeartPulse, ScrollText, Shield, Skull } from "lucide-react";
+import { ChevronDown, HeartPulse, ScrollText, Shield, Skull, Swords } from "lucide-react";
 import React, { useEffect } from "react";
 import { damageTypes } from "../../components/shared/damageTypes";
 import { Badge, Button, DeathSaveTrack, Input, SectionPanel, Select } from "../../components/ui";
+import { defaultCombatantColor } from "../../lib/domain/options";
 import {
   actionSummary,
   effectiveAC,
@@ -95,7 +96,7 @@ export function ActiveTurnHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-[auto_1fr] md:items-center xl:grid-cols-[auto_1fr_auto]">
+    <div className="grid gap-2 md:grid-cols-[auto_minmax(280px,auto)_minmax(220px,1fr)] md:items-center">
       <div className="flex items-center gap-3">
         <Avatar combatant={combatant} />
         <div>
@@ -122,13 +123,13 @@ function TargetSummary({ combatant }: { combatant: EncounterRunCombatant | null 
   }
   return (
     <div
-      className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2"
+      className="flex min-w-0 items-center gap-3 justify-self-stretch rounded-lg border border-border bg-background px-3 py-2 md:justify-self-end"
       title={`Targeted: ${combatant.displayName}`}
     >
       <Avatar combatant={combatant} />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="text-xs font-bold uppercase text-muted-foreground">Targeting</div>
-        <div className="max-w-44 truncate text-sm font-semibold">{combatant.displayName}</div>
+        <div className="truncate text-sm font-semibold">{combatant.displayName}</div>
         <div className="mt-1 flex flex-wrap gap-2 text-xs">
           <span className="inline-flex items-center gap-1 font-bold text-sky-700 dark:text-sky-200">
             <Shield className="h-3.5 w-3.5" /> {effectiveAC(combatant)}
@@ -164,10 +165,10 @@ export function CombatControls({
 }) {
   return (
     <div className="rounded-lg border border-border bg-background p-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <div className="w-24 flex-none">
+      <div className="grid gap-2 sm:grid-cols-[6.25rem_auto_auto] sm:items-stretch">
+        <div className="flex-none">
           <Input
-            className="text-center font-semibold"
+            className="h-full min-h-20 text-center text-2xl font-black tabular-nums"
             type="number"
             placeholder="Amount"
             value={hpAmount}
@@ -176,16 +177,34 @@ export function CombatControls({
             title={disabled ? "Select a target first" : ""}
           />
         </div>
-        <DamageTypeControl value={damageType} onChange={onDamageTypeChange} disabled={disabled} />
-        <Button disabled={disabled} variant="danger" onClick={() => onManual("damage")}>
-          Damage
-        </Button>
-        <Button disabled={disabled} variant="success" onClick={() => onManual("healing")}>
-          Heal
-        </Button>
-        {actions.length > 0 && (
-          <ActionMenu actions={actions} disabled={disabled} onAction={onAction} />
-        )}
+        <div className="grid gap-1.5">
+          <Button
+            className="min-h-9"
+            disabled={disabled}
+            icon={Swords}
+            variant="danger"
+            onClick={() => onManual("damage")}
+            title="Apply damage"
+          >
+            Damage
+          </Button>
+          <Button
+            className="min-h-9"
+            disabled={disabled}
+            icon={HeartPulse}
+            variant="success"
+            onClick={() => onManual("healing")}
+            title="Apply healing"
+          >
+            Heal
+          </Button>
+        </div>
+        <div className="grid gap-1.5">
+          <DamageTypeControl value={damageType} onChange={onDamageTypeChange} disabled={disabled} />
+          {actions.length > 0 && (
+            <ActionMenu actions={actions} disabled={disabled} onAction={onAction} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -291,6 +310,7 @@ export function TargetRow({
 }) {
   const pct = hpPercent(combatant);
   const showDeathSaves = combatant.sourceType === "player" && combatant.currentHitPoints <= 0;
+  const colorStyle = combatantColorStyle(combatant.colorLabel);
   const sideTone =
     active && selected
       ? "border-sky-500 bg-sky-500/10 ring-2 ring-amber-400/70"
@@ -306,7 +326,7 @@ export function TargetRow({
                 ? "border-emerald-500/25 bg-emerald-500/5"
                 : "border-border bg-background";
   return (
-    <div className="grid grid-cols-[2.25rem_1fr] items-start gap-1">
+    <div className="combatant-row grid grid-cols-[2.25rem_1fr] items-start gap-1">
       <div
         className={[
           "mt-4 grid h-8 w-8 place-items-center rounded-full border text-sm font-black",
@@ -317,7 +337,10 @@ export function TargetRow({
       >
         {combatant.initiativeSet ? combatant.initiative : "-"}
       </div>
-      <div className={["rounded-lg border p-2 transition", sideTone].join(" ")}>
+      <div
+        className={["target-row-card rounded-lg border p-2", sideTone].join(" ")}
+        style={colorStyle}
+      >
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -376,9 +399,15 @@ export function TargetRow({
             />
           </div>
         ) : (
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted">
+          <div
+            key={`${combatant.id}-${combatant.currentHitPoints}-${combatant.temporaryHitPoints}`}
+            className={[
+              "mt-2 h-2 overflow-hidden rounded-full bg-muted",
+              combatant.currentHitPoints <= 0 ? "hp-drop-zero" : "hp-bar-pulse",
+            ].join(" ")}
+          >
             <div
-              className="h-full transition-all"
+              className="hp-bar-fill h-full"
               style={{ width: `${pct}%`, backgroundColor: hpBarColor(pct) }}
             />
           </div>
@@ -410,6 +439,17 @@ function StateBadge({ tone, children }: { tone: "acting" | "target"; children: R
       {children}
     </span>
   );
+}
+
+function combatantColorStyle(colorLabel: string): React.CSSProperties | undefined {
+  const color = colorLabel.trim();
+  if (!color || color === defaultCombatantColor || !/^#[0-9a-fA-F]{6}$/.test(color)) {
+    return undefined;
+  }
+  return {
+    borderColor: color,
+    boxShadow: `inset 0 0 0 1px ${color}55`,
+  };
 }
 
 export function DeathSaveControls({

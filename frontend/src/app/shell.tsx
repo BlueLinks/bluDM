@@ -17,6 +17,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
+import { RollLogProvider } from "../components/RollLogProvider";
 import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 import { AccountMenu } from "./AccountMenu";
@@ -98,102 +99,104 @@ export function WorkspaceShell({
   }, [sidebarCollapsed]);
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-background text-foreground">
-      <div className="flex h-full">
-        <aside
-          className={[
-            "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
-            sidebarCollapsed ? "w-20" : "w-64",
-          ].join(" ")}
-        >
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            onNavigate={() => setMobileOpen(false)}
-            onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
-          />
-        </aside>
-        {mobileOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/45 lg:hidden"
-            onClick={() => setMobileOpen(false)}
+    <RollLogProvider>
+      <main className="fixed inset-0 overflow-hidden bg-background text-foreground">
+        <div className="flex h-full">
+          <aside
+            className={[
+              "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
+              sidebarCollapsed ? "w-20" : "w-64",
+            ].join(" ")}
           >
-            <aside
-              className="h-full w-72 border-r border-border bg-card"
-              onClick={(event) => event.stopPropagation()}
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              onNavigate={() => setMobileOpen(false)}
+              onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+            />
+          </aside>
+          {mobileOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+              onClick={() => setMobileOpen(false)}
             >
-              <Sidebar onNavigate={() => setMobileOpen(false)} />
-            </aside>
-          </div>
-        )}
-        <section className="flex h-full min-w-0 flex-1 flex-col">
-          <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
-            <button
-              className="inline-flex rounded-md border border-border p-2 lg:hidden"
-              type="button"
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                icon={ArrowLeft}
-                disabled={!parent}
-                onClick={() => {
-                  if (parent) void navigate(parent);
-                }}
+              <aside
+                className="h-full w-72 border-r border-border bg-card"
+                onClick={(event) => event.stopPropagation()}
               >
-                Back
-              </Button>
-              <div className="min-w-0">
-                <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
-                <nav
-                  className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
-                  aria-label="Current path"
+                <Sidebar onNavigate={() => setMobileOpen(false)} />
+              </aside>
+            </div>
+          )}
+          <section className="flex h-full min-w-0 flex-1 flex-col">
+            <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
+              <button
+                className="inline-flex rounded-md border border-border p-2 lg:hidden"
+                type="button"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  icon={ArrowLeft}
+                  disabled={!parent}
+                  onClick={() => {
+                    if (parent) void navigate(parent);
+                  }}
                 >
-                  {crumbs.length === 0 ? (
-                    <span>Encounter Tracker</span>
-                  ) : (
-                    crumbs.map((crumb, index) => (
-                      <React.Fragment key={`${crumb.label}-${index}`}>
-                        {index > 0 && <span className="text-muted-foreground">/</span>}
-                        {crumb.to && index < crumbs.length - 1 ? (
-                          <Link
-                            className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
-                            to={crumb.to}
-                          >
-                            {crumb.label}
-                          </Link>
-                        ) : (
-                          <span className="max-w-48 truncate text-foreground">{crumb.label}</span>
-                        )}
-                      </React.Fragment>
-                    ))
-                  )}
-                </nav>
+                  Back
+                </Button>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
+                  <nav
+                    className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
+                    aria-label="Current path"
+                  >
+                    {crumbs.length === 0 ? (
+                      <span>Encounter Tracker</span>
+                    ) : (
+                      crumbs.map((crumb, index) => (
+                        <React.Fragment key={`${crumb.label}-${index}`}>
+                          {index > 0 && <span className="text-muted-foreground">/</span>}
+                          {crumb.to && index < crumbs.length - 1 ? (
+                            <Link
+                              className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
+                              to={crumb.to}
+                            >
+                              {crumb.label}
+                            </Link>
+                          ) : (
+                            <span className="max-w-48 truncate text-foreground">{crumb.label}</span>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </nav>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <DiceRoller />
-              <ThemeMenu
-                resolvedTheme={resolvedTheme}
-                theme={theme}
-                onThemeChange={onThemeChange}
-              />
-              <AccountMenu
-                user={user}
-                onLoadAccount={onLoadAccount}
-                onLogout={onLogout}
-                onSetPassword={onSetPassword}
-              />
-            </div>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
-        </section>
-      </div>
-    </main>
+              <div className="flex items-center gap-2">
+                <DiceRoller />
+                <ThemeMenu
+                  resolvedTheme={resolvedTheme}
+                  theme={theme}
+                  onThemeChange={onThemeChange}
+                />
+                <AccountMenu
+                  user={user}
+                  onLoadAccount={onLoadAccount}
+                  onLogout={onLogout}
+                  onSetPassword={onSetPassword}
+                />
+              </div>
+            </header>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
+          </section>
+        </div>
+      </main>
+    </RollLogProvider>
   );
 }
 

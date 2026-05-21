@@ -168,6 +168,9 @@ type manualHPRequest struct {
 }
 
 type updateRunCombatantRequest struct {
+	DisplayName              string   `json:"displayName"`
+	ColorLabel               string   `json:"colorLabel"`
+	AvatarURL                string   `json:"avatarUrl"`
 	Initiative               int      `json:"initiative"`
 	InitiativeSet            bool     `json:"initiativeSet"`
 	ArmorClassBonus          int      `json:"armorClassBonus"`

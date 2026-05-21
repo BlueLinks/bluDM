@@ -1,5 +1,6 @@
 import { HeartPulse, ScrollText, Shield, Zap } from "lucide-react";
 import React from "react";
+import { useRollLog } from "../../components/RollLogProvider";
 import { SectionPanel } from "../../components/ui";
 import { api } from "../../lib/api";
 import {
@@ -17,6 +18,8 @@ import {
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
 import type { EncounterRunCombatant, RollMode } from "../../types";
+
+type AbilityOption = (typeof abilities)[number];
 
 export function CombatSheet({
   combatant,
@@ -40,6 +43,7 @@ export function CombatSheet({
   const leftAbilities = abilities.slice(0, 3);
   const rightAbilities = abilities.slice(3, 6);
   const descriptor = combatantDescriptor(combatant, sheet);
+  const { addRollLogEntry } = useRollLog();
 
   async function roll(
     event: React.MouseEvent,
@@ -59,13 +63,22 @@ export function CombatSheet({
     const total = Number(payload.result.total) || 0;
     const d20 = Number(payload.result.d20) || 0;
     const title = `${label} ${rollType}`;
+    const detail = `${rollDiceDetail(payload.result)} ${bonus >= 0 ? "+" : ""}${bonus}`;
+    addRollLogEntry({
+      title,
+      notation: `${rollModeLabel(rollMode)} d20`,
+      detail,
+      total,
+      actor: combatant.displayName,
+      rollType,
+    });
     onRoll(
       `${title}: ${total} (${rollModeLabel(rollMode)} ${d20} ${bonus >= 0 ? "+" : ""}${bonus})`,
       {
         title,
         subtitle: `${combatant.displayName} · ${rollType} · ${rollModeLabel(rollMode)}`,
         total,
-        detail: `${rollDiceDetail(payload.result)} ${bonus >= 0 ? "+" : ""}${bonus}`,
+        detail,
       },
     );
   }
@@ -75,7 +88,7 @@ export function CombatSheet({
       title={compact ? "Target Sheet" : "Active Sheet"}
       icon={ScrollText}
       className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
-      bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
+      bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto px-1 pb-1"
     >
       <div className="grid gap-3">
         <div className="rounded-md border border-border bg-background px-3 py-2">
@@ -94,7 +107,7 @@ export function CombatSheet({
           />
           <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 overflow-hidden">
           {[leftAbilities, rightAbilities].map((group) => (
             <AbilityTable
               key={group.map((ability) => ability.key).join("-")}
@@ -138,7 +151,7 @@ function AbilityTable({
   proficiencyBonus,
   onRoll,
 }: {
-  abilities: typeof import("../../lib/domain/options").abilities;
+  abilities: AbilityOption[];
   scores: Record<string, unknown>;
   savingThrows: string[];
   proficiencyBonus: number;
@@ -152,7 +165,7 @@ function AbilityTable({
 }) {
   return (
     <div className="overflow-hidden rounded-md border border-border bg-background text-xs">
-      <div className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem] border-b border-border bg-muted/60 px-1 py-1 text-center font-black uppercase text-muted-foreground">
+      <div className="grid grid-cols-4 border-b border-border bg-muted/60 px-0.5 py-1 text-center font-black uppercase text-muted-foreground">
         <span />
         <span />
         <span>Mod</span>
@@ -165,7 +178,7 @@ function AbilityTable({
         return (
           <div
             key={ability.key}
-            className="grid grid-cols-[2.1rem_2rem_2.25rem_2.25rem] items-center border-b border-border px-1 py-1 last:border-b-0"
+            className="grid grid-cols-4 items-center border-b border-border px-0.5 py-1 last:border-b-0"
           >
             <span className="font-black uppercase text-muted-foreground">{ability.key}</span>
             <span className="text-center font-semibold">{score}</span>

@@ -16,7 +16,11 @@ import {
 import { api } from "../../lib/api";
 import { isDownEnemy, rotateCombatantsFromActive } from "../../lib/domain/combat";
 import { createId } from "../../lib/domain/ids";
-import { conditionImmunities } from "../../lib/domain/options";
+import {
+  combatantColors,
+  conditionImmunities,
+  defaultCombatantColor,
+} from "../../lib/domain/options";
 import type {
   CreatureAction,
   Encounter,
@@ -266,7 +270,7 @@ export function CombatTrackerPage() {
           onMove={move}
           onUndo={() => runID && refreshFrom(api.undoRun(runID))}
         />
-        <div className="grid gap-3 rounded-lg border border-border bg-card p-4 xl:grid-cols-[minmax(520px,1fr)_minmax(220px,auto)] xl:items-center">
+        <div className="rounded-lg border border-border bg-card p-3">
           <ActiveTurnHeader combatant={active} selected={selected}>
             {active.currentHitPoints <= 0 && active.sourceType !== "player" ? (
               <MutedPanel>Entity is dead</MutedPanel>
@@ -411,6 +415,66 @@ function RunCombatantEditSheet({
       trigger={<span />}
     >
       <div className="grid gap-4">
+        <div className="grid gap-3">
+          <Field label="Nickname / display name">
+            <Input
+              value={draft.displayName}
+              onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
+            />
+          </Field>
+          <Field label="Avatar URL">
+            <Input
+              value={draft.avatarUrl}
+              onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })}
+            />
+          </Field>
+          <Field label="Frame colour">
+            <div className="flex flex-wrap gap-2">
+              {combatantColors.map((color) => (
+                <button
+                  aria-label={color.label}
+                  className={[
+                    "h-9 rounded-md border-2 px-2 text-xs font-medium transition hover:scale-105",
+                    color.value === defaultCombatantColor
+                      ? "w-auto bg-muted text-muted-foreground"
+                      : "w-9",
+                    draft.colorLabel === color.value
+                      ? "border-foreground ring-2 ring-primary/30"
+                      : "border-border",
+                  ].join(" ")}
+                  key={color.value}
+                  style={
+                    color.value === defaultCombatantColor
+                      ? undefined
+                      : { backgroundColor: color.value }
+                  }
+                  type="button"
+                  onClick={() => setDraft({ ...draft, colorLabel: color.value })}
+                >
+                  {color.value === defaultCombatantColor ? "Default" : ""}
+                </button>
+              ))}
+              <Input
+                className="h-9 w-12 p-1"
+                type="color"
+                value={
+                  draft.colorLabel && /^#[0-9a-fA-F]{6}$/.test(draft.colorLabel)
+                    ? draft.colorLabel
+                    : "#64748b"
+                }
+                onChange={(event) => setDraft({ ...draft, colorLabel: event.target.value })}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setDraft({ ...draft, colorLabel: "" })}
+              >
+                Clear colour
+              </Button>
+            </div>
+          </Field>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Initiative">
             <Input

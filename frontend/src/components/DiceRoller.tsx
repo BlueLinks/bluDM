@@ -1,21 +1,11 @@
 import { Dices } from "lucide-react";
 import { useState } from "react";
-import { createId } from "../lib/domain/ids";
+import { useRollLog } from "./RollLogProvider";
 import { Button, Input, Modal } from "./ui";
 
 type DiceRow = {
   count: string;
   modifier: string;
-};
-
-type RollResult = {
-  id: string;
-  die: number;
-  count: number;
-  modifier: number;
-  rolls: number[];
-  total: number;
-  createdAt: Date;
 };
 
 const diceValues = [4, 6, 8, 10, 12, 20, 100];
@@ -37,13 +27,12 @@ function clampPositive(value: string, fallback: number) {
 }
 
 export function DiceRoller() {
+  const { addRollLogEntry, latest, log } = useRollLog();
   const [open, setOpen] = useState(false);
   const [rows, setRows] = useState(defaultRows);
   const [customDie, setCustomDie] = useState("");
   const [customCount, setCustomCount] = useState("");
   const [customModifier, setCustomModifier] = useState("");
-  const [log, setLog] = useState<RollResult[]>([]);
-  const [latest, setLatest] = useState<RollResult | null>(null);
 
   function updateRow(die: number, patch: Partial<DiceRow>) {
     setRows((current) => ({
@@ -60,17 +49,13 @@ export function DiceRoller() {
       () => Math.floor(Math.random() * die) + 1,
     );
     const total = rolls.reduce((sum, value) => sum + value, 0) + modifier;
-    const result = {
-      id: createId("roll"),
-      die,
-      count,
-      modifier,
-      rolls,
+    addRollLogEntry({
+      title: `Manual d${die}`,
+      notation: `${count}d${die} ${signed(modifier)}`,
+      detail: `${rolls.join(" + ")} ${signed(modifier)}`,
       total,
-      createdAt: new Date(),
-    };
-    setLog((current) => [result, ...current].slice(0, 20));
-    setLatest(result);
+      rollType: "Manual",
+    });
   }
 
   const customDieValue = clampPositive(customDie, 20);
@@ -94,12 +79,10 @@ export function DiceRoller() {
               className="damage-roll-line rounded-xl border border-primary/25 bg-primary/5 p-4 text-center"
             >
               <div className="text-sm font-bold uppercase text-muted-foreground">
-                {latest.count}d{latest.die}
+                {latest.title}
               </div>
               <div className="my-1 text-5xl font-black text-primary">{latest.total}</div>
-              <div className="text-sm font-medium text-muted-foreground">
-                {latest.rolls.join(" + ")} {signed(latest.modifier)}
-              </div>
+              <div className="text-sm font-medium text-muted-foreground">{latest.detail}</div>
             </section>
           )}
           <div className="overflow-hidden rounded-lg border border-border">
@@ -192,12 +175,8 @@ export function DiceRoller() {
                   key={entry.id}
                 >
                   <div>
-                    <div className="font-semibold">
-                      {entry.count}d{entry.die} {signed(entry.modifier)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.rolls.join(" + ")} {signed(entry.modifier)}
-                    </div>
+                    <div className="font-semibold">{entry.title}</div>
+                    <div className="text-xs text-muted-foreground">{entry.detail}</div>
                   </div>
                   <div className="text-xl font-bold text-primary">{entry.total}</div>
                 </div>
