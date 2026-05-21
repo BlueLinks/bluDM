@@ -1,13 +1,8 @@
 import { Checkbox, Input, Select } from "../ui";
 import { damageTypes } from "./damageTypes";
-import {
-  abilities,
-  conditionImmunities,
-  diceSizes,
-  skillDefinitions,
-} from "../../lib/domain/options";
+import { abilities, conditionImmunities, diceSizes } from "../../lib/domain/options";
 import { abilityModifier, modifierTone, signedModifier } from "../../lib/domain/forms";
-import type { AbilityKey, SenseName } from "../../types";
+import type { SenseName } from "../../types";
 
 export function DiceFormulaInput({
   value,
@@ -195,68 +190,6 @@ export function AbilityInput({
   );
 }
 
-export function SkillsTable({
-  abilityScores,
-  proficiencies,
-  expertise,
-  proficiencyBonus,
-  onProficiencyChange,
-  onExpertiseChange,
-}: {
-  abilityScores: Record<AbilityKey, string>;
-  proficiencies: string[];
-  expertise: string[];
-  proficiencyBonus: number;
-  onProficiencyChange: (skill: string, checked: boolean) => void;
-  onExpertiseChange: (skill: string, checked: boolean) => void;
-}) {
-  const bonus = proficiencyBonus;
-  return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      {skillDefinitions.map((skill) => {
-        const score = Number(abilityScores[skill.ability]) || 10;
-        const base = abilityModifier(score);
-        const isProficient = proficiencies.includes(skill.name);
-        const isExpert = expertise.includes(skill.name);
-        const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
-        return (
-          <div
-            className="grid grid-cols-[44px_44px_1fr_72px_72px_52px] items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
-            key={skill.name}
-          >
-            <span className="text-xs font-semibold text-muted-foreground">+{bonus}</span>
-            <span className="rounded bg-muted px-2 py-1 text-center text-xs font-semibold uppercase">
-              {skill.ability}
-            </span>
-            <span className="min-w-0 font-medium">{skill.name}</span>
-            <label className="grid justify-items-center gap-1 text-[0.68rem] font-semibold uppercase text-muted-foreground">
-              Prof
-              <input
-                className="h-4 w-4 accent-primary"
-                checked={isProficient}
-                type="checkbox"
-                onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
-              />
-            </label>
-            <label className="grid justify-items-center gap-1 text-[0.68rem] font-semibold uppercase text-muted-foreground">
-              Expert
-              <input
-                className="h-4 w-4 accent-primary"
-                checked={isExpert}
-                type="checkbox"
-                onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}
-              />
-            </label>
-            <span className={["text-right font-bold", modifierTone(total)].join(" ")}>
-              {total >= 0 ? `+${total}` : total}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export function SenseControl({
   label,
   value,
@@ -266,21 +199,39 @@ export function SenseControl({
   value: { enabled: boolean; range: string };
   onChange: (value: { enabled: boolean; range: string }) => void;
 }) {
+  const disabled = !value.enabled;
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div
+      className={[
+        "rounded-lg border p-3 transition",
+        disabled
+          ? "border-border bg-muted/35 text-muted-foreground"
+          : "border-border bg-background",
+      ].join(" ")}
+    >
       <Checkbox
         label={label}
         checked={value.enabled}
         onChange={(checked) => onChange({ ...value, enabled: checked })}
       />
       <label className="mt-3 grid gap-2 text-sm font-medium">
-        Range ft.
-        <Input
-          type="number"
-          value={value.range}
-          onChange={(event) => onChange({ ...value, range: event.target.value })}
-          disabled={!value.enabled}
-        />
+        <span className="text-xs font-semibold uppercase">Range</span>
+        <span className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-md border border-border bg-card">
+          <Input
+            className="rounded-none border-0 text-center font-semibold disabled:bg-muted/60 disabled:text-muted-foreground"
+            type="number"
+            value={value.range}
+            onChange={(event) => onChange({ ...value, range: event.target.value })}
+            disabled={disabled}
+            placeholder={disabled ? "Enable first" : "0"}
+          />
+          <span className="grid min-w-10 place-items-center border-l border-border px-2 text-xs font-bold text-muted-foreground">
+            ft.
+          </span>
+        </span>
+        {disabled && (
+          <span className="text-xs text-muted-foreground">Tick {label} to set range.</span>
+        )}
       </label>
     </div>
   );
@@ -350,10 +301,16 @@ function DamageChecklist({
     checked: boolean,
   ) => void;
 }) {
+  const tone = damageDefenseTone(field);
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className={["rounded-lg border p-3", tone.panel].join(" ")}>
       <div className="mb-3 flex items-center gap-3">
-        <span className="grid h-8 w-8 place-items-center rounded bg-muted text-sm font-bold">
+        <span
+          className={[
+            "grid h-8 w-8 place-items-center rounded text-sm font-bold",
+            tone.marker,
+          ].join(" ")}
+        >
           {marker}
         </span>
         <div>
@@ -364,7 +321,10 @@ function DamageChecklist({
       <div className="grid gap-2">
         {damageTypes.map((damage) => (
           <label
-            className="flex items-center justify-between rounded-md border border-border px-2 py-2 text-sm"
+            className={[
+              "flex items-center justify-between rounded-md border px-2 py-2 text-sm",
+              tone.item,
+            ].join(" ")}
             key={damage.id}
           >
             <span className="flex items-center gap-2">
@@ -382,6 +342,31 @@ function DamageChecklist({
       </div>
     </div>
   );
+}
+
+function damageDefenseTone(
+  field: "damageVulnerabilities" | "damageResistances" | "damageImmunities",
+) {
+  switch (field) {
+    case "damageVulnerabilities":
+      return {
+        panel: "border-red-500/25 bg-red-500/5",
+        marker: "bg-red-500/15 text-red-700 dark:text-red-300",
+        item: "border-red-500/20 bg-background/70",
+      };
+    case "damageResistances":
+      return {
+        panel: "border-amber-500/25 bg-amber-500/5",
+        marker: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+        item: "border-amber-500/20 bg-background/70",
+      };
+    case "damageImmunities":
+      return {
+        panel: "border-sky-500/25 bg-sky-500/5",
+        marker: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
+        item: "border-sky-500/20 bg-background/70",
+      };
+  }
 }
 
 export function AbilitySelect({
@@ -409,7 +394,7 @@ export function ConditionImmunityChecklist({
   onChange: (condition: string, checked: boolean) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
       {conditionImmunities.map((condition) => (
         <Checkbox
           key={condition}

@@ -6,13 +6,22 @@ import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 
 type AccountMenuProps = {
+  density: "auto" | "compact" | "comfy";
   user?: User;
   onLogout: () => Promise<void>;
+  onDensityChange: (density: "auto" | "compact" | "comfy") => void;
   onLoadAccount: () => Promise<AccountInfo>;
   onSetPassword: (currentPassword: string, newPassword: string) => Promise<AccountInfo>;
 };
 
-export function AccountMenu({ user, onLogout, onLoadAccount, onSetPassword }: AccountMenuProps) {
+export function AccountMenu({
+  density,
+  user,
+  onLogout,
+  onDensityChange,
+  onLoadAccount,
+  onSetPassword,
+}: AccountMenuProps) {
   const [open, setOpen] = useState(false);
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [accountError, setAccountError] = useState("");
@@ -81,6 +90,28 @@ export function AccountMenu({ user, onLogout, onLoadAccount, onSetPassword }: Ac
               )}
             </div>
           )}
+          <div className="mt-3 grid gap-2 rounded-md border border-border bg-muted/30 p-2">
+            <div className="px-1 text-xs font-bold uppercase text-muted-foreground">
+              Interface density
+            </div>
+            <div className="grid grid-cols-3 gap-1 rounded-md bg-background p-1">
+              {(["auto", "compact", "comfy"] as const).map((option) => (
+                <button
+                  className={[
+                    "rounded px-2 py-1.5 text-xs font-bold capitalize transition",
+                    density === option
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ].join(" ")}
+                  key={option}
+                  type="button"
+                  onClick={() => onDensityChange(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
           <Button
             className="mt-3 w-full"
             icon={KeyRound}

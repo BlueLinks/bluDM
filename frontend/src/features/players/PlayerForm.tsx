@@ -1,13 +1,13 @@
 import { BookOpen, HeartPulse, Shield, Sparkles, Zap } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  AbilityInput,
   AbilitySelect,
   ConditionImmunityChecklist,
   DamageDefenseGroup,
   SenseControl,
-  SkillsTable,
 } from "../../components/shared/CharacterFormControls";
+import { CompactAbilityTable, SkillsTable } from "../../components/shared/CharacterSheetTables";
 import { Button, Field, FormSection, IconNumberField, Textarea } from "../../components/ui";
 import { api } from "../../lib/api";
 import { proficiencyBonus } from "../../lib/domain/forms";
@@ -15,6 +15,7 @@ import { abilities, senseTypes } from "../../lib/domain/options";
 import { effectiveCharacterLevel } from "../../lib/domain/progression";
 import type { Campaign, Player, PlayerFormState } from "../../types";
 import { PlayerBasicsSection } from "./PlayerBasicsSection";
+import { UnsavedPlayerNavigationDialog } from "./UnsavedPlayerNavigationDialog";
 
 const emptyPlayerForm: PlayerFormState = {
   campaignId: "",
@@ -144,13 +145,55 @@ export function PlayerForm({
   const [form, setForm] = useState<PlayerFormState>(() =>
     initialPlayer ? playerFormFromPlayer(initialPlayer) : { ...emptyPlayerForm },
   );
+  const [savedSnapshot, setSavedSnapshot] = useState(() =>
+    JSON.stringify(initialPlayer ? playerFormFromPlayer(initialPlayer) : emptyPlayerForm),
+  );
   const [error, setError] = useState("");
+  const [allowNavigation, setAllowNavigation] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const isDirty = JSON.stringify(form) !== savedSnapshot;
 
   useEffect(() => {
-    if (!form.campaignId && campaigns.length > 0) {
-      setForm((current) => ({ ...current, campaignId: campaigns[0].id }));
+    const nextForm = initialPlayer ? playerFormFromPlayer(initialPlayer) : { ...emptyPlayerForm };
+    setForm(nextForm);
+    setSavedSnapshot(JSON.stringify(nextForm));
+    setAllowNavigation(false);
+  }, [initialPlayer]);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isDirty || allowNavigation) return;
+      event.preventDefault();
+      event.returnValue = "";
     }
-  }, [campaigns, form.campaignId]);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [allowNavigation, isDirty]);
+
+  useEffect(() => {
+    function interceptAppNavigation(event: MouseEvent) {
+      if (!isDirty || allowNavigation || event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const target = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(target instanceof HTMLAnchorElement)) return;
+      const url = new URL(target.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      const destination = `${url.pathname}${url.search}${url.hash}`;
+      if (
+        destination ===
+        `${window.location.pathname}${window.location.search}${window.location.hash}`
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setPendingNavigation(destination);
+    }
+
+    document.addEventListener("click", interceptAppNavigation, true);
+    return () => document.removeEventListener("click", interceptAppNavigation, true);
+  }, [allowNavigation, isDirty]);
 
   function toggleList(
     field:
@@ -172,36 +215,64 @@ export function PlayerForm({
     }));
   }
 
-  async function handleCreate(event: FormEvent) {
-    event.preventDefault();
+  async function savePlayer() {
     setError("");
-    if (!form.campaignId) {
-      setError("Create a campaign before adding players.");
-      return;
-    }
     try {
       const payload = initialPlayer
         ? await api.updatePlayer(initialPlayer.id, form)
         : await api.createPlayer(form);
-      onCreated(payload.player);
+      const nextSnapshot = JSON.stringify(form);
+      setSavedSnapshot(nextSnapshot);
+      setAllowNavigation(true);
       if (!initialPlayer) {
         setForm({ ...emptyPlayerForm, campaignId: form.campaignId });
       }
+      return payload.player;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save player");
+      return null;
     }
   }
 
+  async function handleCreate(event: FormEvent) {
+    event.preventDefault();
+    const player = await savePlayer();
+    if (player) {
+      onCreated(player);
+    }
+  }
+
+  async function saveAndProceed() {
+    const player = await savePlayer();
+    if (player && pendingNavigation) {
+      void navigate(pendingNavigation);
+    }
+  }
+
+  function proceedWithoutSaving() {
+    if (!pendingNavigation) return;
+    setAllowNavigation(true);
+    void navigate(pendingNavigation);
+  }
+
   return (
-    <form className="grid gap-5" onSubmit={handleCreate}>
-      <PlayerBasicsSection form={form} campaigns={campaigns} setForm={setForm} />
-      <PlayerVitals form={form} setForm={setForm} />
-      <PlayerAbilitySections form={form} setForm={setForm} toggleList={toggleList} />
-      <PlayerDefenses form={form} setForm={setForm} toggleList={toggleList} />
-      <PlayerSpellAndNotes form={form} setForm={setForm} />
-      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-      <Button type="submit">{submitLabel}</Button>
-    </form>
+    <>
+      <form className="grid gap-5" onSubmit={handleCreate}>
+        <PlayerBasicsSection form={form} campaigns={campaigns} setForm={setForm} />
+        <PlayerVitals form={form} setForm={setForm} />
+        <PlayerAbilitySections form={form} setForm={setForm} toggleList={toggleList} />
+        <PlayerDefenses form={form} setForm={setForm} toggleList={toggleList} />
+        <PlayerSpellAndNotes form={form} setForm={setForm} />
+        {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
+        <Button type="submit">{submitLabel}</Button>
+      </form>
+      <UnsavedPlayerNavigationDialog
+        open={pendingNavigation !== null}
+        onStay={() => setPendingNavigation(null)}
+        onDiscard={proceedWithoutSaving}
+        onSave={() => void saveAndProceed()}
+      />
+    </>
   );
 }
 
@@ -222,50 +293,58 @@ type TogglePlayerList = (
 function PlayerVitals({ form, setForm }: { form: PlayerFormState; setForm: PlayerFormSetter }) {
   return (
     <FormSection title="Health and AC">
-      <div className="flex flex-wrap gap-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <IconNumberField
+          className="w-full"
           icon={Shield}
           label="AC"
           value={form.armorClass}
           onChange={(value) => setForm({ ...form, armorClass: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={HeartPulse}
           label="Max HP"
           value={form.maxHitPoints}
           onChange={(value) => setForm({ ...form, maxHitPoints: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={HeartPulse}
           label="Temp HP"
           value={form.temporaryHitPoints}
           onChange={(value) => setForm({ ...form, temporaryHitPoints: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={HeartPulse}
           label="Temp Max HP"
           value={form.temporaryMaxHitPoints}
           onChange={(value) => setForm({ ...form, temporaryMaxHitPoints: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={Zap}
           label="Speed"
           value={form.speed}
           onChange={(value) => setForm({ ...form, speed: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={BookOpen}
           label="Passive Perception"
           value={form.passivePerception}
           onChange={(value) => setForm({ ...form, passivePerception: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={BookOpen}
           label="Passive Investigation"
           value={form.passiveInvestigation}
           onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
         />
         <IconNumberField
+          className="w-full"
           icon={BookOpen}
           label="Passive Insight"
           value={form.passiveInsight}
@@ -290,25 +369,19 @@ function PlayerAbilitySections({
   return (
     <>
       <FormSection title="Ability Scores">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {abilities.map((ability) => (
-            <AbilityInput
-              key={ability.key}
-              label={ability.label}
-              value={Number(form.abilityScores[ability.key])}
-              saveProficient={form.savingThrowProficiencies.includes(ability.key)}
-              onSaveProficiencyChange={(checked) =>
-                toggleList("savingThrowProficiencies", ability.key, checked)
-              }
-              onChange={(next) =>
-                setForm((current) => ({
-                  ...current,
-                  abilityScores: { ...current.abilityScores, [ability.key]: String(next) },
-                }))
-              }
-            />
-          ))}
-        </div>
+        <CompactAbilityTable
+          abilityScores={form.abilityScores}
+          savingThrowProficiencies={form.savingThrowProficiencies}
+          onSaveProficiencyChange={(ability, checked) =>
+            toggleList("savingThrowProficiencies", ability, checked)
+          }
+          onScoreChange={(ability, value) =>
+            setForm((current) => ({
+              ...current,
+              abilityScores: { ...current.abilityScores, [ability]: value },
+            }))
+          }
+        />
       </FormSection>
       <FormSection title="Skills">
         <SkillsTable
@@ -391,6 +464,7 @@ function PlayerSpellAndNotes({
             />
           </Field>
           <IconNumberField
+            className="w-28"
             icon={Sparkles}
             label="Spell Save DC"
             value={form.spellSaveDC}

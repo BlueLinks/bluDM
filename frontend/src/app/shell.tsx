@@ -17,6 +17,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
+import { RollLogProvider } from "../components/RollLogProvider";
 import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 import { AccountMenu } from "./AccountMenu";
@@ -88,112 +89,134 @@ export function WorkspaceShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("bludm-sidebar") === "collapsed",
   );
+  const [uiDensity, setUiDensity] = useState<"auto" | "compact" | "comfy">(() => {
+    const stored = localStorage.getItem("bludm-ui-density");
+    return stored === "compact" || stored === "comfy" || stored === "auto" ? stored : "auto";
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const crumbs = shellCrumbs(location.pathname);
   const parent = parentPath(location.pathname);
+  const isCombatTracker = /^\/encounter-runs\/[^/]+$/.test(location.pathname);
+  const contentPadding =
+    isCombatTracker && uiDensity !== "comfy" ? "px-1 py-2 sm:px-2 lg:px-3" : "px-4 py-6 lg:px-8";
 
   useEffect(() => {
     localStorage.setItem("bludm-sidebar", sidebarCollapsed ? "collapsed" : "expanded");
   }, [sidebarCollapsed]);
 
+  useEffect(() => {
+    localStorage.setItem("bludm-ui-density", uiDensity);
+  }, [uiDensity]);
+
   return (
-    <main className="h-screen overflow-hidden bg-background text-foreground">
-      <div className="flex min-h-screen">
-        <aside
-          className={[
-            "hidden h-screen shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
-            sidebarCollapsed ? "w-20" : "w-64",
-          ].join(" ")}
-        >
-          <Sidebar
-            collapsed={sidebarCollapsed}
-            onNavigate={() => setMobileOpen(false)}
-            onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
-          />
-        </aside>
-        {mobileOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-black/45 lg:hidden"
-            onClick={() => setMobileOpen(false)}
+    <RollLogProvider>
+      <main
+        className={[
+          "fixed inset-0 overflow-hidden bg-background text-foreground",
+          `ui-density-${uiDensity}`,
+        ].join(" ")}
+      >
+        <div className="flex h-full">
+          <aside
+            className={[
+              "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
+              sidebarCollapsed ? "w-16" : "w-48",
+            ].join(" ")}
           >
-            <aside
-              className="h-full w-72 border-r border-border bg-card"
-              onClick={(event) => event.stopPropagation()}
+            <Sidebar
+              collapsed={sidebarCollapsed}
+              onNavigate={() => setMobileOpen(false)}
+              onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+            />
+          </aside>
+          {mobileOpen && (
+            <div
+              className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+              onClick={() => setMobileOpen(false)}
             >
-              <Sidebar onNavigate={() => setMobileOpen(false)} />
-            </aside>
-          </div>
-        )}
-        <section className="flex h-screen min-w-0 flex-1 flex-col">
-          <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
-            <button
-              className="inline-flex rounded-md border border-border p-2 lg:hidden"
-              type="button"
-              onClick={() => setMobileOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                icon={ArrowLeft}
-                disabled={!parent}
-                onClick={() => {
-                  if (parent) void navigate(parent);
-                }}
+              <aside
+                className="h-full w-72 border-r border-border bg-card"
+                onClick={(event) => event.stopPropagation()}
               >
-                Back
-              </Button>
-              <div className="min-w-0">
-                <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
-                <nav
-                  className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
-                  aria-label="Current path"
+                <Sidebar onNavigate={() => setMobileOpen(false)} />
+              </aside>
+            </div>
+          )}
+          <section className="flex h-full min-w-0 flex-1 flex-col">
+            <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
+              <button
+                className="inline-flex rounded-md border border-border p-2 lg:hidden"
+                type="button"
+                onClick={() => setMobileOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  icon={ArrowLeft}
+                  disabled={!parent}
+                  onClick={() => {
+                    if (parent) void navigate(parent);
+                  }}
                 >
-                  {crumbs.length === 0 ? (
-                    <span>Encounter Tracker</span>
-                  ) : (
-                    crumbs.map((crumb, index) => (
-                      <React.Fragment key={`${crumb.label}-${index}`}>
-                        {index > 0 && <span className="text-muted-foreground">/</span>}
-                        {crumb.to && index < crumbs.length - 1 ? (
-                          <Link
-                            className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
-                            to={crumb.to}
-                          >
-                            {crumb.label}
-                          </Link>
-                        ) : (
-                          <span className="max-w-48 truncate text-foreground">{crumb.label}</span>
-                        )}
-                      </React.Fragment>
-                    ))
-                  )}
-                </nav>
+                  Back
+                </Button>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
+                  <nav
+                    className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
+                    aria-label="Current path"
+                  >
+                    {crumbs.length === 0 ? (
+                      <span>Encounter Tracker</span>
+                    ) : (
+                      crumbs.map((crumb, index) => (
+                        <React.Fragment key={`${crumb.label}-${index}`}>
+                          {index > 0 && <span className="text-muted-foreground">/</span>}
+                          {crumb.to && index < crumbs.length - 1 ? (
+                            <Link
+                              className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
+                              to={crumb.to}
+                            >
+                              {crumb.label}
+                            </Link>
+                          ) : (
+                            <span className="max-w-48 truncate text-foreground">{crumb.label}</span>
+                          )}
+                        </React.Fragment>
+                      ))
+                    )}
+                  </nav>
+                </div>
               </div>
+              <div className="flex items-center gap-2">
+                <DiceRoller />
+                <ThemeMenu
+                  resolvedTheme={resolvedTheme}
+                  theme={theme}
+                  onThemeChange={onThemeChange}
+                />
+                <AccountMenu
+                  density={uiDensity}
+                  user={user}
+                  onLoadAccount={onLoadAccount}
+                  onLogout={onLogout}
+                  onDensityChange={setUiDensity}
+                  onSetPassword={onSetPassword}
+                />
+              </div>
+            </header>
+            <div className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}>
+              {children}
             </div>
-            <div className="flex items-center gap-2">
-              <DiceRoller />
-              <ThemeMenu
-                resolvedTheme={resolvedTheme}
-                theme={theme}
-                onThemeChange={onThemeChange}
-              />
-              <AccountMenu
-                user={user}
-                onLoadAccount={onLoadAccount}
-                onLogout={onLogout}
-                onSetPassword={onSetPassword}
-              />
-            </div>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 lg:px-8">{children}</div>
-        </section>
-      </div>
-    </main>
+          </section>
+        </div>
+      </main>
+    </RollLogProvider>
   );
 }
 
@@ -207,10 +230,10 @@ function Sidebar({
   onToggleCollapsed?: () => void;
 }) {
   return (
-    <div className="flex h-full min-h-0 flex-col p-4">
+    <div className="flex h-full min-h-0 flex-col p-3">
       <div
         className={[
-          "mb-6 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
+          "mb-5 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
           collapsed ? "justify-center" : "gap-3",
         ].join(" ")}
       >
@@ -226,7 +249,7 @@ function Sidebar({
             <NavLink
               className={({ isActive }) =>
                 [
-                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition",
+                  "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition",
                   isActive
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -246,7 +269,7 @@ function Sidebar({
         <button
           type="button"
           className={[
-            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-background px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
             collapsed ? "justify-center" : "gap-3",
           ].join(" ")}
           onClick={onToggleCollapsed}
@@ -257,9 +280,7 @@ function Sidebar({
           ) : (
             <PanelLeftClose className="h-4 w-4" />
           )}
-          <span className={collapsed ? "sr-only" : ""}>
-            {collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          </span>
+          <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand" : "Collapse"}</span>
         </button>
       )}
     </div>

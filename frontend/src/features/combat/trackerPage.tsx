@@ -1,17 +1,14 @@
-import { ClipboardList, Plus, Skull, Swords } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import {
   Button,
-  Callout,
   Checkbox,
   ConfirmDialog,
   Field,
   Input,
   Modal,
   MutedPanel,
-  SectionPanel,
   Sheet,
   ToastViewport,
   useToasts,
@@ -19,7 +16,11 @@ import {
 import { api } from "../../lib/api";
 import { isDownEnemy, rotateCombatantsFromActive } from "../../lib/domain/combat";
 import { createId } from "../../lib/domain/ids";
-import { conditionImmunities } from "../../lib/domain/options";
+import {
+  combatantColors,
+  conditionImmunities,
+  defaultCombatantColor,
+} from "../../lib/domain/options";
 import type {
   CreatureAction,
   Encounter,
@@ -29,16 +30,13 @@ import type {
 } from "../../types";
 import { ActionResult } from "./actionResult";
 import { AddRunTargetDialog } from "./AddRunTargetDialog";
+import { CombatBoard } from "./CombatBoard";
 import {
   ActiveTurnHeader,
   CombatControls,
-  CombatSheet,
   CombatStatusBar,
-  DamageMeters,
   DeathSaveControls,
   RollFlash,
-  TargetRow,
-  TopOfRoundMarker,
 } from "./combatWidgets";
 
 export function CombatTrackerPage() {
@@ -252,7 +250,7 @@ export function CombatTrackerPage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-[1800px] gap-4">
+    <div className="combat-tracker-page mx-auto grid w-full max-w-[1800px] gap-2 sm:gap-4">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
       <Breadcrumbs
         items={[
@@ -261,7 +259,7 @@ export function CombatTrackerPage() {
           { label: "Combat" },
         ]}
       />
-      <div className="grid gap-4">
+      <div className="combat-stack grid gap-2 sm:gap-4">
         <CombatStatusBar
           combatantCount={combatants.length}
           elapsed={elapsed}
@@ -272,7 +270,7 @@ export function CombatTrackerPage() {
           onMove={move}
           onUndo={() => runID && refreshFrom(api.undoRun(runID))}
         />
-        <div className="grid gap-3 rounded-lg border border-border bg-card p-4 xl:grid-cols-[minmax(520px,1fr)_minmax(220px,auto)] xl:items-center">
+        <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
           <ActiveTurnHeader combatant={active} selected={selected}>
             {active.currentHitPoints <= 0 && active.sourceType !== "player" ? (
               <MutedPanel>Entity is dead</MutedPanel>
@@ -296,91 +294,24 @@ export function CombatTrackerPage() {
           </ActiveTurnHeader>
         </div>
 
-        <div
-          className={
-            showMeters
-              ? "grid gap-4 2xl:grid-cols-[360px_420px_minmax(520px,1fr)_300px]"
-              : "grid gap-4 2xl:grid-cols-[360px_430px_minmax(560px,1fr)]"
-          }
-        >
-          <CombatSheet
-            combatant={active}
-            runID={run.id}
-            onRoll={(message, flash) => {
-              toast.push(message);
-              setRollFlash({ ...flash, id: createId() });
-            }}
-          />
-          <SectionPanel
-            title="Initiative & Targets"
-            icon={Swords}
-            action={
-              <Button size="sm" icon={Plus} onClick={() => setAddingTarget(true)}>
-                Add target
-              </Button>
-            }
-          >
-            <div className="grid gap-2">
-              {orderedCombatants.map((combatant) => (
-                <React.Fragment key={combatant.id}>
-                  {combatant.originalIndex === 0 && <TopOfRoundMarker />}
-                  <TargetRow
-                    active={combatant.id === active.id}
-                    combatant={combatant}
-                    selected={selectedID === combatant.id}
-                    onSelect={() => setSelectedID(combatant.id)}
-                    onEdit={() => setEditing(combatant)}
-                    onDeathSave={updateDeathSaveFor}
-                  />
-                </React.Fragment>
-              ))}
-              {downEnemies.length > 0 && (
-                <div className="mt-3 grid gap-2">
-                  <div className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
-                    <Skull className="h-4 w-4" /> Down ({downEnemies.length})
-                  </div>
-                  {downEnemies.map((combatant) => (
-                    <TargetRow
-                      key={combatant.id}
-                      down
-                      combatant={combatant}
-                      selected={selectedID === combatant.id}
-                      onSelect={() => setSelectedID(combatant.id)}
-                      onEdit={() => setEditing(combatant)}
-                      onDeathSave={updateDeathSaveFor}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </SectionPanel>
-          {selected ? (
-            <CombatSheet
-              combatant={selected}
-              runID={run.id}
-              compact
-              onRoll={(message, flash) => {
-                toast.push(message);
-                setRollFlash({ ...flash, id: createId() });
-              }}
-            />
-          ) : (
-            <SectionPanel title="Target Detail" icon={ClipboardList}>
-              {active.currentHitPoints <= 0 || active.defeated ? (
-                <MutedPanel>Entity is dead</MutedPanel>
-              ) : (
-                <Callout>Select a target to enable damage, healing, and action controls.</Callout>
-              )}
-              <div className="mt-4">
-                <MutedPanel>
-                  Click a target to inspect its sheet. Combat controls live beside the active
-                  combatant at the top left.
-                </MutedPanel>
-              </div>
-            </SectionPanel>
-          )}
-          {showMeters && <DamageMeters combatants={combatants} />}
-        </div>
+        <CombatBoard
+          active={active}
+          combatants={combatants}
+          downEnemies={downEnemies}
+          orderedCombatants={orderedCombatants}
+          runID={run.id}
+          selected={selected}
+          selectedID={selectedID}
+          showMeters={showMeters}
+          onAddTarget={() => setAddingTarget(true)}
+          onDeathSave={updateDeathSaveFor}
+          onEdit={setEditing}
+          onRoll={(message, flash) => {
+            toast.push(message);
+            setRollFlash({ ...flash, id: createId() });
+          }}
+          onSelect={setSelectedID}
+        />
       </div>
       <RunCombatantEditSheet
         combatant={editing}
@@ -484,6 +415,66 @@ function RunCombatantEditSheet({
       trigger={<span />}
     >
       <div className="grid gap-4">
+        <div className="grid gap-3">
+          <Field label="Nickname / display name">
+            <Input
+              value={draft.displayName}
+              onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
+            />
+          </Field>
+          <Field label="Avatar URL">
+            <Input
+              value={draft.avatarUrl}
+              onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })}
+            />
+          </Field>
+          <Field label="Frame colour">
+            <div className="flex flex-wrap gap-2">
+              {combatantColors.map((color) => (
+                <button
+                  aria-label={color.label}
+                  className={[
+                    "h-9 rounded-md border-2 px-2 text-xs font-medium transition hover:scale-105",
+                    color.value === defaultCombatantColor
+                      ? "w-auto bg-muted text-muted-foreground"
+                      : "w-9",
+                    draft.colorLabel === color.value
+                      ? "border-foreground ring-2 ring-primary/30"
+                      : "border-border",
+                  ].join(" ")}
+                  key={color.value}
+                  style={
+                    color.value === defaultCombatantColor
+                      ? undefined
+                      : { backgroundColor: color.value }
+                  }
+                  type="button"
+                  onClick={() => setDraft({ ...draft, colorLabel: color.value })}
+                >
+                  {color.value === defaultCombatantColor ? "Default" : ""}
+                </button>
+              ))}
+              <Input
+                className="h-9 w-12 p-1"
+                type="color"
+                value={
+                  draft.colorLabel && /^#[0-9a-fA-F]{6}$/.test(draft.colorLabel)
+                    ? draft.colorLabel
+                    : "#64748b"
+                }
+                onChange={(event) => setDraft({ ...draft, colorLabel: event.target.value })}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={() => setDraft({ ...draft, colorLabel: "" })}
+              >
+                Clear colour
+              </Button>
+            </div>
+          </Field>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Initiative">
             <Input

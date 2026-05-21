@@ -34,20 +34,28 @@ export function SectionPanel({
   icon: Icon,
   action,
   children,
+  className = "",
+  bodyClassName = "",
 }: {
   title: string;
   icon: React.ElementType;
   action?: React.ReactNode;
   children: React.ReactNode;
+  className?: string;
+  bodyClassName?: string;
 }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-5">
-      <div className="mb-4 flex items-center gap-2">
+    <section
+      className={["rounded-lg border border-border bg-card p-3 sm:p-4 xl:p-5", className]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className="mb-3 flex items-center gap-2 xl:mb-4">
         <Icon className="h-5 w-5 text-accent" />
         <h3 className="font-semibold">{title}</h3>
         {action && <div className="ml-auto">{action}</div>}
       </div>
-      {children}
+      <div className={bodyClassName}>{children}</div>
     </section>
   );
 }
@@ -116,7 +124,7 @@ function VitalPill({
   tone,
 }: {
   icon: React.ElementType;
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   tone: "shield" | "heart" | "temp";
 }) {
@@ -264,13 +272,22 @@ export function FormSection({
   title,
   children,
   help,
+  className = "",
 }: {
   title: string;
   children: React.ReactNode;
   help?: string;
+  className?: string;
 }) {
   return (
-    <fieldset className="grid gap-5 rounded-xl border border-border bg-background p-6 shadow-sm">
+    <fieldset
+      className={[
+        "grid min-w-0 gap-5 rounded-xl border border-border bg-background p-4 shadow-sm sm:p-6",
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
       <legend className="px-2 text-sm font-bold uppercase tracking-wide text-accent">
         <span className="inline-flex items-center gap-2">
           {title}
@@ -288,13 +305,15 @@ export function Field({
   className = "",
   help,
 }: {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   className?: string;
   help?: string;
 }) {
   return (
-    <label className={["grid gap-2 text-sm font-medium", className].filter(Boolean).join(" ")}>
+    <label
+      className={["grid min-w-0 gap-2 text-sm font-medium", className].filter(Boolean).join(" ")}
+    >
       <span className="inline-flex items-center gap-2 text-[0.82rem] font-semibold text-muted-foreground">
         {label}
         {help && <HelpTip text={help} />}
@@ -320,7 +339,7 @@ export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
     <input
       {...props}
       className={[
-        "min-h-10 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/30 transition placeholder:italic placeholder:text-muted-foreground/70 focus:ring-2",
+        "min-h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/30 transition placeholder:italic placeholder:text-muted-foreground/70 focus:ring-2",
         props.className,
       ]
         .filter(Boolean)

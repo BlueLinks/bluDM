@@ -35,6 +35,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /api/campaigns/{campaignID}/npcs", s.requireAuth(http.HandlerFunc(s.linkCampaignCreature)))
 	mux.Handle("DELETE /api/campaigns/{campaignID}/npcs/{creatureID}", s.requireAuth(http.HandlerFunc(s.unlinkCampaignCreature)))
 	mux.Handle("GET /api/players", s.requireAuth(http.HandlerFunc(s.listPlayers)))
+	mux.Handle("POST /api/players", s.requireAuth(http.HandlerFunc(s.createPlayer)))
 	mux.Handle("GET /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.getPlayer)))
 	mux.Handle("PUT /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.updatePlayer)))
 	mux.Handle("DELETE /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.deletePlayer)))

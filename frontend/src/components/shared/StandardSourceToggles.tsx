@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
+import { standardSourceDisplayName } from "../../lib/domain/standardSources";
 import type { StandardSource } from "../../types";
 import { Checkbox, MutedPanel } from "../ui";
 
@@ -23,7 +24,7 @@ export function StandardSourceToggles({
       {sources.map((source) => (
         <div key={source.key} className="rounded-full border border-border bg-card text-sm">
           <Checkbox
-            label={source.label}
+            label={standardSourceDisplayName(source)}
             checked={selected.includes(source.key)}
             onChange={(checked) => {
               const next = checked

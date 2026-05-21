@@ -123,7 +123,7 @@ export function PlayerCreatePage() {
         copy="Use the full page form for structured character details and derived modifiers."
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="max-w-5xl">
+      <div className="mx-auto w-full max-w-5xl">
         <SectionPanel title="Create Player Character" icon={UserRound}>
           <PlayerForm campaigns={campaigns} onCreated={() => void navigate("/players")} />
         </SectionPanel>
@@ -183,7 +183,7 @@ export function PlayerEditPage() {
         copy="Update this character sheet and campaign assignment."
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="max-w-5xl">
+      <div className="mx-auto w-full max-w-5xl">
         <SectionPanel title="Edit Player Character" icon={UserRound}>
           <PlayerForm
             campaigns={campaigns}

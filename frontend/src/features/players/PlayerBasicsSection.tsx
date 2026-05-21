@@ -1,16 +1,17 @@
-import { Minus, Pencil, Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { type Dispatch, type SetStateAction, useEffect, useMemo, useState } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
 import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
-import { effectiveCharacterLevel, levelFromExperience } from "../../lib/domain/progression";
 import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../types";
+import { CharacterProgressFields } from "./CharacterProgressFields";
 
 type PlayerFormSetter = Dispatch<SetStateAction<PlayerFormState>>;
 
 const pickerCategories = ["classes", "species", "backgrounds", "feats"];
+const noCampaignValue = "__no_campaign";
 
 export function PlayerBasicsSection({
   campaigns,
@@ -100,7 +101,7 @@ export function PlayerBasicsSection({
           setForm({ ...form, avatarAssetId: avatar.assetId, avatarUrl: avatar.url })
         }
       />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-[minmax(220px,360px)_minmax(180px,280px)]">
         <Field label="Character Name">
           <Input
             value={form.characterName}
@@ -115,54 +116,26 @@ export function PlayerBasicsSection({
           />
         </Field>
       </div>
-      <Field label="Campaign">
-        <Select
-          options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
-          placeholder="Select campaign"
-          value={form.campaignId}
-          onValueChange={(value) => setForm({ ...form, campaignId: value })}
-        />
-      </Field>
-      <section className="grid gap-2 rounded-lg border border-border bg-card p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-sm font-semibold">Browse standard character options</h3>
-            <p className="text-xs text-muted-foreground">
-              Campaign settings choose the default SRD sources, but you can browse another source
-              while creating or editing this character.
-            </p>
-          </div>
-          <InfoHelpButton title="SRD 2014 vs SRD 5.2.1">
-            <p>
-              SRD 2014 reflects the older fifth-edition rules reference. It is well structured in
-              the current API, but has sparse character-origin data: one background and one feat.
-            </p>
-            <p>
-              SRD 5.2.1 reflects the newer 2024 rules reference. bluDM keeps it separate so a
-              campaign can opt into 2014, 2024, or both without mixing rules by accident.
-            </p>
-          </InfoHelpButton>
-        </div>
-        <StandardSourceToggles selected={browseSources} onChange={setBrowseSources} />
-        {hasCampaignSourceMismatch && selectedCampaign && (
-          <Callout>
-            This character can still be saved to {selectedCampaign.name}, but your browse filters
-            include SRD content that campaign does not currently allow. Update the campaign sources
-            if that is intentional.
-          </Callout>
-        )}
-      </section>
+      <CampaignSelect campaigns={campaigns} form={form} setForm={setForm} />
+      <StandardCharacterOptionsBrowser
+        browseSources={browseSources}
+        selectedCampaign={selectedCampaign}
+        hasCampaignSourceMismatch={hasCampaignSourceMismatch}
+        setBrowseSources={setBrowseSources}
+      />
       <div className="grid min-w-0 gap-4">
-        <LibraryTextPicker
-          label="Class"
-          value={form.className}
-          options={optionsByCategory.classes}
-          loading={loadingEntries}
-          onChange={(className) => setForm({ ...form, className })}
-        />
+        <div className="max-w-xl">
+          <LibraryTextPicker
+            label="Class"
+            value={form.className}
+            options={optionsByCategory.classes}
+            loading={loadingEntries}
+            onChange={(className) => setForm({ ...form, className })}
+          />
+        </div>
         <CharacterProgressFields form={form} setForm={setForm} />
       </div>
-      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(220px,360px)_minmax(220px,360px)]">
         <LibraryTextPicker
           label="Species"
           value={form.species}
@@ -178,119 +151,139 @@ export function PlayerBasicsSection({
           onChange={(background) => setForm({ ...form, background })}
         />
       </div>
-      <section className="grid gap-2">
-        <h3 className="text-[0.82rem] font-semibold text-muted-foreground">Feats</h3>
-        <div className="grid gap-2">
-          <div className="flex flex-wrap gap-2">
-            {form.feats.map((feat) => (
-              <button
-                key={feat}
-                type="button"
-                className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
-                onClick={() =>
-                  setForm({ ...form, feats: form.feats.filter((current) => current !== feat) })
-                }
-              >
-                <span className="min-w-0 truncate">{feat}</span>
-                <X className="h-3 w-3 shrink-0" />
-              </button>
-            ))}
-          </div>
-          <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
-            <LibraryTextPicker
-              label="Add feat"
-              value={featInput}
-              options={optionsByCategory.feats}
-              loading={loadingEntries}
-              onChange={setFeatInput}
-            />
-            <Button type="button" icon={Plus} variant="success" onClick={addFeat}>
-              Add
-            </Button>
-          </div>
-        </div>
-      </section>
+      <FeatPicker
+        feats={form.feats}
+        featInput={featInput}
+        options={optionsByCategory.feats}
+        loading={loadingEntries}
+        onFeatInputChange={setFeatInput}
+        onAddFeat={addFeat}
+        onRemoveFeat={(feat) =>
+          setForm({ ...form, feats: form.feats.filter((current) => current !== feat) })
+        }
+      />
     </FormSection>
   );
 }
 
-function CharacterProgressFields({
+function CampaignSelect({
+  campaigns,
   form,
   setForm,
 }: {
+  campaigns: Campaign[];
   form: PlayerFormState;
   setForm: PlayerFormSetter;
 }) {
-  const xpLevel = levelFromExperience(Number(form.experiencePoints) || 0);
-  const effectiveLevel = effectiveCharacterLevel(form.level, form.experiencePoints);
-  const overrideActive = form.level.trim() !== "";
-  const setLevel = (level: number) =>
-    setForm({ ...form, level: String(Math.min(20, Math.max(1, level))) });
-
   return (
-    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,220px)_minmax(150px,190px)_minmax(210px,1fr)]">
-      <Field className="min-w-0" label="XP">
-        <Input
-          type="number"
-          min={0}
-          disabled={overrideActive}
-          value={form.experiencePoints}
-          onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
-        />
-      </Field>
-      <div className="self-end rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-        XP level <span className="font-semibold text-foreground">{xpLevel}</span>
-      </div>
-      <div className="grid min-w-0 gap-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-[0.82rem] font-semibold text-muted-foreground">Level override</span>
-          <span className="text-xs text-muted-foreground">Using level {effectiveLevel}</span>
+    <Field className="max-w-md" label="Campaign">
+      <Select
+        options={[
+          { label: "No campaign", value: noCampaignValue },
+          ...campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id })),
+        ]}
+        placeholder="Select campaign"
+        value={form.campaignId || noCampaignValue}
+        onValueChange={(value) =>
+          setForm({ ...form, campaignId: value === noCampaignValue ? "" : value })
+        }
+      />
+    </Field>
+  );
+}
+
+function StandardCharacterOptionsBrowser({
+  browseSources,
+  selectedCampaign,
+  hasCampaignSourceMismatch,
+  setBrowseSources,
+}: {
+  browseSources: string[];
+  selectedCampaign?: Campaign;
+  hasCampaignSourceMismatch: boolean;
+  setBrowseSources: (sources: string[]) => void;
+}) {
+  return (
+    <section className="grid gap-2 rounded-lg border border-border bg-card p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Browse standard character options</h3>
+          <p className="text-xs text-muted-foreground">
+            Campaign settings choose the default SRD sources, but you can browse another source
+            while creating or editing this character.
+          </p>
         </div>
-        <div className="grid max-w-[172px] grid-cols-[2.25rem_4rem_2.25rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
-          <button
-            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-r border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
-            type="button"
-            onClick={() => setLevel(effectiveLevel - 1)}
-            aria-label="Decrease level override"
-          >
-            <Minus className="h-4 w-4" />
-          </button>
-          <Input
-            className="h-10 min-h-0 w-16 rounded-none border-0 text-center font-semibold focus:ring-0"
-            type="number"
-            min={1}
-            max={20}
-            value={form.level}
-            placeholder="Auto"
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === "") {
-                setForm({ ...form, level: "" });
-                return;
-              }
-              setLevel(Number(value) || 1);
-            }}
+        <InfoHelpButton title="5e SRD vs 2024 SRD">
+          <p>
+            5e SRD (2014) is the original fifth-edition open rules reference. It is well structured
+            in the current API, but has sparse character-origin data: one background and one feat.
+          </p>
+          <p>
+            5.5e / 2024 SRD uses Wizards' document version number, 5.2.1. bluDM shows both names so
+            the edition is clear while still matching the official source.
+          </p>
+        </InfoHelpButton>
+      </div>
+      <StandardSourceToggles selected={browseSources} onChange={setBrowseSources} />
+      {hasCampaignSourceMismatch && selectedCampaign && (
+        <Callout>
+          This character can still be saved to {selectedCampaign.name}, but your browse filters
+          include SRD content that campaign does not currently allow. Update the campaign sources if
+          that is intentional.
+        </Callout>
+      )}
+    </section>
+  );
+}
+
+function FeatPicker({
+  feats,
+  featInput,
+  options,
+  loading,
+  onFeatInputChange,
+  onAddFeat,
+  onRemoveFeat,
+}: {
+  feats: string[];
+  featInput: string;
+  options: string[];
+  loading: boolean;
+  onFeatInputChange: (value: string) => void;
+  onAddFeat: () => void;
+  onRemoveFeat: (feat: string) => void;
+}) {
+  return (
+    <section className="grid gap-2">
+      <h3 className="text-[0.82rem] font-semibold text-muted-foreground">Feats</h3>
+      <div className="grid gap-2">
+        <div className="flex flex-wrap gap-2">
+          {feats.map((feat) => (
+            <button
+              key={feat}
+              type="button"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+              onClick={() => onRemoveFeat(feat)}
+            >
+              <span className="min-w-0 truncate">{feat}</span>
+              <X className="h-3 w-3 shrink-0" />
+            </button>
+          ))}
+        </div>
+        <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+          <LibraryTextPicker
+            label="Add feat"
+            value={featInput}
+            options={options}
+            loading={loading}
+            onChange={onFeatInputChange}
           />
-          <button
-            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
-            type="button"
-            onClick={() => setLevel(effectiveLevel + 1)}
-            aria-label="Increase level override"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-          <button
-            className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-40"
-            type="button"
-            disabled={!overrideActive}
-            onClick={() => setForm({ ...form, level: "" })}
-            aria-label="Clear level override"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <Button type="button" icon={Plus} variant="success" onClick={onAddFeat}>
+            Add
+          </Button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

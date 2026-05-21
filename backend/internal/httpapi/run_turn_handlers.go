@@ -371,7 +371,8 @@ func (s *Server) resolveActionDamageCommand(w http.ResponseWriter, r *http.Reque
 
 func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Request) {
 	combatantID := strings.TrimSpace(r.PathValue("combatantID"))
-	if _, err := s.runCombatantOwnedByID(r.Context(), combatantID); err != nil {
+	combatant, err := s.runCombatantOwnedByID(r.Context(), combatantID)
+	if err != nil {
 		writeError(w, http.StatusNotFound, "combatant not found")
 		return
 	}
@@ -384,15 +385,21 @@ func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusBadRequest, "conditions must be an array")
 		return
 	}
+	displayName := strings.TrimSpace(req.DisplayName)
+	if displayName == "" {
+		displayName = combatant.DisplayName
+	}
 	row := s.db.QueryRow(r.Context(), `
 		update encounter_run_combatants
-		set initiative = $2, initiative_set = $3, armor_class_bonus = $4, temporary_hit_points = $5,
-			max_hit_points_modifier = $6, armor_class_override = $7, max_hit_points_override = $8,
-			current_hit_points_override = $9, current_hit_points = case when $10 > 0 then $10 else current_hit_points end,
-			conditions = $11, defeated = $12
+		set display_name = $2, color_label = $3, avatar_url = $4,
+			initiative = $5, initiative_set = $6, armor_class_bonus = $7, temporary_hit_points = $8,
+			max_hit_points_modifier = $9, armor_class_override = $10, max_hit_points_override = $11,
+			current_hit_points_override = $12, current_hit_points = $13,
+			conditions = $14, defeated = $15
 		where id = $1
 		returning encounter_run_id
-	`, combatantID, req.Initiative, req.InitiativeSet, req.ArmorClassBonus, req.TemporaryHitPoints,
+	`, combatantID, displayName, strings.TrimSpace(req.ColorLabel), strings.TrimSpace(req.AvatarURL),
+		req.Initiative, req.InitiativeSet, req.ArmorClassBonus, req.TemporaryHitPoints,
 		req.MaxHitPointsModifier, req.ArmorClassOverride, req.MaxHitPointsOverride, req.CurrentHitPointsOverride,
 		req.CurrentHitPoints, conditions, req.Defeated)
 	var runID string
@@ -400,7 +407,12 @@ func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusNotFound, "combatant not found")
 		return
 	}
-	_ = s.appendCombatLogEvent(r.Context(), runID, "combatant_edited", "", combatantID, map[string]any{"conditions": req.Conditions})
+	_ = s.appendCombatLogEvent(r.Context(), runID, "combatant_edited", "", combatantID, map[string]any{
+		"displayName": displayName,
+		"colorLabel":  strings.TrimSpace(req.ColorLabel),
+		"avatarUrl":   strings.TrimSpace(req.AvatarURL),
+		"conditions":  req.Conditions,
+	})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
 }
