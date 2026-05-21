@@ -17,22 +17,38 @@ export function ActionRollEditor({
   return (
     <div className="grid gap-2">
       {rolls.map((roll) => (
-        <div
-          className="grid items-start gap-3 rounded-md border border-border bg-card p-3 lg:grid-cols-[minmax(150px,1fr)_minmax(280px,1.4fr)_6rem_2.75rem]"
-          key={roll.id}
-        >
-          <Field label="Damage type">
-            <Select
-              options={damageTypes.map((type) => ({ value: type.id, label: type.label }))}
-              placeholder="Damage"
-              value={roll.damageType}
-              onValueChange={(damageType) =>
-                onChange(
-                  rolls.map((item) => (item.id === roll.id ? { ...item, damageType } : item)),
-                )
-              }
+        <div className="grid gap-3 rounded-md border border-border bg-card p-3" key={roll.id}>
+          <div className="grid items-end gap-3 sm:grid-cols-[minmax(150px,1fr)_6rem_2.75rem]">
+            <Field label="Damage type">
+              <Select
+                options={damageTypes.map((type) => ({ value: type.id, label: type.label }))}
+                placeholder="Damage"
+                value={roll.damageType}
+                onValueChange={(damageType) =>
+                  onChange(
+                    rolls.map((item) => (item.id === roll.id ? { ...item, damageType } : item)),
+                  )
+                }
+              />
+            </Field>
+            <div className="[&>label]:h-10 [&>label]:justify-center [&>label]:px-2">
+              <Checkbox
+                label="Magical"
+                checked={roll.magical}
+                onChange={(magical) =>
+                  onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
+                }
+              />
+            </div>
+            <Button
+              type="button"
+              icon={Trash2}
+              variant="danger"
+              size="sm"
+              className="h-10 w-11 px-0"
+              onClick={() => onChange(rolls.filter((item) => item.id !== roll.id))}
             />
-          </Field>
+          </div>
           <Field label="Roll">
             <DiceFormulaInput
               value={roll}
@@ -52,23 +68,6 @@ export function ActionRollEditor({
               }
             />
           </Field>
-          <div className="[&>label]:h-10 [&>label]:justify-center [&>label]:px-2">
-            <Checkbox
-              label="Magical"
-              checked={roll.magical}
-              onChange={(magical) =>
-                onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
-              }
-            />
-          </div>
-          <Button
-            type="button"
-            icon={Trash2}
-            variant="danger"
-            size="sm"
-            className="h-10 w-11 px-0"
-            onClick={() => onChange(rolls.filter((item) => item.id !== roll.id))}
-          />
         </div>
       ))}
       {!compact && (

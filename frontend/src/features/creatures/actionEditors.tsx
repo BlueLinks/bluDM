@@ -70,38 +70,33 @@ export function ActionMiniFields({
         </Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <FloatingInput
+        <ActionNumberInput
           icon={Swords}
           label="Attack mod"
-          type="number"
           value={value.attackModifier}
           onChange={(attackModifier) => onChange({ ...value, attackModifier })}
         />
-        <FloatingInput
+        <ActionNumberInput
           icon={Zap}
           label="Reach"
-          type="number"
           value={value.reach}
           onChange={(reach) => onChange({ ...value, reach })}
         />
-        <FloatingInput
+        <ActionNumberInput
           icon={Zap}
           label="Range"
-          type="number"
           value={value.range}
           onChange={(range) => onChange({ ...value, range })}
         />
-        <FloatingInput
+        <ActionNumberInput
           icon={Zap}
           label="AOE size"
-          type="number"
           value={value.aoeSize}
           onChange={(aoeSize) => onChange({ ...value, aoeSize })}
         />
-        <FloatingInput
+        <ActionNumberInput
           icon={Archive}
           label="Uses"
-          type="number"
           value={value.limitedUses}
           onChange={(limitedUses) => onChange({ ...value, limitedUses })}
         />
