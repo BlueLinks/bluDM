@@ -532,7 +532,7 @@ function CreatureSpellcastingSection({
           onChange={(value) => setForm({ ...form, spellAttackBonus: value })}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-9">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(5.75rem,6.75rem))] gap-3">
         {([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((level) => {
           const key = `spellSlots${level}` as const;
           return (
