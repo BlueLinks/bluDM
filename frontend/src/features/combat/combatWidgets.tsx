@@ -33,7 +33,7 @@ export function CombatStatusBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center md:p-3">
+    <div className="grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center xl:p-3">
       <div />
       <div className="flex items-stretch justify-center gap-1 sm:gap-2">
         <Button
@@ -96,8 +96,8 @@ export function ActiveTurnHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-2 md:grid-cols-[auto_minmax(280px,auto)_minmax(220px,1fr)] md:items-center">
-      <div className="flex items-center gap-3">
+    <div className="grid min-w-0 gap-2 md:grid-cols-[auto_minmax(13rem,auto)_minmax(0,1fr)] md:items-center xl:grid-cols-[auto_minmax(280px,auto)_minmax(220px,1fr)]">
+      <div className="flex min-w-0 items-center gap-2 xl:gap-3">
         <Avatar combatant={combatant} />
         <div>
           <div className="text-xs font-bold uppercase text-muted-foreground">Current Turn</div>
@@ -116,14 +116,14 @@ export function ActiveTurnHeader({
 function TargetSummary({ combatant }: { combatant: EncounterRunCombatant | null }) {
   if (!combatant) {
     return (
-      <div className="rounded-lg border border-dashed border-border bg-background px-4 py-3 text-sm font-semibold text-muted-foreground">
+      <div className="rounded-lg border border-dashed border-border bg-background px-3 py-2 text-sm font-semibold text-muted-foreground xl:px-4 xl:py-3">
         No target selected
       </div>
     );
   }
   return (
     <div
-      className="flex min-w-0 items-center gap-3 justify-self-stretch rounded-lg border border-border bg-background px-3 py-2 md:justify-self-end"
+      className="flex min-w-0 items-center gap-2 justify-self-stretch rounded-lg border border-border bg-background px-2 py-2 md:justify-self-end xl:gap-3 xl:px-3"
       title={`Targeted: ${combatant.displayName}`}
     >
       <Avatar combatant={combatant} />
@@ -164,8 +164,8 @@ export function CombatControls({
   onManual: (mode: "damage" | "healing") => void;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-background p-2">
-      <div className="grid gap-2 sm:grid-cols-[6.25rem_auto_auto] sm:items-stretch">
+    <div className="min-w-0 rounded-lg border border-border bg-background p-2">
+      <div className="grid min-w-0 gap-2 sm:grid-cols-[5.25rem_auto_minmax(8rem,1fr)] sm:items-stretch xl:grid-cols-[6.25rem_auto_auto]">
         <div className="flex-none">
           <Input
             className="h-full min-h-20 text-center text-2xl font-black tabular-nums"
@@ -273,7 +273,7 @@ function DamageTypeControl({
   disabled?: boolean;
 }) {
   return (
-    <div className="min-w-36" title={disabled ? "Select a target first" : "Damage type"}>
+    <div className="min-w-0" title={disabled ? "Select a target first" : "Damage type"}>
       <Select
         value={value}
         placeholder="Damage type"
@@ -326,10 +326,10 @@ export function TargetRow({
                 ? "border-emerald-500/25 bg-emerald-500/5"
                 : "border-border bg-background";
   return (
-    <div className="combatant-row grid grid-cols-[2.25rem_1fr] items-start gap-1">
+    <div className="combatant-row grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-start gap-1 xl:grid-cols-[2.25rem_minmax(0,1fr)]">
       <div
         className={[
-          "mt-4 grid h-8 w-8 place-items-center rounded-full border text-sm font-black",
+          "mt-4 grid h-7 w-7 place-items-center rounded-full border text-xs font-black xl:h-8 xl:w-8 xl:text-sm",
           active
             ? "border-primary bg-primary text-primary-foreground"
             : "border-border bg-background text-foreground",
@@ -338,26 +338,28 @@ export function TargetRow({
         {combatant.initiativeSet ? combatant.initiative : "-"}
       </div>
       <div
-        className={["target-row-card rounded-lg border p-2", sideTone].join(" ")}
+        className={["target-row-card min-w-0 rounded-lg border p-1.5 xl:p-2", sideTone].join(" ")}
         style={colorStyle}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-1.5 xl:gap-3">
           <button
             type="button"
-            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+            className="flex min-w-0 flex-1 items-center gap-1.5 text-left xl:gap-3"
             onClick={onSelect}
           >
             <Avatar combatant={combatant} />
             <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-1.5 xl:gap-2">
                 <div
-                  className="relative grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200"
+                  className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200 xl:h-10 xl:w-10"
                   title="Armor Class"
                 >
-                  <Shield className="absolute h-8 w-8 opacity-20" />
-                  <span className="relative text-lg font-black">{effectiveAC(combatant)}</span>
+                  <Shield className="absolute h-7 w-7 opacity-20 xl:h-8 xl:w-8" />
+                  <span className="relative text-base font-black xl:text-lg">
+                    {effectiveAC(combatant)}
+                  </span>
                 </div>
-                <div className="flex min-w-0 flex-1 items-center gap-2">
+                <div className="grid min-w-0 flex-1 gap-1">
                   <div
                     className={[
                       "min-w-0 flex-1 truncate font-semibold",
@@ -370,7 +372,7 @@ export function TargetRow({
                   >
                     {combatant.displayName}
                   </div>
-                  <div className="ml-auto flex shrink-0 items-center gap-1">
+                  <div className="flex min-w-0 justify-end gap-1">
                     {active && <StateBadge tone="acting">Acting</StateBadge>}
                     {selected && <StateBadge tone="target">Target</StateBadge>}
                   </div>
@@ -385,7 +387,7 @@ export function TargetRow({
               </div>
             </div>
           </button>
-          <Button type="button" size="sm" variant="ghost" onClick={onEdit}>
+          <Button className="px-1.5" type="button" size="sm" variant="ghost" onClick={onEdit}>
             ...
           </Button>
         </div>
@@ -412,7 +414,7 @@ export function TargetRow({
             />
           </div>
         )}
-        <div className="mt-1 flex flex-wrap gap-1 text-xs text-muted-foreground">
+        <div className="mt-1 flex min-w-0 flex-wrap gap-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <HeartPulse className="h-3.5 w-3.5" /> {combatant.currentHitPoints}/
             {effectiveMaxHP(combatant)} HP

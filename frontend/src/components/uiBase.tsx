@@ -46,11 +46,11 @@ export function SectionPanel({
 }) {
   return (
     <section
-      className={["rounded-lg border border-border bg-card p-5", className]
+      className={["rounded-lg border border-border bg-card p-3 sm:p-4 xl:p-5", className]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-3 flex items-center gap-2 xl:mb-4">
         <Icon className="h-5 w-5 text-accent" />
         <h3 className="font-semibold">{title}</h3>
         {action && <div className="ml-auto">{action}</div>}

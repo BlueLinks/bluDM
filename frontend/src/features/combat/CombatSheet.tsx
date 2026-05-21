@@ -87,17 +87,17 @@ export function CombatSheet({
     <SectionPanel
       title={compact ? "Target Sheet" : "Active Sheet"}
       icon={ScrollText}
-      className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
-      bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto px-1 pb-1"
+      className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+      bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto px-0.5 pb-1 xl:px-1"
     >
-      <div className="grid gap-3">
-        <div className="rounded-md border border-border bg-background px-3 py-2">
+      <div className="grid gap-2 xl:gap-3">
+        <div className="rounded-md border border-border bg-background px-2 py-1.5 xl:px-3 xl:py-2">
           <div className="truncate text-sm font-black">{combatant.displayName}</div>
           {descriptor && (
             <div className="mt-0.5 text-xs italic text-muted-foreground">{descriptor}</div>
           )}
         </div>
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-3 gap-1">
           <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
           <IconStat
             icon={HeartPulse}
@@ -107,7 +107,7 @@ export function CombatSheet({
           />
           <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
         </div>
-        <div className="grid grid-cols-2 gap-2 overflow-hidden">
+        <div className="grid grid-cols-2 gap-1.5 overflow-hidden xl:gap-2">
           {[leftAbilities, rightAbilities].map((group) => (
             <AbilityTable
               key={group.map((ability) => ability.key).join("-")}
@@ -164,8 +164,8 @@ function AbilityTable({
   ) => Promise<void>;
 }) {
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-background text-xs">
-      <div className="grid grid-cols-4 border-b border-border bg-muted/60 px-0.5 py-1 text-center font-black uppercase text-muted-foreground">
+    <div className="min-w-0 overflow-hidden rounded-md border border-border bg-background text-xs">
+      <div className="grid grid-cols-[1.35rem_1.35rem_minmax(1.75rem,1fr)_minmax(1.9rem,1fr)] border-b border-border bg-muted/60 py-1 text-center text-[0.58rem] font-black uppercase leading-none text-muted-foreground sm:grid-cols-[1.5rem_1.5rem_minmax(1.9rem,1fr)_minmax(2rem,1fr)]">
         <span />
         <span />
         <span>Mod</span>
@@ -178,10 +178,10 @@ function AbilityTable({
         return (
           <div
             key={ability.key}
-            className="grid grid-cols-4 items-center border-b border-border px-0.5 py-1 last:border-b-0"
+            className="grid grid-cols-[1.35rem_1.35rem_minmax(1.75rem,1fr)_minmax(1.9rem,1fr)] items-center border-b border-border py-1 last:border-b-0 sm:grid-cols-[1.5rem_1.5rem_minmax(1.9rem,1fr)_minmax(2rem,1fr)]"
           >
             <span className="font-black uppercase text-muted-foreground">{ability.key}</span>
-            <span className="text-center font-semibold">{score}</span>
+            <span className="text-center font-semibold tabular-nums">{score}</span>
             <AbilityRollButton
               label={`${ability.label} check`}
               value={bonus}
@@ -220,17 +220,17 @@ function IconStat({
   return (
     <div
       className={[
-        "grid justify-items-center gap-0.5 rounded-md border px-1.5 py-1.5 text-center",
+        "grid justify-items-center gap-0.5 rounded-md border px-1 py-1 text-center xl:px-1.5 xl:py-1.5",
         tones[tone],
       ].join(" ")}
     >
-      <div className="relative grid h-8 min-w-12 place-items-center px-0.5">
-        <Icon className="absolute h-8 w-8 opacity-20" />
+      <div className="relative grid h-7 min-w-10 place-items-center px-0.5 xl:h-8 xl:min-w-12">
+        <Icon className="absolute h-7 w-7 opacity-20 xl:h-8 xl:w-8" />
         <div className="min-w-0 text-center text-xs font-black leading-none tabular-nums sm:text-sm">
           {value}
         </div>
       </div>
-      <div className="text-[0.6rem] font-bold uppercase">{label}</div>
+      <div className="text-[0.56rem] font-bold uppercase xl:text-[0.6rem]">{label}</div>
     </div>
   );
 }
@@ -248,7 +248,7 @@ function AbilityRollButton({
     <button
       type="button"
       className={[
-        "rounded px-1 py-0.5 text-center font-black hover:bg-primary hover:text-primary-foreground",
+        "rounded px-0.5 py-0.5 text-center font-black tabular-nums hover:bg-primary hover:text-primary-foreground",
         modifierTone(value),
       ].join(" ")}
       title={`${label}. Shift-click for advantage, Control-click for disadvantage.`}

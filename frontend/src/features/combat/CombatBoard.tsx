@@ -44,20 +44,20 @@ export function CombatBoard({
   onSelect: (id: string) => void;
 }) {
   return (
-    <div className="min-h-0 overflow-x-auto pb-2">
+    <div className="min-h-0 min-w-0 overflow-hidden pb-2">
       <div
         className={
           showMeters
-            ? "grid min-h-0 min-w-[760px] gap-2 md:min-w-0 md:grid-cols-[minmax(220px,0.8fr)_minmax(280px,1fr)_minmax(220px,0.8fr)_minmax(220px,0.7fr)] xl:grid-cols-[minmax(260px,0.8fr)_minmax(340px,1fr)_minmax(300px,0.9fr)_minmax(240px,0.7fr)]"
-            : "grid min-h-0 min-w-[620px] gap-2 md:min-w-0 md:grid-cols-[minmax(210px,0.85fr)_minmax(260px,1fr)_minmax(210px,0.85fr)] xl:grid-cols-[minmax(260px,0.85fr)_minmax(360px,1fr)_minmax(300px,0.9fr)]"
+            ? "grid min-h-0 min-w-0 gap-2 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_minmax(0,0.8fr)_minmax(0,0.7fr)] xl:grid-cols-[minmax(260px,0.8fr)_minmax(340px,1fr)_minmax(300px,0.9fr)_minmax(240px,0.7fr)]"
+            : "grid min-h-0 min-w-0 gap-2 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.85fr)] xl:grid-cols-[minmax(260px,0.85fr)_minmax(360px,1fr)_minmax(300px,0.9fr)]"
         }
       >
         <CombatSheet combatant={active} runID={runID} onRoll={onRoll} />
         <SectionPanel
           title="Initiative & Targets"
           icon={Swords}
-          className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
-          bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
+          className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+          bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto"
           action={
             <Button size="sm" icon={Plus} onClick={onAddTarget}>
               Add target
@@ -104,8 +104,8 @@ export function CombatBoard({
           <SectionPanel
             title="Target Detail"
             icon={ClipboardList}
-            className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
-            bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
+            className="max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+            bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto"
           >
             {active.currentHitPoints <= 0 || active.defeated ? (
               <MutedPanel>Entity is dead</MutedPanel>
