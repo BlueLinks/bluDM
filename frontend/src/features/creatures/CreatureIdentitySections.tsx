@@ -6,6 +6,7 @@ import {
   formatDiceFormula,
   parseDiceFormula,
 } from "../../components/shared/CharacterFormControls";
+import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import {
   Button,
   Checkbox,
@@ -283,8 +284,15 @@ function CreatureChallenge({
           </span>
         </div>
         <div className="grid gap-1 self-end rounded-md border border-border bg-muted px-3 py-2 text-center">
-          <span className="text-[0.68rem] font-bold uppercase tracking-wide text-muted-foreground">
+          <span className="inline-flex items-center justify-center gap-1 text-[0.68rem] font-bold uppercase tracking-wide text-muted-foreground">
             PB
+            <InfoHelpButton title="Proficiency bonus">
+              <p>
+                PB means proficiency bonus. It is derived from the creature&apos;s challenge rating
+                and is used when calculating proficient saves, skills, spell attacks, and some
+                action modifiers.
+              </p>
+            </InfoHelpButton>
           </span>
           <span className="text-sm font-black">+{creatureProficiency(form)}</span>
         </div>
