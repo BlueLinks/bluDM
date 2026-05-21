@@ -100,7 +100,7 @@ export function PlayerBasicsSection({
           setForm({ ...form, avatarAssetId: avatar.assetId, avatarUrl: avatar.url })
         }
       />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-[minmax(220px,360px)_minmax(180px,280px)]">
         <Field label="Character Name">
           <Input
             value={form.characterName}
@@ -115,7 +115,7 @@ export function PlayerBasicsSection({
           />
         </Field>
       </div>
-      <Field label="Campaign">
+      <Field className="max-w-md" label="Campaign">
         <Select
           options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
           placeholder="Select campaign"
@@ -153,16 +153,18 @@ export function PlayerBasicsSection({
         )}
       </section>
       <div className="grid min-w-0 gap-4">
-        <LibraryTextPicker
-          label="Class"
-          value={form.className}
-          options={optionsByCategory.classes}
-          loading={loadingEntries}
-          onChange={(className) => setForm({ ...form, className })}
-        />
+        <div className="max-w-xl">
+          <LibraryTextPicker
+            label="Class"
+            value={form.className}
+            options={optionsByCategory.classes}
+            loading={loadingEntries}
+            onChange={(className) => setForm({ ...form, className })}
+          />
+        </div>
         <CharacterProgressFields form={form} setForm={setForm} />
       </div>
-      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(220px,360px)_minmax(220px,360px)]">
         <LibraryTextPicker
           label="Species"
           value={form.species}

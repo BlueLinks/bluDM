@@ -195,6 +195,78 @@ export function AbilityInput({
   );
 }
 
+export function CompactAbilityTable({
+  abilityScores,
+  savingThrowProficiencies,
+  onScoreChange,
+  onSaveProficiencyChange,
+}: {
+  abilityScores: Record<AbilityKey, string>;
+  savingThrowProficiencies: string[];
+  onScoreChange: (ability: AbilityKey, value: string) => void;
+  onSaveProficiencyChange: (ability: AbilityKey, checked: boolean) => void;
+}) {
+  const groups = [abilities.slice(0, 3), abilities.slice(3, 6)];
+  return (
+    <div className="grid gap-3 xl:grid-cols-2 max-[1133px]:grid-cols-1">
+      {groups.map((group) => (
+        <div
+          className="min-w-0 overflow-hidden rounded-lg border border-border bg-background text-sm"
+          key={group.map((ability) => ability.key).join("-")}
+        >
+          <div className="grid grid-cols-[4.25rem_4rem_3.5rem_5.25rem] border-b border-border bg-muted/60 text-center text-[0.62rem] font-black uppercase leading-none text-muted-foreground">
+            <span className="border-r border-border px-2 py-2 text-left">Ability</span>
+            <span className="border-r border-border bg-primary/10 px-2 py-2 text-primary">
+              Score
+            </span>
+            <span className="border-r border-border px-2 py-2">Mod</span>
+            <span className="px-2 py-2">Save Prof</span>
+          </div>
+          {group.map((ability) => {
+            const score = Number(abilityScores[ability.key]) || 10;
+            const modifier = abilityModifier(score);
+            return (
+              <div
+                className="grid grid-cols-[4.25rem_4rem_3.5rem_5.25rem] items-stretch border-b border-border last:border-b-0"
+                key={ability.key}
+              >
+                <span className="grid items-center border-r border-border bg-muted/30 px-2 font-black uppercase text-muted-foreground">
+                  {ability.label}
+                </span>
+                <span className="grid place-items-center border-r border-border bg-primary/5 px-1">
+                  <Input
+                    className="h-9 w-14 rounded-md text-center font-semibold"
+                    type="number"
+                    value={abilityScores[ability.key]}
+                    onChange={(event) => onScoreChange(ability.key, event.target.value)}
+                  />
+                </span>
+                <span
+                  className={[
+                    "grid place-items-center border-r border-border px-2 font-black tabular-nums",
+                    modifierTone(modifier),
+                  ].join(" ")}
+                >
+                  {modifier >= 0 ? `+${modifier}` : modifier}
+                </span>
+                <label className="grid place-items-center px-2">
+                  <span className="sr-only">{ability.label} saving throw proficiency</span>
+                  <input
+                    className="h-4 w-4 accent-primary"
+                    checked={savingThrowProficiencies.includes(ability.key)}
+                    type="checkbox"
+                    onChange={(event) => onSaveProficiencyChange(ability.key, event.target.checked)}
+                  />
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SkillsTable({
   abilityScores,
   proficiencies,
@@ -212,7 +284,7 @@ export function SkillsTable({
 }) {
   const bonus = proficiencyBonus;
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
+    <div className="grid gap-2 xl:grid-cols-2 max-[1133px]:grid-cols-1">
       {skillDefinitions.map((skill) => {
         const score = Number(abilityScores[skill.ability]) || 10;
         const base = abilityModifier(score);
@@ -221,39 +293,35 @@ export function SkillsTable({
         const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
         return (
           <div
-            className="grid min-w-0 gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="grid min-w-0 grid-cols-[1.8rem_2.1rem_minmax(4.5rem,1fr)_2.3rem_2.7rem_3rem] items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1.5 text-sm"
             key={skill.name}
           >
-            <div className="grid min-w-0 grid-cols-[2rem_2.4rem_minmax(0,1fr)_3rem] items-center gap-2">
-              <span className="text-xs font-semibold text-muted-foreground">+{bonus}</span>
-              <span className="rounded bg-muted px-2 py-1 text-center text-xs font-semibold uppercase">
-                {skill.ability}
-              </span>
-              <span className="min-w-0 truncate font-medium">{skill.name}</span>
-              <span className={["text-right font-bold", modifierTone(total)].join(" ")}>
-                {total >= 0 ? `+${total}` : total}
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <label className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/60 px-2 py-1.5 text-[0.68rem] font-semibold uppercase text-muted-foreground">
-                Prof
-                <input
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={isProficient}
-                  type="checkbox"
-                  onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
-                />
-              </label>
-              <label className="flex min-w-0 items-center justify-between gap-2 rounded-md bg-muted/60 px-2 py-1.5 text-[0.68rem] font-semibold uppercase text-muted-foreground">
-                Expert
-                <input
-                  className="h-4 w-4 shrink-0 accent-primary"
-                  checked={isExpert}
-                  type="checkbox"
-                  onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}
-                />
-              </label>
-            </div>
+            <span className="text-xs font-semibold text-muted-foreground">+{bonus}</span>
+            <span className="rounded bg-muted px-1.5 py-1 text-center text-xs font-semibold uppercase">
+              {skill.ability}
+            </span>
+            <span className="min-w-0 truncate font-medium">{skill.name}</span>
+            <span className={["text-right font-bold", modifierTone(total)].join(" ")}>
+              {total >= 0 ? `+${total}` : total}
+            </span>
+            <label className="flex min-w-0 items-center justify-between gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground">
+              Prof
+              <input
+                className="h-4 w-4 shrink-0 accent-primary"
+                checked={isProficient}
+                type="checkbox"
+                onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
+              />
+            </label>
+            <label className="flex min-w-0 items-center justify-between gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground">
+              Expert
+              <input
+                className="h-4 w-4 shrink-0 accent-primary"
+                checked={isExpert}
+                type="checkbox"
+                onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}
+              />
+            </label>
           </div>
         );
       })}

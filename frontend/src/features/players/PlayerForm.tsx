@@ -1,9 +1,9 @@
 import { BookOpen, HeartPulse, Shield, Sparkles, Zap } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import {
-  AbilityInput,
   AbilitySelect,
   ConditionImmunityChecklist,
+  CompactAbilityTable,
   DamageDefenseGroup,
   SenseControl,
   SkillsTable,
@@ -224,48 +224,56 @@ function PlayerVitals({ form, setForm }: { form: PlayerFormState; setForm: Playe
     <FormSection title="Health and AC">
       <div className="flex flex-wrap gap-3">
         <IconNumberField
+          className="w-24"
           icon={Shield}
           label="AC"
           value={form.armorClass}
           onChange={(value) => setForm({ ...form, armorClass: value })}
         />
         <IconNumberField
+          className="w-28"
           icon={HeartPulse}
           label="Max HP"
           value={form.maxHitPoints}
           onChange={(value) => setForm({ ...form, maxHitPoints: value })}
         />
         <IconNumberField
+          className="w-28"
           icon={HeartPulse}
           label="Temp HP"
           value={form.temporaryHitPoints}
           onChange={(value) => setForm({ ...form, temporaryHitPoints: value })}
         />
         <IconNumberField
+          className="w-32"
           icon={HeartPulse}
           label="Temp Max HP"
           value={form.temporaryMaxHitPoints}
           onChange={(value) => setForm({ ...form, temporaryMaxHitPoints: value })}
         />
         <IconNumberField
+          className="w-24"
           icon={Zap}
           label="Speed"
           value={form.speed}
           onChange={(value) => setForm({ ...form, speed: value })}
         />
         <IconNumberField
+          className="w-36"
           icon={BookOpen}
           label="Passive Perception"
           value={form.passivePerception}
           onChange={(value) => setForm({ ...form, passivePerception: value })}
         />
         <IconNumberField
+          className="w-36"
           icon={BookOpen}
           label="Passive Investigation"
           value={form.passiveInvestigation}
           onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
         />
         <IconNumberField
+          className="w-32"
           icon={BookOpen}
           label="Passive Insight"
           value={form.passiveInsight}
@@ -290,25 +298,19 @@ function PlayerAbilitySections({
   return (
     <>
       <FormSection title="Ability Scores">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {abilities.map((ability) => (
-            <AbilityInput
-              key={ability.key}
-              label={ability.label}
-              value={Number(form.abilityScores[ability.key])}
-              saveProficient={form.savingThrowProficiencies.includes(ability.key)}
-              onSaveProficiencyChange={(checked) =>
-                toggleList("savingThrowProficiencies", ability.key, checked)
-              }
-              onChange={(next) =>
-                setForm((current) => ({
-                  ...current,
-                  abilityScores: { ...current.abilityScores, [ability.key]: String(next) },
-                }))
-              }
-            />
-          ))}
-        </div>
+        <CompactAbilityTable
+          abilityScores={form.abilityScores}
+          savingThrowProficiencies={form.savingThrowProficiencies}
+          onSaveProficiencyChange={(ability, checked) =>
+            toggleList("savingThrowProficiencies", ability, checked)
+          }
+          onScoreChange={(ability, value) =>
+            setForm((current) => ({
+              ...current,
+              abilityScores: { ...current.abilityScores, [ability]: value },
+            }))
+          }
+        />
       </FormSection>
       <FormSection title="Skills">
         <SkillsTable
@@ -391,6 +393,7 @@ function PlayerSpellAndNotes({
             />
           </Field>
           <IconNumberField
+            className="w-28"
             icon={Sparkles}
             label="Spell Save DC"
             value={form.spellSaveDC}
