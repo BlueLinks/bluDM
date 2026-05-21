@@ -161,91 +161,84 @@ export function NpcsPage() {
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="grid gap-4 xl:grid-cols-[1fr_460px]">
-        <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
-          <div className="mb-4">
-            <CreatureSourceFilter
-              showStandard={showStandardCreatures}
-              showUser={showUserCreatures}
-              onShowStandardChange={setShowStandardCreatures}
-              onShowUserChange={setShowUserCreatures}
-            />
-          </div>
-          {showStandardCreatures && (
-            <div className="mb-4">
-              <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
-            </div>
-          )}
-          <div className="mb-4">
-            <FloatingInput
-              icon={Search}
-              label="Search creatures"
-              value={creatureSearch}
-              onChange={setCreatureSearch}
-            />
-          </div>
-          {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
-          <CreatureLibraryList
-            creatures={creatures.filter((creature) =>
-              creatureVisible(creature, {
-                query: creatureSearch,
-                showStandard: showStandardCreatures,
-                showUser: showUserCreatures,
-              }),
-            )}
-            onPreview={setPreviewCreature}
-            onRemove={setDeleteCreature}
+      <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
+        <div className="mb-4">
+          <CreatureSourceFilter
+            showStandard={showStandardCreatures}
+            showUser={showUserCreatures}
+            onShowStandardChange={setShowStandardCreatures}
+            onShowUserChange={setShowUserCreatures}
           />
-        </SectionPanel>
-        <SectionPanel title="Action Bank" icon={Archive}>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Reusable attacks and abilities live here. Adding one to a creature creates an editable
-            copy in that creature's own action list.
-          </p>
-          <Modal
-            open={templateModalOpen}
-            onOpenChange={(open) => {
-              setTemplateModalOpen(open);
-              if (!open) {
-                setEditingTemplate(null);
-                setTemplateForm(blankAction());
-              }
-            }}
-            title={editingTemplate ? "Edit custom action" : "Add custom action"}
-            trigger={
-              <Button
-                type="button"
-                icon={Plus}
-                variant="success"
-                onClick={() => openTemplateModal()}
-              >
-                Add action
-              </Button>
-            }
-          >
-            <form className="grid gap-4" onSubmit={handleCreateTemplate}>
-              <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
-              <Button type="submit" icon={Plus} variant="success">
-                {editingTemplate ? "Update custom action" : "Save custom action"}
-              </Button>
-            </form>
-          </Modal>
-          <div className="grid gap-2">
-            {templates.map((template) => (
-              <ActionSummary
-                key={template.id}
-                action={template}
-                onEdit={() => openTemplateModal(template)}
-                onDuplicate={() => void duplicateTemplate(template)}
-                onDelete={() => void openDeleteTemplate(template)}
-              />
-            ))}
-            {!loading && templates.length === 0 && (
-              <EmptyMini copy="No custom actions yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
-            )}
+        </div>
+        {showStandardCreatures && (
+          <div className="mb-4">
+            <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
           </div>
-        </SectionPanel>
-      </div>
+        )}
+        <div className="mb-4">
+          <FloatingInput
+            icon={Search}
+            label="Search creatures"
+            value={creatureSearch}
+            onChange={setCreatureSearch}
+          />
+        </div>
+        {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
+        <CreatureLibraryList
+          creatures={creatures.filter((creature) =>
+            creatureVisible(creature, {
+              query: creatureSearch,
+              showStandard: showStandardCreatures,
+              showUser: showUserCreatures,
+            }),
+          )}
+          onPreview={setPreviewCreature}
+          onRemove={setDeleteCreature}
+        />
+      </SectionPanel>
+      <SectionPanel title="Action Bank" icon={Archive}>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Reusable attacks and abilities live here. Adding one to a creature creates an editable
+          copy in that creature's own action list.
+        </p>
+        <Modal
+          open={templateModalOpen}
+          onOpenChange={(open) => {
+            setTemplateModalOpen(open);
+            if (!open) {
+              setEditingTemplate(null);
+              setTemplateForm(blankAction());
+            }
+          }}
+          title={editingTemplate ? "Edit custom action" : "Add custom action"}
+          trigger={
+            <Button type="button" icon={Plus} variant="success" onClick={() => openTemplateModal()}>
+              Add action
+            </Button>
+          }
+        >
+          <form className="grid gap-4" onSubmit={handleCreateTemplate}>
+            <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
+            <Button type="submit" icon={Plus} variant="success">
+              {editingTemplate ? "Update custom action" : "Save custom action"}
+            </Button>
+          </form>
+        </Modal>
+        <div className="grid gap-2">
+          {templates.map((template) => (
+            <ActionSummary
+              key={template.id}
+              action={template}
+              onEdit={() => openTemplateModal(template)}
+              onDuplicate={() => void duplicateTemplate(template)}
+              onDelete={() => void openDeleteTemplate(template)}
+            />
+          ))}
+          {!loading && templates.length === 0 && (
+            <EmptyMini copy="No custom actions yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
+          )}
+        </div>
+      </SectionPanel>
       <ConfirmDialog
         open={Boolean(deleteCreature)}
         title="Remove creature?"
