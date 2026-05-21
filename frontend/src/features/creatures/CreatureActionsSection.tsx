@@ -109,7 +109,7 @@ export function CreatureActionsSection({
         ? await api.updateActionTemplate(overwriteTemplateId, action)
         : await api.createActionTemplate(action);
       setTemplates((current) => upsertTemplate(current, payload.actionTemplate));
-      await updateActionSource(saveDraft.action.id, payload.actionTemplate.id);
+      await syncActionWithTemplate(saveDraft.action.id, payload.actionTemplate);
       notify(overwriteTemplateId ? "Banked action overwritten" : "Action saved to bank");
       closeSaveDialog();
     } catch (err) {
@@ -138,8 +138,10 @@ export function CreatureActionsSection({
           : await api.updateActionTemplate(overwriteConfirm.templateId, overwriteConfirm.action);
       setTemplates((current) => upsertTemplate(current, payload.actionTemplate));
       if (overwriteConfirm.mode === "conflict") {
-        await updateActionSource(overwriteConfirm.action.id, payload.actionTemplate.id);
+        await syncActionWithTemplate(overwriteConfirm.action.id, payload.actionTemplate);
         closeSaveDialog();
+      } else {
+        syncLocalActionWithTemplate(overwriteConfirm.action.id, payload.actionTemplate);
       }
       notify("Banked action overwritten");
       setOverwriteConfirm(null);
@@ -150,12 +152,20 @@ export function CreatureActionsSection({
     }
   }
 
-  async function updateActionSource(actionId: string, sourceTemplateId: string) {
-    setActions((current) =>
-      current.map((action) => (action.id === actionId ? { ...action, sourceTemplateId } : action)),
-    );
+  async function syncActionWithTemplate(actionId: string, template: ActionTemplate) {
+    syncLocalActionWithTemplate(actionId, template);
     if (!creature || !persistedActionIds.has(actionId)) return;
-    await api.updateCreatureActionSourceTemplate(creature.id, actionId, sourceTemplateId);
+    await api.updateCreatureActionSourceTemplate(creature.id, actionId, template.id);
+  }
+
+  function syncLocalActionWithTemplate(actionId: string, template: ActionTemplate) {
+    setActions((current) =>
+      current.map((action) =>
+        action.id === actionId
+          ? { ...actionFormFromTemplate(template), id: action.id, sourceTemplateId: template.id }
+          : action,
+      ),
+    );
   }
 
   function closeSaveDialog() {

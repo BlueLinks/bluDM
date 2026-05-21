@@ -247,6 +247,8 @@ export function SortableActionEditor({
             <h4 className="truncate font-semibold">
               {action.name.trim() || `Unnamed action ${index + 1}`}
             </h4>
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {action.sourceTemplateId && (
               <span
                 className={[
@@ -259,11 +261,10 @@ export function SortableActionEditor({
                 {bankModified ? "Banked, edited locally" : "In Action Bank"}
               </span>
             )}
+            <span>{bankStatusCopy(action.sourceTemplateId, bankModified, bankSaveable)}</span>
+            <span aria-hidden="true">·</span>
+            <span>{formatRolls(action.rolls)}</span>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {bankStatusCopy(action.sourceTemplateId, bankModified, bankSaveable)} ·{" "}
-            {formatRolls(action.rolls)}
-          </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           {action.sourceTemplateId && bankModified && onOverwriteSource && (
