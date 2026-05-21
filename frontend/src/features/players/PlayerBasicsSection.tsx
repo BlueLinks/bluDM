@@ -5,7 +5,11 @@ import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { api } from "../../lib/api";
-import { effectiveCharacterLevel, levelFromExperience } from "../../lib/domain/progression";
+import {
+  effectiveCharacterLevel,
+  levelFromExperience,
+  levelXpThresholds,
+} from "../../lib/domain/progression";
 import type { Campaign, PlayerFormState, StandardLibraryEntry } from "../../types";
 
 type PlayerFormSetter = Dispatch<SetStateAction<PlayerFormState>>;
@@ -132,14 +136,15 @@ export function PlayerBasicsSection({
               while creating or editing this character.
             </p>
           </div>
-          <InfoHelpButton title="SRD 2014 vs SRD 5.2.1">
+          <InfoHelpButton title="5e SRD vs 2024 SRD">
             <p>
-              SRD 2014 reflects the older fifth-edition rules reference. It is well structured in
-              the current API, but has sparse character-origin data: one background and one feat.
+              5e SRD (2014) is the original fifth-edition open rules reference. It is well
+              structured in the current API, but has sparse character-origin data: one background
+              and one feat.
             </p>
             <p>
-              SRD 5.2.1 reflects the newer 2024 rules reference. bluDM keeps it separate so a
-              campaign can opt into 2014, 2024, or both without mixing rules by accident.
+              5.5e / 2024 SRD uses Wizards' document version number, 5.2.1. bluDM shows both names
+              so the edition is clear while still matching the official source.
             </p>
           </InfoHelpButton>
         </div>
@@ -228,9 +233,16 @@ function CharacterProgressFields({
   const overrideActive = form.level.trim() !== "";
   const setLevel = (level: number) =>
     setForm({ ...form, level: String(Math.min(20, Math.max(1, level))) });
+  const setLevelMode = (mode: "xp" | "explicit") => {
+    if (mode === "xp") {
+      setForm({ ...form, level: "" });
+      return;
+    }
+    setLevel(effectiveLevel);
+  };
 
   return (
-    <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(160px,220px)_minmax(150px,190px)_minmax(210px,1fr)]">
+    <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(160px,220px)_minmax(190px,230px)_minmax(220px,1fr)]">
       <Field className="min-w-0" label="XP">
         <Input
           type="number"
@@ -240,18 +252,58 @@ function CharacterProgressFields({
           onChange={(event) => setForm({ ...form, experiencePoints: event.target.value })}
         />
       </Field>
-      <div className="self-end rounded-md border border-border bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
-        XP level <span className="font-semibold text-foreground">{xpLevel}</span>
+      <div className="grid gap-2 self-end">
+        <div className="inline-grid grid-cols-2 overflow-hidden rounded-md border border-border bg-card text-xs font-bold uppercase text-muted-foreground">
+          <button
+            type="button"
+            className={[
+              "px-3 py-2 transition",
+              !overrideActive ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+            ].join(" ")}
+            onClick={() => setLevelMode("xp")}
+          >
+            Use XP
+          </button>
+          <button
+            type="button"
+            className={[
+              "border-l border-border px-3 py-2 transition",
+              overrideActive ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+            ].join(" ")}
+            onClick={() => setLevelMode("explicit")}
+          >
+            Set level
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/60 px-3 py-2 text-sm">
+          <span className="text-muted-foreground">
+            {overrideActive ? "Explicit level" : "XP level"}
+          </span>
+          <span className="text-2xl font-black leading-none text-foreground">{effectiveLevel}</span>
+        </div>
       </div>
       <div className="grid min-w-0 gap-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[0.82rem] font-semibold text-muted-foreground">Level override</span>
-          <span className="text-xs text-muted-foreground">Using level {effectiveLevel}</span>
+          <span className="inline-flex items-center gap-2 text-[0.82rem] font-semibold text-muted-foreground">
+            Explicit level
+            <InfoHelpButton title="XP needed by level">
+              <XpThresholdList />
+            </InfoHelpButton>
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {overrideActive ? `XP would be level ${xpLevel}` : "Switch to set level manually"}
+          </span>
         </div>
-        <div className="grid max-w-[172px] grid-cols-[2.25rem_4rem_2.25rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
+        <div
+          className={[
+            "grid max-w-[172px] grid-cols-[2.25rem_4rem_2.25rem_2.25rem] overflow-hidden rounded-md border border-border bg-background",
+            !overrideActive ? "opacity-55" : "",
+          ].join(" ")}
+        >
           <button
             className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-r border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
+            disabled={!overrideActive}
             onClick={() => setLevel(effectiveLevel - 1)}
             aria-label="Decrease level override"
           >
@@ -262,8 +314,9 @@ function CharacterProgressFields({
             type="number"
             min={1}
             max={20}
-            value={form.level}
-            placeholder="Auto"
+            disabled={!overrideActive}
+            value={overrideActive ? form.level : ""}
+            placeholder={String(xpLevel)}
             onChange={(event) => {
               const value = event.target.value;
               if (value === "") {
@@ -276,6 +329,7 @@ function CharacterProgressFields({
           <button
             className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
             type="button"
+            disabled={!overrideActive}
             onClick={() => setLevel(effectiveLevel + 1)}
             aria-label="Increase level override"
           >
@@ -292,6 +346,19 @@ function CharacterProgressFields({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function XpThresholdList() {
+  return (
+    <div className="grid max-h-72 grid-cols-2 gap-x-4 overflow-y-auto pr-1 text-xs">
+      {levelXpThresholds.map((xp, index) => (
+        <div key={xp} className="flex justify-between gap-3 border-b border-border/60 py-1">
+          <span className="font-semibold">Level {index + 1}</span>
+          <span className="tabular-nums text-muted-foreground">{xp.toLocaleString()} XP</span>
+        </div>
+      ))}
     </div>
   );
 }

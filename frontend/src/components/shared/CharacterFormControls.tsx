@@ -199,21 +199,39 @@ export function SenseControl({
   value: { enabled: boolean; range: string };
   onChange: (value: { enabled: boolean; range: string }) => void;
 }) {
+  const disabled = !value.enabled;
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div
+      className={[
+        "rounded-lg border p-3 transition",
+        disabled
+          ? "border-border bg-muted/35 text-muted-foreground"
+          : "border-border bg-background",
+      ].join(" ")}
+    >
       <Checkbox
         label={label}
         checked={value.enabled}
         onChange={(checked) => onChange({ ...value, enabled: checked })}
       />
       <label className="mt-3 grid gap-2 text-sm font-medium">
-        Range ft.
-        <Input
-          type="number"
-          value={value.range}
-          onChange={(event) => onChange({ ...value, range: event.target.value })}
-          disabled={!value.enabled}
-        />
+        <span className="text-xs font-semibold uppercase">Range</span>
+        <span className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-md border border-border bg-card">
+          <Input
+            className="rounded-none border-0 text-center font-semibold disabled:bg-muted/60 disabled:text-muted-foreground"
+            type="number"
+            value={value.range}
+            onChange={(event) => onChange({ ...value, range: event.target.value })}
+            disabled={disabled}
+            placeholder={disabled ? "Enable first" : "0"}
+          />
+          <span className="grid min-w-10 place-items-center border-l border-border px-2 text-xs font-bold text-muted-foreground">
+            ft.
+          </span>
+        </span>
+        {disabled && (
+          <span className="text-xs text-muted-foreground">Tick {label} to set range.</span>
+        )}
       </label>
     </div>
   );
