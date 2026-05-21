@@ -363,6 +363,7 @@ export function CreatureForm({
         persistedActionIds={persistedActionIds}
         sensors={sensors}
         setTemplates={setTemplates}
+        templates={templates}
         onDragEnd={handleActionDragEnd}
         onCopyTemplate={copyTemplateIntoCreature}
         onAddWeapon={addWeaponAction}

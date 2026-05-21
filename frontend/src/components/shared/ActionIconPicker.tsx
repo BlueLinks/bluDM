@@ -2,7 +2,7 @@ import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { actionIconAttribution, curatedActionIcons } from "../../lib/domain/actionIcons";
 import type { ActionFormState } from "../../types";
-import { Badge, Button, EmptyMini, Field, FloatingInput, Modal } from "../ui";
+import { Badge, Button, EmptyMini, FloatingInput, Modal } from "../ui";
 import { ActionIcon } from "./ActionIcon";
 
 export function ActionIconPicker({
@@ -43,7 +43,10 @@ export function ActionIconPicker({
   }
 
   return (
-    <Field label="Icon">
+    <div className="grid min-w-0 gap-2 text-sm font-medium">
+      <span className="inline-flex items-center gap-2 text-[0.82rem] font-semibold text-muted-foreground">
+        Icon
+      </span>
       <div className="flex flex-wrap items-center gap-3">
         <ActionIcon action={value} />
         <Modal
@@ -94,6 +97,6 @@ export function ActionIconPicker({
         )}
         {value.iconAttribution && <Badge>{value.iconAttribution}</Badge>}
       </div>
-    </Field>
+    </div>
   );
 }

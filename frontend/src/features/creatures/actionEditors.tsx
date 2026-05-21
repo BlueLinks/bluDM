@@ -200,6 +200,8 @@ export function ActionSummary({
 
 export function SortableActionEditor({
   action,
+  bankModified,
+  bankSaveable,
   index,
   onChange,
   onRemove,
@@ -208,6 +210,8 @@ export function SortableActionEditor({
   onOverwriteSource,
 }: {
   action: ActionFormState;
+  bankModified?: boolean;
+  bankSaveable?: boolean;
   index: number;
   onChange: (action: ActionFormState) => void;
   onRemove: () => void;
@@ -250,7 +254,7 @@ export function SortableActionEditor({
           </p>
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          {action.sourceTemplateId && onOverwriteSource && (
+          {action.sourceTemplateId && bankModified && onOverwriteSource && (
             <Button
               type="button"
               icon={Archive}
@@ -261,7 +265,7 @@ export function SortableActionEditor({
               Overwrite bank
             </Button>
           )}
-          {onSaveToBank && !action.sourceTemplateId && (
+          {onSaveToBank && bankSaveable && !action.sourceTemplateId && (
             <Button
               type="button"
               icon={Archive}
@@ -272,7 +276,7 @@ export function SortableActionEditor({
               Save to bank
             </Button>
           )}
-          {onSaveAsNew && (
+          {onSaveAsNew && bankModified && (
             <Button
               type="button"
               icon={Plus}

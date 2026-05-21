@@ -1,10 +1,19 @@
 import { closestCenter, DndContext, type DragEndEvent, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Plus, Search } from "lucide-react";
-import { type Dispatch, type FormEvent, type SetStateAction, useState } from "react";
-import { Button, Callout, EmptyMini, FloatingInput, FormSection, Modal } from "../../components/ui";
+import { type Dispatch, type SetStateAction, useMemo, useState } from "react";
+import {
+  Button,
+  Callout,
+  ConfirmDialog,
+  EmptyMini,
+  FloatingInput,
+  FormSection,
+  Modal,
+} from "../../components/ui";
 import { api } from "../../lib/api";
-import { blankAction } from "../../lib/domain/forms";
+import { actionPayload } from "../../lib/api/payloads";
+import { blankAction, actionFormFromTemplate } from "../../lib/domain/forms";
 import type { ActionFormState, ActionTemplate, CommonWeapon, Creature } from "../../types";
 import { ActionSummary, SortableActionEditor, WeaponMenu } from "./actionEditors";
 
@@ -17,6 +26,14 @@ type SaveDraft = {
 type TemplateConflict = {
   id: string;
   name: string;
+};
+
+type OverwriteConfirm = {
+  action: ActionFormState;
+  templateId: string;
+  templateName: string;
+  usageCount: number;
+  mode: "source" | "conflict";
 };
 
 export function CreatureActionsSection({
@@ -35,6 +52,7 @@ export function CreatureActionsSection({
   setActionSearch,
   setActions,
   setTemplates,
+  templates,
 }: {
   actionBankOpen: boolean;
   actionSearch: string;
@@ -51,11 +69,17 @@ export function CreatureActionsSection({
   setActionSearch: (search: string) => void;
   setActions: Dispatch<SetStateAction<ActionFormState[]>>;
   setTemplates: Dispatch<SetStateAction<ActionTemplate[]>>;
+  templates: ActionTemplate[];
 }) {
   const [saveDraft, setSaveDraft] = useState<SaveDraft | null>(null);
   const [conflict, setConflict] = useState<TemplateConflict | null>(null);
+  const [overwriteConfirm, setOverwriteConfirm] = useState<OverwriteConfirm | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const templateById = useMemo(
+    () => new Map(templates.map((template) => [template.id, template])),
+    [templates],
+  );
 
   function openSaveDialog(action: ActionFormState, mode: SaveDraft["mode"]) {
     setConflict(null);
@@ -63,8 +87,7 @@ export function CreatureActionsSection({
     setSaveDraft({ action, mode, name: action.name.trim() });
   }
 
-  async function saveTemplate(event?: FormEvent, overwriteTemplateId?: string) {
-    event?.preventDefault();
+  async function saveTemplate(overwriteTemplateId?: string) {
     if (!saveDraft) return;
     const name = saveDraft.name.trim();
     if (!name) {
@@ -98,11 +121,28 @@ export function CreatureActionsSection({
 
   async function overwriteSource(action: ActionFormState) {
     if (!action.sourceTemplateId) return;
+    await openOverwriteConfirm(action, action.sourceTemplateId, "source");
+  }
+
+  async function confirmOverwrite() {
+    if (!overwriteConfirm) return;
     setSaving(true);
     try {
-      const payload = await api.updateActionTemplate(action.sourceTemplateId, action);
+      const payload =
+        overwriteConfirm.mode === "conflict"
+          ? await api.updateActionTemplate(overwriteConfirm.templateId, {
+              ...overwriteConfirm.action,
+              name: saveDraft?.name.trim() || overwriteConfirm.action.name,
+              sourceTemplateId: "",
+            })
+          : await api.updateActionTemplate(overwriteConfirm.templateId, overwriteConfirm.action);
       setTemplates((current) => upsertTemplate(current, payload.actionTemplate));
+      if (overwriteConfirm.mode === "conflict") {
+        await updateActionSource(overwriteConfirm.action.id, payload.actionTemplate.id);
+        closeSaveDialog();
+      }
       notify("Banked action overwritten");
+      setOverwriteConfirm(null);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Could not overwrite banked action");
     } finally {
@@ -121,7 +161,31 @@ export function CreatureActionsSection({
   function closeSaveDialog() {
     setSaveDraft(null);
     setConflict(null);
+    setOverwriteConfirm(null);
     setSaveError("");
+  }
+
+  async function openOverwriteConfirm(
+    action: ActionFormState,
+    templateId: string,
+    mode: OverwriteConfirm["mode"],
+  ) {
+    setSaving(true);
+    try {
+      const usage = await api.actionTemplateUsage(templateId);
+      const templateName = templateById.get(templateId)?.name ?? conflict?.name ?? action.name;
+      setOverwriteConfirm({
+        action,
+        templateId,
+        templateName,
+        usageCount: usage.count,
+        mode,
+      });
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Could not check bank action usage");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -160,6 +224,11 @@ export function CreatureActionsSection({
                 <SortableActionEditor
                   key={action.id}
                   action={action}
+                  bankModified={isBankModified(
+                    action,
+                    templateById.get(action.sourceTemplateId ?? ""),
+                  )}
+                  bankSaveable={isUnbankedSaveable(action)}
                   index={index}
                   onChange={(next) =>
                     setActions((current) =>
@@ -186,10 +255,25 @@ export function CreatureActionsSection({
         onNameChange={(name) =>
           setSaveDraft((current) => (current ? { ...current, name } : current))
         }
-        onSubmit={(event) => void saveTemplate(event)}
-        onOverwrite={() => void saveTemplate(undefined, conflict?.id)}
+        onSubmit={() => void saveTemplate()}
+        onOverwrite={() =>
+          conflict && saveDraft
+            ? void openOverwriteConfirm(saveDraft.action, conflict.id, "conflict")
+            : undefined
+        }
         onReturnToName={() => setConflict(null)}
       />
+      <ConfirmDialog
+        open={Boolean(overwriteConfirm)}
+        title="Overwrite banked action?"
+        confirmLabel="Overwrite action"
+        onCancel={() => setOverwriteConfirm(null)}
+        onConfirm={() => void confirmOverwrite()}
+      >
+        Overwriting {overwriteConfirm?.templateName} updates a shared Action Bank entry. This can
+        affect NPCs that use this banked action. {overwriteConfirm?.usageCount ?? 0} linked creature
+        action{overwriteConfirm?.usageCount === 1 ? "" : "s"} currently reference it.
+      </ConfirmDialog>
     </FormSection>
   );
 }
@@ -259,7 +343,7 @@ function SaveActionDialog({
   onNameChange: (name: string) => void;
   onOverwrite: () => void;
   onReturnToName: () => void;
-  onSubmit: (event: FormEvent) => void;
+  onSubmit: () => void;
 }) {
   return (
     <Modal
@@ -269,7 +353,7 @@ function SaveActionDialog({
       trigger={null}
     >
       {draft && (
-        <form className="grid gap-4" onSubmit={onSubmit}>
+        <div className="grid gap-4">
           <FloatingInput
             label="Bank action name"
             value={draft.name}
@@ -278,8 +362,8 @@ function SaveActionDialog({
           />
           {conflict && (
             <Callout>
-              An action named {conflict.name} already exists. Cancel to choose another name, or
-              overwrite the existing bank action.
+              An action named {conflict.name} already exists. Go back to choose another name, or
+              overwrite the existing bank action after reviewing the shared-use warning.
             </Callout>
           )}
           <div className="flex flex-wrap justify-end gap-2">
@@ -291,12 +375,12 @@ function SaveActionDialog({
                 Overwrite existing
               </Button>
             ) : (
-              <Button type="submit" variant="success" disabled={saving}>
+              <Button type="button" variant="success" disabled={saving} onClick={onSubmit}>
                 Save action
               </Button>
             )}
           </div>
-        </form>
+        </div>
       )}
     </Modal>
   );
@@ -307,4 +391,22 @@ function upsertTemplate(templates: ActionTemplate[], template: ActionTemplate) {
     ? templates.map((item) => (item.id === template.id ? template : item))
     : [...templates, template];
   return next.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function isUnbankedSaveable(action: ActionFormState) {
+  if (action.sourceTemplateId) return false;
+  const payload = actionPayload(action);
+  const blankPayload = actionPayload({ ...blankAction(), id: action.id });
+  return action.name.trim() !== "" || JSON.stringify(payload) !== JSON.stringify(blankPayload);
+}
+
+function isBankModified(action: ActionFormState, template?: ActionTemplate) {
+  if (!action.sourceTemplateId || !template) return false;
+  const actionComparable = actionPayload({ ...action, sourceTemplateId: "" });
+  const templateComparable = actionPayload({
+    ...actionFormFromTemplate(template),
+    id: action.id,
+    sourceTemplateId: "",
+  });
+  return JSON.stringify(actionComparable) !== JSON.stringify(templateComparable);
 }
