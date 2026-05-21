@@ -298,6 +298,37 @@ export type Spell = {
   updatedAt: string;
 };
 
+export type CreatureSpellRef = {
+  spellId: string;
+  librarySource: "user" | "standard";
+  spellLevel: number;
+};
+
+export type CreatureSpell = CreatureSpellRef & {
+  id: string;
+  creatureId: string;
+  spellName: string;
+  sourceKey: string;
+  sourceLabel: string;
+  spellLevel: number;
+  prepared: boolean;
+  innate: boolean;
+  sortOrder: number;
+};
+
+export type CreatureSpellcastingProfile = {
+  creatureId: string;
+  spellcastingAbility: string;
+  innateSpellcastingAbility: string;
+  casterLevel: number;
+  spellSaveDC: number;
+  spellAttackBonus: number;
+  slots: Record<string, unknown>;
+  spells: CreatureSpell[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type ApiError = {
   error: string;
 };
@@ -399,7 +430,7 @@ export type CreatureFormState = {
   spellSlots7: string;
   spellSlots8: string;
   spellSlots9: string;
-  spellIds: string[];
+  spellRefs: CreatureSpellRef[];
   statBlock: string;
 };
 

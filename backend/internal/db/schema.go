@@ -2,28 +2,24 @@ package db
 
 import (
 	"context"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func EnsureSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, `
-create extension if not exists pgcrypto;
-
-create table if not exists users (
+	create extension if not exists pgcrypto;
+	create table if not exists users (
     id uuid primary key default gen_random_uuid(),
     email text not null unique,
     password_hash text,
     avatar_asset_id uuid,
-    avatar_url text not null default '',
-    created_at timestamptz not null default now()
-);
-
-alter table users alter column password_hash drop not null;
-alter table users add column if not exists avatar_asset_id uuid;
-alter table users add column if not exists avatar_url text not null default '';
-
-create table if not exists auth_identities (
+	    avatar_url text not null default '',
+	    created_at timestamptz not null default now()
+	);
+	alter table users alter column password_hash drop not null;
+	alter table users add column if not exists avatar_asset_id uuid;
+	alter table users add column if not exists avatar_url text not null default '';
+	create table if not exists auth_identities (
     id uuid primary key default gen_random_uuid(),
     user_id uuid not null references users(id) on delete cascade,
     provider text not null,
@@ -241,20 +237,23 @@ create table if not exists creature_spellcasting_profiles (
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
-
 create table if not exists creature_spells (
     id uuid primary key default gen_random_uuid(),
     creature_id uuid not null references creatures(id) on delete cascade,
-    spell_id uuid not null references spells(id) on delete cascade,
+    spell_id uuid references spells(id) on delete cascade,
+    standard_spell_id uuid,
+    library_source text not null default 'user',
     spell_level integer not null default 0,
     prepared boolean not null default true,
     innate boolean not null default false,
-    sort_order integer not null default 0,
-    unique (creature_id, spell_id)
+    sort_order integer not null default 0
 );
-
+alter table creature_spells add column if not exists standard_spell_id uuid;
+alter table creature_spells add column if not exists library_source text not null default 'user';
+alter table creature_spells alter column spell_id drop not null;
 create index if not exists creature_spells_creature_level_idx on creature_spells(creature_id, spell_level, sort_order);
-
+create unique index if not exists creature_spells_user_spell_idx on creature_spells(creature_id, spell_id) where spell_id is not null;
+create unique index if not exists creature_spells_standard_spell_idx on creature_spells(creature_id, standard_spell_id) where standard_spell_id is not null;
 create table if not exists players (
     id uuid primary key default gen_random_uuid(),
     owner_user_id uuid references users(id) on delete cascade,

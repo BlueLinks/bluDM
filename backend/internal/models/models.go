@@ -236,14 +236,17 @@ type CreatureSpellcastingProfile struct {
 }
 
 type CreatureSpell struct {
-	ID         string `json:"id"`
-	CreatureID string `json:"creatureId"`
-	SpellID    string `json:"spellId"`
-	SpellName  string `json:"spellName,omitempty"`
-	SpellLevel int    `json:"spellLevel"`
-	Prepared   bool   `json:"prepared"`
-	Innate     bool   `json:"innate"`
-	SortOrder  int    `json:"sortOrder"`
+	ID            string `json:"id"`
+	CreatureID    string `json:"creatureId"`
+	SpellID       string `json:"spellId"`
+	SpellName     string `json:"spellName,omitempty"`
+	LibrarySource string `json:"librarySource"`
+	SourceKey     string `json:"sourceKey"`
+	SourceLabel   string `json:"sourceLabel"`
+	SpellLevel    int    `json:"spellLevel"`
+	Prepared      bool   `json:"prepared"`
+	Innate        bool   `json:"innate"`
+	SortOrder     int    `json:"sortOrder"`
 }
 
 type Spell struct {

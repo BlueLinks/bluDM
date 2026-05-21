@@ -116,10 +116,11 @@ type spellcastingRequest struct {
 }
 
 type creatureSpellRequest struct {
-	SpellID    string `json:"spellId"`
-	SpellLevel int    `json:"spellLevel"`
-	Prepared   bool   `json:"prepared"`
-	Innate     bool   `json:"innate"`
+	SpellID       string `json:"spellId"`
+	LibrarySource string `json:"librarySource"`
+	SpellLevel    int    `json:"spellLevel"`
+	Prepared      bool   `json:"prepared"`
+	Innate        bool   `json:"innate"`
 }
 
 type damageDefenseRequest struct {
@@ -312,6 +313,13 @@ func (req actionRequest) toModelRolls() []models.ActionRollPart {
 func (req *spellcastingRequest) normalize() {
 	req.SpellcastingAbility = strings.TrimSpace(req.SpellcastingAbility)
 	req.InnateSpellcastingAbility = strings.TrimSpace(req.InnateSpellcastingAbility)
+	for index := range req.Spells {
+		req.Spells[index].SpellID = strings.TrimSpace(req.Spells[index].SpellID)
+		req.Spells[index].LibrarySource = strings.TrimSpace(req.Spells[index].LibrarySource)
+		if req.Spells[index].LibrarySource == "" {
+			req.Spells[index].LibrarySource = "user"
+		}
+	}
 	if req.CasterLevel < 0 {
 		req.CasterLevel = 0
 	}

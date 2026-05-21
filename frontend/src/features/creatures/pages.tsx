@@ -27,6 +27,7 @@ import type {
   Campaign,
   Creature,
   CreatureAction,
+  CreatureSpellcastingProfile,
 } from "../../types";
 import { ActionMiniFields, ActionSummary } from "./actionEditors";
 import { CreatureForm } from "./CreatureForm";
@@ -306,6 +307,7 @@ export function NpcEditPage() {
   const toast = useToasts();
   const [creature, setCreature] = useState<Creature | null>(null);
   const [actions, setActions] = useState<CreatureAction[]>([]);
+  const [spellcasting, setSpellcasting] = useState<CreatureSpellcastingProfile | undefined>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [linkedCampaigns, setLinkedCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState("");
@@ -315,15 +317,19 @@ export function NpcEditPage() {
     Promise.all([
       api.creature(creatureID),
       api.creatureActions(creatureID),
+      api.creatureSpellcasting(creatureID),
       api.campaigns(),
       api.creatureCampaigns(creatureID),
     ])
-      .then(([creaturePayload, actionPayload, campaignPayload, linkedPayload]) => {
-        setCreature(creaturePayload.creature);
-        setActions(actionPayload.actions);
-        setCampaigns(campaignPayload.campaigns);
-        setLinkedCampaigns(linkedPayload.campaigns);
-      })
+      .then(
+        ([creaturePayload, actionPayload, spellcastingPayload, campaignPayload, linkedPayload]) => {
+          setCreature(creaturePayload.creature);
+          setActions(actionPayload.actions);
+          setSpellcasting(spellcastingPayload.spellcasting);
+          setCampaigns(campaignPayload.campaigns);
+          setLinkedCampaigns(linkedPayload.campaigns);
+        },
+      )
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creature"))
       .finally(() => setLoading(false));
   }, [creatureID]);
@@ -398,6 +404,7 @@ export function NpcEditPage() {
               mode="edit"
               creature={creature}
               existingActions={actions}
+              spellcasting={spellcasting}
               notify={toast.push}
               onSaved={() => void navigate("/npcs")}
             />

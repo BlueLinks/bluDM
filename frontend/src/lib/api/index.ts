@@ -10,6 +10,7 @@ import type {
   Creature,
   CreatureAction,
   CreatureFormState,
+  CreatureSpellcastingProfile,
   Encounter,
   EncounterCombatant,
   EncounterRun,
@@ -26,7 +27,6 @@ import type {
 } from "../../types";
 import { actionPayload, creaturePayload, parseJSONField, playerPayload } from "./payloads";
 import { request } from "./request";
-
 export const api = {
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
@@ -398,6 +398,10 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ actionIds }),
     }),
+  creatureSpellcasting: (creatureId: string) =>
+    request<{ spellcasting: CreatureSpellcastingProfile }>(
+      `/api/library/creatures/${creatureId}/spellcasting`,
+    ),
   saveCreatureSpellcasting: (creatureId: string, payload: CreatureFormState) =>
     request<unknown>(`/api/library/creatures/${creatureId}/spellcasting`, {
       method: "PUT",
@@ -418,15 +422,15 @@ export const api = {
           8: Number(payload.spellSlots8) || 0,
           9: Number(payload.spellSlots9) || 0,
         },
-        spells: payload.spellIds.map((spellId) => ({
-          spellId,
-          spellLevel: 0,
+        spells: payload.spellRefs.map((spell) => ({
+          spellId: spell.spellId,
+          librarySource: spell.librarySource,
+          spellLevel: spell.spellLevel,
           prepared: true,
           innate: false,
         })),
       }),
     }),
-
   actionTemplates: () => request<{ actionTemplates: ActionTemplate[] }>("/api/action-templates"),
   actionTemplateUsage: (id: string) =>
     request<{ usage: ActionTemplateUsage[]; count: number }>(`/api/action-templates/${id}/usage`),
@@ -445,7 +449,6 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(actionPayload(payload)),
     }),
-
   spells: (options?: {
     includeStandard?: boolean;
     includeUser?: boolean;
