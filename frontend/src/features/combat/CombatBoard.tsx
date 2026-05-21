@@ -56,7 +56,7 @@ export function CombatBoard({
         <SectionPanel
           title="Initiative & Targets"
           icon={Swords}
-          className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+          className="combat-panel combat-section-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
           bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto"
           action={
             <Button size="sm" icon={Plus} onClick={onAddTarget}>
@@ -104,7 +104,7 @@ export function CombatBoard({
           <SectionPanel
             title="Target Detail"
             icon={ClipboardList}
-            className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+            className="combat-panel combat-section-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
             bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto"
           >
             {active.currentHitPoints <= 0 || active.defeated ? (

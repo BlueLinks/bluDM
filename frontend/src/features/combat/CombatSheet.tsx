@@ -87,7 +87,7 @@ export function CombatSheet({
     <SectionPanel
       title={compact ? "Target Sheet" : "Active Sheet"}
       icon={ScrollText}
-      className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
+      className="combat-panel combat-section-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-2 xl:p-3"
       bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto px-0.5 pb-1 xl:px-1"
     >
       <div className="grid gap-2 xl:gap-3">
@@ -180,7 +180,7 @@ function AbilityTable({
             key={ability.key}
             className="grid grid-cols-[1.35rem_1.35rem_minmax(1.75rem,1fr)_minmax(1.9rem,1fr)] items-center border-b border-border py-1 last:border-b-0 sm:grid-cols-[1.5rem_1.5rem_minmax(1.9rem,1fr)_minmax(2rem,1fr)]"
           >
-            <span className="font-black uppercase text-muted-foreground">{ability.key}</span>
+            <span className="pl-1 font-black uppercase text-muted-foreground">{ability.key}</span>
             <span className="text-center font-semibold tabular-nums">{score}</span>
             <AbilityRollButton
               label={`${ability.label} check`}

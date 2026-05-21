@@ -537,7 +537,7 @@ export function DamageMeters({ combatants }: { combatants: EncounterRunCombatant
     <SectionPanel
       title="Damage Meters"
       icon={HeartPulse}
-      className="combat-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
+      className="combat-panel combat-section-panel max-h-[calc(100svh-15.5rem)] min-h-0 overflow-hidden p-3"
       bodyClassName="max-h-[calc(100svh-20rem)] min-h-0 overflow-y-auto pr-1"
     >
       <div className="grid gap-2">

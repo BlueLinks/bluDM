@@ -89,19 +89,34 @@ export function WorkspaceShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("bludm-sidebar") === "collapsed",
   );
+  const [uiDensity, setUiDensity] = useState<"auto" | "compact" | "comfy">(() => {
+    const stored = localStorage.getItem("bludm-ui-density");
+    return stored === "compact" || stored === "comfy" || stored === "auto" ? stored : "auto";
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const crumbs = shellCrumbs(location.pathname);
   const parent = parentPath(location.pathname);
   const isCombatTracker = /^\/encounter-runs\/[^/]+$/.test(location.pathname);
+  const contentPadding =
+    isCombatTracker && uiDensity !== "comfy" ? "px-1 py-2 sm:px-2 lg:px-3" : "px-4 py-6 lg:px-8";
 
   useEffect(() => {
     localStorage.setItem("bludm-sidebar", sidebarCollapsed ? "collapsed" : "expanded");
   }, [sidebarCollapsed]);
 
+  useEffect(() => {
+    localStorage.setItem("bludm-ui-density", uiDensity);
+  }, [uiDensity]);
+
   return (
     <RollLogProvider>
-      <main className="fixed inset-0 overflow-hidden bg-background text-foreground">
+      <main
+        className={[
+          "fixed inset-0 overflow-hidden bg-background text-foreground",
+          `ui-density-${uiDensity}`,
+        ].join(" ")}
+      >
         <div className="flex h-full">
           <aside
             className={[
@@ -186,19 +201,16 @@ export function WorkspaceShell({
                   onThemeChange={onThemeChange}
                 />
                 <AccountMenu
+                  density={uiDensity}
                   user={user}
                   onLoadAccount={onLoadAccount}
                   onLogout={onLogout}
+                  onDensityChange={setUiDensity}
                   onSetPassword={onSetPassword}
                 />
               </div>
             </header>
-            <div
-              className={[
-                "min-h-0 flex-1 overflow-y-auto",
-                isCombatTracker ? "px-1 py-2 sm:px-3 lg:px-6" : "px-4 py-6 lg:px-8",
-              ].join(" ")}
-            >
+            <div className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}>
               {children}
             </div>
           </section>
