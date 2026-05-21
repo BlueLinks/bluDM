@@ -1,4 +1,4 @@
-import { Archive, Castle, Plus, Search, Swords } from "lucide-react";
+import { Castle, Plus, Search, Swords } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
@@ -10,7 +10,6 @@ import {
   ConfirmDialog,
   EmptyMini,
   FloatingInput,
-  Modal,
   MutedPanel,
   Page,
   PageHeader,
@@ -29,7 +28,7 @@ import type {
   CreatureAction,
   CreatureSpellcastingProfile,
 } from "../../types";
-import { ActionMiniFields, ActionSummary } from "./actionEditors";
+import { ActionBankPanel } from "./ActionBankPanel";
 import { CreatureForm } from "./CreatureForm";
 import { CreatureLibraryList, CreaturePreviewModal } from "./CreatureLibraryList";
 
@@ -45,6 +44,9 @@ export function NpcsPage() {
   const [templateForm, setTemplateForm] = useState<ActionFormState>(() => spiderStaffAction());
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ActionTemplate | null>(null);
+  const [templateConflict, setTemplateConflict] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [deleteCreature, setDeleteCreature] = useState<Creature | null>(null);
   const [previewCreature, setPreviewCreature] = useState<Creature | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<ActionTemplate | null>(null);
@@ -67,26 +69,60 @@ export function NpcsPage() {
   async function handleCreateTemplate(event: FormEvent) {
     event.preventDefault();
     setError("");
+    const name = templateForm.name.trim();
+    if (!name) {
+      setError("Custom action name is required");
+      return;
+    }
     try {
+      const conflictPayload = await api.actionTemplateConflict(name);
+      const conflictingAction = conflictPayload.actionTemplate ?? null;
+      if (
+        conflictPayload.conflict &&
+        conflictingAction &&
+        conflictingAction.id !== editingTemplate?.id
+      ) {
+        setTemplateConflict(conflictingAction);
+        return;
+      }
       const payload = editingTemplate
         ? await api.updateActionTemplate(editingTemplate.id, templateForm)
         : await api.createActionTemplate(templateForm);
-      setTemplates((current) =>
-        editingTemplate
-          ? current
-              .map((template) =>
-                template.id === editingTemplate.id ? payload.actionTemplate : template,
-              )
-              .sort((a, b) => a.name.localeCompare(b.name))
-          : [...current, payload.actionTemplate].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setTemplateForm(blankAction());
-      setEditingTemplate(null);
-      setTemplateModalOpen(false);
+      saveTemplateResult(payload.actionTemplate);
       toast.push(editingTemplate ? "Custom action updated" : "Custom action saved");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create custom action");
     }
+  }
+
+  async function overwriteConflictingTemplate() {
+    if (!templateConflict) return;
+    setError("");
+    try {
+      const payload = await api.updateActionTemplate(templateConflict.id, {
+        ...templateForm,
+        name: templateConflict.name,
+        sourceTemplateId: "",
+      });
+      saveTemplateResult(payload.actionTemplate);
+      toast.push(`${payload.actionTemplate.name} overwritten`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not overwrite custom action");
+    }
+  }
+
+  function saveTemplateResult(template: ActionTemplate) {
+    setTemplates((current) =>
+      current.some((item) => item.id === template.id)
+        ? current
+            .map((item) => (item.id === template.id ? template : item))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [...current, template].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    setTemplateForm(blankAction());
+    setEditingTemplate(null);
+    setTemplateConflict(null);
+    setTemplateModalOpen(false);
   }
 
   async function confirmDeleteCreature() {
@@ -140,8 +176,20 @@ export function NpcsPage() {
   function openTemplateModal(template?: ActionTemplate) {
     setEditingTemplate(template ?? null);
     setTemplateForm(template ? actionFormFromTemplate(template) : blankAction());
+    setTemplateConflict(null);
     setTemplateModalOpen(true);
   }
+
+  function closeTemplateModal() {
+    setTemplateModalOpen(false);
+    setEditingTemplate(null);
+    setTemplateConflict(null);
+    setTemplateForm(blankAction());
+  }
+
+  const templateConflictMatches =
+    Boolean(templateConflict) &&
+    normalizeActionName(templateForm.name) === normalizeActionName(templateConflict?.name ?? "");
 
   return (
     <Page>
@@ -196,56 +244,22 @@ export function NpcsPage() {
           onRemove={setDeleteCreature}
         />
       </SectionPanel>
-      <SectionPanel title="Action Bank" icon={Archive}>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Reusable attacks and abilities live here. Adding one to a creature creates an editable
-            copy in that creature's own action list.
-          </p>
-          <Modal
-            open={templateModalOpen}
-            onOpenChange={(open) => {
-              setTemplateModalOpen(open);
-              if (!open) {
-                setEditingTemplate(null);
-                setTemplateForm(blankAction());
-              }
-            }}
-            title={editingTemplate ? "Edit custom action" : "Add custom action"}
-            trigger={
-              <Button
-                type="button"
-                icon={Plus}
-                variant="success"
-                onClick={() => openTemplateModal()}
-              >
-                Add action
-              </Button>
-            }
-          >
-            <form className="grid gap-4" onSubmit={handleCreateTemplate}>
-              <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
-              <Button type="submit" icon={Plus} variant="success">
-                {editingTemplate ? "Update custom action" : "Save custom action"}
-              </Button>
-            </form>
-          </Modal>
-        </div>
-        <div className="grid gap-2">
-          {templates.map((template) => (
-            <ActionSummary
-              key={template.id}
-              action={template}
-              onEdit={() => openTemplateModal(template)}
-              onDuplicate={() => void duplicateTemplate(template)}
-              onDelete={() => void openDeleteTemplate(template)}
-            />
-          ))}
-          {!loading && templates.length === 0 && (
-            <EmptyMini copy="No custom actions yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
-          )}
-        </div>
-      </SectionPanel>
+      <ActionBankPanel
+        editingTemplate={editingTemplate}
+        loading={loading}
+        templateConflict={templateConflict}
+        templateConflictMatches={templateConflictMatches}
+        templateForm={templateForm}
+        templateModalOpen={templateModalOpen}
+        templates={templates}
+        onDelete={(template) => void openDeleteTemplate(template)}
+        onDuplicate={(template) => void duplicateTemplate(template)}
+        onFormChange={setTemplateForm}
+        onModalChange={(open) => (open ? setTemplateModalOpen(true) : closeTemplateModal())}
+        onOpenTemplate={openTemplateModal}
+        onOverwrite={() => void overwriteConflictingTemplate()}
+        onSubmit={handleCreateTemplate}
+      />
       <ConfirmDialog
         open={Boolean(deleteCreature)}
         title="Remove creature?"
@@ -309,6 +323,10 @@ function nextActionCopyName(name: string, templates: ActionTemplate[]) {
     index += 1;
   }
   return `${baseName} ${index}`;
+}
+
+function normalizeActionName(name: string) {
+  return name.trim().toLowerCase();
 }
 
 export function NpcCreatePage() {
