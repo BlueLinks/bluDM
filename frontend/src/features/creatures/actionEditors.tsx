@@ -247,9 +247,21 @@ export function SortableActionEditor({
             <h4 className="truncate font-semibold">
               {action.name.trim() || `Unnamed action ${index + 1}`}
             </h4>
+            {action.sourceTemplateId && (
+              <span
+                className={[
+                  "inline-flex items-center rounded-md px-2 py-1 text-xs font-bold",
+                  bankModified
+                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-200"
+                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
+                ].join(" ")}
+              >
+                {bankModified ? "Banked, edited locally" : "In Action Bank"}
+              </span>
+            )}
           </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {action.sourceTemplateId ? "Banked copy" : "Creature action"} ·{" "}
+          <p className="text-xs text-muted-foreground">
+            {bankStatusCopy(action.sourceTemplateId, bankModified, bankSaveable)} ·{" "}
             {formatRolls(action.rolls)}
           </p>
         </div>
@@ -304,6 +316,19 @@ export function SortableActionEditor({
       {expanded && <ActionEditFields action={action} onChange={onChange} />}
     </div>
   );
+}
+
+function bankStatusCopy(
+  sourceTemplateId: string | undefined,
+  bankModified: boolean | undefined,
+  bankSaveable: boolean | undefined,
+) {
+  if (sourceTemplateId) {
+    return bankModified
+      ? "Saved with this NPC unless you update the bank"
+      : "Matches the reusable bank action";
+  }
+  return bankSaveable ? "NPC-only action. Save to bank if you want to reuse it" : "NPC-only action";
 }
 
 function ActionEditFields({

@@ -265,14 +265,15 @@ export function CreatureActionsSection({
       />
       <ConfirmDialog
         open={Boolean(overwriteConfirm)}
-        title="Overwrite banked action?"
-        confirmLabel="Overwrite action"
+        title="Update Action Bank entry?"
+        confirmLabel="Update bank entry"
         onCancel={() => setOverwriteConfirm(null)}
         onConfirm={() => void confirmOverwrite()}
       >
-        Overwriting {overwriteConfirm?.templateName} updates a shared Action Bank entry. This can
-        affect NPCs that use this banked action. {overwriteConfirm?.usageCount ?? 0} linked creature
-        action{overwriteConfirm?.usageCount === 1 ? "" : "s"} currently reference it.
+        Update the Action Bank entry for {overwriteConfirm?.templateName}? This changes the reusable
+        template DMs copy from the bank. Existing NPC action copies keep their current local values,
+        but {overwriteConfirm?.usageCount ?? 0} creature action
+        {overwriteConfirm?.usageCount === 1 ? "" : "s"} currently reference this bank entry.
       </ConfirmDialog>
     </FormSection>
   );
@@ -362,17 +363,17 @@ function SaveActionDialog({
           />
           {conflict && (
             <Callout>
-              An action named {conflict.name} already exists. Go back to choose another name, or
-              overwrite the existing bank action after reviewing the shared-use warning.
+              {conflict.name} is already in the Action Bank. Choose a different name to create a
+              second reusable action, or overwrite that bank entry.
             </Callout>
           )}
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="ghost" onClick={conflict ? onReturnToName : onCancel}>
-              {conflict ? "Back to name" : "Cancel"}
+              {conflict ? "Rename" : "Cancel"}
             </Button>
             {conflict ? (
               <Button type="button" variant="danger" disabled={saving} onClick={onOverwrite}>
-                Overwrite existing
+                Overwrite bank entry
               </Button>
             ) : (
               <Button type="button" variant="success" disabled={saving} onClick={onSubmit}>
