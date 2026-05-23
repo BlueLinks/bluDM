@@ -1,7 +1,7 @@
 import { ClipboardList, Plus, Skull, Swords } from "lucide-react";
 import React from "react";
 import { Button, Callout, MutedPanel, SectionPanel } from "../../components/ui";
-import type { EncounterRunCombatant } from "../../types";
+import type { EncounterRunCombatant, EncounterRunEffect } from "../../types";
 import { CombatSheet } from "./CombatSheet";
 import { DamageMeters, TargetRow, TopOfRoundMarker } from "./combatWidgets";
 
@@ -16,6 +16,7 @@ type RollFlashPayload = {
 
 export function CombatBoard({
   active,
+  activeEffects,
   combatants,
   downEnemies,
   orderedCombatants,
@@ -30,6 +31,7 @@ export function CombatBoard({
   onSelect,
 }: {
   active: EncounterRunCombatant;
+  activeEffects: EncounterRunEffect[];
   combatants: EncounterRunCombatant[];
   downEnemies: EncounterRunCombatant[];
   orderedCombatants: Array<EncounterRunCombatant & { originalIndex?: number }>;
@@ -52,7 +54,12 @@ export function CombatBoard({
             : "combat-board-grid grid min-h-0 min-w-0 gap-2 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1fr)_minmax(0,0.85fr)] xl:grid-cols-[minmax(260px,0.85fr)_minmax(360px,1fr)_minmax(300px,0.9fr)]"
         }
       >
-        <CombatSheet combatant={active} runID={runID} onRoll={onRoll} />
+        <CombatSheet
+          activeEffects={effectsForCombatant(activeEffects, active.id)}
+          combatant={active}
+          runID={runID}
+          onRoll={onRoll}
+        />
         <SectionPanel
           title="Initiative & Targets"
           icon={Swords}
@@ -70,6 +77,7 @@ export function CombatBoard({
                 {combatant.originalIndex === 0 && <TopOfRoundMarker />}
                 <TargetRow
                   active={combatant.id === active.id}
+                  activeEffects={effectsForCombatant(activeEffects, combatant.id)}
                   combatant={combatant}
                   selected={selectedID === combatant.id}
                   onSelect={() => onSelect(combatant.id)}
@@ -86,6 +94,7 @@ export function CombatBoard({
                 {downEnemies.map((combatant) => (
                   <TargetRow
                     key={combatant.id}
+                    activeEffects={effectsForCombatant(activeEffects, combatant.id)}
                     down
                     combatant={combatant}
                     selected={selectedID === combatant.id}
@@ -99,7 +108,13 @@ export function CombatBoard({
           </div>
         </SectionPanel>
         {selected ? (
-          <CombatSheet combatant={selected} runID={runID} compact onRoll={onRoll} />
+          <CombatSheet
+            activeEffects={effectsForCombatant(activeEffects, selected.id)}
+            combatant={selected}
+            runID={runID}
+            compact
+            onRoll={onRoll}
+          />
         ) : (
           <SectionPanel
             title="Target Detail"
@@ -124,4 +139,8 @@ export function CombatBoard({
       </div>
     </div>
   );
+}
+
+function effectsForCombatant(effects: EncounterRunEffect[], combatantID: string) {
+  return effects.filter((effect) => effect.targetId === combatantID);
 }

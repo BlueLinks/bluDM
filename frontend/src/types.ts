@@ -109,6 +109,51 @@ export type EncounterRun = {
   summary: Record<string, unknown>;
   combatants?: EncounterRunCombatant[];
   events?: CombatLogEvent[];
+  spellSlots?: EncounterRunSpellSlot[];
+  activeEffects?: EncounterRunEffect[];
+  alerts?: EncounterRunAlert[];
+};
+
+export type EncounterRunSpellSlot = {
+  id: string;
+  encounterRunId: string;
+  combatantId: string;
+  spellLevel: number;
+  maxSlots: number;
+  remainingSlots: number;
+};
+
+export type EncounterRunEffect = {
+  id: string;
+  encounterRunId: string;
+  casterId: string;
+  targetId: string;
+  spellId?: string;
+  librarySource: string;
+  spellName: string;
+  castLevel: number;
+  concentration: boolean;
+  timing: string;
+  effectKind: string;
+  conditionName: string;
+  amount: number;
+  payload: Record<string, unknown>;
+  active: boolean;
+  createdAt: string;
+};
+
+export type EncounterRunAlert = {
+  id: string;
+  encounterRunId: string;
+  alertType: string;
+  actorId?: string;
+  targetId?: string;
+  title: string;
+  message: string;
+  dc: number;
+  payload: Record<string, unknown>;
+  resolved: boolean;
+  createdAt: string;
 };
 
 export type EncounterRunCombatant = {
@@ -209,29 +254,17 @@ export type {
   ActionTemplateUsage,
   CreatureAction,
 } from "./types/actions";
-
-export type Spell = {
-  id: string;
-  name: string;
-  level: number;
-  school: string;
-  castingTime: string;
-  range: string;
-  components: Record<string, unknown>;
-  duration: string;
-  ritual: boolean;
-  concentration: boolean;
-  description: string;
-  higherLevel: string;
-  sourceNote: string;
-  librarySource: "user" | "standard";
-  readOnly: boolean;
-  sourceKey: string;
-  sourceLabel: string;
-  mechanics: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
-};
+export type {
+  Spell,
+  SpellAction,
+  SpellActionFormState,
+  SpellActionRollFormState,
+  SpellActionRollPart,
+  SpellAreaScalingFormState,
+  SpellFormState,
+  SpellProjectileScaling,
+  SpellProjectileScalingFormState,
+} from "./types/spells";
 
 export type CreatureSpellRef = {
   spellId: string;
@@ -305,6 +338,7 @@ export type LongRestSnapshot = {
   currentHitPoints: number;
   temporaryHitPoints: number;
   temporaryMaxHitPoints: number;
+  spellSlotsRemaining?: Record<string, unknown>;
 };
 
 export type CommonWeapon = {
@@ -401,23 +435,25 @@ export type PlayerFormState = {
   senses: Record<SenseName, { enabled: boolean; range: string }>;
   spellcastingAbility: string;
   innateSpellcastingAbility: string;
+  spellSlots1: string;
+  spellSlots2: string;
+  spellSlots3: string;
+  spellSlots4: string;
+  spellSlots5: string;
+  spellSlots6: string;
+  spellSlots7: string;
+  spellSlots8: string;
+  spellSlots9: string;
+  spellSlotsRemaining1: string;
+  spellSlotsRemaining2: string;
+  spellSlotsRemaining3: string;
+  spellSlotsRemaining4: string;
+  spellSlotsRemaining5: string;
+  spellSlotsRemaining6: string;
+  spellSlotsRemaining7: string;
+  spellSlotsRemaining8: string;
+  spellSlotsRemaining9: string;
   notes: string;
-};
-
-export type SpellFormState = {
-  name: string;
-  level: string;
-  school: string;
-  castingTime: string;
-  range: string;
-  duration: string;
-  ritual: boolean;
-  concentration: boolean;
-  description: string;
-  higherLevel: string;
-  sourceNote: string;
-  components: string;
-  mechanics: string;
 };
 
 export type DraftCombatant = EncounterCombatant & {

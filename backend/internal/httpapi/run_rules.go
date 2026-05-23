@@ -13,7 +13,7 @@ import (
 
 func rollDice(count, dieSize int) int {
 	if count < 1 {
-		count = 1
+		return 0
 	}
 	if dieSize < 2 {
 		dieSize = 6
@@ -131,7 +131,13 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 	`, runID, eventType, strings.TrimSpace(actorID), strings.TrimSpace(targetID), payloadBytes); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+	if mode == "damage" && amount > 0 {
+		s.createConcentrationAlert(ctx, runID, target.ID, amount)
+	}
+	return nil
 }
 
 func (s *Server) restoreCombatantState(ctx context.Context, payload map[string]any) error {

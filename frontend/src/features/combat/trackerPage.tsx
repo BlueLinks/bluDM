@@ -23,6 +23,7 @@ import {
 } from "../../lib/domain/options";
 import type {
   CreatureAction,
+  CreatureSpellcastingProfile,
   Encounter,
   EncounterRun,
   EncounterRunCombatant,
@@ -31,6 +32,7 @@ import type {
 import { ActionResult } from "./actionResult";
 import { AddRunTargetDialog } from "./AddRunTargetDialog";
 import { CombatBoard } from "./CombatBoard";
+import { ConcentrationAlerts } from "./ConcentrationAlerts";
 import {
   ActiveTurnHeader,
   CombatControls,
@@ -38,6 +40,8 @@ import {
   DeathSaveControls,
   RollFlash,
 } from "./combatWidgets";
+import { ManualSpellSlotDialog } from "./ManualSpellSlotDialog";
+import { SpellCastDialog } from "./SpellCastDialog";
 
 export function CombatTrackerPage() {
   const { runID } = useParams();
@@ -49,7 +53,10 @@ export function CombatTrackerPage() {
   const [hpAmount, setHpAmount] = useState("");
   const [damageType, setDamageType] = useState("slashing");
   const [actions, setActions] = useState<CreatureAction[]>([]);
+  const [spellcasting, setSpellcasting] = useState<CreatureSpellcastingProfile | null>(null);
   const [pendingAction, setPendingAction] = useState<Record<string, unknown> | null>(null);
+  const [spellDialogOpen, setSpellDialogOpen] = useState(false);
+  const [manualSlotsOpen, setManualSlotsOpen] = useState(false);
   const [showMeters, setShowMeters] = useState(false);
   const [editing, setEditing] = useState<EncounterRunCombatant | null>(null);
   const [addingTarget, setAddingTarget] = useState(false);
@@ -163,12 +170,17 @@ export function CombatTrackerPage() {
   useEffect(() => {
     if (!active?.creatureId) {
       setActions([]);
+      setSpellcasting(null);
       return;
     }
     void api
       .creatureActions(active.creatureId)
       .then((payload) => setActions(payload.actions))
       .catch(() => setActions([]));
+    void api
+      .creatureSpellcasting(active.creatureId)
+      .then((payload) => setSpellcasting(payload.spellcasting))
+      .catch(() => setSpellcasting(null));
   }, [active?.creatureId]);
 
   async function refreshFrom(promise: Promise<{ run: EncounterRun }>) {
@@ -230,6 +242,50 @@ export function CombatTrackerPage() {
     setPendingAction(null);
   }
 
+  async function castSpell(payload: {
+    spellId: string;
+    librarySource: "user" | "standard";
+    targetIds: string[];
+    castLevel: number;
+    rollMode: RollMode;
+  }) {
+    if (!run || !active) return;
+    try {
+      const response = await api.castSpell(run.id, {
+        actorId: active.id,
+        ...payload,
+      });
+      setRun(response.run);
+      setSpellDialogOpen(false);
+      const spellName = stringFromResult(response.result.spell, "name") || "Spell";
+      toast.push(`${active.displayName} cast ${spellName}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not cast spell");
+    }
+  }
+
+  async function resolveConcentration(alertID: string, action: string) {
+    if (!run) return;
+    await refreshFrom(api.resolveConcentration(run.id, alertID, action));
+  }
+
+  async function manualSpellSlot(spellLevel: number, mode: "consume" | "restore") {
+    if (!run || !active) return;
+    try {
+      const payload = await api.manualSpellSlot(run.id, {
+        combatantId: active.id,
+        spellLevel,
+        mode,
+      });
+      setRun(payload.run);
+      toast.push(
+        `${mode === "consume" ? "Consumed" : "Restored"} a ${spellLevelLabel(spellLevel)} slot for ${active.displayName}.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update spell slot");
+    }
+  }
+
   async function updateDeathSaveFor(
     combatant: EncounterRunCombatant,
     action: "success" | "failure" | "undo-success" | "undo-failure" | "stabilize",
@@ -270,6 +326,11 @@ export function CombatTrackerPage() {
           onMove={move}
           onUndo={() => runID && refreshFrom(api.undoRun(runID))}
         />
+        <ConcentrationAlerts
+          alerts={run.alerts ?? []}
+          combatants={combatants}
+          onResolve={(alert, action) => void resolveConcentration(alert.id, action)}
+        />
         <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
           <ActiveTurnHeader combatant={active} selected={selected}>
             {active.currentHitPoints <= 0 && active.sourceType !== "player" ? (
@@ -289,6 +350,12 @@ export function CombatTrackerPage() {
                 onAmountChange={setHpAmount}
                 onDamageTypeChange={setDamageType}
                 onManual={applyManual}
+                onOpenManualSlots={() => setManualSlotsOpen(true)}
+                onOpenSpells={() => setSpellDialogOpen(true)}
+                spellSlotsTracked={Boolean(
+                  run.spellSlots?.some((slot) => slot.combatantId === active.id),
+                )}
+                spells={spellcasting?.spells ?? []}
               />
             )}
           </ActiveTurnHeader>
@@ -296,6 +363,7 @@ export function CombatTrackerPage() {
 
         <CombatBoard
           active={active}
+          activeEffects={run.activeEffects ?? []}
           combatants={combatants}
           downEnemies={downEnemies}
           orderedCombatants={orderedCombatants}
@@ -329,6 +397,31 @@ export function CombatTrackerPage() {
           setAddingTarget(false);
           toast.push("Target added to the fight.");
         }}
+      />
+      <SpellCastDialog
+        actor={active}
+        combatants={combatants}
+        open={spellDialogOpen}
+        selectedID={selectedID}
+        slots={run.spellSlots ?? []}
+        spells={spellcasting?.spells ?? []}
+        onCast={(payload) =>
+          void castSpell({
+            spellId: payload.spell.spellId,
+            librarySource: payload.spell.librarySource,
+            targetIds: payload.targetIds,
+            castLevel: payload.castLevel,
+            rollMode: payload.rollMode,
+          })
+        }
+        onOpenChange={setSpellDialogOpen}
+      />
+      <ManualSpellSlotDialog
+        actor={active}
+        open={manualSlotsOpen}
+        slots={run.spellSlots ?? []}
+        onOpenChange={setManualSlotsOpen}
+        onUpdate={(spellLevel, mode) => void manualSpellSlot(spellLevel, mode)}
       />
       <Modal
         open={Boolean(pendingAction)}
@@ -574,4 +667,17 @@ function rollModeFromEvent(event?: React.MouseEvent): RollMode {
   if (event?.shiftKey) return "advantage";
   if (event?.ctrlKey) return "disadvantage";
   return "normal";
+}
+
+function stringFromResult(value: unknown, key: string) {
+  if (!value || typeof value !== "object") return "";
+  const candidate = (value as Record<string, unknown>)[key];
+  return typeof candidate === "string" ? candidate : "";
+}
+
+function spellLevelLabel(level: number) {
+  if (level === 1) return "1st-level";
+  if (level === 2) return "2nd-level";
+  if (level === 3) return "3rd-level";
+  return `${level}th-level`;
 }

@@ -154,6 +154,26 @@ type executeActionRequest struct {
 	RollMode       string               `json:"rollMode"`
 }
 
+type castSpellRequest struct {
+	ActorID       string   `json:"actorId"`
+	TargetIDs     []string `json:"targetIds"`
+	SpellID       string   `json:"spellId"`
+	LibrarySource string   `json:"librarySource"`
+	CastLevel     int      `json:"castLevel"`
+	RollMode      string   `json:"rollMode"`
+}
+
+type resolveConcentrationRequest struct {
+	AlertID string `json:"alertId"`
+	Action  string `json:"action"`
+}
+
+type manualSpellSlotRequest struct {
+	CombatantID string `json:"combatantId"`
+	SpellLevel  int    `json:"spellLevel"`
+	Mode        string `json:"mode"`
+}
+
 type resolveDamageRequest struct {
 	ActorID    string `json:"actorId"`
 	TargetID   string `json:"targetId"`
@@ -231,10 +251,11 @@ type longRestUndoRequest struct {
 }
 
 type longRestPlayerSnapshot struct {
-	ID                    string `json:"id"`
-	CurrentHitPoints      int    `json:"currentHitPoints"`
-	TemporaryHitPoints    int    `json:"temporaryHitPoints"`
-	TemporaryMaxHitPoints int    `json:"temporaryMaxHitPoints"`
+	ID                    string         `json:"id"`
+	CurrentHitPoints      int            `json:"currentHitPoints"`
+	TemporaryHitPoints    int            `json:"temporaryHitPoints"`
+	TemporaryMaxHitPoints int            `json:"temporaryMaxHitPoints"`
+	SpellSlotsRemaining   map[string]any `json:"spellSlotsRemaining,omitempty"`
 }
 
 type endEncounterRequest struct {
@@ -424,43 +445,6 @@ func (req creatureRequest) validate() error {
 	}
 	if req.XP < 0 {
 		return errors.New("xp cannot be negative")
-	}
-	return nil
-}
-
-type spellRequest struct {
-	Name          string         `json:"name"`
-	Level         int            `json:"level"`
-	School        string         `json:"school"`
-	CastingTime   string         `json:"castingTime"`
-	Range         string         `json:"range"`
-	Components    map[string]any `json:"components"`
-	Duration      string         `json:"duration"`
-	Ritual        bool           `json:"ritual"`
-	Concentration bool           `json:"concentration"`
-	Description   string         `json:"description"`
-	HigherLevel   string         `json:"higherLevel"`
-	SourceNote    string         `json:"sourceNote"`
-	Mechanics     map[string]any `json:"mechanics"`
-}
-
-func (req *spellRequest) normalize() {
-	req.Name = strings.TrimSpace(req.Name)
-	req.School = strings.TrimSpace(req.School)
-	req.CastingTime = strings.TrimSpace(req.CastingTime)
-	req.Range = strings.TrimSpace(req.Range)
-	req.Duration = strings.TrimSpace(req.Duration)
-	req.Description = strings.TrimSpace(req.Description)
-	req.HigherLevel = strings.TrimSpace(req.HigherLevel)
-	req.SourceNote = strings.TrimSpace(req.SourceNote)
-}
-
-func (req spellRequest) validate() error {
-	if req.Name == "" {
-		return errors.New("name is required")
-	}
-	if req.Level < 0 || req.Level > 9 {
-		return errors.New("level must be between 0 and 9")
 	}
 	return nil
 }

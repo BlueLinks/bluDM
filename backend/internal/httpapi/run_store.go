@@ -51,6 +51,9 @@ func (s *Server) encounterRunByID(ctx context.Context, runID string) (models.Enc
 		return models.EncounterRun{}, err
 	}
 	run.Events, _ = s.combatLogEventsForRun(ctx, runID, 80)
+	run.SpellSlots, _ = s.runSpellSlots(ctx, runID)
+	run.ActiveEffects, _ = s.runActiveEffects(ctx, runID)
+	run.Alerts, _ = s.runAlerts(ctx, runID)
 	return run, nil
 }
 

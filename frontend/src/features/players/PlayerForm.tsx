@@ -1,4 +1,4 @@
-import { BookOpen, HeartPulse, Shield, Sparkles, Zap } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -15,6 +15,8 @@ import { abilities, senseTypes } from "../../lib/domain/options";
 import { effectiveCharacterLevel } from "../../lib/domain/progression";
 import type { Campaign, Player, PlayerFormState } from "../../types";
 import { PlayerBasicsSection } from "./PlayerBasicsSection";
+import { PlayerSpellSlotsSection } from "./PlayerSpellSlotsSection";
+import { PlayerVitalsSection } from "./PlayerVitalsSection";
 import { UnsavedPlayerNavigationDialog } from "./UnsavedPlayerNavigationDialog";
 
 const emptyPlayerForm: PlayerFormState = {
@@ -61,8 +63,32 @@ const emptyPlayerForm: PlayerFormState = {
   },
   spellcastingAbility: "",
   innateSpellcastingAbility: "",
+  spellSlots1: "0",
+  spellSlots2: "0",
+  spellSlots3: "0",
+  spellSlots4: "0",
+  spellSlots5: "0",
+  spellSlots6: "0",
+  spellSlots7: "0",
+  spellSlots8: "0",
+  spellSlots9: "0",
+  spellSlotsRemaining1: "0",
+  spellSlotsRemaining2: "0",
+  spellSlotsRemaining3: "0",
+  spellSlotsRemaining4: "0",
+  spellSlotsRemaining5: "0",
+  spellSlotsRemaining6: "0",
+  spellSlotsRemaining7: "0",
+  spellSlotsRemaining8: "0",
+  spellSlotsRemaining9: "0",
   notes: "",
 };
+
+function slotValue(source: unknown, level: number, fallback = "0") {
+  if (!source || typeof source !== "object") return fallback;
+  const value = (source as Record<string, unknown>)[String(level)];
+  return String(typeof value === "number" || typeof value === "string" ? value : fallback);
+}
 
 function playerFormFromPlayer(player: Player): PlayerFormState {
   const sheet = player.characterSheet;
@@ -78,6 +104,8 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
     Array.isArray(sheet[key])
       ? sheet[key].filter((item): item is string => typeof item === "string")
       : [];
+  const spellSlots = sheet.spellSlots;
+  const remainingSlots = sheet.spellSlotsRemaining;
   return {
     ...emptyPlayerForm,
     campaignId: player.campaignId,
@@ -127,6 +155,24 @@ function playerFormFromPlayer(player: Player): PlayerFormState {
       typeof sheet.spellcastingAbility === "string" ? sheet.spellcastingAbility : "",
     innateSpellcastingAbility:
       typeof sheet.innateSpellcastingAbility === "string" ? sheet.innateSpellcastingAbility : "",
+    spellSlots1: slotValue(spellSlots, 1),
+    spellSlots2: slotValue(spellSlots, 2),
+    spellSlots3: slotValue(spellSlots, 3),
+    spellSlots4: slotValue(spellSlots, 4),
+    spellSlots5: slotValue(spellSlots, 5),
+    spellSlots6: slotValue(spellSlots, 6),
+    spellSlots7: slotValue(spellSlots, 7),
+    spellSlots8: slotValue(spellSlots, 8),
+    spellSlots9: slotValue(spellSlots, 9),
+    spellSlotsRemaining1: slotValue(remainingSlots, 1, slotValue(spellSlots, 1)),
+    spellSlotsRemaining2: slotValue(remainingSlots, 2, slotValue(spellSlots, 2)),
+    spellSlotsRemaining3: slotValue(remainingSlots, 3, slotValue(spellSlots, 3)),
+    spellSlotsRemaining4: slotValue(remainingSlots, 4, slotValue(spellSlots, 4)),
+    spellSlotsRemaining5: slotValue(remainingSlots, 5, slotValue(spellSlots, 5)),
+    spellSlotsRemaining6: slotValue(remainingSlots, 6, slotValue(spellSlots, 6)),
+    spellSlotsRemaining7: slotValue(remainingSlots, 7, slotValue(spellSlots, 7)),
+    spellSlotsRemaining8: slotValue(remainingSlots, 8, slotValue(spellSlots, 8)),
+    spellSlotsRemaining9: slotValue(remainingSlots, 9, slotValue(spellSlots, 9)),
     notes: typeof sheet.notes === "string" ? sheet.notes : "",
   };
 }
@@ -259,7 +305,7 @@ export function PlayerForm({
     <>
       <form className="grid gap-5" onSubmit={handleCreate}>
         <PlayerBasicsSection form={form} campaigns={campaigns} setForm={setForm} />
-        <PlayerVitals form={form} setForm={setForm} />
+        <PlayerVitalsSection form={form} setForm={setForm} />
         <PlayerAbilitySections form={form} setForm={setForm} toggleList={toggleList} />
         <PlayerDefenses form={form} setForm={setForm} toggleList={toggleList} />
         <PlayerSpellAndNotes form={form} setForm={setForm} />
@@ -289,71 +335,6 @@ type TogglePlayerList = (
   value: string,
   checked: boolean,
 ) => void;
-
-function PlayerVitals({ form, setForm }: { form: PlayerFormState; setForm: PlayerFormSetter }) {
-  return (
-    <FormSection title="Health and AC">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <IconNumberField
-          className="w-full"
-          icon={Shield}
-          label="AC"
-          value={form.armorClass}
-          onChange={(value) => setForm({ ...form, armorClass: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={HeartPulse}
-          label="Max HP"
-          value={form.maxHitPoints}
-          onChange={(value) => setForm({ ...form, maxHitPoints: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={HeartPulse}
-          label="Temp HP"
-          value={form.temporaryHitPoints}
-          onChange={(value) => setForm({ ...form, temporaryHitPoints: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={HeartPulse}
-          label="Temp Max HP"
-          value={form.temporaryMaxHitPoints}
-          onChange={(value) => setForm({ ...form, temporaryMaxHitPoints: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={Zap}
-          label="Speed"
-          value={form.speed}
-          onChange={(value) => setForm({ ...form, speed: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Perception"
-          value={form.passivePerception}
-          onChange={(value) => setForm({ ...form, passivePerception: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Investigation"
-          value={form.passiveInvestigation}
-          onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
-        />
-        <IconNumberField
-          className="w-full"
-          icon={BookOpen}
-          label="Passive Insight"
-          value={form.passiveInsight}
-          onChange={(value) => setForm({ ...form, passiveInsight: value })}
-        />
-      </div>
-    </FormSection>
-  );
-}
 
 function PlayerAbilitySections({
   form,
@@ -450,26 +431,29 @@ function PlayerSpellAndNotes({
   return (
     <>
       <FormSection title="Spellcasting">
-        <div className="grid gap-4 sm:grid-cols-[220px_220px_140px]">
-          <Field label="Spellcasting Ability">
-            <AbilitySelect
-              value={form.spellcastingAbility}
-              onChange={(value) => setForm({ ...form, spellcastingAbility: value })}
+        <div className="grid gap-5">
+          <div className="grid gap-4 sm:grid-cols-[220px_220px_140px]">
+            <Field label="Spellcasting Ability">
+              <AbilitySelect
+                value={form.spellcastingAbility}
+                onChange={(value) => setForm({ ...form, spellcastingAbility: value })}
+              />
+            </Field>
+            <Field label="Innate Spellcasting Ability">
+              <AbilitySelect
+                value={form.innateSpellcastingAbility}
+                onChange={(value) => setForm({ ...form, innateSpellcastingAbility: value })}
+              />
+            </Field>
+            <IconNumberField
+              className="w-28"
+              icon={Sparkles}
+              label="Spell Save DC"
+              value={form.spellSaveDC}
+              onChange={(value) => setForm({ ...form, spellSaveDC: value })}
             />
-          </Field>
-          <Field label="Innate Spellcasting Ability">
-            <AbilitySelect
-              value={form.innateSpellcastingAbility}
-              onChange={(value) => setForm({ ...form, innateSpellcastingAbility: value })}
-            />
-          </Field>
-          <IconNumberField
-            className="w-28"
-            icon={Sparkles}
-            label="Spell Save DC"
-            value={form.spellSaveDC}
-            onChange={(value) => setForm({ ...form, spellSaveDC: value })}
-          />
+          </div>
+          <PlayerSpellSlotsSection form={form} setForm={setForm} />
         </div>
       </FormSection>
       <FormSection title="Notes">

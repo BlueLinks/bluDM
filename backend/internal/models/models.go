@@ -74,6 +74,9 @@ type EncounterRun struct {
 	Summary          map[string]any          `json:"summary"`
 	Combatants       []EncounterRunCombatant `json:"combatants,omitempty"`
 	Events           []CombatLogEvent        `json:"events,omitempty"`
+	SpellSlots       []EncounterRunSpellSlot `json:"spellSlots,omitempty"`
+	ActiveEffects    []EncounterRunEffect    `json:"activeEffects,omitempty"`
+	Alerts           []EncounterRunAlert     `json:"alerts,omitempty"`
 }
 
 type EncounterRunCombatant struct {
@@ -120,6 +123,48 @@ type CombatLogEvent struct {
 	ActorID        string         `json:"actorId,omitempty"`
 	TargetID       string         `json:"targetId,omitempty"`
 	Payload        map[string]any `json:"payload"`
+	CreatedAt      time.Time      `json:"createdAt"`
+}
+
+type EncounterRunSpellSlot struct {
+	ID             string `json:"id"`
+	EncounterRunID string `json:"encounterRunId"`
+	CombatantID    string `json:"combatantId"`
+	SpellLevel     int    `json:"spellLevel"`
+	MaxSlots       int    `json:"maxSlots"`
+	RemainingSlots int    `json:"remainingSlots"`
+}
+
+type EncounterRunEffect struct {
+	ID             string         `json:"id"`
+	EncounterRunID string         `json:"encounterRunId"`
+	CasterID       string         `json:"casterId"`
+	TargetID       string         `json:"targetId"`
+	SpellID        string         `json:"spellId,omitempty"`
+	LibrarySource  string         `json:"librarySource"`
+	SpellName      string         `json:"spellName"`
+	CastLevel      int            `json:"castLevel"`
+	Concentration  bool           `json:"concentration"`
+	Timing         string         `json:"timing"`
+	EffectKind     string         `json:"effectKind"`
+	ConditionName  string         `json:"conditionName"`
+	Amount         int            `json:"amount"`
+	Payload        map[string]any `json:"payload"`
+	Active         bool           `json:"active"`
+	CreatedAt      time.Time      `json:"createdAt"`
+}
+
+type EncounterRunAlert struct {
+	ID             string         `json:"id"`
+	EncounterRunID string         `json:"encounterRunId"`
+	AlertType      string         `json:"alertType"`
+	ActorID        string         `json:"actorId,omitempty"`
+	TargetID       string         `json:"targetId,omitempty"`
+	Title          string         `json:"title"`
+	Message        string         `json:"message"`
+	DC             int            `json:"dc"`
+	Payload        map[string]any `json:"payload"`
+	Resolved       bool           `json:"resolved"`
 	CreatedAt      time.Time      `json:"createdAt"`
 }
 
@@ -260,26 +305,88 @@ type CreatureSpell struct {
 }
 
 type Spell struct {
-	ID            string         `json:"id"`
-	Name          string         `json:"name"`
-	Level         int            `json:"level"`
-	School        string         `json:"school"`
-	CastingTime   string         `json:"castingTime"`
-	Range         string         `json:"range"`
-	Components    map[string]any `json:"components"`
-	Duration      string         `json:"duration"`
-	Ritual        bool           `json:"ritual"`
-	Concentration bool           `json:"concentration"`
-	Description   string         `json:"description"`
-	HigherLevel   string         `json:"higherLevel"`
-	SourceNote    string         `json:"sourceNote"`
-	LibrarySource string         `json:"librarySource"`
-	ReadOnly      bool           `json:"readOnly"`
-	SourceKey     string         `json:"sourceKey"`
-	SourceLabel   string         `json:"sourceLabel"`
-	Mechanics     map[string]any `json:"mechanics"`
-	CreatedAt     time.Time      `json:"createdAt"`
-	UpdatedAt     time.Time      `json:"updatedAt"`
+	ID                string                  `json:"id"`
+	Name              string                  `json:"name"`
+	Level             int                     `json:"level"`
+	School            string                  `json:"school"`
+	CastingTime       string                  `json:"castingTime"`
+	CastType          string                  `json:"castType"`
+	Range             string                  `json:"range"`
+	RangeType         string                  `json:"rangeType"`
+	RangeFeet         int                     `json:"rangeFeet"`
+	Components        map[string]any          `json:"components"`
+	Material          string                  `json:"materialComponents"`
+	Classes           []string                `json:"classes"`
+	Duration          string                  `json:"duration"`
+	DurationType      string                  `json:"durationType"`
+	DurationValue     int                     `json:"durationValue"`
+	DurationScale     string                  `json:"durationScale"`
+	AOEType           string                  `json:"aoeType"`
+	AOESize           int                     `json:"aoeSize"`
+	Ritual            bool                    `json:"ritual"`
+	Concentration     bool                    `json:"concentration"`
+	ScalingType       string                  `json:"scalingType"`
+	Description       string                  `json:"description"`
+	HigherLevel       string                  `json:"higherLevel"`
+	SourceNote        string                  `json:"sourceNote"`
+	SourceMaterial    string                  `json:"sourceMaterial"`
+	LibrarySource     string                  `json:"librarySource"`
+	ReadOnly          bool                    `json:"readOnly"`
+	SourceKey         string                  `json:"sourceKey"`
+	SourceLabel       string                  `json:"sourceLabel"`
+	Mechanics         map[string]any          `json:"mechanics"`
+	ProjectileScaling *SpellProjectileScaling `json:"projectileScaling,omitempty"`
+	Actions           []SpellAction           `json:"actions"`
+	CreatedAt         time.Time               `json:"createdAt"`
+	UpdatedAt         time.Time               `json:"updatedAt"`
+}
+
+type SpellProjectileScaling struct {
+	BaseProjectiles       int            `json:"baseProjectiles"`
+	ScalingType           string         `json:"scalingType"`
+	ScaleFromLevel        int            `json:"scaleFromLevel"`
+	AdditionalProjectiles int            `json:"additionalProjectiles"`
+	StepSize              int            `json:"stepSize"`
+	Description           string         `json:"description"`
+	CantripScaling        map[string]any `json:"cantripScaling,omitempty"`
+}
+
+type SpellAction struct {
+	ID                    string                `json:"id"`
+	Name                  string                `json:"name"`
+	SortOrder             int                   `json:"sortOrder"`
+	ActionType            string                `json:"actionType"`
+	SaveAbility           string                `json:"saveAbility"`
+	SuccessfulSaveEffect  string                `json:"successfulSaveEffect"`
+	AttackModifier        int                   `json:"attackModifier"`
+	HitSpecialEvent       string                `json:"hitSpecialEvent"`
+	WeaponSource          string                `json:"weaponSource"`
+	AttackAbilityOverride string                `json:"attackAbilityOverride"`
+	DamageAbilityOverride string                `json:"damageAbilityOverride"`
+	DamageTypeChoice      string                `json:"damageTypeChoice"`
+	DamageTypeOptions     []string              `json:"damageTypeOptions"`
+	Rolls                 []SpellActionRollPart `json:"rolls"`
+}
+
+type SpellActionRollPart struct {
+	ID                     string         `json:"id"`
+	SortOrder              int            `json:"sortOrder"`
+	RollKind               string         `json:"rollKind"`
+	DamageType             string         `json:"damageType"`
+	Magical                bool           `json:"magical"`
+	DiceCount              int            `json:"diceCount"`
+	DieSize                int            `json:"dieSize"`
+	FixedValue             int            `json:"fixedValue"`
+	AddPrimaryStatModifier bool           `json:"addPrimaryStatModifier"`
+	ConditionName          string         `json:"conditionName"`
+	Timing                 string         `json:"timing"`
+	ScalingType            string         `json:"scalingType"`
+	ScalingFromLevel       int            `json:"scalingFromLevel"`
+	ScalingDiceCount       int            `json:"scalingDiceCount"`
+	ScalingDieSize         int            `json:"scalingDieSize"`
+	ScalingFixedValue      int            `json:"scalingFixedValue"`
+	ScalingStepSize        int            `json:"scalingStepSize"`
+	CantripScaling         map[string]any `json:"cantripScaling,omitempty"`
 }
 
 type StandardSource struct {

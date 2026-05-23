@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"context"
 	"encoding/json"
 	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- Initiative rolls are gameplay randomness, not security-sensitive tokens or secrets.
 	mrand "math/rand/v2"
@@ -160,6 +161,10 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 		writeError(w, http.StatusNotFound, "encounter run not found")
 		return
 	}
+	if direction < 0 {
+		s.restoreCurrentTurnTimedEffects(r.Context(), runID, run.CurrentRound, run.CurrentTurnIndex)
+		run, _ = s.encounterRunByID(r.Context(), runID)
+	}
 	before := map[string]any{"round": run.CurrentRound, "turnIndex": run.CurrentTurnIndex}
 	count := len(run.Combatants)
 	if count == 0 {
@@ -200,9 +205,53 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 		return
 	}
 	after := map[string]any{"round": nextRound, "turnIndex": nextIndex}
-	_ = s.appendCombatLogEvent(r.Context(), runID, "turn_changed", "", "", map[string]any{"undoable": true, "before": before, "after": after, "skipped": skipped})
+	timedEffects := []map[string]any{}
+	if direction > 0 && nextIndex >= 0 && nextIndex < len(run.Combatants) {
+		timedEffects = s.applyStartTurnEffects(r.Context(), runID, run.Combatants[nextIndex].ID)
+	}
+	_ = s.appendCombatLogEvent(r.Context(), runID, "turn_changed", "", "", map[string]any{"undoable": true, "before": before, "after": after, "skipped": skipped, "timedEffects": timedEffects})
 	run, _ = s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
+}
+
+func (s *Server) restoreCurrentTurnTimedEffects(ctx context.Context, runID string, round, turnIndex int) {
+	events, err := s.combatLogEventsForRun(ctx, runID, 25)
+	if err != nil {
+		return
+	}
+	for _, event := range events {
+		if event.EventType != "turn_changed" || !boolFromAny(event.Payload["undoable"]) {
+			continue
+		}
+		after, ok := event.Payload["after"].(map[string]any)
+		if !ok || intFromAny(after["round"]) != round || intFromAny(after["turnIndex"]) != turnIndex {
+			continue
+		}
+		restoreTimedEffects(ctx, s, event.Payload["timedEffects"])
+		_, _ = s.db.Exec(ctx, `update combat_log_events set payload = jsonb_set(payload, '{undoable}', 'false'::jsonb) where id = $1`, event.ID)
+		return
+	}
+}
+
+func restoreTimedEffects(ctx context.Context, s *Server, value any) {
+	effects, ok := value.([]any)
+	if !ok {
+		return
+	}
+	for _, raw := range effects {
+		effect, ok := raw.(map[string]any)
+		if !ok {
+			continue
+		}
+		before, ok := effect["before"].(map[string]any)
+		if ok {
+			_ = s.restoreCombatantState(ctx, before)
+		}
+		effectID := strings.TrimSpace(stringFromAny(effect["effectId"]))
+		if effectID != "" {
+			_, _ = s.db.Exec(ctx, `update encounter_run_active_effects set active = true where id = $1`, effectID)
+		}
+	}
 }
 
 func shouldSkipTurn(combatant models.EncounterRunCombatant) bool {

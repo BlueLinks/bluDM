@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { DiceFormulaInput } from "../../components/shared/CharacterFormControls";
-import { damageTypes } from "../../components/shared/damageTypes";
+import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { Button, Checkbox, Field, Select } from "../../components/ui";
 import { blankRoll } from "../../lib/domain/forms";
 import type { ActionRollFormState } from "../../types";
@@ -21,7 +21,7 @@ export function ActionRollEditor({
           <div className="grid items-end gap-3 sm:grid-cols-[minmax(150px,1fr)_6rem_2.75rem]">
             <Field label="Damage type">
               <Select
-                options={damageTypes.map((type) => ({ value: type.id, label: type.label }))}
+                options={damageTypeOptions()}
                 placeholder="Damage"
                 value={roll.damageType}
                 onValueChange={(damageType) =>

@@ -373,6 +373,11 @@ func (s *Server) startEncounter(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if err := s.snapshotRunSpellSlots(r.Context(), tx, run.ID); err != nil {
+		s.log.Error("start encounter spell slot snapshot failed", "error", err, "runID", run.ID)
+		writeError(w, http.StatusInternalServerError, "could not snapshot spell slots")
+		return
+	}
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not start encounter")
 		return

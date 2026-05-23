@@ -21,6 +21,137 @@ export const hitSpecialEvents = [
   { value: "heal_caster_full", label: "Heal caster full" },
   { value: "heal_caster_half", label: "Heal caster half" },
   { value: "reduce_max_hp", label: "Reduce max HP" },
+  { value: "increase_max_hp", label: "Increase target max HP" },
+  { value: "grant_temp_hp", label: "Grant temporary HP" },
+  { value: "add_condition", label: "Add condition" },
+];
+
+export const spellRollKinds = [
+  { value: "damage", label: "Deal damage to target" },
+  { value: "healing", label: "Restore target current HP" },
+  { value: "max_hp", label: "Increase target HP maximum" },
+  { value: "temp_hp", label: "Set target temporary HP" },
+  { value: "condition", label: "Apply condition to target" },
+  { value: "condition_immunity", label: "Grant condition immunity" },
+  { value: "custom", label: "Custom target effect" },
+];
+
+export const spellEffectTimings = [
+  { value: "immediate", label: "Immediate" },
+  { value: "start_target_turn", label: "Start of each target turn" },
+  { value: "start_target_turn_once", label: "Start of target's next turn only" },
+  { value: "end_target_turn", label: "End of each target turn" },
+  { value: "end_target_turn_once", label: "End of target's next turn only" },
+];
+
+export const spellLevels = [
+  { value: "0", label: "Cantrip" },
+  ...Array.from({ length: 9 }, (_, index) => ({
+    value: String(index + 1),
+    label: `${index + 1}${index === 0 ? "st" : index === 1 ? "nd" : index === 2 ? "rd" : "th"} level`,
+  })),
+];
+
+export const spellSchools = [
+  "Abjuration",
+  "Conjuration",
+  "Divination",
+  "Enchantment",
+  "Evocation",
+  "Illusion",
+  "Necromancy",
+  "Transmutation",
+];
+
+export const spellCastTypes = ["Action", "Bonus Action", "Reaction", "Longer Time", "Special"];
+
+export const spellCastingTriggers = [
+  { value: "normal", label: "Normal casting" },
+  { value: "after_ranged_weapon_hit", label: "After a ranged weapon hit" },
+  { value: "after_melee_weapon_hit", label: "After a melee weapon hit" },
+  { value: "when_hit", label: "When the caster is hit" },
+  { value: "manual_special", label: "Manual / special trigger" },
+];
+
+export const spellTargetPatterns = [
+  { value: "target", label: "Target" },
+  { value: "self", label: "Self" },
+  { value: "area", label: "Area" },
+  { value: "special", label: "Special" },
+];
+
+export const spellTargetAnchors = [
+  { value: "chosen_target", label: "Chosen target" },
+  { value: "target_hit_by_triggering_attack", label: "Target hit by triggering attack" },
+  { value: "caster", label: "Caster" },
+  { value: "point_in_range", label: "Point in range" },
+];
+
+export const weaponAttackSources = [
+  { value: "chosen_weapon", label: "Chosen weapon" },
+  { value: "triggering_weapon", label: "Triggering weapon" },
+  { value: "specific_weapon", label: "Specific weapon" },
+];
+
+export const abilityOverrideOptions = [
+  { value: "normal", label: "Use weapon's normal ability" },
+  { value: "spellcasting", label: "Use spellcasting ability" },
+];
+
+export const damageTypeChoices = [
+  { value: "weapon", label: "Use weapon damage" },
+  { value: "specific", label: "Use specific damage" },
+  { value: "choice", label: "Give damage options" },
+];
+
+export const spellRangeTypes = ["Self", "Touch", "Range", "Sight", "Unlimited", "Special"];
+
+export const spellClasses = [
+  "Bard",
+  "Cleric",
+  "Druid",
+  "Paladin",
+  "Ranger",
+  "Sorcerer",
+  "Warlock",
+  "Wizard",
+];
+
+export const spellDurationTypes = [
+  "Concentration",
+  "Instantaneous",
+  "Special",
+  "Time",
+  "Until Dispelled",
+  "Until Dispelled Or Triggered",
+];
+
+export const spellTimeScales = ["Round", "Minute", "Hour", "Day"];
+
+export const spellAOETypes = [
+  "None",
+  "Cone",
+  "Cube",
+  "Cylinder",
+  "Line",
+  "Radius",
+  "Sphere",
+  "Square",
+  "Square Feet",
+];
+
+export const spellScalingTypes = [
+  { value: "none", label: "None" },
+  { value: "character_level", label: "Character Level" },
+  { value: "spell_scale", label: "Spell Scale" },
+  { value: "spell_level", label: "Spell Level" },
+];
+
+export const successfulSaveEffects = [
+  { value: "none", label: "No effect" },
+  { value: "half", label: "Half damage" },
+  { value: "full", label: "Full damage" },
+  { value: "negates", label: "Negates effect" },
 ];
 
 export const encounterStatusOptions = [

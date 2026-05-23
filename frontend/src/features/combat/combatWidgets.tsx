@@ -1,6 +1,15 @@
-import { ChevronDown, HeartPulse, ScrollText, Shield, Skull, Swords } from "lucide-react";
+import {
+  ChevronDown,
+  HeartPulse,
+  ScrollText,
+  Shield,
+  Skull,
+  Sparkles,
+  Swords,
+  WandSparkles,
+} from "lucide-react";
 import React, { useEffect } from "react";
-import { damageTypes } from "../../components/shared/damageTypes";
+import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { Badge, Button, DeathSaveTrack, Input, SectionPanel, Select } from "../../components/ui";
 import { defaultCombatantColor } from "../../lib/domain/options";
 import {
@@ -10,7 +19,13 @@ import {
   hpBarColor,
   hpPercent,
 } from "../../lib/domain/combat";
-import type { CreatureAction, EncounterRun, EncounterRunCombatant } from "../../types";
+import type {
+  CreatureAction,
+  CreatureSpell,
+  EncounterRun,
+  EncounterRunCombatant,
+  EncounterRunEffect,
+} from "../../types";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
 export function CombatStatusBar({
@@ -153,6 +168,10 @@ export function CombatControls({
   onAmountChange,
   onDamageTypeChange,
   onManual,
+  onOpenManualSlots,
+  onOpenSpells,
+  spells,
+  spellSlotsTracked,
 }: {
   actions: CreatureAction[];
   damageType: string;
@@ -162,6 +181,10 @@ export function CombatControls({
   onAmountChange: (value: string) => void;
   onDamageTypeChange: (value: string) => void;
   onManual: (mode: "damage" | "healing") => void;
+  onOpenManualSlots: () => void;
+  onOpenSpells: () => void;
+  spells: CreatureSpell[];
+  spellSlotsTracked: boolean;
 }) {
   return (
     <div className="combat-panel min-w-0 rounded-lg border border-border bg-background p-2">
@@ -203,6 +226,21 @@ export function CombatControls({
           <DamageTypeControl value={damageType} onChange={onDamageTypeChange} disabled={disabled} />
           {actions.length > 0 && (
             <ActionMenu actions={actions} disabled={disabled} onAction={onAction} />
+          )}
+          {spells.length > 0 && (
+            <Button type="button" variant="secondary" icon={Sparkles} onClick={onOpenSpells}>
+              Spells
+            </Button>
+          )}
+          {spellSlotsTracked && (
+            <Button
+              type="button"
+              variant="secondary"
+              icon={WandSparkles}
+              onClick={onOpenManualSlots}
+            >
+              Slots
+            </Button>
           )}
         </div>
       </div>
@@ -277,11 +315,7 @@ function DamageTypeControl({
       <Select
         value={value}
         placeholder="Damage type"
-        options={damageTypes.map((type) => ({
-          label: type.label,
-          value: type.id,
-          icon: type.icon,
-        }))}
+        options={damageTypeOptions()}
         onValueChange={onChange}
       />
     </div>
@@ -290,6 +324,7 @@ function DamageTypeControl({
 
 export function TargetRow({
   active = false,
+  activeEffects = [],
   down = false,
   combatant,
   selected,
@@ -298,6 +333,7 @@ export function TargetRow({
   onDeathSave,
 }: {
   active?: boolean;
+  activeEffects?: EncounterRunEffect[];
   down?: boolean;
   combatant: EncounterRunCombatant;
   selected: boolean;
@@ -422,10 +458,26 @@ export function TargetRow({
           {combatant.conditions.map((condition) => (
             <Badge key={condition}>{condition}</Badge>
           ))}
+          {activeEffects.map((effect) => (
+            <Badge key={effect.id}>{effectLabel(effect)}</Badge>
+          ))}
         </div>
       </div>
     </div>
   );
+}
+
+function effectLabel(effect: EncounterRunEffect) {
+  if (effect.effectKind === "condition_immunity" && effect.conditionName) {
+    return `Immune: ${effect.conditionName}`;
+  }
+  if (effect.effectKind === "concentration") {
+    return `Concentration: ${effect.spellName}`;
+  }
+  if (effect.timing === "start_target_turn") {
+    return `${effect.spellName}: start turn`;
+  }
+  return effect.spellName;
 }
 
 function StateBadge({ tone, children }: { tone: "acting" | "target"; children: React.ReactNode }) {

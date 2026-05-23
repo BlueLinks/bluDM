@@ -47,12 +47,14 @@ export function Modal({
   children,
   open,
   onOpenChange,
+  className = "",
 }: {
   title: string;
   trigger: React.ReactNode;
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  className?: string;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -61,7 +63,12 @@ export function Modal({
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
           forceMount
-          className="modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl"
+          className={[
+            "modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl",
+            className,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
