@@ -36,24 +36,26 @@ type standardCreatureSeed struct {
 }
 
 type standardSpellSeed struct {
-	SourceKey     string          `json:"sourceKey"`
-	Slug          string          `json:"slug"`
-	Name          string          `json:"name"`
-	Level         int             `json:"level"`
-	School        string          `json:"school"`
-	CastingTime   string          `json:"castingTime"`
-	Range         string          `json:"range"`
-	Components    json.RawMessage `json:"components"`
-	Duration      string          `json:"duration"`
-	Ritual        bool            `json:"ritual"`
-	Concentration bool            `json:"concentration"`
-	Description   string          `json:"description"`
-	HigherLevel   string          `json:"higherLevel"`
-	SourceNote    string          `json:"sourceNote"`
-	SourceLabel   string          `json:"sourceLabel"`
-	SourceURL     string          `json:"sourceUrl"`
-	LicenseName   string          `json:"licenseName"`
-	Mechanics     json.RawMessage `json:"mechanics"`
+	SourceKey         string                              `json:"sourceKey"`
+	Slug              string                              `json:"slug"`
+	Name              string                              `json:"name"`
+	Level             int                                 `json:"level"`
+	School            string                              `json:"school"`
+	CastingTime       string                              `json:"castingTime"`
+	Range             string                              `json:"range"`
+	Components        json.RawMessage                     `json:"components"`
+	Duration          string                              `json:"duration"`
+	Ritual            bool                                `json:"ritual"`
+	Concentration     bool                                `json:"concentration"`
+	Description       string                              `json:"description"`
+	HigherLevel       string                              `json:"higherLevel"`
+	SourceNote        string                              `json:"sourceNote"`
+	SourceLabel       string                              `json:"sourceLabel"`
+	SourceURL         string                              `json:"sourceUrl"`
+	LicenseName       string                              `json:"licenseName"`
+	Mechanics         json.RawMessage                     `json:"mechanics"`
+	ProjectileScaling *standardSpellProjectileScalingSeed `json:"projectileScaling"`
+	Actions           []standardSpellActionSeed           `json:"actions"`
 }
 
 func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
@@ -122,7 +124,8 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 		}
 	}
 	for _, spell := range spells {
-		if _, err := tx.Exec(ctx, upsertStandardSpellSQL,
+		var spellID string
+		if err := tx.QueryRow(ctx, upsertStandardSpellSQL,
 			spell.SourceKey,
 			spell.Slug,
 			spell.Name,
@@ -141,8 +144,11 @@ func seedStandardContent(ctx context.Context, pool *pgxpool.Pool) error {
 			spell.SourceURL,
 			spell.LicenseName,
 			spell.Mechanics,
-		); err != nil {
+		).Scan(&spellID); err != nil {
 			return fmt.Errorf("seed standard spell %q: %w", spell.Slug, err)
+		}
+		if err := replaceStandardSpellAutomation(ctx, tx, spellID, spell.ProjectileScaling, spell.Actions); err != nil {
+			return fmt.Errorf("seed standard spell automation %q: %w", spell.Slug, err)
 		}
 	}
 	for _, entry := range entries {
@@ -199,6 +205,7 @@ func parseStandardSpells() ([]standardSpellSeed, error) {
 		if len(spell.Mechanics) == 0 {
 			spells[index].Mechanics = json.RawMessage(`{}`)
 		}
+		inferStandardSpellAutomation(&spells[index])
 	}
 	return spells, nil
 }
@@ -267,6 +274,56 @@ create index if not exists standard_spells_level_name_idx on standard_spells(lev
 create index if not exists standard_spells_school_idx on standard_spells(school);
 create index if not exists standard_spells_source_key_idx on standard_spells(source_key, level, name);
 create unique index if not exists standard_spells_source_slug_idx on standard_spells(source_key, slug);
+
+create table if not exists standard_spell_projectile_scaling (
+    standard_spell_id uuid primary key references standard_spells(id) on delete cascade,
+    base_projectiles integer not null default 1,
+    scaling_type text not null default 'none',
+    scale_from_level integer not null default 0,
+    additional_projectiles integer not null default 0,
+    step_size integer not null default 1,
+    description text not null default '',
+    cantrip_scaling jsonb not null default '{}'::jsonb
+);
+create table if not exists standard_spell_actions (
+    id uuid primary key default gen_random_uuid(),
+    standard_spell_id uuid not null references standard_spells(id) on delete cascade,
+    name text not null default '',
+    sort_order integer not null default 0,
+    action_type text not null default 'damage',
+    save_ability text not null default '',
+    successful_save_effect text not null default 'none',
+    attack_modifier integer not null default 0,
+    hit_special_event text not null default 'none',
+    weapon_source text not null default '',
+    attack_ability_override text not null default '',
+    damage_ability_override text not null default '',
+    damage_type_choice text not null default '',
+    damage_type_options text[] not null default '{}'::text[]
+);
+create index if not exists standard_spell_actions_spell_idx on standard_spell_actions(standard_spell_id, sort_order);
+create table if not exists standard_spell_action_roll_parts (
+    id uuid primary key default gen_random_uuid(),
+    standard_spell_action_id uuid not null references standard_spell_actions(id) on delete cascade,
+    sort_order integer not null default 0,
+    roll_kind text not null default 'damage',
+    damage_type text not null default '',
+    magical boolean not null default false,
+    dice_count integer not null default 1,
+    die_size integer not null default 6,
+    fixed_value integer not null default 0,
+    add_primary_stat_modifier boolean not null default false,
+    condition_name text not null default '',
+    timing text not null default 'immediate',
+    scaling_type text not null default 'none',
+    scaling_from_level integer not null default 0,
+    scaling_dice_count integer not null default 0,
+    scaling_die_size integer not null default 6,
+    scaling_fixed_value integer not null default 0,
+    scaling_step_size integer not null default 1,
+    cantrip_scaling jsonb not null default '{}'::jsonb
+);
+create index if not exists standard_spell_action_roll_parts_action_idx on standard_spell_action_roll_parts(standard_spell_action_id, sort_order);
 `
 
 const upsertStandardCreatureSQL = `
@@ -322,5 +379,6 @@ on conflict (source_key, slug) do update set
     source_url = excluded.source_url,
     license_name = excluded.license_name,
     mechanics = excluded.mechanics,
-    updated_at = now();
+    updated_at = now()
+returning id;
 `

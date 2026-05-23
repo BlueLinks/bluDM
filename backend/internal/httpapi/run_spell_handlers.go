@@ -207,7 +207,15 @@ func (s *Server) spellForCast(ctx context.Context, spellID string, librarySource
 			from standard_spells
 			where id = $1
 		`, spellID)
-		return scanStandardSpell(row)
+		spell, err := scanStandardSpell(row)
+		if err != nil {
+			return models.Spell{}, err
+		}
+		spells, err := s.attachSpellChildren(ctx, []models.Spell{spell})
+		if err != nil {
+			return models.Spell{}, err
+		}
+		return spells[0], nil
 	}
 	userID, _ := currentUserID(ctx)
 	row := s.db.QueryRow(ctx, `
