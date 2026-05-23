@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func (s *Server) getCreatureSpellcasting(w http.ResponseWriter, r *http.Request) {
@@ -72,15 +73,10 @@ func (s *Server) upsertCreatureSpellcasting(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	for index, spell := range req.Spells {
-		if strings.TrimSpace(spell.SpellID) == "" {
+		if spell.SpellID == "" {
 			continue
 		}
-		tag, err := tx.Exec(r.Context(), `
-			insert into creature_spells (creature_id, spell_id, spell_level, prepared, innate, sort_order)
-			select $1, spells.id, $3, $4, $5, $6
-			from spells
-			where spells.id = $2 and spells.owner_user_id = $7
-		`, creatureID, strings.TrimSpace(spell.SpellID), spell.SpellLevel, spell.Prepared, spell.Innate, index, currentUserIDMust(r.Context()))
+		tag, err := s.insertCreatureSpell(r.Context(), tx, creatureID, spell, index)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not save creature spells")
 			return
@@ -100,6 +96,31 @@ func (s *Server) upsertCreatureSpellcasting(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"spellcasting": profile})
+}
+
+type spellTx interface {
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+}
+
+func (s *Server) insertCreatureSpell(ctx context.Context, tx spellTx, creatureID string, spell creatureSpellRequest, index int) (pgconn.CommandTag, error) {
+	if spell.LibrarySource == "standard" {
+		return tx.Exec(ctx, `
+			insert into creature_spells (
+				creature_id, standard_spell_id, library_source, spell_level, prepared, innate, sort_order
+			)
+			select $1, standard_spells.id, 'standard', $3, $4, $5, $6
+			from standard_spells
+			where standard_spells.id = $2
+		`, creatureID, spell.SpellID, spell.SpellLevel, spell.Prepared, spell.Innate, index)
+	}
+	return tx.Exec(ctx, `
+		insert into creature_spells (
+			creature_id, spell_id, library_source, spell_level, prepared, innate, sort_order
+		)
+		select $1, spells.id, 'user', $3, $4, $5, $6
+		from spells
+		where spells.id = $2 and spells.owner_user_id = $7
+	`, creatureID, spell.SpellID, spell.SpellLevel, spell.Prepared, spell.Innate, index, currentUserIDMust(ctx))
 }
 
 func (s *Server) creatureSpellcastingProfile(ctx context.Context, creatureID string) (models.CreatureSpellcastingProfile, error) {
@@ -132,11 +153,17 @@ func (s *Server) creatureSpellcastingProfile(ctx context.Context, creatureID str
 
 func (s *Server) creatureSpells(ctx context.Context, creatureID string) ([]models.CreatureSpell, error) {
 	rows, err := s.db.Query(ctx, `
-		select creature_spells.id, creature_spells.creature_id, creature_spells.spell_id,
-			spells.name, creature_spells.spell_level, creature_spells.prepared,
+		select creature_spells.id, creature_spells.creature_id,
+			coalesce(creature_spells.spell_id::text, creature_spells.standard_spell_id::text, ''),
+			coalesce(spells.name, standard_spells.name, ''),
+			creature_spells.library_source,
+			coalesce(standard_spells.source_key, ''),
+			coalesce(standard_spells.source_label, ''),
+			creature_spells.spell_level, creature_spells.prepared,
 			creature_spells.innate, creature_spells.sort_order
 		from creature_spells
-		join spells on spells.id = creature_spells.spell_id
+		left join spells on spells.id = creature_spells.spell_id
+		left join standard_spells on standard_spells.id = creature_spells.standard_spell_id
 		where creature_spells.creature_id = $1
 		order by creature_spells.spell_level asc, creature_spells.sort_order asc
 	`, creatureID)
@@ -147,7 +174,19 @@ func (s *Server) creatureSpells(ctx context.Context, creatureID string) ([]model
 	spells := []models.CreatureSpell{}
 	for rows.Next() {
 		var spell models.CreatureSpell
-		if err := rows.Scan(&spell.ID, &spell.CreatureID, &spell.SpellID, &spell.SpellName, &spell.SpellLevel, &spell.Prepared, &spell.Innate, &spell.SortOrder); err != nil {
+		if err := rows.Scan(
+			&spell.ID,
+			&spell.CreatureID,
+			&spell.SpellID,
+			&spell.SpellName,
+			&spell.LibrarySource,
+			&spell.SourceKey,
+			&spell.SourceLabel,
+			&spell.SpellLevel,
+			&spell.Prepared,
+			&spell.Innate,
+			&spell.SortOrder,
+		); err != nil {
 			return nil, err
 		}
 		spells = append(spells, spell)

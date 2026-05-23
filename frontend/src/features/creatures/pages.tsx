@@ -1,4 +1,4 @@
-import { Archive, Castle, Plus, Search, Swords } from "lucide-react";
+import { Castle, Plus, Search, Swords } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
@@ -10,7 +10,6 @@ import {
   ConfirmDialog,
   EmptyMini,
   FloatingInput,
-  Modal,
   MutedPanel,
   Page,
   PageHeader,
@@ -27,8 +26,9 @@ import type {
   Campaign,
   Creature,
   CreatureAction,
+  CreatureSpellcastingProfile,
 } from "../../types";
-import { ActionMiniFields, ActionSummary } from "./actionEditors";
+import { ActionBankPanel } from "./ActionBankPanel";
 import { CreatureForm } from "./CreatureForm";
 import { CreatureLibraryList, CreaturePreviewModal } from "./CreatureLibraryList";
 
@@ -44,6 +44,9 @@ export function NpcsPage() {
   const [templateForm, setTemplateForm] = useState<ActionFormState>(() => spiderStaffAction());
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ActionTemplate | null>(null);
+  const [templateConflict, setTemplateConflict] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const [deleteCreature, setDeleteCreature] = useState<Creature | null>(null);
   const [previewCreature, setPreviewCreature] = useState<Creature | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<ActionTemplate | null>(null);
@@ -66,26 +69,60 @@ export function NpcsPage() {
   async function handleCreateTemplate(event: FormEvent) {
     event.preventDefault();
     setError("");
+    const name = templateForm.name.trim();
+    if (!name) {
+      setError("Custom action name is required");
+      return;
+    }
     try {
+      const conflictPayload = await api.actionTemplateConflict(name);
+      const conflictingAction = conflictPayload.actionTemplate ?? null;
+      if (
+        conflictPayload.conflict &&
+        conflictingAction &&
+        conflictingAction.id !== editingTemplate?.id
+      ) {
+        setTemplateConflict(conflictingAction);
+        return;
+      }
       const payload = editingTemplate
         ? await api.updateActionTemplate(editingTemplate.id, templateForm)
         : await api.createActionTemplate(templateForm);
-      setTemplates((current) =>
-        editingTemplate
-          ? current
-              .map((template) =>
-                template.id === editingTemplate.id ? payload.actionTemplate : template,
-              )
-              .sort((a, b) => a.name.localeCompare(b.name))
-          : [...current, payload.actionTemplate].sort((a, b) => a.name.localeCompare(b.name)),
-      );
-      setTemplateForm(blankAction());
-      setEditingTemplate(null);
-      setTemplateModalOpen(false);
-      toast.push(editingTemplate ? "Action template updated" : "Action template saved");
+      saveTemplateResult(payload.actionTemplate);
+      toast.push(editingTemplate ? "Custom action updated" : "Custom action saved");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create action template");
+      setError(err instanceof Error ? err.message : "Could not create custom action");
     }
+  }
+
+  async function overwriteConflictingTemplate() {
+    if (!templateConflict) return;
+    setError("");
+    try {
+      const payload = await api.updateActionTemplate(templateConflict.id, {
+        ...templateForm,
+        name: templateConflict.name,
+        sourceTemplateId: "",
+      });
+      saveTemplateResult(payload.actionTemplate);
+      toast.push(`${payload.actionTemplate.name} overwritten`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not overwrite custom action");
+    }
+  }
+
+  function saveTemplateResult(template: ActionTemplate) {
+    setTemplates((current) =>
+      current.some((item) => item.id === template.id)
+        ? current
+            .map((item) => (item.id === template.id ? template : item))
+            .sort((a, b) => a.name.localeCompare(b.name))
+        : [...current, template].sort((a, b) => a.name.localeCompare(b.name)),
+    );
+    setTemplateForm(blankAction());
+    setEditingTemplate(null);
+    setTemplateConflict(null);
+    setTemplateModalOpen(false);
   }
 
   async function confirmDeleteCreature() {
@@ -103,7 +140,7 @@ export function NpcsPage() {
       const payload = await api.actionTemplateUsage(template.id);
       setTemplateUsage(payload.usage);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load action template usage");
+      setError(err instanceof Error ? err.message : "Could not load custom action usage");
     }
   }
 
@@ -112,17 +149,47 @@ export function NpcsPage() {
     const payload = await api.deleteActionTemplate(deleteTemplate.id);
     setTemplates((current) => current.filter((template) => template.id !== deleteTemplate.id));
     toast.push(
-      `Action template removed from bank and ${payload.removedCreatureActions} creature action${payload.removedCreatureActions === 1 ? "" : "s"}`,
+      `Custom action removed from bank and ${payload.removedCreatureActions} creature action${payload.removedCreatureActions === 1 ? "" : "s"}`,
     );
     setDeleteTemplate(null);
     setTemplateUsage([]);
   }
 
+  async function duplicateTemplate(template: ActionTemplate) {
+    setError("");
+    try {
+      const duplicate = {
+        ...actionFormFromTemplate(template),
+        name: nextActionCopyName(template.name, templates),
+        sourceTemplateId: "",
+      };
+      const payload = await api.createActionTemplate(duplicate);
+      setTemplates((current) =>
+        [...current, payload.actionTemplate].sort((a, b) => a.name.localeCompare(b.name)),
+      );
+      toast.push(`${payload.actionTemplate.name} added to custom actions`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not duplicate custom action");
+    }
+  }
+
   function openTemplateModal(template?: ActionTemplate) {
     setEditingTemplate(template ?? null);
     setTemplateForm(template ? actionFormFromTemplate(template) : blankAction());
+    setTemplateConflict(null);
     setTemplateModalOpen(true);
   }
+
+  function closeTemplateModal() {
+    setTemplateModalOpen(false);
+    setEditingTemplate(null);
+    setTemplateConflict(null);
+    setTemplateForm(blankAction());
+  }
+
+  const templateConflictMatches =
+    Boolean(templateConflict) &&
+    normalizeActionName(templateForm.name) === normalizeActionName(templateConflict?.name ?? "");
 
   return (
     <Page>
@@ -142,90 +209,57 @@ export function NpcsPage() {
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="grid gap-4 xl:grid-cols-[1fr_460px]">
-        <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
-          <div className="mb-4">
-            <CreatureSourceFilter
-              showStandard={showStandardCreatures}
-              showUser={showUserCreatures}
-              onShowStandardChange={setShowStandardCreatures}
-              onShowUserChange={setShowUserCreatures}
-            />
-          </div>
-          {showStandardCreatures && (
-            <div className="mb-4">
-              <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
-            </div>
-          )}
-          <div className="mb-4">
-            <FloatingInput
-              icon={Search}
-              label="Search creatures"
-              value={creatureSearch}
-              onChange={setCreatureSearch}
-            />
-          </div>
-          {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
-          <CreatureLibraryList
-            creatures={creatures.filter((creature) =>
-              creatureVisible(creature, {
-                query: creatureSearch,
-                showStandard: showStandardCreatures,
-                showUser: showUserCreatures,
-              }),
-            )}
-            onPreview={setPreviewCreature}
-            onRemove={setDeleteCreature}
+      <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
+        <div className="mb-4">
+          <CreatureSourceFilter
+            showStandard={showStandardCreatures}
+            showUser={showUserCreatures}
+            onShowStandardChange={setShowStandardCreatures}
+            onShowUserChange={setShowUserCreatures}
           />
-        </SectionPanel>
-        <SectionPanel title="Action Bank" icon={Archive}>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Reusable attacks and abilities live here. Adding one to a creature creates an editable
-            copy in that creature's own action list.
-          </p>
-          <Modal
-            open={templateModalOpen}
-            onOpenChange={(open) => {
-              setTemplateModalOpen(open);
-              if (!open) {
-                setEditingTemplate(null);
-                setTemplateForm(blankAction());
-              }
-            }}
-            title={editingTemplate ? "Edit action template" : "Add action template"}
-            trigger={
-              <Button
-                type="button"
-                icon={Plus}
-                variant="success"
-                onClick={() => openTemplateModal()}
-              >
-                Add action
-              </Button>
-            }
-          >
-            <form className="grid gap-4" onSubmit={handleCreateTemplate}>
-              <ActionMiniFields value={templateForm} onChange={setTemplateForm} />
-              <Button type="submit" icon={Plus} variant="success">
-                {editingTemplate ? "Update action template" : "Save action template"}
-              </Button>
-            </form>
-          </Modal>
-          <div className="grid gap-2">
-            {templates.map((template) => (
-              <ActionSummary
-                key={template.id}
-                action={template}
-                onEdit={() => openTemplateModal(template)}
-                onDelete={() => void openDeleteTemplate(template)}
-              />
-            ))}
-            {!loading && templates.length === 0 && (
-              <EmptyMini copy="No action templates yet. Create reusable attacks here, then copy them into specific NPCs or monsters." />
-            )}
+        </div>
+        {showStandardCreatures && (
+          <div className="mb-4">
+            <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
           </div>
-        </SectionPanel>
-      </div>
+        )}
+        <div className="mb-4">
+          <FloatingInput
+            icon={Search}
+            label="Search creatures"
+            value={creatureSearch}
+            onChange={setCreatureSearch}
+          />
+        </div>
+        {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
+        <CreatureLibraryList
+          creatures={creatures.filter((creature) =>
+            creatureVisible(creature, {
+              query: creatureSearch,
+              showStandard: showStandardCreatures,
+              showUser: showUserCreatures,
+            }),
+          )}
+          onPreview={setPreviewCreature}
+          onRemove={setDeleteCreature}
+        />
+      </SectionPanel>
+      <ActionBankPanel
+        editingTemplate={editingTemplate}
+        loading={loading}
+        templateConflict={templateConflict}
+        templateConflictMatches={templateConflictMatches}
+        templateForm={templateForm}
+        templateModalOpen={templateModalOpen}
+        templates={templates}
+        onDelete={(template) => void openDeleteTemplate(template)}
+        onDuplicate={(template) => void duplicateTemplate(template)}
+        onFormChange={setTemplateForm}
+        onModalChange={(open) => (open ? setTemplateModalOpen(true) : closeTemplateModal())}
+        onOpenTemplate={openTemplateModal}
+        onOverwrite={() => void overwriteConflictingTemplate()}
+        onSubmit={handleCreateTemplate}
+      />
       <ConfirmDialog
         open={Boolean(deleteCreature)}
         title="Remove creature?"
@@ -247,7 +281,7 @@ export function NpcsPage() {
         onConfirm={() => void confirmDeleteTemplate()}
       >
         Removing {deleteTemplate?.name} will also remove copied actions that still reference this
-        bank template.
+        custom action.
         {templateUsage.length > 0 && (
           <div className="mt-3 rounded-md border border-border bg-background p-3 text-sm">
             <div className="font-semibold">Affected creatures</div>
@@ -280,6 +314,21 @@ function creatureVisible(
     .includes(query);
 }
 
+function nextActionCopyName(name: string, templates: ActionTemplate[]) {
+  const baseName = `${name} Copy`;
+  const existingNames = new Set(templates.map((template) => template.name.toLowerCase()));
+  if (!existingNames.has(baseName.toLowerCase())) return baseName;
+  let index = 2;
+  while (existingNames.has(`${baseName} ${index}`.toLowerCase())) {
+    index += 1;
+  }
+  return `${baseName} ${index}`;
+}
+
+function normalizeActionName(name: string) {
+  return name.trim().toLowerCase();
+}
+
 export function NpcCreatePage() {
   const navigate = useNavigate();
   const toast = useToasts();
@@ -306,6 +355,7 @@ export function NpcEditPage() {
   const toast = useToasts();
   const [creature, setCreature] = useState<Creature | null>(null);
   const [actions, setActions] = useState<CreatureAction[]>([]);
+  const [spellcasting, setSpellcasting] = useState<CreatureSpellcastingProfile | undefined>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [linkedCampaigns, setLinkedCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState("");
@@ -315,15 +365,19 @@ export function NpcEditPage() {
     Promise.all([
       api.creature(creatureID),
       api.creatureActions(creatureID),
+      api.creatureSpellcasting(creatureID),
       api.campaigns(),
       api.creatureCampaigns(creatureID),
     ])
-      .then(([creaturePayload, actionPayload, campaignPayload, linkedPayload]) => {
-        setCreature(creaturePayload.creature);
-        setActions(actionPayload.actions);
-        setCampaigns(campaignPayload.campaigns);
-        setLinkedCampaigns(linkedPayload.campaigns);
-      })
+      .then(
+        ([creaturePayload, actionPayload, spellcastingPayload, campaignPayload, linkedPayload]) => {
+          setCreature(creaturePayload.creature);
+          setActions(actionPayload.actions);
+          setSpellcasting(spellcastingPayload.spellcasting);
+          setCampaigns(campaignPayload.campaigns);
+          setLinkedCampaigns(linkedPayload.campaigns);
+        },
+      )
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creature"))
       .finally(() => setLoading(false));
   }, [creatureID]);
@@ -398,6 +452,7 @@ export function NpcEditPage() {
               mode="edit"
               creature={creature}
               existingActions={actions}
+              spellcasting={spellcasting}
               notify={toast.push}
               onSaved={() => void navigate("/npcs")}
             />

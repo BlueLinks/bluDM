@@ -61,6 +61,12 @@ export function blankAction(): ActionFormState {
     attackModifier: "",
     missEffect: "none",
     hitSpecialEvent: "none",
+    sourceTemplateId: "",
+    iconSource: "none",
+    iconKey: "",
+    iconAssetId: "",
+    iconUrl: "",
+    iconAttribution: "",
     rolls: [blankRoll()],
   };
 }
@@ -97,6 +103,7 @@ export function actionFormFromTemplate(template: ActionTemplate): ActionFormStat
   return {
     id: createId(),
     name: template.name,
+    sourceTemplateId: template.id,
     description: template.description,
     recharge: template.recharge,
     limitedUses: String(template.limitedUses),
@@ -109,6 +116,11 @@ export function actionFormFromTemplate(template: ActionTemplate): ActionFormStat
     attackModifier: String(template.attackModifier),
     missEffect: template.missEffect || "none",
     hitSpecialEvent: template.hitSpecialEvent || "none",
+    iconSource: template.iconSource || "none",
+    iconKey: template.iconKey || "",
+    iconAssetId: template.iconAssetId ?? "",
+    iconUrl: template.iconUrl || "",
+    iconAttribution: template.iconAttribution || "",
     rolls:
       template.rolls.length > 0
         ? template.rolls.map((roll) => ({
@@ -125,7 +137,11 @@ export function actionFormFromTemplate(template: ActionTemplate): ActionFormStat
 }
 
 export function actionFormFromCreatureAction(action: CreatureAction): ActionFormState {
-  return actionFormFromTemplate(action);
+  return {
+    ...actionFormFromTemplate(action),
+    id: action.id,
+    sourceTemplateId: action.sourceTemplateId ?? "",
+  };
 }
 
 export function weaponAction(weapon: CommonWeapon, form: CreatureFormState): ActionFormState {

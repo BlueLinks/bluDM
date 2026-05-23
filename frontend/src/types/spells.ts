@@ -1,0 +1,180 @@
+export type Spell = {
+  id: string;
+  name: string;
+  level: number;
+  school: string;
+  castingTime: string;
+  castType: string;
+  range: string;
+  rangeType: string;
+  rangeFeet: number;
+  components: Record<string, unknown>;
+  materialComponents: string;
+  classes: string[];
+  duration: string;
+  durationType: string;
+  durationValue: number;
+  durationScale: string;
+  aoeType: string;
+  aoeSize: number;
+  ritual: boolean;
+  concentration: boolean;
+  scalingType: string;
+  description: string;
+  higherLevel: string;
+  sourceNote: string;
+  sourceMaterial: string;
+  librarySource: "user" | "standard";
+  readOnly: boolean;
+  sourceKey: string;
+  sourceLabel: string;
+  mechanics: Record<string, unknown>;
+  projectileScaling?: SpellProjectileScaling;
+  areaScaling?: SpellAreaScalingFormState;
+  actions: SpellAction[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SpellProjectileScaling = {
+  baseProjectiles: number;
+  scalingType: string;
+  scaleFromLevel: number;
+  additionalProjectiles: number;
+  stepSize: number;
+  description: string;
+  cantripScaling?: Record<string, unknown>;
+};
+
+export type SpellAction = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  actionType: string;
+  saveAbility: string;
+  successfulSaveEffect: string;
+  attackModifier: number;
+  hitSpecialEvent: string;
+  weaponSource: string;
+  attackAbilityOverride: string;
+  damageAbilityOverride: string;
+  damageTypeChoice: string;
+  damageTypeOptions: string[];
+  rolls: SpellActionRollPart[];
+};
+
+export type SpellActionRollPart = {
+  id: string;
+  sortOrder: number;
+  rollKind: string;
+  damageType: string;
+  magical: boolean;
+  diceCount: number;
+  dieSize: number;
+  fixedValue: number;
+  addPrimaryStatModifier: boolean;
+  conditionName: string;
+  timing: string;
+  scalingType: string;
+  scalingFromLevel: number;
+  scalingDiceCount: number;
+  scalingDieSize: number;
+  scalingFixedValue: number;
+  scalingStepSize: number;
+  cantripScaling?: Record<string, unknown>;
+};
+
+export type SpellFormState = {
+  name: string;
+  level: string;
+  school: string;
+  castingTime: string;
+  castType: string;
+  range: string;
+  rangeType: string;
+  rangeFeet: string;
+  duration: string;
+  durationType: string;
+  durationValue: string;
+  durationScale: string;
+  aoeType: string;
+  aoeSize: string;
+  ritual: boolean;
+  concentration: boolean;
+  scalingType: string;
+  description: string;
+  higherLevel: string;
+  sourceNote: string;
+  sourceMaterial: string;
+  castingTrigger: string;
+  triggerDetail: string;
+  targetPattern: string;
+  targetAnchor: string;
+  materialComponents: string;
+  components: { verbal: boolean; somatic: boolean; material: boolean };
+  classes: string[];
+  projectileScaling?: SpellProjectileScalingFormState;
+  areaScaling?: SpellAreaScalingFormState;
+  actions: SpellActionFormState[];
+};
+
+export type SpellProjectileScalingFormState = {
+  baseProjectiles: string;
+  scalingType: string;
+  scaleFromLevel: string;
+  additionalProjectiles: string;
+  stepSize: string;
+  description: string;
+  cantrip5Targets: string;
+  cantrip11Targets: string;
+  cantrip17Targets: string;
+};
+
+export type SpellAreaScalingFormState = {
+  scalingType: string;
+  scaleFromLevel: string;
+  additionalSize: string;
+  stepSize: string;
+  description: string;
+};
+
+export type SpellActionFormState = {
+  id: string;
+  name: string;
+  actionType: string;
+  saveAbility: string;
+  successfulSaveEffect: string;
+  attackModifier: string;
+  hitSpecialEvent: string;
+  weaponSource: string;
+  attackAbilityOverride: string;
+  damageAbilityOverride: string;
+  damageTypeChoice: string;
+  damageTypeOptions: string[];
+  rolls: SpellActionRollFormState[];
+};
+
+export type SpellActionRollFormState = {
+  id: string;
+  rollKind: string;
+  damageType: string;
+  magical: boolean;
+  diceCount: string;
+  dieSize: string;
+  fixedValue: string;
+  addPrimaryStatModifier: boolean;
+  conditionName: string;
+  timing: string;
+  scalingType: string;
+  scalingFromLevel: string;
+  scalingDiceCount: string;
+  scalingDieSize: string;
+  scalingFixedValue: string;
+  scalingStepSize: string;
+  cantrip5DiceCount: string;
+  cantrip5DieSize: string;
+  cantrip11DiceCount: string;
+  cantrip11DieSize: string;
+  cantrip17DiceCount: string;
+  cantrip17DieSize: string;
+};

@@ -1,7 +1,5 @@
 import type {
   ActionFormState,
-  ActionTemplate,
-  ActionTemplateUsage,
   AccountInfo,
   AuthStatus,
   AuthProvider,
@@ -10,24 +8,26 @@ import type {
   Creature,
   CreatureAction,
   CreatureFormState,
+  CreatureSpellcastingProfile,
   Encounter,
   EncounterCombatant,
   EncounterRun,
-  EncounterRunCombatant,
   LongRestSnapshot,
   Player,
   PlayerFormState,
-  RollMode,
   Spell,
   SpellFormState,
   StandardLibraryEntry,
   StandardSource,
   User,
 } from "../../types";
-import { actionPayload, creaturePayload, parseJSONField, playerPayload } from "./payloads";
+import { actionTemplateApi } from "./actionTemplates";
+import { encounterRunApi } from "./encounterRuns";
+import { actionPayload, creaturePayload, playerPayload, spellPayload } from "./payloads";
 import { request } from "./request";
-
 export const api = {
+  ...actionTemplateApi,
+  ...encounterRunApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
     request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
@@ -151,139 +151,6 @@ export const api = {
       body: JSON.stringify({ test }),
     }),
 
-  encounterRun: (id: string) => request<{ run: EncounterRun }>(`/api/encounter-runs/${id}`),
-  rollInitiative: (runId: string, sides: string[]) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/roll-initiative`, {
-      method: "POST",
-      body: JSON.stringify({ sides }),
-    }),
-  setInitiative: (runId: string, combatantId: string, initiative: number) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/set-initiative`, {
-      method: "POST",
-      body: JSON.stringify({ combatantId, initiative }),
-    }),
-  reorderInitiative: (runId: string, combatantIds: string[]) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/reorder-initiative`, {
-      method: "POST",
-      body: JSON.stringify({ combatantIds }),
-    }),
-  beginEncounterRun: (runId: string) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/begin`, {
-      method: "POST",
-    }),
-  moveTurn: (runId: string, direction: "next" | "previous") =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/${direction}-turn`, {
-      method: "POST",
-    }),
-  manualHP: (
-    runId: string,
-    payload: {
-      actorId?: string;
-      targetId: string;
-      amount: number;
-      mode: string;
-      damageType?: string;
-    },
-  ) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/manual-hp`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-  addRunCombatants: (
-    runId: string,
-    payload: {
-      creatureId?: string;
-      standardCreatureId?: string;
-      side: "friendly" | "enemy";
-      quantity: number;
-      rolledHp: boolean;
-      initiative?: number;
-      initiativeSet?: boolean;
-      displayName?: string;
-      colorLabel?: string;
-      avatarUrl?: string;
-    },
-  ) =>
-    request<{ run: EncounterRun; combatants: EncounterRunCombatant[] }>(
-      `/api/encounter-runs/${runId}/combatants`,
-      { method: "POST", body: JSON.stringify(payload) },
-    ),
-  executeAction: (
-    runId: string,
-    payload: { actorId: string; targetId: string; actionId: string; rollMode?: RollMode },
-  ) =>
-    request<{ result: Record<string, unknown> }>(
-      `/api/encounter-runs/${runId}/commands/execute-action`,
-      { method: "POST", body: JSON.stringify(payload) },
-    ),
-  resolveActionDamage: (
-    runId: string,
-    payload: { actorId: string; targetId: string; damage: number; override: string },
-  ) =>
-    request<{ run: EncounterRun; result: Record<string, unknown> }>(
-      `/api/encounter-runs/${runId}/commands/resolve-action-damage`,
-      { method: "POST", body: JSON.stringify(payload) },
-    ),
-  updateRunCombatant: (combatant: EncounterRunCombatant) =>
-    request<{ run: EncounterRun }>(`/api/encounter-run-combatants/${combatant.id}`, {
-      method: "PUT",
-      body: JSON.stringify({
-        displayName: combatant.displayName,
-        colorLabel: combatant.colorLabel,
-        avatarUrl: combatant.avatarUrl,
-        initiative: combatant.initiative,
-        initiativeSet: combatant.initiativeSet,
-        armorClassBonus: combatant.armorClassBonus,
-        temporaryHitPoints: combatant.temporaryHitPoints,
-        maxHitPointsModifier: combatant.maxHitPointsModifier,
-        armorClassOverride: combatant.armorClassOverride,
-        maxHitPointsOverride: combatant.maxHitPointsOverride,
-        currentHitPointsOverride: combatant.currentHitPointsOverride,
-        currentHitPoints: combatant.currentHitPoints,
-        conditions: combatant.conditions,
-        defeated: combatant.defeated,
-      }),
-    }),
-  rollCheck: (
-    runId: string,
-    payload: {
-      actorId: string;
-      label: string;
-      ability: string;
-      bonus: number;
-      rollMode?: RollMode;
-    },
-  ) =>
-    request<{ result: Record<string, unknown> }>(
-      `/api/encounter-runs/${runId}/commands/roll-check`,
-      { method: "POST", body: JSON.stringify(payload) },
-    ),
-  deathSave: (
-    runId: string,
-    combatantId: string,
-    action: "success" | "failure" | "undo-success" | "undo-failure" | "stabilize",
-  ) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/death-save`, {
-      method: "POST",
-      body: JSON.stringify({ combatantId, action }),
-    }),
-  undoRun: (runId: string) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/undo`, {
-      method: "POST",
-    }),
-  endEncounterRun: (
-    runId: string,
-    payload: {
-      xpAwards: Record<string, number>;
-      lootPool: string[];
-      lootAssignments: Record<string, string[]>;
-    },
-  ) =>
-    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/end`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
-
   addEncounterCombatants: (
     encounterId: string,
     payload: {
@@ -398,6 +265,10 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ actionIds }),
     }),
+  creatureSpellcasting: (creatureId: string) =>
+    request<{ spellcasting: CreatureSpellcastingProfile }>(
+      `/api/library/creatures/${creatureId}/spellcasting`,
+    ),
   saveCreatureSpellcasting: (creatureId: string, payload: CreatureFormState) =>
     request<unknown>(`/api/library/creatures/${creatureId}/spellcasting`, {
       method: "PUT",
@@ -418,34 +289,15 @@ export const api = {
           8: Number(payload.spellSlots8) || 0,
           9: Number(payload.spellSlots9) || 0,
         },
-        spells: payload.spellIds.map((spellId) => ({
-          spellId,
-          spellLevel: 0,
+        spells: payload.spellRefs.map((spell) => ({
+          spellId: spell.spellId,
+          librarySource: spell.librarySource,
+          spellLevel: spell.spellLevel,
           prepared: true,
           innate: false,
         })),
       }),
     }),
-
-  actionTemplates: () => request<{ actionTemplates: ActionTemplate[] }>("/api/action-templates"),
-  actionTemplateUsage: (id: string) =>
-    request<{ usage: ActionTemplateUsage[]; count: number }>(`/api/action-templates/${id}/usage`),
-  deleteActionTemplate: (id: string) =>
-    request<{ usage: ActionTemplateUsage[]; removedCreatureActions: number }>(
-      `/api/action-templates/${id}`,
-      { method: "DELETE" },
-    ),
-  createActionTemplate: (payload: ActionFormState) =>
-    request<{ actionTemplate: ActionTemplate }>("/api/action-templates", {
-      method: "POST",
-      body: JSON.stringify(actionPayload(payload)),
-    }),
-  updateActionTemplate: (id: string, payload: ActionFormState) =>
-    request<{ actionTemplate: ActionTemplate }>(`/api/action-templates/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(actionPayload(payload)),
-    }),
-
   spells: (options?: {
     includeStandard?: boolean;
     includeUser?: boolean;
@@ -484,13 +336,15 @@ export const api = {
   createSpell: (payload: SpellFormState) =>
     request<{ spell: Spell }>("/api/library/spells", {
       method: "POST",
-      body: JSON.stringify({
-        ...payload,
-        level: Number(payload.level),
-        components: parseJSONField(payload.components),
-        mechanics: parseJSONField(payload.mechanics),
-      }),
+      body: JSON.stringify(spellPayload(payload)),
     }),
+  updateSpell: (spellId: string, payload: SpellFormState) =>
+    request<{ spell: Spell }>(`/api/library/spells/${spellId}`, {
+      method: "PUT",
+      body: JSON.stringify(spellPayload(payload)),
+    }),
+  deleteSpell: (spellId: string) =>
+    request<void>(`/api/library/spells/${spellId}`, { method: "DELETE" }),
   seedTestData: () =>
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };

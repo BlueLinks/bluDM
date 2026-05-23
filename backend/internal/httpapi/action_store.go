@@ -45,6 +45,7 @@ func (s *Server) actionTemplateByID(ctx context.Context, templateID string) (mod
 	row := s.db.QueryRow(ctx, `
 		select id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
 			created_at, updated_at
 		from action_templates
 		where id = $1 and owner_user_id = $2
@@ -69,6 +70,8 @@ func (s *Server) creatureActionByID(ctx context.Context, actionID string) (model
 			creature_actions.reach, creature_actions.action_range, creature_actions.aoe_type,
 			creature_actions.aoe_size, creature_actions.action_type, creature_actions.attack_modifier,
 			creature_actions.miss_effect, creature_actions.hit_special_event,
+			creature_actions.icon_source, creature_actions.icon_key, coalesce(creature_actions.icon_asset_id::text, ''),
+			creature_actions.icon_url, creature_actions.icon_attribution,
 			creature_actions.created_at, creature_actions.updated_at
 		from creature_actions
 		join creatures on creatures.id = creature_actions.creature_id
@@ -86,7 +89,9 @@ func (s *Server) creatureActions(ctx context.Context, creatureID string) ([]mode
 	rows, err := s.db.Query(ctx, `
 		select id, creature_id, coalesce(source_template_id::text, ''), sort_order, name, description,
 			recharge, limited_uses, limit_type, reach, action_range, aoe_type, aoe_size,
-			action_type, attack_modifier, miss_effect, hit_special_event, created_at, updated_at
+			action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
+			created_at, updated_at
 		from creature_actions
 		where creature_id = $1
 		order by sort_order asc, created_at asc
@@ -156,6 +161,11 @@ func scanActionTemplate(row scanner) (models.ActionTemplate, error) {
 		&template.AttackModifier,
 		&template.MissEffect,
 		&template.HitSpecialEvent,
+		&template.IconSource,
+		&template.IconKey,
+		&template.IconAssetID,
+		&template.IconURL,
+		&template.IconAttribution,
 		&template.CreatedAt,
 		&template.UpdatedAt,
 	)
@@ -182,6 +192,11 @@ func scanCreatureAction(row scanner) (models.CreatureAction, error) {
 		&action.AttackModifier,
 		&action.MissEffect,
 		&action.HitSpecialEvent,
+		&action.IconSource,
+		&action.IconKey,
+		&action.IconAssetID,
+		&action.IconURL,
+		&action.IconAttribution,
 		&action.CreatedAt,
 		&action.UpdatedAt,
 	)
@@ -210,15 +225,57 @@ func insertActionTemplate(ctx context.Context, tx pgx.Tx, ownerUserID string, re
 	row := tx.QueryRow(ctx, `
 		insert into action_templates (
 			owner_user_id, name, description, recharge, limited_uses, limit_type, reach, action_range,
-			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event
+			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, icon_asset_id, icon_url, icon_attribution
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+			$15, $16, nullif($17, '')::uuid, $18, $19)
 		returning id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
 			created_at, updated_at
 	`, ownerUserID, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach, req.Range,
-		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent)
+		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent,
+		req.IconSource, req.IconKey, req.IconAssetID, req.IconURL, req.IconAttribution)
 	return scanActionTemplate(row)
+}
+
+func (s *Server) replaceActionTemplate(ctx context.Context, templateID string, req actionRequest) error {
+	req.normalize()
+	if err := req.validate(); err != nil {
+		return err
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	tag, err := tx.Exec(ctx, `
+		update action_templates
+		set name = $2, description = $3, recharge = $4, limited_uses = $5,
+			limit_type = $6, reach = $7, action_range = $8, aoe_type = $9,
+			aoe_size = $10, action_type = $11, attack_modifier = $12,
+			miss_effect = $13, hit_special_event = $14, icon_source = $15,
+			icon_key = $16, icon_asset_id = nullif($17, '')::uuid, icon_url = $18,
+			icon_attribution = $19, updated_at = now()
+		where id = $1 and owner_user_id = $20
+	`, templateID, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach,
+		req.Range, req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect,
+		req.HitSpecialEvent, req.IconSource, req.IconKey, req.IconAssetID, req.IconURL,
+		req.IconAttribution, currentUserIDMust(ctx))
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return pgx.ErrNoRows
+	}
+	if _, err := tx.Exec(ctx, `delete from action_template_roll_parts where action_template_id = $1`, templateID); err != nil {
+		return err
+	}
+	if err := insertActionTemplateRolls(ctx, tx, templateID, req.Rolls); err != nil {
+		return err
+	}
+	return tx.Commit(ctx)
 }
 
 func insertCreatureAction(ctx context.Context, tx pgx.Tx, creatureID, sourceTemplateID string, req actionRequest) (models.CreatureAction, error) {
@@ -230,15 +287,19 @@ func insertCreatureAction(ctx context.Context, tx pgx.Tx, creatureID, sourceTemp
 		insert into creature_actions (
 			creature_id, source_template_id, sort_order, name, description, recharge, limited_uses,
 			limit_type, reach, action_range, aoe_type, aoe_size, action_type, attack_modifier,
-			miss_effect, hit_special_event
+			miss_effect, hit_special_event, icon_source, icon_key, icon_asset_id, icon_url, icon_attribution
 		)
-		values ($1, nullif($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+		values ($1, nullif($2, '')::uuid, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
+			$15, $16, $17, $18, nullif($19, '')::uuid, $20, $21)
 		returning id, creature_id, coalesce(source_template_id::text, ''), sort_order, name, description,
 			recharge, limited_uses, limit_type, reach, action_range, aoe_type, aoe_size,
-			action_type, attack_modifier, miss_effect, hit_special_event, created_at, updated_at
+			action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
+			created_at, updated_at
 	`, creatureID, sourceTemplateID, nextOrder, req.Name, req.Description, req.Recharge, req.LimitedUses,
 		req.LimitType, req.Reach, req.Range, req.AOEType, req.AOESize, req.ActionType,
-		req.AttackModifier, req.MissEffect, req.HitSpecialEvent)
+		req.AttackModifier, req.MissEffect, req.HitSpecialEvent, req.IconSource, req.IconKey,
+		req.IconAssetID, req.IconURL, req.IconAttribution)
 	return scanCreatureAction(row)
 }
 
@@ -298,6 +359,47 @@ func actionRequestFromTemplate(template models.ActionTemplate) actionRequest {
 		AttackModifier:  template.AttackModifier,
 		MissEffect:      template.MissEffect,
 		HitSpecialEvent: template.HitSpecialEvent,
+		IconSource:      template.IconSource,
+		IconKey:         template.IconKey,
+		IconAssetID:     template.IconAssetID,
+		IconURL:         template.IconURL,
+		IconAttribution: template.IconAttribution,
 		Rolls:           rolls,
+	}
+}
+
+func actionRequestFromCreatureAction(action models.CreatureAction) actionRequest {
+	rolls := make([]actionRollPartRequest, 0, len(action.Rolls))
+	for _, roll := range action.Rolls {
+		rolls = append(rolls, actionRollPartRequest{
+			RollKind:   roll.RollKind,
+			DamageType: roll.DamageType,
+			Magical:    roll.Magical,
+			DiceCount:  roll.DiceCount,
+			DieSize:    roll.DieSize,
+			FixedValue: roll.FixedValue,
+		})
+	}
+	return actionRequest{
+		Name:             action.Name,
+		SourceTemplateID: action.SourceTemplateID,
+		Description:      action.Description,
+		Recharge:         action.Recharge,
+		LimitedUses:      action.LimitedUses,
+		LimitType:        action.LimitType,
+		Reach:            action.Reach,
+		Range:            action.Range,
+		AOEType:          action.AOEType,
+		AOESize:          action.AOESize,
+		ActionType:       action.ActionType,
+		AttackModifier:   action.AttackModifier,
+		MissEffect:       action.MissEffect,
+		HitSpecialEvent:  action.HitSpecialEvent,
+		IconSource:       action.IconSource,
+		IconKey:          action.IconKey,
+		IconAssetID:      action.IconAssetID,
+		IconURL:          action.IconURL,
+		IconAttribution:  action.IconAttribution,
+		Rolls:            rolls,
 	}
 }

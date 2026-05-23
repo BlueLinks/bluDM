@@ -3,6 +3,7 @@ package httpapi
 import (
 	"bludm/backend/internal/models"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -255,7 +256,8 @@ func (s *Server) longRestCampaign(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := s.db.Query(r.Context(), `
-		select id, current_hit_points, temporary_hit_points, temporary_max_hit_points
+		select id, current_hit_points, temporary_hit_points, temporary_max_hit_points,
+			coalesce(character_sheet->'spellSlotsRemaining', '{}'::jsonb)
 		from players
 		where campaign_id = $1
 	`, campaignID)
@@ -266,11 +268,13 @@ func (s *Server) longRestCampaign(w http.ResponseWriter, r *http.Request) {
 	snapshot := []longRestPlayerSnapshot{}
 	for rows.Next() {
 		var item longRestPlayerSnapshot
-		if err := rows.Scan(&item.ID, &item.CurrentHitPoints, &item.TemporaryHitPoints, &item.TemporaryMaxHitPoints); err != nil {
+		var remainingBytes []byte
+		if err := rows.Scan(&item.ID, &item.CurrentHitPoints, &item.TemporaryHitPoints, &item.TemporaryMaxHitPoints, &remainingBytes); err != nil {
 			rows.Close()
 			writeError(w, http.StatusInternalServerError, "could not long rest party")
 			return
 		}
+		item.SpellSlotsRemaining, _ = unmarshalJSONMap(remainingBytes)
 		snapshot = append(snapshot, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -284,7 +288,13 @@ func (s *Server) longRestCampaign(w http.ResponseWriter, r *http.Request) {
 		update players
 		set current_hit_points = max_hit_points,
 			temporary_hit_points = 0,
-			temporary_max_hit_points = 0
+			temporary_max_hit_points = 0,
+			character_sheet = jsonb_set(
+				coalesce(character_sheet, '{}'::jsonb),
+				'{spellSlotsRemaining}',
+				coalesce(character_sheet->'spellSlots', '{}'::jsonb),
+				true
+			)
 		where campaign_id = $1
 	`, campaignID)
 	if err != nil {
@@ -313,13 +323,23 @@ func (s *Server) undoLongRestCampaign(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback(r.Context())
 	restored := int64(0)
 	for _, player := range req.Players {
+		if player.SpellSlotsRemaining == nil {
+			player.SpellSlotsRemaining = map[string]any{}
+		}
+		remainingBytes, _ := json.Marshal(player.SpellSlotsRemaining)
 		tag, err := tx.Exec(r.Context(), `
 			update players
 			set current_hit_points = $3,
 				temporary_hit_points = $4,
-				temporary_max_hit_points = $5
+				temporary_max_hit_points = $5,
+				character_sheet = jsonb_set(
+					coalesce(character_sheet, '{}'::jsonb),
+					'{spellSlotsRemaining}',
+					$6::jsonb,
+					true
+				)
 			where campaign_id = $1 and id = $2
-		`, campaignID, strings.TrimSpace(player.ID), player.CurrentHitPoints, player.TemporaryHitPoints, player.TemporaryMaxHitPoints)
+		`, campaignID, strings.TrimSpace(player.ID), player.CurrentHitPoints, player.TemporaryHitPoints, player.TemporaryMaxHitPoints, remainingBytes)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not undo long rest")
 			return

@@ -3,6 +3,7 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -89,6 +90,7 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 			_ = s.restoreCombatantState(r.Context(), before)
 		}
 	case "turn_changed":
+		restoreTimedEffects(r.Context(), s, event.Payload["timedEffects"])
 		if before, ok := event.Payload["before"].(map[string]any); ok {
 			_, _ = s.db.Exec(r.Context(), `update encounter_runs set current_round = $2, current_turn_index = $3 where id = $1`,
 				runID, intFromAny(before["round"]), intFromAny(before["turnIndex"]))
@@ -140,13 +142,33 @@ func (s *Server) endEncounterRun(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "could not end encounter")
 			return
 		}
+		remainingSlotsByCombatant := map[string]map[string]int{}
+		for _, slot := range run.SpellSlots {
+			if remainingSlotsByCombatant[slot.CombatantID] == nil {
+				remainingSlotsByCombatant[slot.CombatantID] = map[string]int{}
+			}
+			remainingSlotsByCombatant[slot.CombatantID][strconv.Itoa(slot.SpellLevel)] = slot.RemainingSlots
+		}
 		for _, combatant := range run.Combatants {
 			if combatant.SourceType == "player" && combatant.PlayerID != "" {
+				remainingSlots := remainingSlotsByCombatant[combatant.ID]
+				if remainingSlots == nil {
+					remainingSlots = map[string]int{}
+				}
+				remainingBytes, _ := json.Marshal(remainingSlots)
 				_, _ = tx.Exec(r.Context(), `
 					update players
-					set current_hit_points = $2, temporary_hit_points = $3, experience_points = experience_points + $4
+					set current_hit_points = $2,
+						temporary_hit_points = $3,
+						experience_points = experience_points + $4,
+						character_sheet = jsonb_set(
+							coalesce(character_sheet, '{}'::jsonb),
+							'{spellSlotsRemaining}',
+							$5::jsonb,
+							true
+						)
 					where id = $1
-				`, combatant.PlayerID, combatant.CurrentHitPoints, combatant.TemporaryHitPoints, req.XPAwards[combatant.PlayerID])
+				`, combatant.PlayerID, combatant.CurrentHitPoints, combatant.TemporaryHitPoints, req.XPAwards[combatant.PlayerID], remainingBytes)
 			}
 		}
 	}

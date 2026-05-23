@@ -38,20 +38,26 @@ type playerRequest struct {
 }
 
 type actionRequest struct {
-	Name            string                  `json:"name"`
-	Description     string                  `json:"description"`
-	Recharge        string                  `json:"recharge"`
-	LimitedUses     int                     `json:"limitedUses"`
-	LimitType       string                  `json:"limitType"`
-	Reach           int                     `json:"reach"`
-	Range           int                     `json:"range"`
-	AOEType         string                  `json:"aoeType"`
-	AOESize         int                     `json:"aoeSize"`
-	ActionType      string                  `json:"actionType"`
-	AttackModifier  int                     `json:"attackModifier"`
-	MissEffect      string                  `json:"missEffect"`
-	HitSpecialEvent string                  `json:"hitSpecialEvent"`
-	Rolls           []actionRollPartRequest `json:"rolls"`
+	Name             string                  `json:"name"`
+	SourceTemplateID string                  `json:"sourceTemplateId"`
+	Description      string                  `json:"description"`
+	Recharge         string                  `json:"recharge"`
+	LimitedUses      int                     `json:"limitedUses"`
+	LimitType        string                  `json:"limitType"`
+	Reach            int                     `json:"reach"`
+	Range            int                     `json:"range"`
+	AOEType          string                  `json:"aoeType"`
+	AOESize          int                     `json:"aoeSize"`
+	ActionType       string                  `json:"actionType"`
+	AttackModifier   int                     `json:"attackModifier"`
+	MissEffect       string                  `json:"missEffect"`
+	HitSpecialEvent  string                  `json:"hitSpecialEvent"`
+	IconSource       string                  `json:"iconSource"`
+	IconKey          string                  `json:"iconKey"`
+	IconAssetID      string                  `json:"iconAssetId"`
+	IconURL          string                  `json:"iconUrl"`
+	IconAttribution  string                  `json:"iconAttribution"`
+	Rolls            []actionRollPartRequest `json:"rolls"`
 }
 
 type actionRollPartRequest struct {
@@ -73,6 +79,15 @@ type reorderActionsRequest struct {
 
 type replaceActionsRequest struct {
 	Actions []actionRequest `json:"actions"`
+}
+
+type actionTemplateFromCreatureActionRequest struct {
+	CreatureActionID string `json:"creatureActionId"`
+	Name             string `json:"name"`
+}
+
+type updateCreatureActionSourceTemplateRequest struct {
+	SourceTemplateID string `json:"sourceTemplateId"`
 }
 
 type addCombatantRequest struct {
@@ -116,10 +131,11 @@ type spellcastingRequest struct {
 }
 
 type creatureSpellRequest struct {
-	SpellID    string `json:"spellId"`
-	SpellLevel int    `json:"spellLevel"`
-	Prepared   bool   `json:"prepared"`
-	Innate     bool   `json:"innate"`
+	SpellID       string `json:"spellId"`
+	LibrarySource string `json:"librarySource"`
+	SpellLevel    int    `json:"spellLevel"`
+	Prepared      bool   `json:"prepared"`
+	Innate        bool   `json:"innate"`
 }
 
 type damageDefenseRequest struct {
@@ -136,6 +152,26 @@ type executeActionRequest struct {
 	TargetDefenses damageDefenseRequest `json:"targetDefenses"`
 	ActionID       string               `json:"actionId"`
 	RollMode       string               `json:"rollMode"`
+}
+
+type castSpellRequest struct {
+	ActorID       string   `json:"actorId"`
+	TargetIDs     []string `json:"targetIds"`
+	SpellID       string   `json:"spellId"`
+	LibrarySource string   `json:"librarySource"`
+	CastLevel     int      `json:"castLevel"`
+	RollMode      string   `json:"rollMode"`
+}
+
+type resolveConcentrationRequest struct {
+	AlertID string `json:"alertId"`
+	Action  string `json:"action"`
+}
+
+type manualSpellSlotRequest struct {
+	CombatantID string `json:"combatantId"`
+	SpellLevel  int    `json:"spellLevel"`
+	Mode        string `json:"mode"`
 }
 
 type resolveDamageRequest struct {
@@ -215,10 +251,11 @@ type longRestUndoRequest struct {
 }
 
 type longRestPlayerSnapshot struct {
-	ID                    string `json:"id"`
-	CurrentHitPoints      int    `json:"currentHitPoints"`
-	TemporaryHitPoints    int    `json:"temporaryHitPoints"`
-	TemporaryMaxHitPoints int    `json:"temporaryMaxHitPoints"`
+	ID                    string         `json:"id"`
+	CurrentHitPoints      int            `json:"currentHitPoints"`
+	TemporaryHitPoints    int            `json:"temporaryHitPoints"`
+	TemporaryMaxHitPoints int            `json:"temporaryMaxHitPoints"`
+	SpellSlotsRemaining   map[string]any `json:"spellSlotsRemaining,omitempty"`
 }
 
 type endEncounterRequest struct {
@@ -229,6 +266,7 @@ type endEncounterRequest struct {
 
 func (req *actionRequest) normalize() {
 	req.Name = strings.TrimSpace(req.Name)
+	req.SourceTemplateID = strings.TrimSpace(req.SourceTemplateID)
 	req.Description = strings.TrimSpace(req.Description)
 	if len(req.Description) > 2000 {
 		req.Description = req.Description[:2000]
@@ -251,6 +289,14 @@ func (req *actionRequest) normalize() {
 	if req.HitSpecialEvent == "" {
 		req.HitSpecialEvent = "none"
 	}
+	req.IconSource = strings.TrimSpace(req.IconSource)
+	if req.IconSource == "" {
+		req.IconSource = "none"
+	}
+	req.IconKey = strings.TrimSpace(req.IconKey)
+	req.IconAssetID = strings.TrimSpace(req.IconAssetID)
+	req.IconURL = strings.TrimSpace(req.IconURL)
+	req.IconAttribution = strings.TrimSpace(req.IconAttribution)
 	if len(req.Rolls) == 0 {
 		req.Rolls = []actionRollPartRequest{{RollKind: "damage", DamageType: "bludgeoning", DiceCount: 1, DieSize: 6}}
 	}
@@ -271,6 +317,9 @@ func (req actionRequest) validate() error {
 	}
 	if req.MissEffect != "none" && req.MissEffect != "half" && req.MissEffect != "full" {
 		return errors.New("missEffect must be none, half, or full")
+	}
+	if req.IconSource != "none" && req.IconSource != "game-icons" && req.IconSource != "asset" && req.IconSource != "url" {
+		return errors.New("iconSource must be none, game-icons, asset, or url")
 	}
 	return nil
 }
@@ -312,6 +361,13 @@ func (req actionRequest) toModelRolls() []models.ActionRollPart {
 func (req *spellcastingRequest) normalize() {
 	req.SpellcastingAbility = strings.TrimSpace(req.SpellcastingAbility)
 	req.InnateSpellcastingAbility = strings.TrimSpace(req.InnateSpellcastingAbility)
+	for index := range req.Spells {
+		req.Spells[index].SpellID = strings.TrimSpace(req.Spells[index].SpellID)
+		req.Spells[index].LibrarySource = strings.TrimSpace(req.Spells[index].LibrarySource)
+		if req.Spells[index].LibrarySource == "" {
+			req.Spells[index].LibrarySource = "user"
+		}
+	}
 	if req.CasterLevel < 0 {
 		req.CasterLevel = 0
 	}
@@ -389,43 +445,6 @@ func (req creatureRequest) validate() error {
 	}
 	if req.XP < 0 {
 		return errors.New("xp cannot be negative")
-	}
-	return nil
-}
-
-type spellRequest struct {
-	Name          string         `json:"name"`
-	Level         int            `json:"level"`
-	School        string         `json:"school"`
-	CastingTime   string         `json:"castingTime"`
-	Range         string         `json:"range"`
-	Components    map[string]any `json:"components"`
-	Duration      string         `json:"duration"`
-	Ritual        bool           `json:"ritual"`
-	Concentration bool           `json:"concentration"`
-	Description   string         `json:"description"`
-	HigherLevel   string         `json:"higherLevel"`
-	SourceNote    string         `json:"sourceNote"`
-	Mechanics     map[string]any `json:"mechanics"`
-}
-
-func (req *spellRequest) normalize() {
-	req.Name = strings.TrimSpace(req.Name)
-	req.School = strings.TrimSpace(req.School)
-	req.CastingTime = strings.TrimSpace(req.CastingTime)
-	req.Range = strings.TrimSpace(req.Range)
-	req.Duration = strings.TrimSpace(req.Duration)
-	req.Description = strings.TrimSpace(req.Description)
-	req.HigherLevel = strings.TrimSpace(req.HigherLevel)
-	req.SourceNote = strings.TrimSpace(req.SourceNote)
-}
-
-func (req spellRequest) validate() error {
-	if req.Name == "" {
-		return errors.New("name is required")
-	}
-	if req.Level < 0 || req.Level > 9 {
-		return errors.New("level must be between 0 and 9")
 	}
 	return nil
 }

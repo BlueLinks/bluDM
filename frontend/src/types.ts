@@ -109,6 +109,51 @@ export type EncounterRun = {
   summary: Record<string, unknown>;
   combatants?: EncounterRunCombatant[];
   events?: CombatLogEvent[];
+  spellSlots?: EncounterRunSpellSlot[];
+  activeEffects?: EncounterRunEffect[];
+  alerts?: EncounterRunAlert[];
+};
+
+export type EncounterRunSpellSlot = {
+  id: string;
+  encounterRunId: string;
+  combatantId: string;
+  spellLevel: number;
+  maxSlots: number;
+  remainingSlots: number;
+};
+
+export type EncounterRunEffect = {
+  id: string;
+  encounterRunId: string;
+  casterId: string;
+  targetId: string;
+  spellId?: string;
+  librarySource: string;
+  spellName: string;
+  castLevel: number;
+  concentration: boolean;
+  timing: string;
+  effectKind: string;
+  conditionName: string;
+  amount: number;
+  payload: Record<string, unknown>;
+  active: boolean;
+  createdAt: string;
+};
+
+export type EncounterRunAlert = {
+  id: string;
+  encounterRunId: string;
+  alertType: string;
+  actorId?: string;
+  targetId?: string;
+  title: string;
+  message: string;
+  dc: number;
+  payload: Record<string, unknown>;
+  resolved: boolean;
+  createdAt: string;
 };
 
 export type EncounterRunCombatant = {
@@ -200,102 +245,56 @@ export type Creature = {
   updatedAt: string;
 };
 
-export type ActionRollPart = {
-  id?: string;
-  sortOrder?: number;
-  rollKind: string;
-  damageType: string;
-  magical: boolean;
-  diceCount: number;
-  dieSize: number;
-  fixedValue: number;
-  rolledValue?: number;
-  criticalRolledValue?: number;
-  total?: number;
+export type {
+  ActionFormState,
+  ActionIconSource,
+  ActionRollFormState,
+  ActionRollPart,
+  ActionTemplate,
+  ActionTemplateUsage,
+  CreatureAction,
+} from "./types/actions";
+export type {
+  Spell,
+  SpellAction,
+  SpellActionFormState,
+  SpellActionRollFormState,
+  SpellActionRollPart,
+  SpellAreaScalingFormState,
+  SpellFormState,
+  SpellProjectileScaling,
+  SpellProjectileScalingFormState,
+} from "./types/spells";
+
+export type CreatureSpellRef = {
+  spellId: string;
+  librarySource: "user" | "standard";
+  spellLevel: number;
 };
 
-export type ActionTemplate = {
+export type CreatureSpell = CreatureSpellRef & {
   id: string;
-  name: string;
-  description: string;
-  recharge: string;
-  limitedUses: number;
-  limitType: string;
-  reach: number;
-  range: number;
-  aoeType: string;
-  aoeSize: number;
-  actionType: string;
-  attackModifier: number;
-  missEffect: string;
-  hitSpecialEvent: string;
-  rolls: ActionRollPart[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type CreatureAction = ActionTemplate & {
   creatureId: string;
-  sourceTemplateId?: string;
+  spellName: string;
+  sourceKey: string;
+  sourceLabel: string;
+  spellLevel: number;
+  prepared: boolean;
+  innate: boolean;
   sortOrder: number;
 };
 
-export type ActionFormState = {
-  id: string;
-  name: string;
-  description: string;
-  recharge: string;
-  limitedUses: string;
-  limitType: string;
-  reach: string;
-  range: string;
-  aoeType: string;
-  aoeSize: string;
-  actionType: string;
-  attackModifier: string;
-  missEffect: string;
-  hitSpecialEvent: string;
-  rolls: ActionRollFormState[];
-};
-
-export type ActionRollFormState = {
-  id: string;
-  rollKind: string;
-  damageType: string;
-  magical: boolean;
-  diceCount: string;
-  dieSize: string;
-  fixedValue: string;
-};
-
-export type ActionTemplateUsage = {
-  actionId: string;
+export type CreatureSpellcastingProfile = {
   creatureId: string;
-  creatureName: string;
-  actionName: string;
-};
-
-export type Spell = {
-  id: string;
-  name: string;
-  level: number;
-  school: string;
-  castingTime: string;
-  range: string;
-  components: Record<string, unknown>;
-  duration: string;
-  ritual: boolean;
-  concentration: boolean;
-  description: string;
-  higherLevel: string;
-  sourceNote: string;
-  librarySource: "user" | "standard";
-  readOnly: boolean;
-  sourceKey: string;
-  sourceLabel: string;
-  mechanics: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
+  spellcastingAbility: string;
+  innateSpellcastingAbility: string;
+  casterLevel: number;
+  spellSaveDC: number;
+  spellAttackBonus: number;
+  slots: Record<string, unknown>;
+  spells: CreatureSpell[];
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ApiError = {
@@ -339,6 +338,7 @@ export type LongRestSnapshot = {
   currentHitPoints: number;
   temporaryHitPoints: number;
   temporaryMaxHitPoints: number;
+  spellSlotsRemaining?: Record<string, unknown>;
 };
 
 export type CommonWeapon = {
@@ -399,7 +399,7 @@ export type CreatureFormState = {
   spellSlots7: string;
   spellSlots8: string;
   spellSlots9: string;
-  spellIds: string[];
+  spellRefs: CreatureSpellRef[];
   statBlock: string;
 };
 
@@ -435,23 +435,25 @@ export type PlayerFormState = {
   senses: Record<SenseName, { enabled: boolean; range: string }>;
   spellcastingAbility: string;
   innateSpellcastingAbility: string;
+  spellSlots1: string;
+  spellSlots2: string;
+  spellSlots3: string;
+  spellSlots4: string;
+  spellSlots5: string;
+  spellSlots6: string;
+  spellSlots7: string;
+  spellSlots8: string;
+  spellSlots9: string;
+  spellSlotsRemaining1: string;
+  spellSlotsRemaining2: string;
+  spellSlotsRemaining3: string;
+  spellSlotsRemaining4: string;
+  spellSlotsRemaining5: string;
+  spellSlotsRemaining6: string;
+  spellSlotsRemaining7: string;
+  spellSlotsRemaining8: string;
+  spellSlotsRemaining9: string;
   notes: string;
-};
-
-export type SpellFormState = {
-  name: string;
-  level: string;
-  school: string;
-  castingTime: string;
-  range: string;
-  duration: string;
-  ritual: boolean;
-  concentration: boolean;
-  description: string;
-  higherLevel: string;
-  sourceNote: string;
-  components: string;
-  mechanics: string;
 };
 
 export type DraftCombatant = EncounterCombatant & {

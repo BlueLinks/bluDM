@@ -14,14 +14,14 @@ export function Sheet({
   onOpenChange,
 }: {
   title: string;
-  trigger: React.ReactNode;
+  trigger?: React.ReactNode;
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
-      <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
+      {trigger && <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>}
       <Dialog.Portal>
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
@@ -47,12 +47,14 @@ export function Modal({
   children,
   open,
   onOpenChange,
+  className = "",
 }: {
   title: string;
   trigger: React.ReactNode;
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  className?: string;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -61,7 +63,12 @@ export function Modal({
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
           forceMount
-          className="modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl"
+          className={[
+            "modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl",
+            className,
+          ]
+            .filter(Boolean)
+            .join(" ")}
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
@@ -201,19 +208,21 @@ export function SlotStepper({
   const current = Number(value) || 0;
   const suffix = level === 1 ? "st" : level === 2 ? "nd" : level === 3 ? "rd" : "th";
   return (
-    <div className="grid justify-items-center gap-1 rounded-lg border border-border bg-background p-2">
+    <div className="grid justify-items-center gap-2 rounded-lg border border-border bg-background p-2">
+      <span className="text-center text-[0.68rem] font-bold uppercase leading-tight text-muted-foreground">
+        {level}
+        {suffix} level
+      </span>
       <button
-        className="grid h-7 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
+        className="grid h-6 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
         type="button"
         onClick={() => onChange(String(current + 1))}
+        aria-label={`Increase ${level}${suffix} level spell slots`}
       >
         <ChevronUp className="h-4 w-4" />
       </button>
       <label className="grid justify-items-center gap-1">
-        <span className="text-[0.68rem] font-bold uppercase text-muted-foreground">
-          {level}
-          {suffix}
-        </span>
+        <span className="text-[0.62rem] font-bold uppercase text-muted-foreground">Slots</span>
         <input
           className="h-10 w-12 rounded-md border border-border bg-card text-center text-lg font-semibold outline-none ring-primary/30 focus:ring-2"
           inputMode="numeric"
@@ -222,9 +231,10 @@ export function SlotStepper({
         />
       </label>
       <button
-        className="grid h-7 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
+        className="grid h-6 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
         type="button"
         onClick={() => onChange(String(Math.max(0, current - 1)))}
+        aria-label={`Decrease ${level}${suffix} level spell slots`}
       >
         <ChevronDown className="h-4 w-4" />
       </button>

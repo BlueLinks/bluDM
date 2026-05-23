@@ -1,7 +1,7 @@
 import { HeartPulse, ScrollText, Shield, Zap } from "lucide-react";
 import React from "react";
 import { useRollLog } from "../../components/RollLogProvider";
-import { SectionPanel } from "../../components/ui";
+import { Badge, SectionPanel } from "../../components/ui";
 import { api } from "../../lib/api";
 import {
   abilityScoresFromSheet,
@@ -17,16 +17,18 @@ import {
 } from "../../lib/domain/combat";
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
-import type { EncounterRunCombatant, RollMode } from "../../types";
+import type { EncounterRunCombatant, EncounterRunEffect, RollMode } from "../../types";
 
 type AbilityOption = (typeof abilities)[number];
 
 export function CombatSheet({
+  activeEffects = [],
   combatant,
   runID,
   compact = false,
   onRoll,
 }: {
+  activeEffects?: EncounterRunEffect[];
   combatant: EncounterRunCombatant;
   runID: string;
   compact?: boolean;
@@ -96,6 +98,13 @@ export function CombatSheet({
           {descriptor && (
             <div className="mt-0.5 text-xs italic text-muted-foreground">{descriptor}</div>
           )}
+          {activeEffects.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {activeEffects.map((effect) => (
+                <Badge key={effect.id}>{sheetEffectLabel(effect)}</Badge>
+              ))}
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-3 gap-1">
           <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
@@ -142,6 +151,19 @@ export function CombatSheet({
       </div>
     </SectionPanel>
   );
+}
+
+function sheetEffectLabel(effect: EncounterRunEffect) {
+  if (effect.effectKind === "condition_immunity" && effect.conditionName) {
+    return `Immune to ${effect.conditionName}`;
+  }
+  if (effect.effectKind === "concentration") {
+    return `Concentration: ${effect.spellName}`;
+  }
+  if (effect.timing === "start_target_turn") {
+    return `${effect.spellName} at turn start`;
+  }
+  return effect.spellName;
 }
 
 function AbilityTable({

@@ -14,6 +14,7 @@ func (s *Server) listActionTemplates(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.db.Query(r.Context(), `
 		select id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
 			created_at, updated_at
 		from action_templates
 		where owner_user_id = $1
@@ -107,13 +108,17 @@ func (s *Server) updateActionTemplate(w http.ResponseWriter, r *http.Request) {
 		set name = $2, description = $3, recharge = $4, limited_uses = $5,
 			limit_type = $6, reach = $7, action_range = $8, aoe_type = $9,
 			aoe_size = $10, action_type = $11, attack_modifier = $12,
-			miss_effect = $13, hit_special_event = $14
-		where id = $1 and owner_user_id = $15
+			miss_effect = $13, hit_special_event = $14, icon_source = $15,
+			icon_key = $16, icon_asset_id = nullif($17, '')::uuid, icon_url = $18,
+			icon_attribution = $19, updated_at = now()
+		where id = $1 and owner_user_id = $20
 		returning id, name, description, recharge, limited_uses, limit_type, reach, action_range,
 			aoe_type, aoe_size, action_type, attack_modifier, miss_effect, hit_special_event,
+			icon_source, icon_key, coalesce(icon_asset_id::text, ''), icon_url, icon_attribution,
 			created_at, updated_at
 	`, templateID, req.Name, req.Description, req.Recharge, req.LimitedUses, req.LimitType, req.Reach, req.Range,
-		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent, currentUserIDMust(r.Context()))
+		req.AOEType, req.AOESize, req.ActionType, req.AttackModifier, req.MissEffect, req.HitSpecialEvent,
+		req.IconSource, req.IconKey, req.IconAssetID, req.IconURL, req.IconAttribution, currentUserIDMust(r.Context()))
 	template, err := scanActionTemplate(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -225,7 +230,7 @@ func (s *Server) createCreatureAction(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context())
 
-	action, err := insertCreatureAction(r.Context(), tx, creatureID, "", req)
+	action, err := insertCreatureAction(r.Context(), tx, creatureID, req.SourceTemplateID, req)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create creature action")
 		return
@@ -269,7 +274,7 @@ func (s *Server) replaceCreatureActions(w http.ResponseWriter, r *http.Request) 
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		action, err := insertCreatureAction(r.Context(), tx, creatureID, "", actionReq)
+		action, err := insertCreatureAction(r.Context(), tx, creatureID, actionReq.SourceTemplateID, actionReq)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not replace creature action")
 			return

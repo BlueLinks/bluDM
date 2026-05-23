@@ -1,42 +1,22 @@
-import { BookOpen, Eye, Plus, Search } from "lucide-react";
-import { type FormEvent, useEffect, useState } from "react";
+import { BookOpen, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
   Badge,
   Button,
   Callout,
-  Checkbox,
-  Field,
   FloatingInput,
-  FormSection,
-  Input,
   Modal,
   MutedPanel,
   Page,
   PageHeader,
-  Sheet,
   StatPill,
-  Textarea,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { Spell, SpellFormState } from "../../types";
-
-const emptySpellForm: SpellFormState = {
-  name: "",
-  level: "0",
-  school: "",
-  castingTime: "",
-  range: "",
-  duration: "",
-  ritual: false,
-  concentration: false,
-  description: "",
-  higherLevel: "",
-  sourceNote: "",
-  components: '{"verbal":false,"somatic":false,"material":""}',
-  mechanics: "{}",
-};
+import { SpellDialog } from "./SpellDialog";
+import { displaySpellDuration, displaySpellRange, generateSpellDescription } from "./spellText";
 
 export function SpellsPage() {
   const [spells, setSpells] = useState<Spell[]>([]);
@@ -44,7 +24,8 @@ export function SpellsPage() {
   const [showStandardSpells, setShowStandardSpells] = useState(true);
   const [selectedSources, setSelectedSources] = useState(["srd-2014", "srd-5-2-1"]);
   const [search, setSearch] = useState("");
-  const [sheetOpen, setSheetOpen] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingSpell, setEditingSpell] = useState<Spell | null>(null);
   const [previewSpell, setPreviewSpell] = useState<Spell | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -73,23 +54,15 @@ export function SpellsPage() {
         title="Spell library"
         copy="Create app-native spell entries from your own books or original content, and browse read-only SRD spells separately."
         action={
-          <Sheet
-            open={sheetOpen}
-            onOpenChange={setSheetOpen}
-            title="Quick add spell"
-            trigger={<Button icon={Plus}>Quick add spell</Button>}
+          <Button
+            icon={Plus}
+            onClick={() => {
+              setEditingSpell(null);
+              setDialogOpen(true);
+            }}
           >
-            <SpellForm
-              onCreated={(spell) => {
-                setSpells((current) =>
-                  [...current, spell].sort(
-                    (a, b) => a.level - b.level || a.name.localeCompare(b.name),
-                  ),
-                );
-                setSheetOpen(false);
-              }}
-            />
-          </Sheet>
+            Add spell
+          </Button>
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
@@ -108,26 +81,86 @@ export function SpellsPage() {
         <FloatingInput icon={Search} label="Search spells" value={search} onChange={setSearch} />
       </div>
       {loading && <MutedPanel>Loading spells...</MutedPanel>}
-      <SpellGrid spells={visibleSpells} onPreview={setPreviewSpell} />
+      <SpellGrid
+        spells={visibleSpells}
+        onDelete={handleDelete}
+        onEdit={(spell) => {
+          setEditingSpell(spell);
+          setDialogOpen(true);
+        }}
+        onPreview={setPreviewSpell}
+      />
       <SpellPreviewModal spell={previewSpell} onClose={() => setPreviewSpell(null)} />
+      <SpellDialog
+        open={dialogOpen}
+        spell={editingSpell}
+        onOpenChange={setDialogOpen}
+        onSubmit={editingSpell ? handleUpdate : handleCreate}
+      />
     </Page>
   );
+
+  async function handleCreate(form: SpellFormState) {
+    const payload = await api.createSpell(form);
+    setSpells((current) => sortSpells([...current, payload.spell]));
+  }
+
+  async function handleUpdate(form: SpellFormState) {
+    if (!editingSpell) return;
+    const payload = await api.updateSpell(editingSpell.id, form);
+    setSpells((current) =>
+      sortSpells(current.map((spell) => (spell.id === payload.spell.id ? payload.spell : spell))),
+    );
+    setEditingSpell(null);
+  }
+
+  async function handleDelete(spell: Spell) {
+    if (!window.confirm(`Delete ${spell.name}?`)) return;
+    await api.deleteSpell(spell.id);
+    setSpells((current) => current.filter((item) => item.id !== spell.id));
+  }
 }
 
-function SpellGrid({ spells, onPreview }: { spells: Spell[]; onPreview: (spell: Spell) => void }) {
+function SpellGrid({
+  spells,
+  onDelete,
+  onEdit,
+  onPreview,
+}: {
+  spells: Spell[];
+  onDelete: (spell: Spell) => void;
+  onEdit: (spell: Spell) => void;
+  onPreview: (spell: Spell) => void;
+}) {
   if (spells.length === 0) {
     return <MutedPanel>No spells match the current filters.</MutedPanel>;
   }
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       {spells.map((spell) => (
-        <SpellCard key={spell.id} spell={spell} onPreview={onPreview} />
+        <SpellCard
+          key={spell.id}
+          spell={spell}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onPreview={onPreview}
+        />
       ))}
     </div>
   );
 }
 
-function SpellCard({ spell, onPreview }: { spell: Spell; onPreview: (spell: Spell) => void }) {
+function SpellCard({
+  spell,
+  onDelete,
+  onEdit,
+  onPreview,
+}: {
+  spell: Spell;
+  onDelete: (spell: Spell) => void;
+  onEdit: (spell: Spell) => void;
+  onPreview: (spell: Spell) => void;
+}) {
   return (
     <article
       className={[
@@ -146,17 +179,25 @@ function SpellCard({ spell, onPreview }: { spell: Spell; onPreview: (spell: Spel
             {spell.school && `· ${spell.school}`}
           </p>
         </div>
-        <Button icon={Eye} size="sm" variant="secondary" onClick={() => onPreview(spell)}>
-          View
-        </Button>
+        <div className="flex gap-2">
+          <Button icon={Eye} size="sm" variant="secondary" onClick={() => onPreview(spell)}>
+            View
+          </Button>
+          {!spell.readOnly && (
+            <>
+              <Button icon={Pencil} size="sm" variant="secondary" onClick={() => onEdit(spell)} />
+              <Button icon={Trash2} size="sm" variant="danger" onClick={() => onDelete(spell)} />
+            </>
+          )}
+        </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {spell.concentration && <Badge>Concentration</Badge>}
         {spell.ritual && <Badge>Ritual</Badge>}
-        <Badge>{spell.duration || "Spell"}</Badge>
+        <Badge>{displaySpellDuration(spell) || "Spell"}</Badge>
       </div>
       <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
-        {spell.description || "No description yet."}
+        {spell.description || generateSpellDescription(spell)}
       </p>
     </article>
   );
@@ -198,13 +239,13 @@ function SpellPreview({ spell }: { spell: Spell }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         <StatPill label="Casting Time" value={spell.castingTime || "-"} />
-        <StatPill label="Range" value={spell.range || "-"} />
-        <StatPill label="Duration" value={spell.duration || "-"} />
+        <StatPill label="Range" value={displaySpellRange(spell)} />
+        <StatPill label="Duration" value={displaySpellDuration(spell)} />
         <StatPill label="Components" value={componentSummary(spell.components)} />
       </div>
-      <TextBlock title="Description" value={spell.description} />
+      <TextBlock title="Description" value={spell.description || generateSpellDescription(spell)} />
       <TextBlock title="At Higher Levels" value={spell.higherLevel} />
-      <MechanicsBlock mechanics={spell.mechanics} />
+      <MechanicsBlock mechanics={spell.mechanics} actions={spell.actions} />
     </div>
   );
 }
@@ -219,12 +260,30 @@ function TextBlock({ title, value }: { title: string; value: string }) {
   );
 }
 
-function MechanicsBlock({ mechanics }: { mechanics: Record<string, unknown> }) {
+function MechanicsBlock({
+  mechanics,
+  actions = [],
+}: {
+  mechanics: Record<string, unknown>;
+  actions?: Spell["actions"];
+}) {
   const entries = Object.entries(mechanics).filter(([key, value]) => key !== "source" && value);
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && actions.length === 0) return null;
   return (
     <section className="rounded-md border border-border bg-background p-3">
       <h4 className="font-semibold">Mechanics</h4>
+      {actions.length > 0 && (
+        <div className="mt-2 grid gap-2 text-sm">
+          {actions.map((action) => (
+            <div className="rounded-md bg-muted px-3 py-2" key={action.id}>
+              <span className="font-semibold">{action.name || action.actionType}</span>
+              <span className="ml-2 text-muted-foreground">
+                {action.rolls.map(formatRollPart).join(", ") || "No rolls"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
       <dl className="mt-2 grid gap-1 text-sm">
         {entries.map(([key, value]) => (
           <div className="flex justify-between gap-3" key={key}>
@@ -234,128 +293,6 @@ function MechanicsBlock({ mechanics }: { mechanics: Record<string, unknown> }) {
         ))}
       </dl>
     </section>
-  );
-}
-
-function SpellForm({ onCreated }: { onCreated: (spell: Spell) => void }) {
-  const [form, setForm] = useState<SpellFormState>(emptySpellForm);
-  const [error, setError] = useState("");
-
-  async function handleCreate(event: FormEvent) {
-    event.preventDefault();
-    setError("");
-    try {
-      const payload = await api.createSpell(form);
-      onCreated(payload.spell);
-      setForm(emptySpellForm);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create spell");
-    }
-  }
-
-  return (
-    <form className="grid gap-5" onSubmit={handleCreate}>
-      <FormSection title="Basic Info">
-        <Field label="Name">
-          <Input
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            required
-          />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Level">
-            <Input
-              type="number"
-              min={0}
-              max={9}
-              value={form.level}
-              onChange={(event) => setForm({ ...form, level: event.target.value })}
-            />
-          </Field>
-          <Field label="School">
-            <Input
-              value={form.school}
-              onChange={(event) => setForm({ ...form, school: event.target.value })}
-            />
-          </Field>
-        </div>
-      </FormSection>
-      <FormSection title="Casting">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Casting Time">
-            <Input
-              value={form.castingTime}
-              onChange={(event) => setForm({ ...form, castingTime: event.target.value })}
-            />
-          </Field>
-          <Field label="Range">
-            <Input
-              value={form.range}
-              onChange={(event) => setForm({ ...form, range: event.target.value })}
-            />
-          </Field>
-        </div>
-        <Field label="Duration">
-          <Input
-            value={form.duration}
-            onChange={(event) => setForm({ ...form, duration: event.target.value })}
-          />
-        </Field>
-        <div className="flex flex-wrap gap-3">
-          <Checkbox
-            label="Ritual"
-            checked={form.ritual}
-            onChange={(checked) => setForm({ ...form, ritual: checked })}
-          />
-          <Checkbox
-            label="Concentration"
-            checked={form.concentration}
-            onChange={(checked) => setForm({ ...form, concentration: checked })}
-          />
-        </div>
-      </FormSection>
-      <FormSection title="Description">
-        <Field label="Description">
-          <Textarea
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            rows={5}
-          />
-        </Field>
-        <Field label="Higher Levels">
-          <Textarea
-            value={form.higherLevel}
-            onChange={(event) => setForm({ ...form, higherLevel: event.target.value })}
-            rows={3}
-          />
-        </Field>
-      </FormSection>
-      <FormSection title="Components and Mechanics">
-        <Field label="Source Note">
-          <Input
-            value={form.sourceNote}
-            onChange={(event) => setForm({ ...form, sourceNote: event.target.value })}
-          />
-        </Field>
-        <Field label="Components JSON">
-          <Textarea
-            value={form.components}
-            onChange={(event) => setForm({ ...form, components: event.target.value })}
-            rows={4}
-          />
-        </Field>
-        <Field label="Mechanics JSON">
-          <Textarea
-            value={form.mechanics}
-            onChange={(event) => setForm({ ...form, mechanics: event.target.value })}
-            rows={4}
-          />
-        </Field>
-      </FormSection>
-      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-      <Button type="submit">Create spell</Button>
-    </form>
   );
 }
 
@@ -390,6 +327,32 @@ function formatMechanic(value: unknown): string {
       .join("; ");
   }
   return String(value);
+}
+
+function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) {
+  if (roll.rollKind === "condition") {
+    return `Apply ${roll.conditionName || "condition"}`;
+  }
+  if (roll.rollKind === "condition_immunity") {
+    return `Immunity to ${roll.conditionName || "condition"}`;
+  }
+  if (roll.rollKind === "custom") {
+    return roll.conditionName || "Custom target effect";
+  }
+  const fixed =
+    roll.fixedValue > 0 ? `+${roll.fixedValue}` : roll.fixedValue < 0 ? roll.fixedValue : "";
+  const amount = roll.diceCount > 0 ? `${roll.diceCount}d${roll.dieSize}${fixed}` : fixed || "0";
+  const label =
+    roll.rollKind === "max_hp"
+      ? "HP maximum"
+      : roll.rollKind === "temp_hp"
+        ? "sets temp HP"
+        : roll.rollKind;
+  return `${amount} ${roll.rollKind === "damage" ? roll.damageType : label}`;
+}
+
+function sortSpells(spells: Spell[]) {
+  return [...spells].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 function SrdBadge({ label }: { label?: string }) {

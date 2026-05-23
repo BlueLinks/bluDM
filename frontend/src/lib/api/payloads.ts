@@ -1,4 +1,9 @@
-import type { ActionFormState, CreatureFormState, PlayerFormState } from "../../types";
+import type {
+  ActionFormState,
+  CreatureFormState,
+  PlayerFormState,
+  SpellFormState,
+} from "../../types";
 import { abilities } from "../domain/options";
 import { effectiveCharacterLevel } from "../domain/progression";
 
@@ -15,6 +20,7 @@ export function parseJSONField(value: string): Record<string, unknown> {
 export function actionPayload(action: ActionFormState) {
   return {
     name: action.name,
+    sourceTemplateId: action.sourceTemplateId ?? "",
     description: action.description,
     recharge: action.recharge,
     limitedUses: Number(action.limitedUses) || 0,
@@ -27,6 +33,11 @@ export function actionPayload(action: ActionFormState) {
     attackModifier: Number(action.attackModifier) || 0,
     missEffect: action.missEffect,
     hitSpecialEvent: action.hitSpecialEvent,
+    iconSource: action.iconSource,
+    iconKey: action.iconKey,
+    iconAssetId: action.iconAssetId,
+    iconUrl: action.iconUrl,
+    iconAttribution: action.iconAttribution,
     rolls: action.rolls.map((roll) => ({
       rollKind: roll.rollKind,
       damageType: roll.damageType,
@@ -38,10 +49,171 @@ export function actionPayload(action: ActionFormState) {
   };
 }
 
+export function spellPayload(payload: SpellFormState) {
+  return {
+    name: payload.name,
+    level: Number(payload.level) || 0,
+    school: payload.school,
+    castingTime: spellCastingTime(payload),
+    castType: payload.castType,
+    range: payload.range,
+    rangeType: payload.rangeType,
+    rangeFeet: Number(payload.rangeFeet) || 0,
+    components: {
+      verbal: payload.components.verbal,
+      somatic: payload.components.somatic,
+      material: payload.components.material,
+      materialText: payload.materialComponents,
+    },
+    materialComponents: payload.materialComponents,
+    classes: payload.classes,
+    duration: payload.duration,
+    durationType: payload.durationType,
+    durationValue: Number(payload.durationValue) || 0,
+    durationScale: payload.durationScale,
+    aoeType: payload.aoeType,
+    aoeSize: payload.aoeType === "None" ? 0 : Number(payload.aoeSize) || 0,
+    ritual: payload.ritual,
+    concentration: payload.concentration,
+    scalingType: payload.scalingType,
+    description: payload.description,
+    higherLevel: payload.higherLevel,
+    sourceNote: payload.sourceNote,
+    sourceMaterial: payload.sourceMaterial,
+    mechanics: {
+      castingTrigger: payload.castingTrigger,
+      triggerDetail: payload.triggerDetail,
+      targetPattern: payload.targetPattern,
+      targetAnchor: payload.targetAnchor,
+      ...(payload.areaScaling && payload.areaScaling.scalingType !== "none"
+        ? {
+            areaScaling: {
+              scalingType: payload.areaScaling.scalingType,
+              scaleFromLevel: Number(payload.areaScaling.scaleFromLevel) || 0,
+              additionalSize: Number(payload.areaScaling.additionalSize) || 0,
+              stepSize: Number(payload.areaScaling.stepSize) || 1,
+              description: payload.areaScaling.description,
+            },
+          }
+        : {}),
+    },
+    projectileScaling: payload.projectileScaling
+      ? {
+          baseProjectiles: Number(payload.projectileScaling.baseProjectiles) || 1,
+          scalingType: payload.projectileScaling.scalingType,
+          scaleFromLevel: Number(payload.projectileScaling.scaleFromLevel) || 0,
+          additionalProjectiles: Number(payload.projectileScaling.additionalProjectiles) || 0,
+          stepSize: Number(payload.projectileScaling.stepSize) || 1,
+          description: payload.projectileScaling.description,
+          cantripScaling: projectileCantripScalingPayload(payload.projectileScaling),
+        }
+      : undefined,
+    actions: payload.actions.map((action) => ({
+      name: action.name,
+      actionType: action.actionType,
+      saveAbility: action.saveAbility,
+      successfulSaveEffect: action.successfulSaveEffect,
+      attackModifier: Number(action.attackModifier) || 0,
+      hitSpecialEvent: action.hitSpecialEvent,
+      weaponSource: action.weaponSource,
+      attackAbilityOverride: action.attackAbilityOverride,
+      damageAbilityOverride: action.damageAbilityOverride,
+      damageTypeChoice: action.damageTypeChoice,
+      damageTypeOptions: action.damageTypeOptions,
+      rolls: action.rolls.map((roll) => ({
+        rollKind: roll.rollKind,
+        damageType: roll.damageType,
+        magical: roll.magical,
+        diceCount: Number(roll.diceCount) || 0,
+        dieSize: Number(roll.dieSize) || 6,
+        fixedValue: Number(roll.fixedValue) || 0,
+        addPrimaryStatModifier: roll.addPrimaryStatModifier,
+        conditionName: roll.conditionName,
+        timing: roll.timing,
+        scalingType: roll.scalingType,
+        scalingFromLevel: roll.scalingType === "none" ? 0 : Number(roll.scalingFromLevel) || 0,
+        scalingDiceCount: roll.scalingType === "none" ? 0 : Number(roll.scalingDiceCount) || 0,
+        scalingDieSize: roll.scalingType === "none" ? 6 : Number(roll.scalingDieSize) || 6,
+        scalingFixedValue: roll.scalingType === "none" ? 0 : Number(roll.scalingFixedValue) || 0,
+        scalingStepSize: roll.scalingType === "none" ? 1 : Number(roll.scalingStepSize) || 1,
+        cantripScaling: cantripScalingPayload(roll),
+      })),
+    })),
+  };
+}
+
+function spellCastingTime(payload: SpellFormState) {
+  if (payload.castType === "Action") return "1 Action";
+  if (payload.castType === "Bonus Action") return "1 Bonus Action";
+  if (payload.castType === "Reaction") return payload.castingTime.trim() || "1 Reaction";
+  if (payload.castType === "Longer Time") return payload.castingTime.trim();
+  if (payload.castType === "Special") return payload.castingTime.trim() || "Special";
+  return payload.castingTime.trim();
+}
+
+function projectileCantripScalingPayload(
+  scaling: NonNullable<SpellFormState["projectileScaling"]>,
+) {
+  const hasCantripScaling =
+    Number(scaling.cantrip5Targets) > 0 ||
+    Number(scaling.cantrip11Targets) > 0 ||
+    Number(scaling.cantrip17Targets) > 0;
+  if (!hasCantripScaling) return {};
+  return {
+    5: { targets: Number(scaling.cantrip5Targets) || 0 },
+    11: { targets: Number(scaling.cantrip11Targets) || 0 },
+    17: { targets: Number(scaling.cantrip17Targets) || 0 },
+  };
+}
+
+function cantripScalingPayload(roll: SpellFormState["actions"][number]["rolls"][number]) {
+  const hasCantripScaling =
+    Number(roll.cantrip5DiceCount) > 0 ||
+    Number(roll.cantrip11DiceCount) > 0 ||
+    Number(roll.cantrip17DiceCount) > 0;
+  if (!hasCantripScaling) return {};
+  return {
+    5: {
+      diceCount: Number(roll.cantrip5DiceCount) || 0,
+      dieSize: Number(roll.cantrip5DieSize) || 6,
+    },
+    11: {
+      diceCount: Number(roll.cantrip11DiceCount) || 0,
+      dieSize: Number(roll.cantrip11DieSize) || 6,
+    },
+    17: {
+      diceCount: Number(roll.cantrip17DiceCount) || 0,
+      dieSize: Number(roll.cantrip17DieSize) || 6,
+    },
+  };
+}
+
 export function playerPayload(payload: PlayerFormState) {
   const trimmedLevelOverride = payload.level.trim();
   const levelOverride = trimmedLevelOverride === "" ? null : Number(trimmedLevelOverride);
   const level = effectiveCharacterLevel(payload.level, payload.experiencePoints);
+  const spellSlots = {
+    1: Number(payload.spellSlots1) || 0,
+    2: Number(payload.spellSlots2) || 0,
+    3: Number(payload.spellSlots3) || 0,
+    4: Number(payload.spellSlots4) || 0,
+    5: Number(payload.spellSlots5) || 0,
+    6: Number(payload.spellSlots6) || 0,
+    7: Number(payload.spellSlots7) || 0,
+    8: Number(payload.spellSlots8) || 0,
+    9: Number(payload.spellSlots9) || 0,
+  };
+  const spellSlotsRemaining = {
+    1: Math.min(Number(payload.spellSlotsRemaining1) || 0, spellSlots[1]),
+    2: Math.min(Number(payload.spellSlotsRemaining2) || 0, spellSlots[2]),
+    3: Math.min(Number(payload.spellSlotsRemaining3) || 0, spellSlots[3]),
+    4: Math.min(Number(payload.spellSlotsRemaining4) || 0, spellSlots[4]),
+    5: Math.min(Number(payload.spellSlotsRemaining5) || 0, spellSlots[5]),
+    6: Math.min(Number(payload.spellSlotsRemaining6) || 0, spellSlots[6]),
+    7: Math.min(Number(payload.spellSlotsRemaining7) || 0, spellSlots[7]),
+    8: Math.min(Number(payload.spellSlotsRemaining8) || 0, spellSlots[8]),
+    9: Math.min(Number(payload.spellSlotsRemaining9) || 0, spellSlots[9]),
+  };
 
   return {
     campaignId: payload.campaignId,
@@ -72,6 +244,8 @@ export function playerPayload(payload: PlayerFormState) {
       passiveInvestigation: Number(payload.passiveInvestigation),
       passiveInsight: Number(payload.passiveInsight),
       spellSaveDC: Number(payload.spellSaveDC),
+      spellSlots,
+      spellSlotsRemaining,
       damageVulnerabilities: payload.damageVulnerabilities,
       damageResistances: payload.damageResistances,
       damageImmunities: payload.damageImmunities,

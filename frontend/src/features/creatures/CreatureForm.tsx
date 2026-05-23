@@ -1,19 +1,11 @@
 import {
-  closestCenter,
-  DndContext,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { BookOpen, HeartPulse, Plus, Search, Shield, Sparkles, Zap } from "lucide-react";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import {
   type Dispatch,
   type FormEvent,
@@ -22,32 +14,20 @@ import {
   useMemo,
   useState,
 } from "react";
-import { AvatarImagePicker } from "../../components/AvatarImagePicker";
 import {
-  AbilityInput,
   AbilitySelect,
   ConditionImmunityChecklist,
   DamageDefenseGroup,
-  DiceFormulaInput,
-  formatDiceFormula,
-  parseDiceFormula,
   SenseControl,
 } from "../../components/shared/CharacterFormControls";
-import { SkillsTable } from "../../components/shared/CharacterSheetTables";
+import { CompactAbilityTable, SkillsTable } from "../../components/shared/CharacterSheetTables";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
-  Badge,
   Button,
-  Checkbox,
   ConfirmDialog,
-  EmptyMini,
   Field,
-  FloatingInput,
   FormSection,
-  IconNumberField,
   Input,
-  Modal,
-  Select,
   SlotStepper,
   Textarea,
 } from "../../components/ui";
@@ -55,22 +35,11 @@ import { api } from "../../lib/api";
 import {
   actionFormFromCreatureAction,
   actionFormFromTemplate,
-  blankAction,
   creatureToForm as creatureToFormState,
-  formatRolls,
   spiderStaffAction,
   weaponAction,
 } from "../../lib/domain/forms";
-import {
-  abilities,
-  alignments,
-  challengeRatings,
-  creatureEnvironments,
-  creatureSizes,
-  creatureSubtypes,
-  creatureTypes,
-  senseTypes,
-} from "../../lib/domain/options";
+import { senseTypes } from "../../lib/domain/options";
 import type {
   ActionFormState,
   ActionTemplate,
@@ -78,10 +47,13 @@ import type {
   Creature,
   CreatureAction,
   CreatureFormState,
+  CreatureSpellcastingProfile,
   Spell,
 } from "../../types";
-import { SortableActionEditor, WeaponMenu } from "./actionEditors";
+import { CreatureActionsSection } from "./CreatureActionsSection";
+import { CreatureIdentitySections } from "./CreatureIdentitySections";
 import { CreatureSpellPickerModal } from "./CreatureSpellPickerModal";
+import { SelectedCreatureSpells } from "./SelectedCreatureSpells";
 const emptyCreatureForm: CreatureFormState = {
   imageAssetId: "",
   avatarUrl: "",
@@ -142,23 +114,62 @@ const emptyCreatureForm: CreatureFormState = {
   spellSlots7: "0",
   spellSlots8: "0",
   spellSlots9: "0",
-  spellIds: [],
+  spellRefs: [],
   statBlock: "{}",
 };
+
+type SpellSlotLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+type SpellSlotKey = `spellSlots${SpellSlotLevel}`;
+
+function applySpellcastingToForm(
+  form: CreatureFormState,
+  spellcasting?: CreatureSpellcastingProfile,
+): CreatureFormState {
+  if (!spellcasting) return form;
+  const slotValue = (level: number) => String(Number(spellcasting.slots[String(level)]) || 0);
+  return {
+    ...form,
+    spellcastingAbility: spellcasting.spellcastingAbility,
+    innateSpellcastingAbility: spellcasting.innateSpellcastingAbility,
+    casterLevel: String(spellcasting.casterLevel),
+    spellSaveDC: String(spellcasting.spellSaveDC),
+    spellAttackBonus: String(spellcasting.spellAttackBonus),
+    spellSlots1: slotValue(1),
+    spellSlots2: slotValue(2),
+    spellSlots3: slotValue(3),
+    spellSlots4: slotValue(4),
+    spellSlots5: slotValue(5),
+    spellSlots6: slotValue(6),
+    spellSlots7: slotValue(7),
+    spellSlots8: slotValue(8),
+    spellSlots9: slotValue(9),
+    spellRefs: spellcasting.spells.map((spell) => ({
+      spellId: spell.spellId,
+      librarySource: spell.librarySource === "standard" ? "standard" : "user",
+      spellLevel: spell.spellLevel,
+    })),
+  };
+}
+
 export function CreatureForm({
   mode,
   creature,
   existingActions = [],
+  spellcasting,
   onSaved,
   notify,
 }: {
   mode: "create" | "edit";
   creature?: Creature;
   existingActions?: CreatureAction[];
+  spellcasting?: CreatureSpellcastingProfile;
   onSaved: (creature: Creature) => void;
   notify: (message: string) => void;
 }) {
-  const initialForm = useMemo(() => creatureToFormState(creature, emptyCreatureForm), [creature]);
+  const initialForm = useMemo(
+    () => applySpellcastingToForm(creatureToFormState(creature, emptyCreatureForm), spellcasting),
+    [creature, spellcasting],
+  );
   const initialActions = useMemo(
     () =>
       existingActions.length > 0
@@ -167,6 +178,10 @@ export function CreatureForm({
           ? [spiderStaffAction()]
           : [],
     [existingActions, mode],
+  );
+  const persistedActionIds = useMemo(
+    () => new Set(existingActions.map((action) => action.id)),
+    [existingActions],
   );
   const [form, setForm] = useState<CreatureFormState>(initialForm);
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
@@ -188,7 +203,7 @@ export function CreatureForm({
     setForm(initialForm);
     setActions(initialActions);
     setBaselineSnapshot(JSON.stringify({ form: initialForm, actions: initialActions }));
-  }, [creature?.id, existingActions.length]);
+  }, [creature?.id, existingActions.length, spellcasting]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -203,6 +218,15 @@ export function CreatureForm({
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+
+  useEffect(() => {
+    const selectedStandardSources =
+      spellcasting?.spells
+        .filter((spell) => spell.librarySource === "standard" && spell.sourceKey)
+        .map((spell) => spell.sourceKey) ?? [];
+    if (selectedStandardSources.length === 0) return;
+    setSpellSources((current) => Array.from(new Set([...current, ...selectedStandardSources])));
+  }, [spellcasting]);
 
   useEffect(() => {
     Promise.all([
@@ -292,11 +316,12 @@ export function CreatureForm({
 
   const filteredSpells = spells.filter((spell) => {
     const query = spellSearch.trim().toLowerCase();
-    return (
+    const hasAvailableSlot = spell.level === 0 || spellSlotCount(form, spell.level) > 0;
+    const matchesQuery =
       !query ||
       spell.name.toLowerCase().includes(query) ||
-      spell.school.toLowerCase().includes(query)
-    );
+      spell.school.toLowerCase().includes(query);
+    return hasAvailableSlot && matchesQuery;
   });
   const filteredTemplates = templates.filter((template) => {
     const query = actionSearch.trim().toLowerCase();
@@ -314,6 +339,8 @@ export function CreatureForm({
       <CreatureSpellcastingSection
         form={form}
         setForm={setForm}
+        notify={notify}
+        spellcasting={spellcasting}
         spellModalOpen={spellModalOpen}
         setSpellModalOpen={setSpellModalOpen}
         spellSearch={spellSearch}
@@ -331,7 +358,12 @@ export function CreatureForm({
         actionSearch={actionSearch}
         setActionSearch={setActionSearch}
         filteredTemplates={filteredTemplates}
+        creature={creature}
+        notify={notify}
+        persistedActionIds={persistedActionIds}
         sensors={sensors}
+        setTemplates={setTemplates}
+        templates={templates}
         onDragEnd={handleActionDragEnd}
         onCopyTemplate={copyTemplateIntoCreature}
         onAddWeapon={addWeaponAction}
@@ -368,211 +400,6 @@ type ToggleCreatureList = (
   value: string,
   checked: boolean,
 ) => void;
-
-function CreatureIdentitySections({
-  form,
-  setForm,
-}: {
-  form: CreatureFormState;
-  setForm: CreatureFormSetter;
-}) {
-  const subtypeOptions = creatureSubtypes[form.creatureType] ?? [];
-  const hitDice = parseDiceFormula(form.hitDice);
-  function setCreatureType(creatureType: string) {
-    setForm((current) => ({
-      ...current,
-      creatureType,
-      creatureSubtype: creatureSubtypes[creatureType]?.includes(current.creatureSubtype)
-        ? current.creatureSubtype
-        : "",
-    }));
-  }
-  return (
-    <>
-      <FormSection title="Basic Info">
-        <AvatarImagePicker
-          label="NPC avatar"
-          name={form.name}
-          assetId={form.imageAssetId}
-          url={form.avatarUrl}
-          uploadImage={(file) => api.uploadImage(file)}
-          onChange={(avatar) =>
-            setForm({ ...form, imageAssetId: avatar.assetId, avatarUrl: avatar.url })
-          }
-        />
-        <Field label="Name">
-          <Input
-            value={form.name}
-            onChange={(event) => setForm({ ...form, name: event.target.value })}
-            required
-          />
-        </Field>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Size">
-            <Select
-              options={creatureSizes.map((size) => ({ label: size, value: size }))}
-              placeholder="Select size"
-              value={form.size}
-              onValueChange={(value) => setForm({ ...form, size: value })}
-            />
-          </Field>
-          <Field label="Alignment">
-            <Select
-              options={alignments.map((alignment) => ({ label: alignment, value: alignment }))}
-              placeholder="Select alignment"
-              value={form.alignment}
-              onValueChange={(value) => setForm({ ...form, alignment: value })}
-            />
-          </Field>
-          <Field label="Environment">
-            <Select
-              options={creatureEnvironments.map((environment) => ({
-                label: environment,
-                value: environment,
-              }))}
-              placeholder="Select environment"
-              value={creatureEnvironments.includes(form.environment) ? form.environment : ""}
-              onValueChange={(environment) => setForm({ ...form, environment })}
-            />
-          </Field>
-        </div>
-        <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_minmax(220px,1fr)_auto]">
-          <Field label="Type">
-            <Select
-              options={creatureTypes.map((type) => ({ label: type, value: type }))}
-              placeholder="Select type"
-              value={creatureTypes.includes(form.creatureType) ? form.creatureType : ""}
-              onValueChange={setCreatureType}
-            />
-          </Field>
-          {subtypeOptions.length > 0 && (
-            <Field label="Subtype">
-              <div className="flex gap-2">
-                <Select
-                  options={subtypeOptions.map((subtype) => ({ label: subtype, value: subtype }))}
-                  placeholder="Optional subtype"
-                  value={form.creatureSubtype}
-                  onValueChange={(creatureSubtype) => setForm({ ...form, creatureSubtype })}
-                />
-                {form.creatureSubtype && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setForm({ ...form, creatureSubtype: "" })}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </div>
-            </Field>
-          )}
-          <div className="self-end">
-            <Checkbox
-              label="Friendly by default"
-              checked={form.defaultDisposition === "friendly"}
-              onChange={(checked) =>
-                setForm({ ...form, defaultDisposition: checked ? "friendly" : "enemy" })
-              }
-            />
-          </div>
-        </div>
-        <Field label="Languages">
-          <Input
-            value={form.languages}
-            onChange={(event) => setForm({ ...form, languages: event.target.value })}
-            placeholder="Common, Deep Speech, Telepathy 120 ft."
-          />
-        </Field>
-      </FormSection>
-      <FormSection title="Movement">
-        <div className="flex flex-wrap gap-3">
-          {(["walkSpeed", "swimSpeed", "flySpeed", "burrowSpeed", "climbSpeed"] as const).map(
-            (key) => (
-              <IconNumberField
-                key={key}
-                icon={Zap}
-                label={speedLabel(key)}
-                value={form[key]}
-                onChange={(value) => setForm({ ...form, [key]: value })}
-              />
-            ),
-          )}
-        </div>
-      </FormSection>
-      <FormSection title="Health and AC">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <IconNumberField
-            className="w-full"
-            icon={Shield}
-            label="AC"
-            value={form.armorClass}
-            onChange={(value) => setForm({ ...form, armorClass: value })}
-          />
-          <IconNumberField
-            className="w-full"
-            icon={HeartPulse}
-            label="HP"
-            value={form.hitPoints}
-            onChange={(value) => setForm({ ...form, hitPoints: value })}
-          />
-          <Field label="Hit Dice">
-            <DiceFormulaInput
-              value={hitDice}
-              onChange={(next) => setForm({ ...form, hitDice: formatDiceFormula(next) })}
-            />
-          </Field>
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Perception"
-            value={form.passivePerception}
-            onChange={(value) => setForm({ ...form, passivePerception: value })}
-          />
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Investigation"
-            value={form.passiveInvestigation}
-            onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
-          />
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Insight"
-            value={form.passiveInsight}
-            onChange={(value) => setForm({ ...form, passiveInsight: value })}
-          />
-        </div>
-      </FormSection>
-      <FormSection title="Challenge">
-        <div className="grid gap-4 sm:grid-cols-[180px_140px_80px]">
-          <Field label="Challenge Rating">
-            <Select
-              options={challengeRatings.map((rating) => ({ label: rating, value: rating }))}
-              placeholder="Select CR"
-              value={form.challengeRating}
-              onValueChange={(challengeRating) => setForm({ ...form, challengeRating })}
-            />
-          </Field>
-          <Field
-            label="XP"
-            help="Used for summaries and to estimate a default proficiency bonus until CR-specific rules are modeled fully."
-          >
-            <Input
-              type="number"
-              value={form.xp}
-              onChange={(event) => setForm({ ...form, xp: event.target.value })}
-            />
-          </Field>
-          <div className="self-end rounded-md border border-border bg-muted px-3 py-2 text-center text-sm font-semibold">
-            +{creatureProficiency(form)}
-          </div>
-        </div>
-      </FormSection>
-    </>
-  );
-}
-
 function CreatureTraitSections({
   form,
   setForm,
@@ -585,25 +412,19 @@ function CreatureTraitSections({
   return (
     <>
       <FormSection title="Ability Scores">
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {abilities.map((ability) => (
-            <AbilityInput
-              key={ability.key}
-              label={ability.label}
-              value={Number(form.abilityScores[ability.key])}
-              saveProficient={form.savingThrowProficiencies.includes(ability.key)}
-              onSaveProficiencyChange={(checked) =>
-                toggleList("savingThrowProficiencies", ability.key, checked)
-              }
-              onChange={(next) =>
-                setForm((current) => ({
-                  ...current,
-                  abilityScores: { ...current.abilityScores, [ability.key]: String(next) },
-                }))
-              }
-            />
-          ))}
-        </div>
+        <CompactAbilityTable
+          abilityScores={form.abilityScores}
+          savingThrowProficiencies={form.savingThrowProficiencies}
+          onSaveProficiencyChange={(ability, checked) =>
+            toggleList("savingThrowProficiencies", ability, checked)
+          }
+          onScoreChange={(ability, value) =>
+            setForm((current) => ({
+              ...current,
+              abilityScores: { ...current.abilityScores, [ability]: value },
+            }))
+          }
+        />
       </FormSection>
       <FormSection title="Skills">
         <SkillsTable
@@ -650,7 +471,9 @@ function CreatureTraitSections({
 function CreatureSpellcastingSection({
   filteredSpells,
   form,
+  notify,
   setForm,
+  spellcasting,
   setSpellModalOpen,
   setSpellSearch,
   setSpellSources,
@@ -661,7 +484,9 @@ function CreatureSpellcastingSection({
 }: {
   filteredSpells: Spell[];
   form: CreatureFormState;
+  notify: (message: string) => void;
   setForm: CreatureFormSetter;
+  spellcasting?: CreatureSpellcastingProfile;
   setSpellModalOpen: (open: boolean) => void;
   setSpellSearch: (search: string) => void;
   setSpellSources: (sources: string[]) => void;
@@ -670,6 +495,16 @@ function CreatureSpellcastingSection({
   spellSources: string[];
   spells: Spell[];
 }) {
+  function setSpellSlotCount(level: number, value: string) {
+    const selectedCount = form.spellRefs.filter((spell) => spell.spellLevel === level).length;
+    const nextCount = Math.max(0, Number(value) || 0);
+    if (nextCount < selectedCount) {
+      notify(`Remove a spell from ${spellLevelName(level)} before reducing those slots.`);
+      return;
+    }
+    setForm({ ...form, [`spellSlots${level}`]: String(nextCount) });
+  }
+
   return (
     <FormSection
       title="Spellcasting"
@@ -688,29 +523,29 @@ function CreatureSpellcastingSection({
             onChange={(value) => setForm({ ...form, innateSpellcastingAbility: value })}
           />
         </Field>
-        <IconNumberField
-          className="w-full"
-          icon={Sparkles}
+        <CompactNumberStepper
           label="Caster Level"
           value={form.casterLevel}
+          min={0}
+          max={30}
           onChange={(value) => setForm({ ...form, casterLevel: value })}
         />
-        <IconNumberField
-          className="w-full"
-          icon={Sparkles}
+        <CompactNumberStepper
           label="Spell Save DC"
           value={form.spellSaveDC}
+          min={0}
+          max={40}
           onChange={(value) => setForm({ ...form, spellSaveDC: value })}
         />
-        <IconNumberField
-          className="w-full"
-          icon={Sparkles}
+        <CompactNumberStepper
           label="Spell Attack"
           value={form.spellAttackBonus}
+          min={-20}
+          max={40}
           onChange={(value) => setForm({ ...form, spellAttackBonus: value })}
         />
       </div>
-      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-9">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(5.75rem,6.75rem))] gap-3">
         {([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((level) => {
           const key = `spellSlots${level}` as const;
           return (
@@ -718,7 +553,7 @@ function CreatureSpellcastingSection({
               key={level}
               level={level}
               value={form[key]}
-              onChange={(value) => setForm({ ...form, [key]: value })}
+              onChange={(value) => setSpellSlotCount(level, value)}
             />
           );
         })}
@@ -728,7 +563,7 @@ function CreatureSpellcastingSection({
           <div>
             <h4 className="font-semibold">Known spells</h4>
             <p className="text-sm text-muted-foreground">
-              {form.spellIds.length} selected. Slot counts above control what this creature can
+              {form.spellRefs.length} selected. Slot counts above control what this creature can
               spend.
             </p>
           </div>
@@ -736,153 +571,90 @@ function CreatureSpellcastingSection({
             open={spellModalOpen}
             search={spellSearch}
             spells={filteredSpells}
-            selectedIds={form.spellIds}
+            selectedRefs={form.spellRefs}
+            slotCounts={spellSlotCounts(form)}
             spellSources={spellSources}
-            setForm={setForm}
+            onSaveSelection={(spellRefs) => setForm({ ...form, spellRefs })}
             setSpellSources={setSpellSources}
             onOpenChange={setSpellModalOpen}
             onSearch={setSpellSearch}
           />
         </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {spells
-            .filter((spell) => form.spellIds.includes(spell.id))
-            .map((spell) => (
-              <Badge key={spell.id}>{spell.name}</Badge>
-            ))}
-        </div>
+        <SelectedCreatureSpells
+          form={form}
+          setForm={setForm}
+          spells={spells}
+          spellcasting={spellcasting}
+        />
       </div>
     </FormSection>
   );
 }
 
-function CreatureActionsSection({
-  actionBankOpen,
-  actionSearch,
-  actions,
-  filteredTemplates,
-  onAddWeapon,
-  onCopyTemplate,
-  onDragEnd,
-  sensors,
-  setActionBankOpen,
-  setActionSearch,
-  setActions,
-}: {
-  actionBankOpen: boolean;
-  actionSearch: string;
-  actions: ActionFormState[];
-  filteredTemplates: ActionTemplate[];
-  onAddWeapon: (weapon: CommonWeapon) => void;
-  onCopyTemplate: (template: ActionTemplate) => void;
-  onDragEnd: (event: DragEndEvent) => void;
-  sensors: ReturnType<typeof useSensors>;
-  setActionBankOpen: (open: boolean) => void;
-  setActionSearch: (search: string) => void;
-  setActions: ActionFormSetter;
-}) {
-  return (
-    <FormSection
-      title="Actions & Abilities"
-      help="Creature actions are ordered for this creature only. Banked actions are copied in, so you can customize the copy without changing the bank."
-    >
-      <div className="grid gap-4">
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            icon={Plus}
-            variant="success"
-            onClick={() => setActions((current) => [...current, blankAction()])}
-          >
-            Add custom action
-          </Button>
-          <ActionBankModal
-            open={actionBankOpen}
-            search={actionSearch}
-            templates={filteredTemplates}
-            onCopyTemplate={onCopyTemplate}
-            onOpenChange={setActionBankOpen}
-            onSearch={setActionSearch}
-          />
-          <WeaponMenu onAdd={onAddWeapon} />
-        </div>
-        <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={onDragEnd}>
-          <SortableContext
-            items={actions.map((action) => action.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="grid gap-3">
-              {actions.map((action, index) => (
-                <SortableActionEditor
-                  key={action.id}
-                  action={action}
-                  index={index}
-                  onChange={(next) =>
-                    setActions((current) =>
-                      current.map((item) => (item.id === action.id ? next : item)),
-                    )
-                  }
-                  onRemove={() =>
-                    setActions((current) => current.filter((item) => item.id !== action.id))
-                  }
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      </div>
-    </FormSection>
+function spellLevelName(level: number) {
+  if (level === 1) return "1st level";
+  if (level === 2) return "2nd level";
+  if (level === 3) return "3rd level";
+  return `${level}th level`;
+}
+
+function spellSlotCount(form: CreatureFormState, level: number) {
+  if (level < 1 || level > 9) return 0;
+  const key = `spellSlots${level}` as SpellSlotKey;
+  return Number(form[key]) || 0;
+}
+
+function spellSlotCounts(form: CreatureFormState) {
+  return Object.fromEntries(
+    ([1, 2, 3, 4, 5, 6, 7, 8, 9] as const).map((level) => [level, spellSlotCount(form, level)]),
   );
 }
 
-function ActionBankModal({
-  onCopyTemplate,
-  onOpenChange,
-  onSearch,
-  open,
-  search,
-  templates,
+function CompactNumberStepper({
+  label,
+  value,
+  min,
+  max,
+  onChange,
 }: {
-  onCopyTemplate: (template: ActionTemplate) => void;
-  onOpenChange: (open: boolean) => void;
-  onSearch: (search: string) => void;
-  open: boolean;
-  search: string;
-  templates: ActionTemplate[];
+  label: string;
+  value: string;
+  min: number;
+  max: number;
+  onChange: (value: string) => void;
 }) {
+  const current = Number(value) || 0;
+  const clamp = (next: number) => Math.min(max, Math.max(min, next));
   return (
-    <Modal
-      open={open}
-      onOpenChange={onOpenChange}
-      title="Copy from action bank"
-      trigger={
-        <Button type="button" icon={Search} variant="secondary">
-          Search action bank
-        </Button>
-      }
-    >
-      <div className="grid gap-4">
-        <FloatingInput icon={Search} label="Search actions" value={search} onChange={onSearch} />
-        <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
-          {templates.map((template) => (
-            <button
-              className="rounded-md border border-border bg-background p-3 text-left text-sm transition hover:bg-muted"
-              key={template.id}
-              type="button"
-              onClick={() => onCopyTemplate(template)}
-            >
-              <span className="font-semibold">{template.name}</span>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {formatRolls(template.rolls)}
-              </span>
-            </button>
-          ))}
-          {templates.length === 0 && (
-            <EmptyMini copy="No action templates match that search. Add bank templates from the NPC library page." />
-          )}
-        </div>
+    <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">
+      {label}
+      <div className="grid max-w-[136px] grid-cols-[2.25rem_4rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
+        <button
+          className="grid h-10 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          type="button"
+          onClick={() => onChange(String(clamp(current - 1)))}
+          aria-label={`Decrease ${label}`}
+        >
+          -
+        </button>
+        <Input
+          className="h-10 min-h-0 w-16 rounded-none border-0 text-center font-semibold focus:ring-0"
+          type="number"
+          min={min}
+          max={max}
+          value={value}
+          onChange={(event) => onChange(String(clamp(Number(event.target.value) || 0)))}
+        />
+        <button
+          className="grid h-10 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          type="button"
+          onClick={() => onChange(String(clamp(current + 1)))}
+          aria-label={`Increase ${label}`}
+        >
+          +
+        </button>
       </div>
-    </Modal>
+    </label>
   );
 }
 
@@ -965,9 +737,6 @@ function CreatureFormFooter({
 }
 
 function creatureProficiency(form: CreatureFormState) {
-  return Math.max(2, Math.ceil((Number(form.xp) || 0) / 2900));
-}
-
-function speedLabel(key: "walkSpeed" | "swimSpeed" | "flySpeed" | "burrowSpeed" | "climbSpeed") {
-  return key.replace("Speed", " speed").replace(/^\w/, (char) => char.toUpperCase());
+  const cr = Number(form.challengeRating.includes("/") ? 0 : form.challengeRating) || 0;
+  return Math.max(2, Math.min(9, Math.ceil((cr + 3) / 4) + 1));
 }
