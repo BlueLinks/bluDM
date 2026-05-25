@@ -97,6 +97,11 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 		t.Fatalf("expected Healing Word 1d4 + spellcasting modifier, got %+v", roll)
 	}
 
+	rayOfFrost := findStandardSpell(t, spells, "srd-ray-of-frost")
+	assertRayOfFrostSpeedReduction(t, rayOfFrost)
+	rayOfFrost2024 := findStandardSpell(t, spells, "srd-5-2-1-ray-of-frost")
+	assertRayOfFrostSpeedReduction(t, rayOfFrost2024)
+
 	aid := findStandardSpell(t, spells, "srd-aid")
 	if aid.ProjectileScaling == nil || aid.ProjectileScaling.BaseProjectiles != 3 {
 		t.Fatalf("expected Aid to target up to three creatures, got %+v", aid.ProjectileScaling)
@@ -147,6 +152,29 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	}
 	if len(elementalism.Actions) != 1 || len(elementalism.Actions[0].Rolls) != 1 || elementalism.Actions[0].Rolls[0].RollKind != "custom" {
 		t.Fatalf("expected SRD 5.2.1 Elementalism to include a custom utility effect, got %+v", elementalism.Actions)
+	}
+}
+
+func assertRayOfFrostSpeedReduction(t *testing.T, spell standardSpellSeed) {
+	t.Helper()
+	if len(spell.Actions) != 1 {
+		t.Fatalf("expected %s to include one spell action, got %+v", spell.Slug, spell.Actions)
+	}
+	if spell.Actions[0].ActionType != "spell_attack" {
+		t.Fatalf("expected %s to be inferred as a spell attack, got %q", spell.Slug, spell.Actions[0].ActionType)
+	}
+	var foundDamage bool
+	var foundSlow bool
+	for _, roll := range spell.Actions[0].Rolls {
+		if roll.RollKind == "damage" && roll.DamageType == "cold" && roll.DiceCount == 1 && roll.DieSize == 8 {
+			foundDamage = true
+		}
+		if roll.RollKind == "speed_reduction" && roll.FixedValue == 10 && roll.Timing == "start_caster_turn_once" {
+			foundSlow = true
+		}
+	}
+	if !foundDamage || !foundSlow {
+		t.Fatalf("expected %s to include cold damage and speed reduction, got %+v", spell.Slug, spell.Actions[0].Rolls)
 	}
 }
 

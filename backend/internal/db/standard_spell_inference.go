@@ -29,9 +29,10 @@ func inferStandardSpellAutomation(spell *standardSpellSeed) {
 	if len(damageRolls) == 0 {
 		return
 	}
+	damageRolls = append(damageRolls, inferSpeedReductionRolls(spell.Description)...)
 
 	actionType := "damage"
-	if attackType := strings.ToLower(stringValue(mechanics["attackType"])); attackType == "ranged" || attackType == "melee" {
+	if attackType := strings.ToLower(stringValue(mechanics["attackType"])); attackType == "ranged" || attackType == "melee" || descriptionHasSpellAttack(spell.Description) {
 		actionType = "spell_attack"
 	}
 	saveAbility, saveEffect := inferSave(mechanics["dc"], spell.Description)
@@ -52,6 +53,11 @@ func inferStandardSpellAutomation(spell *standardSpellSeed) {
 	if spell.ProjectileScaling == nil {
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 	}
+}
+
+func descriptionHasSpellAttack(description string) bool {
+	lowered := strings.ToLower(description)
+	return strings.Contains(lowered, "ranged spell attack") || strings.Contains(lowered, "melee spell attack")
 }
 
 func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {

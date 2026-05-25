@@ -229,6 +229,9 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "temp_hp") {
     return `${subject}'s temporary hit points become ${amount}.`;
   }
+  if (roll.rollKind === "speed_reduction") {
+    return `${subject}'s speed is reduced by ${amount} feet.`;
+  }
   return `${label}: ${amount}.`;
 }
 

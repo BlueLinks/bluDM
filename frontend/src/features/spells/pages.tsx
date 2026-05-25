@@ -424,6 +424,9 @@ function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) {
   if (roll.rollKind === "custom") {
     return roll.conditionName || "Custom target effect";
   }
+  if (roll.rollKind === "speed_reduction") {
+    return `Speed -${Math.max(0, Number(roll.fixedValue) || 0)} ft.`;
+  }
   const fixed =
     roll.fixedValue > 0 ? `+${roll.fixedValue}` : roll.fixedValue < 0 ? roll.fixedValue : "";
   const amount = roll.diceCount > 0 ? `${roll.diceCount}d${roll.dieSize}${fixed}` : fixed || "0";
@@ -432,7 +435,9 @@ function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) {
       ? "HP maximum"
       : roll.rollKind === "temp_hp"
         ? "sets temp HP"
-        : roll.rollKind;
+        : roll.rollKind === "speed_reduction"
+          ? "speed reduction"
+          : roll.rollKind;
   return `${amount} ${roll.rollKind === "damage" ? roll.damageType : label}`;
 }
 

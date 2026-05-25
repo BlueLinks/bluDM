@@ -109,6 +109,7 @@ export function rollKindDescription(kind: string) {
   if (kind === "healing") return "healing";
   if (kind === "max_hp") return "to the hit point maximum";
   if (kind === "temp_hp") return "temporary hit points";
+  if (kind === "speed_reduction") return "speed reduction";
   if (kind === "custom") return "custom effect";
   return "damage";
 }
@@ -144,6 +145,9 @@ function effectTargetHelp(rollKind: string) {
   }
   if (rollKind === "temp_hp") {
     return "Sets the target's temporary hit points to this amount. It replaces current temp HP instead of stacking.";
+  }
+  if (rollKind === "speed_reduction") {
+    return "Reduces the target's speed by the configured amount while the effect is active.";
   }
   return "Restores current hit points.";
 }

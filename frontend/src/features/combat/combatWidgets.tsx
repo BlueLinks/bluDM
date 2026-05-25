@@ -468,6 +468,9 @@ export function TargetRow({
 }
 
 function effectLabel(effect: EncounterRunEffect) {
+  if (effect.effectKind === "speed_reduction") {
+    return `Speed -${effect.amount} ft.`;
+  }
   if (effect.effectKind === "condition_immunity" && effect.conditionName) {
     return `Immune: ${effect.conditionName}`;
   }

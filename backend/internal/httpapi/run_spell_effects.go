@@ -16,6 +16,8 @@ func (s *Server) applySpellEffect(ctx context.Context, runID, actorID, targetID 
 		return s.applyTemporaryHP(ctx, runID, actorID, targetID, amount, spellName)
 	case "max_hp":
 		return s.applyMaxHPModifier(ctx, runID, actorID, targetID, amount, spellName)
+	case "speed_reduction":
+		return s.appendCombatLogEvent(ctx, runID, "spell_speed_reduction", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
 	case "condition":
 		return s.applyRunCondition(ctx, runID, actorID, targetID, roll.ConditionName, roll.RollKind, spellName)
 	case "condition_immunity":
@@ -123,6 +125,17 @@ func (s *Server) applyStartTurnEffects(ctx context.Context, runID, targetID stri
 	}
 	applied := []map[string]any{}
 	for _, effect := range effects {
+		if effect.CasterID == targetID && effect.Timing == "start_caster_turn_once" {
+			if _, err := s.db.Exec(ctx, `update encounter_run_active_effects set active = false where id = $1`, effect.ID); err == nil {
+				applied = append(applied, map[string]any{
+					"effectId":  effect.ID,
+					"spellName": effect.SpellName,
+					"timing":    effect.Timing,
+					"expired":   true,
+				})
+			}
+			continue
+		}
 		if effect.TargetID != targetID || !isStartTurnEffect(effect.Timing) {
 			continue
 		}

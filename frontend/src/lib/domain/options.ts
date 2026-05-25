@@ -31,6 +31,7 @@ export const spellRollKinds = [
   { value: "healing", label: "Restore target current HP" },
   { value: "max_hp", label: "Increase target HP maximum" },
   { value: "temp_hp", label: "Set target temporary HP" },
+  { value: "speed_reduction", label: "Reduce target speed" },
   { value: "condition", label: "Apply condition to target" },
   { value: "condition_immunity", label: "Grant condition immunity" },
   { value: "custom", label: "Custom target effect" },
@@ -40,6 +41,7 @@ export const spellEffectTimings = [
   { value: "immediate", label: "Immediate" },
   { value: "start_target_turn", label: "Start of each target turn" },
   { value: "start_target_turn_once", label: "Start of target's next turn only" },
+  { value: "start_caster_turn_once", label: "Start of caster's next turn only" },
   { value: "end_target_turn", label: "End of each target turn" },
   { value: "end_target_turn_once", label: "End of target's next turn only" },
 ];

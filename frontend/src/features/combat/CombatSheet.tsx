@@ -114,7 +114,12 @@ export function CombatSheet({
             value={`${combatant.currentHitPoints}/${effectiveMaxHP(combatant)}`}
             tone="heart"
           />
-          <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
+          <IconStat
+            icon={Zap}
+            label="Speed"
+            value={speedValue(speedFromSheet(sheet), activeEffects)}
+            tone="speed"
+          />
         </div>
         <div className="combat-ability-grid grid grid-cols-2 gap-1.5 overflow-hidden xl:gap-2">
           {[leftAbilities, rightAbilities].map((group) => (
@@ -154,6 +159,9 @@ export function CombatSheet({
 }
 
 function sheetEffectLabel(effect: EncounterRunEffect) {
+  if (effect.effectKind === "speed_reduction") {
+    return `Speed -${effect.amount} ft.`;
+  }
   if (effect.effectKind === "condition_immunity" && effect.conditionName) {
     return `Immune to ${effect.conditionName}`;
   }
@@ -164,6 +172,14 @@ function sheetEffectLabel(effect: EncounterRunEffect) {
     return `${effect.spellName} at turn start`;
   }
   return effect.spellName;
+}
+
+function speedValue(baseSpeed: number, effects: EncounterRunEffect[]) {
+  const reduction = effects
+    .filter((effect) => effect.effectKind === "speed_reduction")
+    .reduce((total, effect) => total + Math.max(0, Number(effect.amount) || 0), 0);
+  if (reduction <= 0) return baseSpeed;
+  return `${Math.max(0, baseSpeed - reduction)} (-${reduction})`;
 }
 
 function AbilityTable({
