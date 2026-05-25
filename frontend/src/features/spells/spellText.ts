@@ -1,6 +1,14 @@
 import { damageTypes } from "../../components/shared/damageTypes";
-import { spellRollKinds } from "../../lib/domain/options";
+import { rollModifierCategories, spellRollKinds } from "../../lib/domain/options";
 import { configText } from "../../lib/domain/effectConfig";
+import {
+  areaTriggerModes,
+  areaTriggerOutcomes,
+  baseACAbilityModifiers,
+  damageDefenseRestrictions,
+  repeatSaveCheckTypes,
+  repeatSaveSuccessOutcomes,
+} from "../../lib/domain/spellEffectOptions";
 import type { Spell, SpellAreaScalingFormState, SpellFormState } from "../../types";
 
 type SpellLike = Pick<
@@ -237,16 +245,25 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
     return `${configText(roll.effectConfig?.appliesTo, subject)} has ${configText(roll.effectConfig?.state, "advantage")} on ${configText(roll.effectConfig?.category, "configured rolls")}.`;
   }
   if (roll.rollKind === "damage_defense") {
-    return `${subject} gains ${configText(roll.effectConfig?.mode, "resistance")} to ${configText(roll.effectConfig?.damageTypes, "the chosen damage type")}.`;
+    return `${subject} gains ${configText(roll.effectConfig?.mode, "resistance")} to ${listOrFallback(roll.effectConfig?.damageTypes, "the chosen damage type")}${restrictionText(roll.effectConfig?.restriction)}.`;
   }
   if (roll.rollKind === "action_restriction") {
     return `${subject}: ${configText(roll.effectConfig?.mode, "restricted actions")}.`;
   }
   if (roll.rollKind === "saving_throw_repeat") {
-    return `${subject} repeats the ${configText(roll.effectConfig?.ability, "configured")} save to ${configText(roll.effectConfig?.success, "resolve the effect")}.`;
+    const checkType = labelFor(repeatSaveCheckTypes, configText(roll.effectConfig?.checkType));
+    const outcome = labelFor(
+      repeatSaveSuccessOutcomes,
+      configText(roll.effectConfig?.successOutcome),
+    );
+    return `${subject} repeats the ${configText(roll.effectConfig?.ability, "configured")} ${checkType || "check"}; on success, ${outcome || "resolve the effect"}.`;
   }
   if (roll.rollKind === "area_trigger") {
-    return `Area trigger: ${configText(roll.effectConfig?.trigger, "manual trigger")} causes ${configText(roll.effectConfig?.effect, "the configured effect")}.`;
+    const trigger = labelFor(areaTriggerModes, configText(roll.effectConfig?.trigger));
+    const outcome = labelFor(areaTriggerOutcomes, configText(roll.effectConfig?.outcome));
+    const save = configText(roll.effectConfig?.saveAbility, "");
+    const details = configText(roll.effectConfig?.details, "");
+    return `Area trigger: ${trigger || "manual trigger"} causes ${outcome || "the configured effect"}${save ? ` (${save} save)` : ""}${details ? `; ${details}` : ""}.`;
   }
   if (roll.rollKind === "visibility_effect") {
     return `${subject}: ${configText(roll.effectConfig?.mode, "visibility effect")}.`;
@@ -302,9 +319,9 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "ac_bonus")
     return `${subject} gains a ${(Number(roll.fixedValue) || 0) >= 0 ? "+" : ""}${amount} bonus to AC.`;
   if (roll.rollKind === "base_ac")
-    return `${subject}'s base AC becomes ${configText(roll.effectConfig?.formula, String(amount))}.`;
+    return `${subject}'s base AC becomes ${baseACText(roll, amount)}.`;
   if (roll.rollKind === "roll_modifier") {
-    return `${subject} ${configText(roll.effectConfig?.mode, "adds")}s ${amount} to ${configText(roll.effectConfig?.category, "a roll")}.`;
+    return `${subject} ${configText(roll.effectConfig?.mode, "adds")}s ${amount} to ${rollCategoryText(roll.effectConfig?.categories)}.`;
   }
   if (roll.rollKind === "attack_damage_rider")
     return `${subject}'s attacks deal an extra ${amount}.`;
@@ -332,6 +349,44 @@ function effectAmount(roll: SpellLike["actions"][number]["rolls"][number]) {
       return part.startsWith("-") ? `- ${part.slice(1)}` : `+ ${part}`;
     })
     .join(" ");
+}
+
+function baseACText(roll: SpellLike["actions"][number]["rolls"][number], fallback: string) {
+  if (configText(roll.effectConfig?.calculationMode, "formula") === "standard_ac") {
+    const ability = labelFor(
+      baseACAbilityModifiers,
+      configText(roll.effectConfig?.abilityModifier),
+    );
+    return `${configText(roll.effectConfig?.baseValue, fallback)}${ability ? ` + ${ability}` : ""}`;
+  }
+  return configText(roll.effectConfig?.formula, fallback);
+}
+
+function rollCategoryText(value: unknown) {
+  const categories = configStringArray(value)
+    .map((category) => labelFor(rollModifierCategories, category))
+    .filter(Boolean);
+  return categories.length > 0 ? categories.join(", ") : "a configured roll";
+}
+
+function listOrFallback(value: unknown, fallback: string) {
+  const values = configStringArray(value);
+  return values.length > 0 ? values.join(", ") : fallback;
+}
+
+function restrictionText(value: unknown) {
+  const label = labelFor(damageDefenseRestrictions, configText(value));
+  return label && label !== "No restriction" ? ` (${label.toLowerCase()})` : "";
+}
+
+function configStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function labelFor(options: Array<{ value: string; label: string }>, value: string) {
+  return options.find((option) => option.value === value)?.label ?? value;
 }
 
 function plural(value: string, count: number) {

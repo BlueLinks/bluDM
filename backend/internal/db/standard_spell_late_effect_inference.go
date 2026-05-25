@@ -38,21 +38,21 @@ func inferCuratedStandardLateEffectSpellAutomation(spell *standardSpellSeed) boo
 				Rolls: []standardSpellActionRollSeed{
 					effectRoll("advantage_state", 0, "start_caster_turn_once", map[string]any{"state": "disadvantage", "category": "attack_roll", "appliesTo": "target_rolls", "uses": "next_attack_on_success"}),
 					effectRoll("advantage_state", 0, "immediate", map[string]any{"state": "disadvantage", "category": "strength_d20_test", "appliesTo": "target_rolls"}),
-					effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "subtract", "category": "damage_roll", "dice": "1d8"}),
-					effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"ability": "con", "success": "end_effect"}),
+					effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "subtract", "categories": []string{"damage_roll"}, "dice": "1d8"}),
+					effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"checkType": "saving_throw", "ability": "con", "successOutcome": "end_effect"}),
 				},
 			}}
 		} else {
 			spell.Actions = []standardSpellActionSeed{simpleEffectAction("Ray of Enfeeblement",
 				effectRoll("action_restriction", 0, "immediate", map[string]any{"mode": "half_strength_weapon_damage"}),
-				effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"ability": "con", "success": "end_effect"}),
+				effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"checkType": "saving_throw", "ability": "con", "successOutcome": "end_effect"}),
 			)}
 		}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "aura of life":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Aura of Life",
-			effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": "necrotic", "scope": "aura"}),
+			effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": []string{"necrotic"}, "scope": "aura"}),
 			effectRoll("death_protection", 0, "immediate", map[string]any{"mode": "hp_max_cannot_be_reduced"}),
 			effectRoll("recurring_hp_change", 1, "start_target_turn_each", map[string]any{"mode": "healing", "onlyIfCurrentHP": 0}),
 		)}

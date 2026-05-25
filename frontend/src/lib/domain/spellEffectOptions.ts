@@ -194,6 +194,31 @@ export const advantageAppliesTo = [
   { value: "saves_against_source", label: "Saves against source" },
 ];
 
+export const repeatSaveCheckTypes = [
+  { value: "saving_throw", label: "Saving throw" },
+  { value: "ability_check", label: "Ability check" },
+  { value: "skill_check", label: "Skill check" },
+  { value: "manual", label: "Manual check" },
+];
+
+export const repeatSaveSuccessOutcomes = [
+  { value: "end_effect", label: "End the effect" },
+  { value: "reduce_effect", label: "Reduce the effect" },
+  { value: "avoid_repeat_damage", label: "Avoid this turn's repeat damage" },
+  { value: "manual", label: "Manual outcome" },
+];
+
+export const effectAbilities = [
+  { value: "str", label: "Strength" },
+  { value: "dex", label: "Dexterity" },
+  { value: "con", label: "Constitution" },
+  { value: "int", label: "Intelligence" },
+  { value: "wis", label: "Wisdom" },
+  { value: "cha", label: "Charisma" },
+  { value: "str_athletics", label: "Strength (Athletics)" },
+  { value: "manual", label: "Manual / special" },
+];
+
 export const damageDefenseRestrictions = [
   { value: "", label: "No restriction" },
   { value: "nonmagical", label: "Nonmagical only" },
@@ -217,8 +242,35 @@ export const areaTriggerModes = [
   { value: "end_turn", label: "Ends turn in area" },
   { value: "enter_or_start_turn", label: "Enters or starts turn in area" },
   { value: "enter_or_end_turn", label: "Enters or ends turn in area" },
+  {
+    value: "appear_enter_moved_into_or_end_turn",
+    label: "Appears, enters, is moved in, or ends turn there",
+  },
+  { value: "moves_into_or_within", label: "Moves into or within area" },
+  { value: "web_burns", label: "Web burns" },
   { value: "move_within", label: "Moves within area" },
   { value: "manual", label: "Manual area trigger" },
+];
+
+export const areaTriggerOutcomes = [
+  { value: "save_for_damage", label: "Save against damage" },
+  { value: "dex_save_or_prone", label: "Dexterity save or prone" },
+  { value: "restrained", label: "Restrained on failed save" },
+  { value: "fire_damage", label: "Fire damage" },
+  { value: "manual", label: "Manual outcome" },
+];
+
+export const baseACCalculationModes = [
+  { value: "formula", label: "Formula" },
+  { value: "standard_ac", label: "Standard AC" },
+];
+
+export const baseACAbilityModifiers = [
+  { value: "", label: "No ability modifier" },
+  { value: "dex", label: "Dexterity modifier" },
+  { value: "con", label: "Constitution modifier" },
+  { value: "wis", label: "Wisdom modifier" },
+  { value: "spellcasting", label: "Spellcasting ability modifier" },
 ];
 
 export const visibilityEffectModes = [

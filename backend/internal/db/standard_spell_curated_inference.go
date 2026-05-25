@@ -20,7 +20,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "mage armor":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Mage Armor", effectRoll("base_ac", 13, "immediate", map[string]any{"formula": "13 + Dex modifier"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Mage Armor", effectRoll("base_ac", 13, "immediate", map[string]any{"calculationMode": "formula", "formula": "13 + Dex modifier", "baseValue": 13, "abilityModifier": "dex"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "shield":
@@ -32,23 +32,23 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "bless":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Bless", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "add", "category": "attack_roll,saving_throw", "dice": "1d4"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Bless", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "add", "categories": []string{"attack_roll", "saving_throw"}, "dice": "1d4"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "bane":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Bane", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "subtract", "category": "attack_roll,saving_throw", "dice": "1d4"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Bane", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "subtract", "categories": []string{"attack_roll", "saving_throw"}, "dice": "1d4"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "guidance":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Guidance", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "add", "category": "ability_check", "dice": "1d4"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Guidance", effectRoll("roll_modifier", 0, "immediate", map[string]any{"mode": "add", "categories": []string{"ability_check"}, "dice": "1d4"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "protection from energy":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Protection from Energy", effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": "acid,cold,fire,lightning,thunder"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Protection from Energy", effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": []string{"acid", "cold", "fire", "lightning", "thunder"}}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "stoneskin":
-		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Stoneskin", effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": "bludgeoning,piercing,slashing", "restriction": "nonmagical"}))}
+		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Stoneskin", effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": []string{"bludgeoning", "piercing", "slashing"}, "restriction": "nonmagical"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "gust of wind":
@@ -66,7 +66,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			DamageTypeOptions:    []string{},
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain", "durationMode": "spell_duration"}),
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_end_turn", "effect": "dex_save_or_prone", "durationMode": "spell_duration"}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_end_turn", "outcome": "dex_save_or_prone", "saveAbility": "dex", "durationMode": "spell_duration"}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -114,8 +114,8 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 	case "warding bond":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Warding Bond",
 			effectRoll("ac_bonus", 1, "immediate", nil),
-			effectRoll("roll_modifier", 1, "immediate", map[string]any{"mode": "add", "category": "saving_throw", "amountType": "fixed"}),
-			effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": "all"}),
+			effectRoll("roll_modifier", 1, "immediate", map[string]any{"mode": "add", "categories": []string{"saving_throw"}}),
+			effectRoll("damage_defense", 0, "immediate", map[string]any{"mode": "resistance", "damageTypes": []string{"all"}}),
 			effectRoll("damage_transfer", 0, "immediate", map[string]any{"mode": "mirror_damage_to_caster"}),
 		)}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -142,9 +142,9 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("speed_multiplier", 0, "immediate", map[string]any{"multiplier": "0.5"}),
 				effectRoll("ac_bonus", -2, "immediate", nil),
-				effectRoll("roll_modifier", -2, "immediate", map[string]any{"mode": "subtract", "category": "dexterity_saving_throw", "amountType": "fixed"}),
+				effectRoll("roll_modifier", -2, "immediate", map[string]any{"mode": "subtract", "categories": []string{"dexterity_saving_throw"}}),
 				effectRoll("action_restriction", 0, "immediate", map[string]any{"mode": "no_reactions_action_or_bonus_one_attack_spell_delay"}),
-				effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"ability": "wis", "success": "end_effect"}),
+				effectRoll("saving_throw_repeat", 0, "end_target_turn_each", map[string]any{"checkType": "saving_throw", "ability": "wis", "successOutcome": "end_effect"}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -242,7 +242,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			DamageTypeOptions:    []string{},
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain,heavily_obscured"}),
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "effect": "dex_save_or_prone", "breaksConcentration": true}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "outcome": "dex_save_or_prone", "saveAbility": "dex", "details": "Breaks concentration in the area.", "durationMode": "spell_duration"}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -258,8 +258,8 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			DamageTypeOptions:    []string{},
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain,lightly_obscured"}),
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "effect": "restrained"}),
-				standardDamageRoll("area_trigger", "fire", 2, 4, 0, "immediate", map[string]any{"trigger": "web_burns", "effect": "fire_damage"}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "outcome": "restrained", "saveAbility": "dex", "durationMode": "spell_duration"}),
+				standardDamageRoll("area_trigger", "fire", 2, 4, 0, "immediate", map[string]any{"trigger": "web_burns", "outcome": "fire_damage", "durationMode": "instant"}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -267,7 +267,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 	case "spike growth":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Spike Growth",
 			effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain,camouflaged"}),
-			standardDamageRoll("area_trigger", "piercing", 2, 4, 0, "immediate", map[string]any{"trigger": "moves_into_or_within", "per": "5 feet traveled"}),
+			standardDamageRoll("area_trigger", "piercing", 2, 4, 0, "immediate", map[string]any{"trigger": "moves_into_or_within", "outcome": "save_for_damage", "details": "Damage applies per 5 feet traveled."}),
 		)}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
@@ -288,7 +288,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			DamageTypeOptions:    []string{"radiant"},
 			Rolls: []standardSpellActionRollSeed{
 				roll,
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "appear_enter_moved_into_or_end_turn", "effect": "save_for_damage", "shapechanger": "revert_true_form"}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "appear_enter_moved_into_or_end_turn", "outcome": "save_for_damage", "saveAbility": "con", "details": "Shapechangers revert to their true form on a failed save."}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -311,7 +311,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("speed_multiplier", 0, "immediate", map[string]any{"multiplier": "0.5", "scope": "affected_area"}),
 				roll,
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "effect": "save_for_damage", "oncePerTurn": true}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "outcome": "save_for_damage", "saveAbility": "wis", "details": "Only once per turn."}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -355,7 +355,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Searing Smite",
 			initial,
 			burning,
-			effectRoll("saving_throw_repeat", 0, "start_target_turn_each", map[string]any{"ability": "con", "success": "end_effect"}),
+			effectRoll("saving_throw_repeat", 0, "start_target_turn_each", map[string]any{"checkType": "saving_throw", "ability": "con", "successOutcome": "end_effect"}),
 		)}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
@@ -377,7 +377,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("condition", 0, "immediate", map[string]any{"condition": "Restrained", "largeOrLargerSaveAdvantage": true}),
 				ongoing,
-				effectRoll("saving_throw_repeat", 0, "manual", map[string]any{"ability": "str_athletics", "success": "end_effect", "requiresAction": true}),
+				effectRoll("saving_throw_repeat", 0, "manual", map[string]any{"checkType": "skill_check", "ability": "str_athletics", "successOutcome": "end_effect", "details": "Requires an action."}),
 			},
 		}}
 		spell.Actions[0].Rolls[0].ConditionName = "Restrained"

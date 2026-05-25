@@ -106,9 +106,12 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-fly"), "movement_mode")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-shield"), "ac_bonus")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-mage-armor"), "base_ac")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-mage-armor"), "base_ac", "calculationMode", "formula")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-bless"), "roll_modifier")
+	assertSpellHasEffectConfigArrayContains(t, findStandardSpell(t, spells, "srd-bless"), "roll_modifier", "categories", "attack_roll")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-bane"), "roll_modifier")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-protection-from-energy"), "damage_defense")
+	assertSpellHasEffectConfigArrayContains(t, findStandardSpell(t, spells, "srd-protection-from-energy"), "damage_defense", "damageTypes", "fire")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block", "start_caster_turn_once")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-5-2-1-chill-touch"), "healing_block", "end_caster_turn_once")
@@ -120,6 +123,7 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-gust-of-wind"), "forced_movement", "triggerTiming", "start_target_turn_each")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-grease"), "terrain_effect")
 	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-grease"), "area_trigger", "trigger", "enter_or_end_turn")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-grease"), "area_trigger", "outcome", "dex_save_or_prone")
 	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-command"), "action_restriction", "durationMode", "end_target_next")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-hunter-s-mark"), "attack_damage_rider")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-beacon-of-hope"), "healing_maximized")
@@ -128,6 +132,7 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-warding-bond"), "damage_transfer")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-haste"), "action_restriction")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-slow"), "saving_throw_repeat")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-slow"), "saving_throw_repeat", "successOutcome", "end_effect")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-freedom-of-movement"), "terrain_effect")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-guiding-bolt"), "advantage_state")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-faerie-fire"), "visibility_effect")
@@ -145,6 +150,7 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-ensnaring-strike"), "condition")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-vampiric-touch"), "linked_healing")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-ray-of-enfeeblement"), "roll_modifier")
+	assertSpellHasEffectConfigArrayContains(t, findStandardSpell(t, spells, "srd-5-2-1-ray-of-enfeeblement"), "roll_modifier", "categories", "damage_roll")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-aura-of-life"), "death_protection")
 
 	aid := findStandardSpell(t, spells, "srd-aid")
@@ -234,6 +240,40 @@ func assertSpellHasEffectConfig(t *testing.T, spell standardSpellSeed, rollKind 
 		}
 	}
 	t.Fatalf("expected %s to include %s effect config %s=%s, got %+v", spell.Slug, rollKind, key, value, spell.Actions)
+}
+
+func assertSpellHasEffectConfigArrayContains(t *testing.T, spell standardSpellSeed, rollKind string, key string, value string) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind != rollKind {
+				continue
+			}
+			for _, item := range stringSliceValue(roll.EffectConfig[key]) {
+				if item == value {
+					return
+				}
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s effect config array %s containing %s, got %+v", spell.Slug, rollKind, key, value, spell.Actions)
+}
+
+func stringSliceValue(value any) []string {
+	switch typed := value.(type) {
+	case []string:
+		return typed
+	case []any:
+		result := []string{}
+		for _, item := range typed {
+			if text := stringValue(item); text != "" {
+				result = append(result, text)
+			}
+		}
+		return result
+	default:
+		return nil
+	}
 }
 
 func assertRayOfFrostSpeedReduction(t *testing.T, spell standardSpellSeed) {

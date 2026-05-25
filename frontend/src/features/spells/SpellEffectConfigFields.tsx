@@ -1,8 +1,12 @@
-import { Field, Input, Select } from "../../components/ui";
+import { Checkbox, Field, Input, Select, Textarea } from "../../components/ui";
 import { configText } from "../../lib/domain/effectConfig";
 import {
   actionRestrictionModes,
+  areaTriggerOutcomes,
   areaTriggerModes,
+  effectAbilities,
+  repeatSaveCheckTypes,
+  repeatSaveSuccessOutcomes,
   senseEffectModes,
   terrainEffectModes,
   visibilityEffectModes,
@@ -35,74 +39,110 @@ export function AdvancedEffectConfigFields({
 }) {
   if (roll.rollKind === "action_restriction") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 md:grid-cols-[16rem_minmax(16rem,1fr)]">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="mode"
           label="Restriction"
           options={actionRestrictionModes}
+          help="Choose the action economy rule this effect imposes."
         />
-        <EffectInput
+        <EffectConfigInput
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="note"
-          label="Details"
+          label="Restriction details"
           placeholder="Allowed actions, trigger, or limitation"
+          help="Use this for limits that need table-facing wording."
         />
       </div>
     );
   }
   if (roll.rollKind === "saving_throw_repeat") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectInput
+      <div className="grid gap-3 md:grid-cols-[13rem_14rem_15rem_minmax(16rem,1fr)]">
+        <EffectConfigSelect
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="checkType"
+          label="Repeat check"
+          options={repeatSaveCheckTypes}
+          help="The kind of roll the target repeats while the effect is active."
+        />
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="ability"
-          label="Save / check"
-          placeholder="con, wis, str_athletics"
+          label="Ability or skill"
+          options={effectAbilities}
         />
-        <EffectInput
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
-          configKey="success"
+          configKey="successOutcome"
           label="On success"
-          placeholder="end_effect"
+          options={repeatSaveSuccessOutcomes}
+        />
+        <EffectConfigInput
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="details"
+          label="Repeat details"
+          placeholder="Uses an action, ends after three successes..."
         />
       </div>
     );
   }
   if (roll.rollKind === "area_trigger") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 md:grid-cols-[18rem_15rem_13rem_minmax(16rem,1fr)]">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="trigger"
-          label="Trigger"
+          label="Area trigger"
           options={areaTriggerModes}
+          help="When a creature should be checked against this area."
         />
-        <EffectInput
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
-          configKey="effect"
-          label="Effect"
-          placeholder="Save for damage, restrained, prone..."
+          configKey="outcome"
+          label="Area outcome"
+          options={areaTriggerOutcomes}
+        />
+        <EffectConfigSelect
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="saveAbility"
+          label="Save ability"
+          options={effectAbilities}
+        />
+        <EffectConfigInput
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="details"
+          label="Area details"
+          placeholder="Once per turn, shapechanger reverts, per 5 feet moved..."
         />
       </div>
     );
   }
   if (roll.rollKind === "visibility_effect") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 sm:grid-cols-3">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -110,7 +150,7 @@ export function AdvancedEffectConfigFields({
           label="Visibility"
           options={visibilityEffectModes}
         />
-        <EffectInput
+        <EffectConfigInput
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -123,8 +163,8 @@ export function AdvancedEffectConfigFields({
   }
   if (roll.rollKind === "sense_effect") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 sm:grid-cols-3">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -132,7 +172,7 @@ export function AdvancedEffectConfigFields({
           label="Sense"
           options={senseEffectModes}
         />
-        <EffectInput
+        <EffectConfigInput
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -145,8 +185,8 @@ export function AdvancedEffectConfigFields({
   }
   if (roll.rollKind === "terrain_effect") {
     return (
-      <div className="grid gap-2 sm:grid-cols-2">
-        <EffectSelect
+      <div className="grid gap-3 sm:grid-cols-2">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -157,22 +197,45 @@ export function AdvancedEffectConfigFields({
       </div>
     );
   }
+  if (roll.rollKind === "battlefield_object") {
+    return (
+      <div className="grid gap-3 md:grid-cols-[16rem_minmax(18rem,1fr)]">
+        <EffectConfigInput
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="kind"
+          label="Object type"
+          placeholder="Wall, sphere, hand, summoned object..."
+        />
+        <EffectConfigTextarea
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="details"
+          label="Battlefield details"
+          placeholder="What the DM should place, move, or track on the battlefield."
+        />
+      </div>
+    );
+  }
   return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      <EffectInput
+    <div className="grid gap-3 sm:grid-cols-2">
+      <EffectConfigInput
         roll={roll}
         rolls={rolls}
         onChange={onChange}
         configKey="mode"
-        label="Mode / details"
+        label="Effect detail"
         placeholder="Optional effect detail"
       />
     </div>
   );
 }
 
-export function EffectSelect({
+export function EffectConfigSelect({
   configKey,
+  help,
   label,
   onChange,
   options,
@@ -180,6 +243,7 @@ export function EffectSelect({
   rolls,
 }: {
   configKey: string;
+  help?: string;
   label: string;
   onChange: (rolls: SpellActionFormState["rolls"]) => void;
   options: Array<{ value: string; label: string }>;
@@ -187,7 +251,7 @@ export function EffectSelect({
   rolls: SpellActionFormState["rolls"];
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} help={help}>
       <Select
         options={options}
         placeholder={label}
@@ -198,8 +262,9 @@ export function EffectSelect({
   );
 }
 
-export function EffectInput({
+export function EffectConfigInput({
   configKey,
+  help,
   label,
   onChange,
   placeholder,
@@ -207,6 +272,7 @@ export function EffectInput({
   rolls,
 }: {
   configKey: string;
+  help?: string;
   label: string;
   onChange: (rolls: SpellActionFormState["rolls"]) => void;
   placeholder?: string;
@@ -214,7 +280,7 @@ export function EffectInput({
   rolls: SpellActionFormState["rolls"];
 }) {
   return (
-    <Field label={label}>
+    <Field label={label} help={help}>
       <Input
         value={configText(roll.effectConfig?.[configKey], "")}
         placeholder={placeholder}
@@ -226,11 +292,121 @@ export function EffectInput({
   );
 }
 
+export function EffectConfigTextarea({
+  configKey,
+  help,
+  label,
+  onChange,
+  placeholder,
+  roll,
+  rolls,
+}: {
+  configKey: string;
+  help?: string;
+  label: string;
+  onChange: (rolls: SpellActionFormState["rolls"]) => void;
+  placeholder?: string;
+  roll: SpellActionFormState["rolls"][number];
+  rolls: SpellActionFormState["rolls"];
+}) {
+  return (
+    <Field label={label} help={help}>
+      <Textarea
+        rows={3}
+        value={configText(roll.effectConfig?.[configKey], "")}
+        placeholder={placeholder}
+        onChange={(event) =>
+          updateEffectConfig(rolls, roll.id, configKey, event.target.value, onChange)
+        }
+      />
+    </Field>
+  );
+}
+
+export function EffectConfigMultiCheck({
+  configKey,
+  help,
+  label,
+  onChange,
+  options,
+  roll,
+  rolls,
+}: {
+  configKey: string;
+  help?: string;
+  label: string;
+  onChange: (rolls: SpellActionFormState["rolls"]) => void;
+  options: Array<{ value: string; label: string }>;
+  roll: SpellActionFormState["rolls"][number];
+  rolls: SpellActionFormState["rolls"];
+}) {
+  const selected = configStringArray(roll.effectConfig?.[configKey]);
+  return (
+    <Field label={label} help={help}>
+      <div className="flex flex-wrap gap-2">
+        {options.map((option) => (
+          <Checkbox
+            key={option.value}
+            label={option.label}
+            checked={selected.includes(option.value)}
+            onChange={(checked) =>
+              updateEffectConfig(
+                rolls,
+                roll.id,
+                configKey,
+                checked
+                  ? [...selected, option.value]
+                  : selected.filter((value) => value !== option.value),
+                onChange,
+              )
+            }
+          />
+        ))}
+      </div>
+    </Field>
+  );
+}
+
+export function EffectConfigSegmented({
+  configKey,
+  onChange,
+  options,
+  roll,
+  rolls,
+}: {
+  configKey: string;
+  onChange: (rolls: SpellActionFormState["rolls"]) => void;
+  options: Array<{ value: string; label: string }>;
+  roll: SpellActionFormState["rolls"][number];
+  rolls: SpellActionFormState["rolls"];
+}) {
+  const selected = configText(roll.effectConfig?.[configKey], options[0]?.value ?? "");
+  return (
+    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-card">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={[
+            "min-h-10 px-3 text-sm font-semibold transition",
+            selected === option.value
+              ? "bg-primary text-primary-foreground"
+              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+          ].join(" ")}
+          onClick={() => updateEffectConfig(rolls, roll.id, configKey, option.value, onChange)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function updateEffectConfig(
   rolls: SpellActionFormState["rolls"],
   rollID: string,
   key: string,
-  value: string,
+  value: unknown,
   onChange: (rolls: SpellActionFormState["rolls"]) => void,
 ) {
   onChange(
@@ -240,4 +416,10 @@ export function updateEffectConfig(
         : item,
     ),
   );
+}
+
+export function configStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }

@@ -1,5 +1,6 @@
 import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { Field, Select, Textarea } from "../../components/ui";
+import { configText } from "../../lib/domain/effectConfig";
 import {
   advantageStates,
   conditionImmunities,
@@ -11,14 +12,22 @@ import {
   speedMultipliers,
   spellRollKinds,
 } from "../../lib/domain/options";
-import { advantageAppliesTo, damageDefenseRestrictions } from "../../lib/domain/spellEffectOptions";
+import {
+  advantageAppliesTo,
+  baseACAbilityModifiers,
+  baseACCalculationModes,
+  damageDefenseRestrictions,
+} from "../../lib/domain/spellEffectOptions";
 import type { SpellActionFormState } from "../../types";
 import {
   AdvancedEffectConfigFields,
-  EffectInput,
-  EffectSelect,
+  EffectConfigInput,
+  EffectConfigMultiCheck,
+  EffectConfigSegmented,
+  EffectConfigSelect,
   advancedEffectKinds,
 } from "./SpellEffectConfigFields";
+import { FlatNumberInput } from "./SpellEffectScheduleFields";
 
 export function RollKindDetail({
   roll,
@@ -97,7 +106,7 @@ export function RollKindDetail({
   if (roll.rollKind === "movement_mode") {
     return (
       <div className="grid gap-2 sm:grid-cols-2">
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -111,7 +120,7 @@ export function RollKindDetail({
   if (roll.rollKind === "speed_multiplier") {
     return (
       <div className="grid gap-2 sm:grid-cols-2">
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -124,8 +133,8 @@ export function RollKindDetail({
   }
   if (roll.rollKind === "roll_modifier") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 md:grid-cols-[12rem_minmax(16rem,1fr)_12rem]">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -133,15 +142,16 @@ export function RollKindDetail({
           label="Mode"
           options={rollModifierModes}
         />
-        <EffectSelect
+        <EffectConfigMultiCheck
           roll={roll}
           rolls={rolls}
           onChange={onChange}
-          configKey="category"
-          label="Roll type"
+          configKey="categories"
+          label="Roll categories"
           options={rollModifierCategories}
+          help="Choose every roll type this modifier applies to."
         />
-        <EffectInput
+        <EffectConfigInput
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -155,7 +165,7 @@ export function RollKindDetail({
   if (roll.rollKind === "advantage_state") {
     return (
       <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -163,7 +173,7 @@ export function RollKindDetail({
           label="State"
           options={advantageStates}
         />
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -171,7 +181,7 @@ export function RollKindDetail({
           label="Roll type"
           options={rollModifierCategories}
         />
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -184,24 +194,29 @@ export function RollKindDetail({
   }
   if (roll.rollKind === "damage_defense") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectSelect
+      <div className="grid gap-3 md:grid-cols-[12rem_minmax(16rem,1fr)_12rem]">
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="mode"
           label="Defense"
           options={damageDefenseModes}
+          help="The defensive relationship this effect grants."
         />
-        <EffectInput
+        <EffectConfigMultiCheck
           roll={roll}
           rolls={rolls}
           onChange={onChange}
           configKey="damageTypes"
           label="Damage types"
-          placeholder="fire, cold, lightning"
+          options={[
+            { value: "all", label: "All damage" },
+            ...damageTypeOptions().map(({ value, label }) => ({ value, label })),
+          ]}
+          help="Choose all damage types covered by this defense."
         />
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -215,7 +230,7 @@ export function RollKindDetail({
   if (roll.rollKind === "forced_movement") {
     return (
       <div className="grid gap-2 sm:grid-cols-2">
-        <EffectSelect
+        <EffectConfigSelect
           roll={roll}
           rolls={rolls}
           onChange={onChange}
@@ -227,18 +242,7 @@ export function RollKindDetail({
     );
   }
   if (roll.rollKind === "base_ac") {
-    return (
-      <div className="grid gap-2 sm:grid-cols-2">
-        <EffectInput
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="formula"
-          label="Formula"
-          placeholder="13 + Dex modifier"
-        />
-      </div>
-    );
+    return <BaseACFields roll={roll} rolls={rolls} onChange={onChange} />;
   }
   if (roll.rollKind === "remove_condition") {
     return (
@@ -271,6 +275,74 @@ export function RollKindDetail({
           {rollKindLabel(roll.rollKind)}
         </div>
       </Field>
+    </div>
+  );
+}
+
+function BaseACFields({
+  roll,
+  rolls,
+  onChange,
+}: {
+  roll: SpellActionFormState["rolls"][number];
+  rolls: SpellActionFormState["rolls"];
+  onChange: (rolls: SpellActionFormState["rolls"]) => void;
+}) {
+  const mode = configText(roll.effectConfig?.calculationMode, "formula");
+  return (
+    <div className="grid gap-3">
+      <Field
+        label="AC calculation"
+        help="Use Formula for printed rules text, or Standard AC when it is a base number plus an optional ability modifier."
+      >
+        <EffectConfigSegmented
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="calculationMode"
+          options={baseACCalculationModes}
+        />
+      </Field>
+      {mode === "standard_ac" ? (
+        <div className="grid gap-3 sm:grid-cols-[11rem_16rem]">
+          <Field label="Base AC">
+            <FlatNumberInput
+              value={configText(roll.effectConfig?.baseValue, roll.fixedValue || "13")}
+              onChange={(baseValue) =>
+                onChange(
+                  rolls.map((item) =>
+                    item.id === roll.id
+                      ? {
+                          ...item,
+                          fixedValue: baseValue,
+                          effectConfig: { ...item.effectConfig, baseValue },
+                        }
+                      : item,
+                  ),
+                )
+              }
+            />
+          </Field>
+          <EffectConfigSelect
+            roll={roll}
+            rolls={rolls}
+            onChange={onChange}
+            configKey="abilityModifier"
+            label="Ability modifier"
+            options={baseACAbilityModifiers}
+          />
+        </div>
+      ) : (
+        <EffectConfigInput
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="formula"
+          label="AC formula"
+          placeholder="13 + Dex modifier"
+          help="Use this for exact rules wording or formulas that need a DM to interpret."
+        />
+      )}
     </div>
   );
 }

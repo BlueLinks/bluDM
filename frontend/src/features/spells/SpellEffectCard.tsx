@@ -377,6 +377,25 @@ function effectSummary(roll: SpellActionFormState["rolls"][number]) {
   }
   if (roll.rollKind === "custom") return roll.conditionName || "Custom DM-facing effect";
   if (roll.rollKind === "forced_movement") return forcedMovementLabel(roll);
+  if (roll.rollKind === "base_ac") {
+    return configText(roll.effectConfig?.calculationMode, "formula") === "standard_ac"
+      ? `Base AC ${configText(roll.effectConfig?.baseValue, roll.fixedValue)}`
+      : configText(roll.effectConfig?.formula, "Base AC formula");
+  }
+  if (roll.rollKind === "roll_modifier") {
+    const categories = configStringArray(roll.effectConfig?.categories).join(", ");
+    return `${configText(roll.effectConfig?.mode, "Modify")} ${configText(roll.effectConfig?.dice, roll.fixedValue)}${categories ? ` · ${categories}` : ""}`;
+  }
+  if (roll.rollKind === "damage_defense") {
+    const damageTypes = configStringArray(roll.effectConfig?.damageTypes).join(", ");
+    return `${configText(roll.effectConfig?.mode, "Defense")}${damageTypes ? ` · ${damageTypes}` : ""}`;
+  }
+  if (roll.rollKind === "saving_throw_repeat") {
+    return `Repeat ${configText(roll.effectConfig?.ability, "save")} · ${configText(roll.effectConfig?.successOutcome, "outcome")}`;
+  }
+  if (roll.rollKind === "area_trigger") {
+    return `${configText(roll.effectConfig?.trigger, "Area trigger")} · ${configText(roll.effectConfig?.outcome, "outcome")}`;
+  }
   return rollKindLabel(roll.rollKind);
 }
 
@@ -415,6 +434,12 @@ function selectedCategoryLabel(category: SpellEffectCategory) {
 
 function titleCase(value: string) {
   return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function configStringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function categoryAccent(category: SpellEffectCategory) {
