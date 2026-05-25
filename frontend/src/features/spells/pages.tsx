@@ -420,13 +420,14 @@ function sortSpells(spells: Spell[]) {
 }
 
 function spellCopyDraft(spell: Spell): Spell {
+  const sourceParts = [spell.name, spell.sourceLabel].filter(Boolean).join(" · ");
   return {
     ...spell,
     id: "",
     name: `Copy of ${spell.name}`,
     librarySource: "user",
     readOnly: false,
-    sourceNote: spell.sourceLabel ? `Copied from ${spell.sourceLabel}` : spell.sourceNote,
+    sourceNote: sourceParts ? `Copied from ${sourceParts}` : spell.sourceNote,
     sourceKey: "",
     sourceLabel: "",
   };

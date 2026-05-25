@@ -22,6 +22,8 @@ export function SpellDialog({
   const [form, setForm] = useState<SpellFormState>(emptySpellForm);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const copiedSourceNote =
+    mode === "create" && spell?.sourceNote?.startsWith("Copied from") ? spell.sourceNote : "";
 
   useEffect(() => {
     if (open) {
@@ -49,10 +51,15 @@ export function SpellDialog({
       className="max-w-5xl"
       open={open}
       onOpenChange={onOpenChange}
-      title={mode === "edit" ? "Edit spell" : "Add spell"}
+      title={mode === "edit" ? "Edit spell" : copiedSourceNote ? "Create spell copy" : "Add spell"}
       trigger={<span />}
     >
       <form className="grid gap-5" onSubmit={handleSubmit}>
+        {copiedSourceNote && (
+          <div className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-900 dark:text-sky-100">
+            {copiedSourceNote}
+          </div>
+        )}
         <SpellCoreFields form={form} setForm={setForm} />
         <ProjectileSection form={form} setForm={setForm} />
         <SpellActionsSection form={form} setForm={setForm} />

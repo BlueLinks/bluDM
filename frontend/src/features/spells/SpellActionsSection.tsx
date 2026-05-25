@@ -1,19 +1,10 @@
 import { Plus, Trash2 } from "lucide-react";
-import { DiceFormulaInput } from "../../components/shared/CharacterFormControls";
-import { Button, Checkbox, Field, FormSection, Input, Select } from "../../components/ui";
-import {
-  abilities,
-  hitSpecialEvents,
-  spellEffectTimings,
-  spellRollKinds,
-  successfulSaveEffects,
-} from "../../lib/domain/options";
+import { Button, Field, FormSection, Input, Select } from "../../components/ui";
+import { abilities, hitSpecialEvents, successfulSaveEffects } from "../../lib/domain/options";
 import type { SpellActionFormState, SpellFormState } from "../../types";
-import { SpellSubsection } from "./SpellFormLayout";
 import { blankSpellAction, blankSpellRoll } from "./spellFormState";
-import { effectFormula, rollKindDescription, RollKindDetail } from "./SpellRollKindDetail";
-import { scalingPhrase, SpellScalingFields } from "./SpellScalingFields";
-import { CantripBreakpointFields, WeaponAttackFields } from "./SpellWeaponAndCantripFields";
+import { SpellEffectCard } from "./SpellEffectCard";
+import { WeaponAttackFields } from "./SpellWeaponAndCantripFields";
 
 export function SpellActionsSection({
   form,
@@ -192,115 +183,15 @@ function SpellRollEditor({
 }) {
   return (
     <div className="grid gap-3">
-      {rolls.map((roll) => (
-        <div className="grid gap-3 rounded-md border border-border bg-background p-3" key={roll.id}>
-          <div className="grid items-start gap-3 lg:grid-cols-[10rem_minmax(9rem,1fr)_auto_auto]">
-            <Field
-              label="Effect on target"
-              help="Choose what this effect changes on the target. Effects can be damage, healing, HP changes, conditions, or temporary immunities."
-            >
-              <Select
-                options={spellRollKinds}
-                placeholder="Effect"
-                value={roll.rollKind}
-                onValueChange={(rollKind) =>
-                  onChange(
-                    rolls.map((item) => (item.id === roll.id ? { ...item, rollKind } : item)),
-                  )
-                }
-              />
-            </Field>
-            {isFullWidthRollDetail(roll.rollKind) ? (
-              <div className="hidden lg:block" />
-            ) : (
-              <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
-            )}
-            {usesMagicalToggle(roll.rollKind) && (
-              <Checkbox
-                label="Magical"
-                checked={roll.magical}
-                onChange={(magical) =>
-                  onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
-                }
-              />
-            )}
-            <Button
-              type="button"
-              icon={Trash2}
-              variant="danger"
-              className="self-start"
-              onClick={() => onChange(rolls.filter((item) => item.id !== roll.id))}
-            />
-          </div>
-          {isFullWidthRollDetail(roll.rollKind) && (
-            <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
-          )}
-          {usesAmountControls(roll.rollKind) && (
-            <>
-              <Field label="Amount" help="Set Dice to 0 and use Modifier for a fixed flat value.">
-                <DiceFormulaInput
-                  allowEmpty
-                  value={roll}
-                  onChange={(next) =>
-                    onChange(
-                      rolls.map((item) =>
-                        item.id === roll.id
-                          ? {
-                              ...item,
-                              diceCount: next.diceCount,
-                              dieSize: next.dieSize,
-                              fixedValue: next.fixedValue,
-                            }
-                          : item,
-                      ),
-                    )
-                  }
-                />
-                <Checkbox
-                  label="Add Spellcasting Ability Modifier"
-                  checked={roll.addPrimaryStatModifier}
-                  onChange={(addPrimaryStatModifier) =>
-                    onChange(
-                      rolls.map((item) =>
-                        item.id === roll.id ? { ...item, addPrimaryStatModifier } : item,
-                      ),
-                    )
-                  }
-                />
-                <p className="mt-2 rounded-md border border-border bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
-                  Result: {effectFormula(roll)}
-                </p>
-              </Field>
-              <Field
-                label="Effect timing"
-                help="Immediate effects apply when cast. Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects."
-              >
-                <Select
-                  options={spellEffectTimings}
-                  placeholder="Timing"
-                  value={roll.timing}
-                  onValueChange={(timing) =>
-                    onChange(
-                      rolls.map((item) => (item.id === roll.id ? { ...item, timing } : item)),
-                    )
-                  }
-                />
-              </Field>
-              <RollScalingFields
-                roll={roll}
-                onChange={(next) =>
-                  onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
-                }
-              />
-              <CantripBreakpointFields
-                roll={roll}
-                onChange={(next) =>
-                  onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
-                }
-              />
-            </>
-          )}
-        </div>
+      {rolls.map((roll, index) => (
+        <SpellEffectCard
+          index={index}
+          key={roll.id}
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          onRemove={() => onChange(rolls.filter((item) => item.id !== roll.id))}
+        />
       ))}
       <Button
         type="button"
@@ -313,114 +204,4 @@ function SpellRollEditor({
       </Button>
     </div>
   );
-}
-
-function isFullWidthRollDetail(rollKind: string) {
-  return rollKind === "custom";
-}
-
-function usesMagicalToggle(rollKind: string) {
-  return usesAmountControls(rollKind) || rollKind === "damage_defense";
-}
-
-function usesAmountControls(rollKind: string) {
-  return ![
-    "condition",
-    "condition_immunity",
-    "custom",
-    "action_restriction",
-    "advantage_state",
-    "area_trigger",
-    "battlefield_object",
-    "damage_defense",
-    "damage_transfer",
-    "death_protection",
-    "heal_to_full",
-    "healing_block",
-    "healing_maximized",
-    "linked_healing",
-    "remove_condition",
-    "saving_throw_repeat",
-    "sense_effect",
-    "terrain_effect",
-    "visibility_effect",
-  ].includes(rollKind);
-}
-
-function RollScalingFields({
-  roll,
-  onChange,
-}: {
-  roll: SpellActionFormState["rolls"][number];
-  onChange: (roll: SpellActionFormState["rolls"][number]) => void;
-}) {
-  return (
-    <SpellSubsection
-      title="Roll Scaling"
-      description="Configure extra dice or fixed value added by spell scaling."
-    >
-      <SpellScalingFields
-        value={{
-          scalingType: roll.scalingType,
-          scaleFromLevel: roll.scalingFromLevel,
-          stepSize: roll.scalingStepSize,
-        }}
-        onChange={(next) =>
-          onChange({
-            ...roll,
-            scalingType: next.scalingType,
-            scalingFromLevel: next.scaleFromLevel,
-            scalingStepSize: next.stepSize,
-          })
-        }
-        amount={
-          <Field
-            label="Additional roll"
-            help="The extra dice and fixed value added each scaling step."
-          >
-            <DiceFormulaInput
-              allowEmpty
-              value={{
-                diceCount: roll.scalingDiceCount,
-                dieSize: roll.scalingDieSize,
-                fixedValue: roll.scalingFixedValue,
-              }}
-              onChange={(next) =>
-                onChange({
-                  ...roll,
-                  scalingDiceCount: next.diceCount,
-                  scalingDieSize: next.dieSize,
-                  scalingFixedValue: next.fixedValue,
-                })
-              }
-            />
-          </Field>
-        }
-        generated={rollScalingDescription(roll)}
-        label="Roll scaling"
-        help="Use this when this roll gains extra dice or a fixed bonus at higher slot, character, or spell scale values."
-      />
-    </SpellSubsection>
-  );
-}
-
-function rollScalingDescription(roll: SpellActionFormState["rolls"][number]) {
-  const from = Number(roll.scalingFromLevel) || 1;
-  const step = Math.max(1, Number(roll.scalingStepSize) || 1);
-  const dice = Number(roll.scalingDiceCount) || 0;
-  const die = Number(roll.scalingDieSize) || 6;
-  const fixed = Number(roll.scalingFixedValue) || 0;
-  const formula =
-    `${dice > 0 ? `${dice}d${die}` : ""}${fixed > 0 ? `+${fixed}` : fixed < 0 ? fixed : ""}` ||
-    "the configured amount";
-  const kind = rollKindDescription(roll.rollKind);
-  if (roll.scalingType === "none") {
-    return "This effect does not scale.";
-  }
-  return scalingPhrase({
-    scalingType: roll.scalingType,
-    from,
-    step,
-    effect: `this effect adds ${formula} ${kind}`,
-  });
 }

@@ -1,3 +1,76 @@
+import { spellRollKinds } from "./options";
+
+export type SpellEffectCategory =
+  | "hp"
+  | "damage"
+  | "movement"
+  | "defense"
+  | "rolls"
+  | "conditions"
+  | "action"
+  | "senses"
+  | "area"
+  | "utility";
+
+export const spellEffectCategories: Array<{ value: SpellEffectCategory; label: string }> = [
+  { value: "hp", label: "HP" },
+  { value: "damage", label: "Damage" },
+  { value: "movement", label: "Movement" },
+  { value: "defense", label: "Defense" },
+  { value: "rolls", label: "Rolls" },
+  { value: "conditions", label: "Conditions" },
+  { value: "action", label: "Action Economy" },
+  { value: "senses", label: "Visibility / Senses" },
+  { value: "area", label: "Area / Recurring" },
+  { value: "utility", label: "Utility" },
+];
+
+export const spellEffectKindCategories: Record<string, SpellEffectCategory> = {
+  healing: "hp",
+  max_hp: "hp",
+  max_hp_reduction: "hp",
+  temp_hp: "hp",
+  healing_block: "hp",
+  healing_maximized: "hp",
+  heal_to_full: "hp",
+  revive: "hp",
+  death_protection: "hp",
+  damage: "damage",
+  attack_damage_rider: "damage",
+  linked_healing: "damage",
+  speed_bonus: "movement",
+  speed_reduction: "movement",
+  speed_multiplier: "movement",
+  movement_mode: "movement",
+  forced_movement: "movement",
+  terrain_effect: "movement",
+  ac_bonus: "defense",
+  base_ac: "defense",
+  damage_defense: "defense",
+  damage_transfer: "defense",
+  roll_modifier: "rolls",
+  advantage_state: "rolls",
+  saving_throw_repeat: "rolls",
+  condition: "conditions",
+  remove_condition: "conditions",
+  condition_immunity: "conditions",
+  action_restriction: "action",
+  visibility_effect: "senses",
+  sense_effect: "senses",
+  recurring_hp_change: "area",
+  area_trigger: "area",
+  battlefield_object: "area",
+  custom: "utility",
+};
+
+export function spellEffectCategoryForKind(kind: string): SpellEffectCategory {
+  return spellEffectKindCategories[kind] ?? "utility";
+}
+
+export function spellEffectOptionsForCategory(category: SpellEffectCategory) {
+  return spellRollKinds.filter((option) => spellEffectCategoryForKind(option.value) === category);
+}
+
 export const advantageAppliesTo = [
   { value: "target_rolls", label: "Target's rolls" },
   { value: "attacks_against_target", label: "Attacks against target" },
