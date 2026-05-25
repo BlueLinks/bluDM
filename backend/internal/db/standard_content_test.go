@@ -1,6 +1,9 @@
 package db
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseStandardCreaturesIncludesVersionedSources(t *testing.T) {
 	creatures, err := parseStandardCreatures()
@@ -92,6 +95,9 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	}
 
 	aid2024 := findStandardSpell(t, spells, "srd-5-2-1-aid")
+	if strings.Contains(aid2024.Description, "t aUrgseint") {
+		t.Fatalf("expected SRD 5.2.1 Aid description to be cleaned, got %q", aid2024.Description)
+	}
 	if aid2024.ProjectileScaling == nil || aid2024.ProjectileScaling.BaseProjectiles != 3 {
 		t.Fatalf("expected SRD 5.2.1 Aid to target up to three creatures, got %+v", aid2024.ProjectileScaling)
 	}

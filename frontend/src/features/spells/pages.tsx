@@ -1,4 +1,4 @@
-import { BookOpen, Eye, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { BookOpen, Copy, Eye, ListChecks, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
@@ -26,6 +26,7 @@ export function SpellsPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSpell, setEditingSpell] = useState<Spell | null>(null);
+  const [draftSpell, setDraftSpell] = useState<Spell | null>(null);
   const [previewSpell, setPreviewSpell] = useState<Spell | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,7 @@ export function SpellsPage() {
             icon={Plus}
             onClick={() => {
               setEditingSpell(null);
+              setDraftSpell(null);
               setDialogOpen(true);
             }}
           >
@@ -86,14 +88,21 @@ export function SpellsPage() {
         onDelete={handleDelete}
         onEdit={(spell) => {
           setEditingSpell(spell);
+          setDraftSpell(null);
           setDialogOpen(true);
         }}
+        onCopy={handleCopy}
         onPreview={setPreviewSpell}
       />
-      <SpellPreviewModal spell={previewSpell} onClose={() => setPreviewSpell(null)} />
+      <SpellPreviewModal
+        spell={previewSpell}
+        onClose={() => setPreviewSpell(null)}
+        onCopy={handleCopy}
+      />
       <SpellDialog
         open={dialogOpen}
-        spell={editingSpell}
+        spell={editingSpell ?? draftSpell}
+        mode={editingSpell ? "edit" : "create"}
         onOpenChange={setDialogOpen}
         onSubmit={editingSpell ? handleUpdate : handleCreate}
       />
@@ -103,6 +112,7 @@ export function SpellsPage() {
   async function handleCreate(form: SpellFormState) {
     const payload = await api.createSpell(form);
     setSpells((current) => sortSpells([...current, payload.spell]));
+    setDraftSpell(null);
   }
 
   async function handleUpdate(form: SpellFormState) {
@@ -119,17 +129,26 @@ export function SpellsPage() {
     await api.deleteSpell(spell.id);
     setSpells((current) => current.filter((item) => item.id !== spell.id));
   }
+
+  function handleCopy(spell: Spell) {
+    setEditingSpell(null);
+    setDraftSpell(spellCopyDraft(spell));
+    setPreviewSpell(null);
+    setDialogOpen(true);
+  }
 }
 
 function SpellGrid({
   spells,
   onDelete,
   onEdit,
+  onCopy,
   onPreview,
 }: {
   spells: Spell[];
   onDelete: (spell: Spell) => void;
   onEdit: (spell: Spell) => void;
+  onCopy: (spell: Spell) => void;
   onPreview: (spell: Spell) => void;
 }) {
   if (spells.length === 0) {
@@ -143,6 +162,7 @@ function SpellGrid({
           spell={spell}
           onDelete={onDelete}
           onEdit={onEdit}
+          onCopy={onCopy}
           onPreview={onPreview}
         />
       ))}
@@ -154,11 +174,13 @@ function SpellCard({
   spell,
   onDelete,
   onEdit,
+  onCopy,
   onPreview,
 }: {
   spell: Spell;
   onDelete: (spell: Spell) => void;
   onEdit: (spell: Spell) => void;
+  onCopy: (spell: Spell) => void;
   onPreview: (spell: Spell) => void;
 }) {
   return (
@@ -183,6 +205,9 @@ function SpellCard({
           <Button icon={Eye} size="sm" variant="secondary" onClick={() => onPreview(spell)}>
             View
           </Button>
+          <Button icon={Copy} size="sm" variant="secondary" onClick={() => onCopy(spell)}>
+            Copy
+          </Button>
           {!spell.readOnly && (
             <>
               <Button icon={Pencil} size="sm" variant="secondary" onClick={() => onEdit(spell)} />
@@ -203,7 +228,15 @@ function SpellCard({
   );
 }
 
-function SpellPreviewModal({ spell, onClose }: { spell: Spell | null; onClose: () => void }) {
+function SpellPreviewModal({
+  spell,
+  onClose,
+  onCopy,
+}: {
+  spell: Spell | null;
+  onClose: () => void;
+  onCopy: (spell: Spell) => void;
+}) {
   return (
     <Modal
       title={spell ? spell.name : "Spell"}
@@ -211,12 +244,14 @@ function SpellPreviewModal({ spell, onClose }: { spell: Spell | null; onClose: (
       onOpenChange={(open) => !open && onClose()}
       trigger={<span />}
     >
-      {spell && <SpellPreview spell={spell} />}
+      {spell && <SpellPreview spell={spell} onCopy={onCopy} />}
     </Modal>
   );
 }
 
-function SpellPreview({ spell }: { spell: Spell }) {
+function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) => void }) {
+  const [showDetails, setShowDetails] = useState(false);
+  const hasDetails = spell.actions.length > 0 || detailMechanicEntries(spell.mechanics).length > 0;
   return (
     <div className="grid gap-5">
       {spell.readOnly && (
@@ -226,9 +261,19 @@ function SpellPreview({ spell }: { spell: Spell }) {
             <span className="text-sm font-semibold">Read-only standard spell</span>
           </div>
           <p className="text-sm leading-6 opacity-90">
-            This spell is provided as shared SRD content. Create a private spell if you need to
-            adjust text or mechanics for your table.
+            This spell is provided as shared SRD content. Create a private copy if you want to use
+            it as a template for homebrew or table-specific changes.
           </p>
+          <Button
+            className="mt-3"
+            icon={Copy}
+            size="sm"
+            type="button"
+            variant="secondary"
+            onClick={() => onCopy(spell)}
+          >
+            Create copy
+          </Button>
         </div>
       )}
       <div>
@@ -245,7 +290,19 @@ function SpellPreview({ spell }: { spell: Spell }) {
       </div>
       <TextBlock title="Description" value={spell.description || generateSpellDescription(spell)} />
       <TextBlock title="At Higher Levels" value={spell.higherLevel} />
-      <MechanicsBlock mechanics={spell.mechanics} actions={spell.actions} />
+      {hasDetails && (
+        <div>
+          <Button
+            icon={ListChecks}
+            type="button"
+            variant="secondary"
+            onClick={() => setShowDetails((current) => !current)}
+          >
+            {showDetails ? "Hide structured details" : "Show structured details"}
+          </Button>
+          {showDetails && <MechanicsBlock mechanics={spell.mechanics} actions={spell.actions} />}
+        </div>
+      )}
     </div>
   );
 }
@@ -267,7 +324,7 @@ function MechanicsBlock({
   mechanics: Record<string, unknown>;
   actions?: Spell["actions"];
 }) {
-  const entries = Object.entries(mechanics).filter(([key, value]) => key !== "source" && value);
+  const entries = detailMechanicEntries(mechanics);
   if (entries.length === 0 && actions.length === 0) return null;
   return (
     <section className="rounded-md border border-border bg-background p-3">
@@ -293,6 +350,17 @@ function MechanicsBlock({
         ))}
       </dl>
     </section>
+  );
+}
+
+function detailMechanicEntries(mechanics: Record<string, unknown>) {
+  return Object.entries(mechanics).filter(
+    ([key, value]) =>
+      key !== "source" &&
+      key !== "rawText" &&
+      value !== null &&
+      value !== "" &&
+      !(Array.isArray(value) && value.length === 0),
   );
 }
 
@@ -353,6 +421,19 @@ function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) {
 
 function sortSpells(spells: Spell[]) {
   return [...spells].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+function spellCopyDraft(spell: Spell): Spell {
+  return {
+    ...spell,
+    id: "",
+    name: `Copy of ${spell.name}`,
+    librarySource: "user",
+    readOnly: false,
+    sourceNote: spell.sourceLabel ? `Copied from ${spell.sourceLabel}` : spell.sourceNote,
+    sourceKey: "",
+    sourceLabel: "",
+  };
 }
 
 function SrdBadge({ label }: { label?: string }) {

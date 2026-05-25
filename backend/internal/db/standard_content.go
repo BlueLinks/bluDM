@@ -205,9 +205,18 @@ func parseStandardSpells() ([]standardSpellSeed, error) {
 		if len(spell.Mechanics) == 0 {
 			spells[index].Mechanics = json.RawMessage(`{}`)
 		}
+		cleanStandardSpellText(&spells[index])
 		inferStandardSpellAutomation(&spells[index])
 	}
 	return spells, nil
+}
+
+func cleanStandardSpellText(spell *standardSpellSeed) {
+	switch spell.Slug {
+	case "srd-5-2-1-aid":
+		spell.Description = "Choose up to three creatures within range. Each target's Hit Point maximum and current Hit Points increase by 5 for the duration."
+		spell.HigherLevel = "Each target's Hit Points increase by 5 for each spell slot level above 2."
+	}
 }
 
 const standardCreaturesSchemaSQL = `

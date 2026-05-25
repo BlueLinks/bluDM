@@ -9,11 +9,13 @@ import { emptySpellForm, spellToForm } from "./spellFormState";
 export function SpellDialog({
   open,
   spell,
+  mode = spell ? "edit" : "create",
   onOpenChange,
   onSubmit,
 }: {
   open: boolean;
   spell?: Spell | null;
+  mode?: "create" | "edit";
   onOpenChange: (open: boolean) => void;
   onSubmit: (form: SpellFormState) => Promise<void>;
 }) {
@@ -47,7 +49,7 @@ export function SpellDialog({
       className="max-w-5xl"
       open={open}
       onOpenChange={onOpenChange}
-      title={spell ? "Edit spell" : "Add spell"}
+      title={mode === "edit" ? "Edit spell" : "Add spell"}
       trigger={<span />}
     >
       <form className="grid gap-5" onSubmit={handleSubmit}>
@@ -60,7 +62,7 @@ export function SpellDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : spell ? "Save spell" : "Create spell"}
+            {saving ? "Saving..." : mode === "edit" ? "Save spell" : "Create spell"}
           </Button>
         </div>
       </form>
