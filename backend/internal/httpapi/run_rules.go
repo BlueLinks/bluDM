@@ -270,6 +270,27 @@ func (s *Server) hasActiveHealingBlock(ctx context.Context, runID, targetID stri
 	return false
 }
 
+func (s *Server) hasActiveDeathProtection(ctx context.Context, runID, targetID string, mode string) bool {
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, targetID) {
+		if effect.EffectKind != "death_protection" {
+			continue
+		}
+		if mode == "" || strings.EqualFold(stringFromAny(effect.Payload["mode"]), mode) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) hasActiveHealingMaximized(ctx context.Context, runID, targetID string) bool {
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, targetID) {
+		if effect.EffectKind == "healing_maximized" {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Server) activeEffectsForTarget(ctx context.Context, runID, targetID string) []models.EncounterRunEffect {
 	effects, err := s.runActiveEffects(ctx, runID)
 	if err != nil {
@@ -341,13 +362,13 @@ func sourceMap(snapshot map[string]any) map[string]any {
 
 func applyDamageDefense(amount int, damageType string, defenses damageDefenseRequest) int {
 	damageType = strings.TrimSpace(strings.ToLower(damageType))
-	if containsFold(defenses.Immunities, damageType) {
+	if containsFold(defenses.Immunities, damageType) || containsFold(defenses.Immunities, "all") {
 		return 0
 	}
-	if containsFold(defenses.Vulnerabilities, damageType) {
+	if containsFold(defenses.Vulnerabilities, damageType) || containsFold(defenses.Vulnerabilities, "all") {
 		return amount * 2
 	}
-	if containsFold(defenses.Resistances, damageType) {
+	if containsFold(defenses.Resistances, damageType) || containsFold(defenses.Resistances, "all") {
 		return amount / 2
 	}
 	return amount

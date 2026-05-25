@@ -198,6 +198,10 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 		nextIndex = run.CurrentTurnIndex
 		nextRound = run.CurrentRound
 	}
+	timedEffects := []map[string]any{}
+	if direction > 0 && run.CurrentTurnIndex >= 0 && run.CurrentTurnIndex < len(run.Combatants) {
+		timedEffects = append(timedEffects, s.applyEndTurnEffects(r.Context(), runID, run.Combatants[run.CurrentTurnIndex].ID)...)
+	}
 	if _, err := s.db.Exec(r.Context(), `
 		update encounter_runs set current_round = $2, current_turn_index = $3 where id = $1
 	`, runID, nextRound, nextIndex); err != nil {
@@ -205,9 +209,8 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 		return
 	}
 	after := map[string]any{"round": nextRound, "turnIndex": nextIndex}
-	timedEffects := []map[string]any{}
 	if direction > 0 && nextIndex >= 0 && nextIndex < len(run.Combatants) {
-		timedEffects = s.applyStartTurnEffects(r.Context(), runID, run.Combatants[nextIndex].ID)
+		timedEffects = append(timedEffects, s.applyStartTurnEffects(r.Context(), runID, run.Combatants[nextIndex].ID)...)
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "turn_changed", "", "", map[string]any{"undoable": true, "before": before, "after": after, "skipped": skipped, "timedEffects": timedEffects})
 	run, _ = s.encounterRunByID(r.Context(), runID)

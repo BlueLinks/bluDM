@@ -58,6 +58,9 @@ func (s *Server) castSpellCommand(w http.ResponseWriter, r *http.Request) {
 		for _, action := range spell.Actions {
 			for _, roll := range action.Rolls {
 				amount := spellEffectAmount(roll, castLevel, modifier)
+				if roll.RollKind == "healing" && s.hasActiveHealingMaximized(r.Context(), runID, target.ID) {
+					amount = spellEffectMaxAmount(roll, castLevel, modifier)
+				}
 				shouldTrack := shouldTrackSpellEffect(roll)
 				if roll.Timing != "" && roll.Timing != "immediate" {
 					_ = s.createActiveSpellEffect(r.Context(), runID, actor.ID, target.ID, spell, castLevel, roll, amount)
@@ -250,6 +253,18 @@ func spellEffectAmount(roll models.SpellActionRollPart, castLevel int, spellcast
 	return max(0, total)
 }
 
+func spellEffectMaxAmount(roll models.SpellActionRollPart, castLevel int, spellcastingMod int) int {
+	total := max(0, roll.DiceCount)*max(0, roll.DieSize) + roll.FixedValue
+	if roll.ScalingType == "spell_level" && castLevel > roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
+		steps := 1 + (castLevel-roll.ScalingFromLevel-1)/max(1, roll.ScalingStepSize)
+		total += steps * (max(0, roll.ScalingDiceCount)*max(0, roll.ScalingDieSize) + roll.ScalingFixedValue)
+	}
+	if roll.AddPrimaryStatModifier {
+		total += spellcastingMod
+	}
+	return max(0, total)
+}
+
 func spellEffectLog(target models.EncounterRunCombatant, roll models.SpellActionRollPart, amount int, status string) map[string]any {
 	return map[string]any{"targetId": target.ID, "targetName": target.DisplayName, "effectKind": roll.RollKind, "conditionName": roll.ConditionName, "effectConfig": roll.EffectConfig, "amount": amount, "timing": roll.Timing, "status": status}
 }
@@ -261,7 +276,9 @@ func shouldTrackSpellEffect(roll models.SpellActionRollPart) bool {
 	switch roll.RollKind {
 	case "condition_immunity", "healing_block", "speed_bonus", "speed_reduction", "speed_multiplier",
 		"movement_mode", "ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense",
-		"attack_damage_rider":
+		"attack_damage_rider", "healing_maximized", "action_restriction", "saving_throw_repeat",
+		"area_trigger", "visibility_effect", "sense_effect", "terrain_effect", "death_protection",
+		"linked_healing", "damage_transfer", "battlefield_object":
 		return true
 	default:
 		return false

@@ -110,9 +110,35 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-bane"), "roll_modifier")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-protection-from-energy"), "damage_defense")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block")
+	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block", "start_caster_turn_once")
+	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-5-2-1-chill-touch"), "healing_block", "end_caster_turn_once")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-harm"), "max_hp_reduction")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-thunderwave"), "forced_movement")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-hunter-s-mark"), "attack_damage_rider")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-beacon-of-hope"), "healing_maximized")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-power-word-heal"), "heal_to_full")
+	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-regenerate"), "recurring_hp_change", "start_target_turn_each")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-warding-bond"), "damage_transfer")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-haste"), "action_restriction")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-slow"), "saving_throw_repeat")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-freedom-of-movement"), "terrain_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-guiding-bolt"), "advantage_state")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-faerie-fire"), "visibility_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-shining-smite"), "visibility_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-invisibility"), "condition")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-see-invisibility"), "sense_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-darkvision"), "sense_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-sleet-storm"), "area_trigger")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-web"), "terrain_effect")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-spike-growth"), "area_trigger")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-moonbeam"), "area_trigger")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-spirit-guardians"), "area_trigger")
+	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-acid-arrow"), "recurring_hp_change", "end_target_turn_once")
+	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-5-2-1-searing-smite"), "recurring_hp_change", "start_target_turn_each")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-ensnaring-strike"), "condition")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-vampiric-touch"), "linked_healing")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-ray-of-enfeeblement"), "roll_modifier")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-aura-of-life"), "death_protection")
 
 	aid := findStandardSpell(t, spells, "srd-aid")
 	if aid.ProjectileScaling == nil || aid.ProjectileScaling.BaseProjectiles != 3 {
@@ -177,6 +203,18 @@ func assertSpellHasEffect(t *testing.T, spell standardSpellSeed, rollKind string
 		}
 	}
 	t.Fatalf("expected %s to include %s effect, got %+v", spell.Slug, rollKind, spell.Actions)
+}
+
+func assertSpellHasEffectTiming(t *testing.T, spell standardSpellSeed, rollKind string, timing string) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind == rollKind && roll.Timing == timing {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s effect with timing %s, got %+v", spell.Slug, rollKind, timing, spell.Actions)
 }
 
 func assertRayOfFrostSpeedReduction(t *testing.T, spell standardSpellSeed) {
@@ -247,6 +285,62 @@ func TestParseStandardSpellsCleansPDFTextArtifacts(t *testing.T) {
 	}
 }
 
+func TestStandardSpellEffectAuditCoversDeterministicPhrases(t *testing.T) {
+	spells, err := parseStandardSpells()
+	if err != nil {
+		t.Fatalf("parse standard spells: %v", err)
+	}
+	checks := []struct {
+		phrase string
+		kind   string
+	}{
+		{"can't regain hit points", "healing_block"},
+		{"can’t regain Hit Points", "healing_block"},
+		{"regains the maximum number of hit points", "healing_maximized"},
+		{"regains the maximum number of Hit Points", "healing_maximized"},
+		{"regains all its Hit Points", "heal_to_full"},
+		{"speed increases by 10 feet", "speed_bonus"},
+		{"Speed is doubled", "speed_multiplier"},
+		{"speed is doubled", "speed_multiplier"},
+		{"Speed is halved", "speed_multiplier"},
+		{"speed is halved", "speed_multiplier"},
+		{"bonus to AC", "ac_bonus"},
+		{"bonus to Armor Class", "ac_bonus"},
+		{"flying speed of 60 feet", "movement_mode"},
+		{"has darkvision out to", "sense_effect"},
+		{"willing creature you touch has Darkvision", "sense_effect"},
+		{"see invisible creatures", "sense_effect"},
+		{"see creatures and objects that have the Invisible condition", "sense_effect"},
+		{"2d4 Acid damage at the end of its next turn", "recurring_hp_change"},
+		{"regains 1 Hit Point at the start of each of its turns", "recurring_hp_change"},
+		{"can't take reactions", "action_restriction"},
+		{"can’t take Reactions", "action_restriction"},
+	}
+	for _, spell := range spells {
+		text := spell.Description + "\n" + spell.HigherLevel
+		for _, check := range checks {
+			if !strings.Contains(text, check.phrase) {
+				continue
+			}
+			if deterministicAuditAllowlist[spell.Slug] {
+				continue
+			}
+			if !spellHasEffect(spell, check.kind) {
+				t.Fatalf("expected %s containing %q to infer %s, got %+v", spell.Slug, check.phrase, check.kind, spell.Actions)
+			}
+		}
+	}
+}
+
+var deterministicAuditAllowlist = map[string]bool{
+	"srd-confusion":            true,
+	"srd-5-2-1-confusion":      true,
+	"srd-wish":                 true,
+	"srd-5-2-1-wish":           true,
+	"srd-prismatic-wall":       true,
+	"srd-5-2-1-prismatic-wall": true,
+}
+
 func findStandardSpell(t *testing.T, spells []standardSpellSeed, slug string) standardSpellSeed {
 	t.Helper()
 	for _, spell := range spells {
@@ -256,4 +350,15 @@ func findStandardSpell(t *testing.T, spells []standardSpellSeed, slug string) st
 	}
 	t.Fatalf("standard spell %q not found", slug)
 	return standardSpellSeed{}
+}
+
+func spellHasEffect(spell standardSpellSeed, rollKind string) bool {
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind == rollKind {
+				return true
+			}
+		}
+	}
+	return false
 }

@@ -1,5 +1,5 @@
 import { damageTypeOptions } from "../../components/shared/damageTypes";
-import { Field, Input, Select, Textarea } from "../../components/ui";
+import { Field, Select, Textarea } from "../../components/ui";
 import {
   advantageStates,
   conditionImmunities,
@@ -9,11 +9,17 @@ import {
   rollModifierCategories,
   rollModifierModes,
   speedMultipliers,
-  spellEffectTimings,
   spellRollKinds,
 } from "../../lib/domain/options";
-import { configText } from "../../lib/domain/effectConfig";
+import { advantageAppliesTo, damageDefenseRestrictions } from "../../lib/domain/spellEffectOptions";
 import type { SpellActionFormState } from "../../types";
+import {
+  AdvancedEffectConfigFields,
+  EffectInput,
+  EffectSelect,
+  TimingField,
+  advancedEffectKinds,
+} from "./SpellEffectConfigFields";
 
 export function RollKindDetail({
   roll,
@@ -145,6 +151,14 @@ export function RollKindDetail({
           label="Roll type"
           options={rollModifierCategories}
         />
+        <EffectInput
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="dice"
+          label="Dice / fixed"
+          placeholder="1d4 or +2"
+        />
         <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
@@ -168,6 +182,14 @@ export function RollKindDetail({
           label="Roll type"
           options={rollModifierCategories}
         />
+        <EffectSelect
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="appliesTo"
+          label="Applies to"
+          options={advantageAppliesTo}
+        />
         <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
@@ -190,6 +212,14 @@ export function RollKindDetail({
           configKey="damageTypes"
           label="Damage types"
           placeholder="fire, cold, lightning"
+        />
+        <EffectSelect
+          roll={roll}
+          rolls={rolls}
+          onChange={onChange}
+          configKey="restriction"
+          label="Restriction"
+          options={damageDefenseRestrictions}
         />
         <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
@@ -247,6 +277,9 @@ export function RollKindDetail({
       </div>
     );
   }
+  if (advancedEffectKinds.includes(roll.rollKind)) {
+    return <AdvancedEffectConfigFields roll={roll} rolls={rolls} onChange={onChange} />;
+  }
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <Field label="Effect target" help={effectTargetHelp(roll.rollKind)}>
@@ -277,6 +310,9 @@ export function rollKindDescription(kind: string) {
   if (kind === "max_hp_reduction") return "to reduce hit point maximum";
   if (kind === "temp_hp") return "temporary hit points";
   if (kind === "healing_block") return "healing prevention";
+  if (kind === "healing_maximized") return "maximized healing";
+  if (kind === "heal_to_full") return "full healing";
+  if (kind === "recurring_hp_change") return "recurring HP change";
   if (kind === "speed_bonus") return "speed bonus";
   if (kind === "speed_reduction") return "speed reduction";
   if (kind === "speed_multiplier") return "speed multiplier";
@@ -288,106 +324,20 @@ export function rollKindDescription(kind: string) {
   if (kind === "damage_defense") return "damage defense";
   if (kind === "forced_movement") return "forced movement";
   if (kind === "attack_damage_rider") return "attack damage rider";
+  if (kind === "action_restriction") return "action restriction";
+  if (kind === "saving_throw_repeat") return "repeat saving throw";
+  if (kind === "area_trigger") return "area trigger";
+  if (kind === "visibility_effect") return "visibility effect";
+  if (kind === "sense_effect") return "sense effect";
+  if (kind === "terrain_effect") return "terrain effect";
+  if (kind === "death_protection") return "death protection";
+  if (kind === "linked_healing") return "linked healing";
+  if (kind === "damage_transfer") return "damage transfer";
+  if (kind === "battlefield_object") return "battlefield object";
   if (kind === "remove_condition") return "condition removal";
   if (kind === "revive") return "revival";
   if (kind === "custom") return "custom effect";
   return "damage";
-}
-
-function EffectSelect({
-  configKey,
-  label,
-  onChange,
-  options,
-  roll,
-  rolls,
-}: {
-  configKey: string;
-  label: string;
-  onChange: (rolls: SpellActionFormState["rolls"]) => void;
-  options: Array<{ value: string; label: string }>;
-  roll: SpellActionFormState["rolls"][number];
-  rolls: SpellActionFormState["rolls"];
-}) {
-  return (
-    <Field label={label}>
-      <Select
-        options={options}
-        placeholder={label}
-        value={configText(roll.effectConfig?.[configKey], "")}
-        onValueChange={(value) => updateEffectConfig(rolls, roll.id, configKey, value, onChange)}
-      />
-    </Field>
-  );
-}
-
-function EffectInput({
-  configKey,
-  label,
-  onChange,
-  placeholder,
-  roll,
-  rolls,
-}: {
-  configKey: string;
-  label: string;
-  onChange: (rolls: SpellActionFormState["rolls"]) => void;
-  placeholder?: string;
-  roll: SpellActionFormState["rolls"][number];
-  rolls: SpellActionFormState["rolls"];
-}) {
-  return (
-    <Field label={label}>
-      <Input
-        value={configText(roll.effectConfig?.[configKey], "")}
-        placeholder={placeholder}
-        onChange={(event) =>
-          updateEffectConfig(rolls, roll.id, configKey, event.target.value, onChange)
-        }
-      />
-    </Field>
-  );
-}
-
-function updateEffectConfig(
-  rolls: SpellActionFormState["rolls"],
-  rollID: string,
-  key: string,
-  value: string,
-  onChange: (rolls: SpellActionFormState["rolls"]) => void,
-) {
-  onChange(
-    rolls.map((item) =>
-      item.id === rollID
-        ? { ...item, effectConfig: { ...(item.effectConfig ?? {}), [key]: value } }
-        : item,
-    ),
-  );
-}
-
-function TimingField({
-  help = "Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects.",
-  onChange,
-  roll,
-  rolls,
-}: {
-  help?: string;
-  roll: SpellActionFormState["rolls"][number];
-  rolls: SpellActionFormState["rolls"];
-  onChange: (rolls: SpellActionFormState["rolls"]) => void;
-}) {
-  return (
-    <Field label="Effect timing" help={help}>
-      <Select
-        options={spellEffectTimings}
-        placeholder="Timing"
-        value={roll.timing}
-        onValueChange={(timing) =>
-          onChange(rolls.map((item) => (item.id === roll.id ? { ...item, timing } : item)))
-        }
-      />
-    </Field>
-  );
 }
 
 function effectTargetHelp(rollKind: string) {

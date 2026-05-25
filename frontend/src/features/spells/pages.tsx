@@ -14,9 +14,9 @@ import {
   StatPill,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import { configText } from "../../lib/domain/effectConfig";
 import type { Spell, SpellFormState } from "../../types";
 import { SpellDialog } from "./SpellDialog";
+import { formatRollPart } from "./spellPreviewFormat";
 import { displaySpellDuration, displaySpellRange, generateSpellDescription } from "./spellText";
 
 export function SpellsPage() {
@@ -413,63 +413,6 @@ function formatMechanic(value: unknown): string {
       .join("; ");
   }
   return String(value);
-}
-
-function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) {
-  if (roll.rollKind === "condition") {
-    return `Apply ${roll.conditionName || "condition"}`;
-  }
-  if (roll.rollKind === "remove_condition") {
-    return `Remove ${roll.conditionName || "condition"}`;
-  }
-  if (roll.rollKind === "condition_immunity") {
-    return `Immunity to ${roll.conditionName || "condition"}`;
-  }
-  if (roll.rollKind === "custom") {
-    return roll.conditionName || "Custom target effect";
-  }
-  if (roll.rollKind === "speed_reduction") {
-    return `Speed -${Math.max(0, Number(roll.fixedValue) || 0)} ft.`;
-  }
-  if (roll.rollKind === "speed_bonus") {
-    return `Speed +${Math.max(0, Number(roll.fixedValue) || 0)} ft.`;
-  }
-  if (roll.rollKind === "speed_multiplier") {
-    return configText(roll.effectConfig?.multiplier) === "2" ? "Double speed" : "Halve speed";
-  }
-  if (roll.rollKind === "movement_mode") {
-    return `${configText(roll.effectConfig?.mode, "Movement")} ${roll.fixedValue ? `${roll.fixedValue} ft.` : ""}`;
-  }
-  if (roll.rollKind === "ac_bonus") {
-    return `AC ${roll.fixedValue >= 0 ? "+" : ""}${roll.fixedValue}`;
-  }
-  if (roll.rollKind === "base_ac") {
-    return `Base AC ${configText(roll.effectConfig?.formula, String(roll.fixedValue))}`;
-  }
-  if (roll.rollKind === "damage_defense") {
-    return `${configText(roll.effectConfig?.mode, "Defense")} ${configText(roll.effectConfig?.damageTypes, "")}`.trim();
-  }
-  if (roll.rollKind === "healing_block") return "Prevents healing";
-  if (roll.rollKind === "advantage_state") {
-    return `${configText(roll.effectConfig?.state, "Advantage")} on ${configText(roll.effectConfig?.category, "rolls")}`;
-  }
-  if (roll.rollKind === "forced_movement") {
-    return `${configText(roll.effectConfig?.direction, "Forced movement")} ${roll.fixedValue ? `${roll.fixedValue} ft.` : ""}`;
-  }
-  const fixed =
-    roll.fixedValue > 0 ? `+${roll.fixedValue}` : roll.fixedValue < 0 ? roll.fixedValue : "";
-  const amount = roll.diceCount > 0 ? `${roll.diceCount}d${roll.dieSize}${fixed}` : fixed || "0";
-  const label =
-    roll.rollKind === "max_hp"
-      ? "HP maximum"
-      : roll.rollKind === "max_hp_reduction"
-        ? "reduces HP maximum"
-        : roll.rollKind === "temp_hp"
-          ? "sets temp HP"
-          : roll.rollKind === "speed_reduction"
-            ? "speed reduction"
-            : roll.rollKind;
-  return `${amount} ${roll.rollKind === "damage" ? roll.damageType : label}`;
 }
 
 function sortSpells(spells: Spell[]) {

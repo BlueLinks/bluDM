@@ -33,6 +33,9 @@ export const spellRollKinds = [
   { value: "max_hp_reduction", label: "Reduce target HP maximum" },
   { value: "temp_hp", label: "Set target temporary HP" },
   { value: "healing_block", label: "Prevent target healing" },
+  { value: "healing_maximized", label: "Maximize target healing" },
+  { value: "heal_to_full", label: "Restore target to full HP" },
+  { value: "recurring_hp_change", label: "Recurring HP change" },
   { value: "speed_bonus", label: "Increase target speed" },
   { value: "speed_reduction", label: "Reduce target speed" },
   { value: "speed_multiplier", label: "Multiply target speed" },
@@ -44,6 +47,16 @@ export const spellRollKinds = [
   { value: "damage_defense", label: "Grant damage defense" },
   { value: "forced_movement", label: "Force movement or prone" },
   { value: "attack_damage_rider", label: "Add attack damage rider" },
+  { value: "action_restriction", label: "Restrict target actions" },
+  { value: "saving_throw_repeat", label: "Repeat saving throw" },
+  { value: "area_trigger", label: "Area trigger" },
+  { value: "visibility_effect", label: "Visibility or light effect" },
+  { value: "sense_effect", label: "Grant sense" },
+  { value: "terrain_effect", label: "Terrain or movement rule" },
+  { value: "death_protection", label: "Death protection" },
+  { value: "linked_healing", label: "Linked healing" },
+  { value: "damage_transfer", label: "Transfer damage" },
+  { value: "battlefield_object", label: "Battlefield object" },
   { value: "condition", label: "Apply condition to target" },
   { value: "remove_condition", label: "Remove condition from target" },
   { value: "condition_immunity", label: "Grant condition immunity" },
@@ -75,6 +88,9 @@ export const rollModifierCategories = [
   { value: "ability_check", label: "Ability checks" },
   { value: "damage_roll", label: "Damage rolls" },
   { value: "death_save", label: "Death saves" },
+  { value: "dexterity_saving_throw", label: "Dexterity saving throws" },
+  { value: "wisdom_saving_throw", label: "Wisdom saving throws" },
+  { value: "strength_d20_test", label: "Strength D20 Tests" },
 ];
 
 export const advantageStates = [
@@ -93,15 +109,23 @@ export const forcedMovementDirections = [
   { value: "pull", label: "Pull toward" },
   { value: "move_away", label: "Move away using reaction" },
   { value: "prone", label: "Knock prone" },
+  { value: "manual_map", label: "Manual map movement" },
 ];
 
 export const spellEffectTimings = [
   { value: "immediate", label: "Immediate" },
-  { value: "start_target_turn", label: "Start of each target turn" },
-  { value: "start_target_turn_once", label: "Start of target's next turn only" },
-  { value: "start_caster_turn_once", label: "Start of caster's next turn only" },
-  { value: "end_target_turn", label: "End of each target turn" },
-  { value: "end_target_turn_once", label: "End of target's next turn only" },
+  { value: "start_target_turn", label: "At start of each target turn" },
+  { value: "start_target_turn_each", label: "At start of each target turn" },
+  { value: "start_target_turn_once", label: "Until/start of target's next turn only" },
+  { value: "end_target_turn", label: "At end of each target turn" },
+  { value: "end_target_turn_each", label: "At end of each target turn" },
+  { value: "end_target_turn_once", label: "Until/end of target's next turn only" },
+  { value: "start_caster_turn_once", label: "Until start of caster's next turn" },
+  { value: "end_caster_turn_once", label: "Until end of caster's next turn" },
+  { value: "start_caster_turn_each", label: "At start of each caster turn" },
+  { value: "end_caster_turn_each", label: "At end of each caster turn" },
+  { value: "end_spell", label: "When spell ends" },
+  { value: "manual", label: "Manual / DM prompted" },
 ];
 
 export const spellLevels = [

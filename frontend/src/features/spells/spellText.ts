@@ -227,11 +227,47 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "healing_block") {
     return `${subject} can't regain hit points while the effect is active.`;
   }
+  if (roll.rollKind === "healing_maximized") {
+    return `${subject} regains the maximum possible hit points from healing.`;
+  }
+  if (roll.rollKind === "heal_to_full") {
+    return `${subject} regains all missing hit points.`;
+  }
   if (roll.rollKind === "advantage_state") {
-    return `${subject} has ${configText(roll.effectConfig?.state, "advantage")} on ${configText(roll.effectConfig?.category, "configured rolls")}.`;
+    return `${configText(roll.effectConfig?.appliesTo, subject)} has ${configText(roll.effectConfig?.state, "advantage")} on ${configText(roll.effectConfig?.category, "configured rolls")}.`;
   }
   if (roll.rollKind === "damage_defense") {
     return `${subject} gains ${configText(roll.effectConfig?.mode, "resistance")} to ${configText(roll.effectConfig?.damageTypes, "the chosen damage type")}.`;
+  }
+  if (roll.rollKind === "action_restriction") {
+    return `${subject}: ${configText(roll.effectConfig?.mode, "restricted actions")}.`;
+  }
+  if (roll.rollKind === "saving_throw_repeat") {
+    return `${subject} repeats the ${configText(roll.effectConfig?.ability, "configured")} save to ${configText(roll.effectConfig?.success, "resolve the effect")}.`;
+  }
+  if (roll.rollKind === "area_trigger") {
+    return `Area trigger: ${configText(roll.effectConfig?.trigger, "manual trigger")} causes ${configText(roll.effectConfig?.effect, "the configured effect")}.`;
+  }
+  if (roll.rollKind === "visibility_effect") {
+    return `${subject}: ${configText(roll.effectConfig?.mode, "visibility effect")}.`;
+  }
+  if (roll.rollKind === "sense_effect") {
+    return `${subject} gains ${configText(roll.effectConfig?.mode, "a special sense")}.`;
+  }
+  if (roll.rollKind === "terrain_effect") {
+    return `Terrain or movement rule: ${configText(roll.effectConfig?.mode, "configured terrain effect")}.`;
+  }
+  if (roll.rollKind === "death_protection") {
+    return `${subject}: ${configText(roll.effectConfig?.mode, "death protection")}.`;
+  }
+  if (roll.rollKind === "linked_healing") {
+    return `${configText(roll.effectConfig?.target, "Caster")} heals from ${configText(roll.effectConfig?.source, "the linked effect")}.`;
+  }
+  if (roll.rollKind === "damage_transfer") {
+    return `Damage transfer: ${configText(roll.effectConfig?.mode, "configured transfer")}.`;
+  }
+  if (roll.rollKind === "battlefield_object") {
+    return `Battlefield object: ${configText(roll.effectConfig?.kind, "manual object")}.`;
   }
   const amount = effectAmount(roll);
   if (!amount) return "";

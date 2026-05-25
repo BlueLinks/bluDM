@@ -328,10 +328,22 @@ function usesAmountControls(rollKind: string) {
     "condition",
     "condition_immunity",
     "custom",
+    "action_restriction",
     "advantage_state",
+    "area_trigger",
+    "battlefield_object",
     "damage_defense",
+    "damage_transfer",
+    "death_protection",
+    "heal_to_full",
     "healing_block",
+    "healing_maximized",
+    "linked_healing",
     "remove_condition",
+    "saving_throw_repeat",
+    "sense_effect",
+    "terrain_effect",
+    "visibility_effect",
   ].includes(rollKind);
 }
 

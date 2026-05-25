@@ -49,13 +49,27 @@ func inferAdditionalEffectRolls(spell standardSpellSeed) []standardSpellActionRo
 	rolls := inferSpeedReductionRolls(spell.Description)
 	switch strings.ToLower(spell.Name) {
 	case "chill touch":
-		rolls = append(rolls, effectRoll("healing_block", 0, "start_caster_turn_once", nil))
+		timing := "start_caster_turn_once"
+		if spell.SourceKey == "srd-5-2-1" {
+			timing = "end_caster_turn_once"
+		}
+		rolls = append(rolls, effectRoll("healing_block", 0, timing, nil))
 	case "harm":
 		rolls = append(rolls, effectRoll("max_hp_reduction", 0, "immediate", map[string]any{"amountSource": "damageTaken"}))
 	case "thunderwave":
 		rolls = append(rolls, effectRoll("forced_movement", 10, "immediate", map[string]any{"direction": "push"}))
+	case "shocking grasp":
+		rolls = append(rolls, effectRoll("action_restriction", 0, "start_target_turn_once", map[string]any{"mode": "no_reactions"}))
 	}
 	return rolls
+}
+
+func standardDamageRoll(kind, damageType string, diceCount, dieSize, fixedValue int, timing string, config map[string]any) standardSpellActionRollSeed {
+	roll := effectRoll(kind, fixedValue, timing, config)
+	roll.DamageType = damageType
+	roll.DiceCount = diceCount
+	roll.DieSize = dieSize
+	return roll
 }
 
 func attackDamageRiderRoll(name string) (standardSpellActionRollSeed, bool) {
