@@ -17,7 +17,6 @@ import {
   AdvancedEffectConfigFields,
   EffectInput,
   EffectSelect,
-  TimingField,
   advancedEffectKinds,
 } from "./SpellEffectConfigFields";
 
@@ -55,7 +54,6 @@ export function RollKindDetail({
             }
           />
         </Field>
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -79,12 +77,6 @@ export function RollKindDetail({
             }
           />
         </Field>
-        <TimingField
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          help="Choose when this descriptive effect should be shown in combat."
-        />
       </div>
     );
   }
@@ -113,7 +105,6 @@ export function RollKindDetail({
           label="Mode"
           options={movementModes}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -128,7 +119,6 @@ export function RollKindDetail({
           label="Multiplier"
           options={speedMultipliers}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -159,7 +149,6 @@ export function RollKindDetail({
           label="Dice / fixed"
           placeholder="1d4 or +2"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -190,7 +179,6 @@ export function RollKindDetail({
           label="Applies to"
           options={advantageAppliesTo}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -221,7 +209,6 @@ export function RollKindDetail({
           label="Restriction"
           options={damageDefenseRestrictions}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -233,10 +220,9 @@ export function RollKindDetail({
           rolls={rolls}
           onChange={onChange}
           configKey="direction"
-          label="Movement"
+          label="Forced movement"
           options={forcedMovementDirections}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -251,7 +237,6 @@ export function RollKindDetail({
           label="Formula"
           placeholder="13 + Dex modifier"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -273,7 +258,6 @@ export function RollKindDetail({
             }
           />
         </Field>
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -287,7 +271,6 @@ export function RollKindDetail({
           {rollKindLabel(roll.rollKind)}
         </div>
       </Field>
-      <TimingField roll={roll} rolls={rolls} onChange={onChange} />
     </div>
   );
 }

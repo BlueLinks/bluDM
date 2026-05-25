@@ -2,11 +2,14 @@ import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { DiceFormulaInput } from "../../components/shared/CharacterFormControls";
 import { Button, Checkbox, Field, Select } from "../../components/ui";
-import { spellEffectTimings, spellRollKinds } from "../../lib/domain/options";
+import { configText } from "../../lib/domain/effectConfig";
+import { spellRollKinds } from "../../lib/domain/options";
 import {
   type SpellEffectCategory,
+  type SpellEffectAmountControl,
   spellEffectCategories,
   spellEffectCategoryForKind,
+  spellEffectMetadata,
   spellEffectOptionsForCategory,
 } from "../../lib/domain/spellEffectOptions";
 import type { SpellActionFormState } from "../../types";
@@ -14,6 +17,7 @@ import { effectFormula, rollKindDescription, RollKindDetail } from "./SpellRollK
 import { SpellSubsection } from "./SpellFormLayout";
 import { scalingPhrase, SpellScalingFields } from "./SpellScalingFields";
 import { CantripBreakpointFields } from "./SpellWeaponAndCantripFields";
+import { EffectScheduleFields, FlatNumberInput } from "./SpellEffectScheduleFields";
 
 export function SpellEffectCard({
   index,
@@ -33,7 +37,8 @@ export function SpellEffectCard({
   const categoryOptions = spellEffectOptionsForCategory(selectedCategory);
   const selectedLabel = rollKindLabel(roll.rollKind);
   const accent = categoryAccent(rollCategory);
-  const hasAmount = usesAmountControls(roll.rollKind);
+  const metadata = spellEffectMetadata(roll.rollKind);
+  const amountControl = effectAmountControl(roll, metadata.amountControl);
   const selectedEffectInCategory = categoryOptions.some((option) => option.value === roll.rollKind);
 
   useEffect(() => {
@@ -105,43 +110,38 @@ export function SpellEffectCard({
         <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
       )}
 
-      {selectedEffectInCategory && hasAmount ? (
+      {selectedEffectInCategory && amountControl !== "none" ? (
         <>
-          <Field label="Amount" help="Set Dice to 0 and use Modifier for a fixed flat value.">
-            <DiceFormulaInput
-              allowEmpty
-              value={roll}
-              onChange={(next) =>
-                updateRoll({
-                  diceCount: next.diceCount,
-                  dieSize: next.dieSize,
-                  fixedValue: next.fixedValue,
-                })
-              }
-            />
-            <Checkbox
-              label="Add Spellcasting Ability Modifier"
-              checked={roll.addPrimaryStatModifier}
-              onChange={(addPrimaryStatModifier) => updateRoll({ addPrimaryStatModifier })}
-            />
-          </Field>
+          <EffectAmountFields
+            amountControl={amountControl}
+            label={metadata.flatAmountLabel}
+            onChange={updateRoll}
+            roll={roll}
+          />
           <SpellEffectResult roll={roll} />
-          <Field
-            label="Effect timing"
-            help="Immediate effects apply when cast. Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects."
-          >
-            <Select
-              options={spellEffectTimings}
-              placeholder="Timing"
-              value={roll.timing}
-              onValueChange={(timing) => updateRoll({ timing })}
-            />
-          </Field>
-          <RollScalingFields roll={roll} onChange={updateRoll} />
-          <CantripBreakpointFields roll={roll} onChange={(next) => updateRoll(next)} />
+          <EffectScheduleFields
+            metadata={metadata}
+            onChange={onChange}
+            roll={roll}
+            rolls={rolls}
+            updateRoll={updateRoll}
+          />
+          {metadata.scaling && <RollScalingFields roll={roll} onChange={updateRoll} />}
+          {metadata.scaling && (
+            <CantripBreakpointFields roll={roll} onChange={(next) => updateRoll(next)} />
+          )}
         </>
       ) : selectedEffectInCategory ? (
-        <SpellEffectResult roll={roll} />
+        <>
+          <SpellEffectResult roll={roll} />
+          <EffectScheduleFields
+            metadata={metadata}
+            onChange={onChange}
+            roll={roll}
+            rolls={rolls}
+            updateRoll={updateRoll}
+          />
+        </>
       ) : (
         <div className="rounded-lg border border-border bg-card px-3 py-3 text-sm text-muted-foreground">
           The existing effect is still {selectedLabel}. Selecting a new effect above will update
@@ -149,6 +149,52 @@ export function SpellEffectCard({
         </div>
       )}
     </article>
+  );
+}
+
+function EffectAmountFields({
+  amountControl,
+  label = "Amount",
+  onChange,
+  roll,
+}: {
+  amountControl: SpellEffectAmountControl;
+  label?: string;
+  onChange: (roll: Partial<SpellActionFormState["rolls"][number]>) => void;
+  roll: SpellActionFormState["rolls"][number];
+}) {
+  if (amountControl === "flat") {
+    return (
+      <Field
+        label={label}
+        help="Use this for fixed numeric effects such as movement distance, speed, Armor Class, or revive HP."
+      >
+        <FlatNumberInput
+          value={roll.fixedValue}
+          onChange={(fixedValue) => onChange({ fixedValue })}
+        />
+      </Field>
+    );
+  }
+  return (
+    <Field label="Amount" help="Set Dice to 0 and use Modifier for a fixed flat value.">
+      <DiceFormulaInput
+        allowEmpty
+        value={roll}
+        onChange={(next) =>
+          onChange({
+            diceCount: next.diceCount,
+            dieSize: next.dieSize,
+            fixedValue: next.fixedValue,
+          })
+        }
+      />
+      <Checkbox
+        label="Add Spellcasting Ability Modifier"
+        checked={roll.addPrimaryStatModifier}
+        onChange={(addPrimaryStatModifier) => onChange({ addPrimaryStatModifier })}
+      />
+    </Field>
   );
 }
 
@@ -189,8 +235,9 @@ function SpellEffectCategoryPicker({
 }
 
 function SpellEffectResult({ roll }: { roll: SpellActionFormState["rolls"][number] }) {
-  const hasAmount = usesAmountControls(roll.rollKind);
-  const headline = hasAmount ? amountHeadline(roll) : effectSummary(roll);
+  const amountControl = effectAmountControl(roll, spellEffectMetadata(roll.rollKind).amountControl);
+  const headline =
+    amountControl !== "none" ? amountHeadline(roll, amountControl) : effectSummary(roll);
   return (
     <div className="rounded-lg border border-primary/25 bg-primary/10 px-3 py-3">
       <p className="text-xs font-bold uppercase tracking-wide text-primary">Result</p>
@@ -260,31 +307,19 @@ function isFullWidthRollDetail(rollKind: string) {
 }
 
 function usesMagicalToggle(rollKind: string) {
-  return usesAmountControls(rollKind) || rollKind === "damage_defense";
+  const amountControl = spellEffectMetadata(rollKind).amountControl;
+  return amountControl === "dice" || rollKind === "damage_defense";
 }
 
-function usesAmountControls(rollKind: string) {
-  return ![
-    "condition",
-    "condition_immunity",
-    "custom",
-    "action_restriction",
-    "advantage_state",
-    "area_trigger",
-    "battlefield_object",
-    "damage_defense",
-    "damage_transfer",
-    "death_protection",
-    "heal_to_full",
-    "healing_block",
-    "healing_maximized",
-    "linked_healing",
-    "remove_condition",
-    "saving_throw_repeat",
-    "sense_effect",
-    "terrain_effect",
-    "visibility_effect",
-  ].includes(rollKind);
+function effectAmountControl(
+  roll: SpellActionFormState["rolls"][number],
+  configured: SpellEffectAmountControl,
+) {
+  if (roll.rollKind === "forced_movement") {
+    const direction = configText(roll.effectConfig?.direction, "");
+    if (direction === "prone" || direction === "manual_map") return "none";
+  }
+  return configured;
 }
 
 function rollScalingDescription(roll: SpellActionFormState["rolls"][number]) {
@@ -307,8 +342,12 @@ function rollScalingDescription(roll: SpellActionFormState["rolls"][number]) {
   });
 }
 
-function amountHeadline(roll: SpellActionFormState["rolls"][number]) {
-  const formula = effectFormula(roll);
+function amountHeadline(
+  roll: SpellActionFormState["rolls"][number],
+  amountControl = effectAmountControl(roll, spellEffectMetadata(roll.rollKind).amountControl),
+) {
+  const formula =
+    amountControl === "flat" ? String(Number(roll.fixedValue) || 0) : effectFormula(roll);
   if (roll.rollKind === "damage") {
     return `${formula} ${titleCase(roll.damageType || "damage")}`;
   }
@@ -319,12 +358,17 @@ function amountHeadline(roll: SpellActionFormState["rolls"][number]) {
   if (roll.rollKind === "speed_bonus") return `+${formula} ft. speed`;
   if (roll.rollKind === "speed_reduction") return `-${formula} ft. speed`;
   if (roll.rollKind === "ac_bonus") return `${formula} AC`;
+  if (roll.rollKind === "movement_mode") return `${formula} ft. movement`;
+  if (roll.rollKind === "forced_movement")
+    return `${forcedMovementLabel(roll)}${formula !== "0" ? ` ${formula} ft.` : ""}`;
+  if (roll.rollKind === "revive") return `${formula} HP on revive`;
   return formula;
 }
 
 function effectSummary(roll: SpellActionFormState["rolls"][number]) {
-  if (usesAmountControls(roll.rollKind)) {
-    return `${amountHeadline(roll)} · ${rollKindDescription(roll.rollKind)}`;
+  const amountControl = effectAmountControl(roll, spellEffectMetadata(roll.rollKind).amountControl);
+  if (amountControl !== "none") {
+    return `${amountHeadline(roll, amountControl)} · ${rollKindDescription(roll.rollKind)}`;
   }
   if (roll.rollKind === "condition") return `Apply ${roll.conditionName || "condition"}`;
   if (roll.rollKind === "remove_condition") return `Remove ${roll.conditionName || "condition"}`;
@@ -332,6 +376,7 @@ function effectSummary(roll: SpellActionFormState["rolls"][number]) {
     return `Grant immunity to ${roll.conditionName || "a condition"}`;
   }
   if (roll.rollKind === "custom") return roll.conditionName || "Custom DM-facing effect";
+  if (roll.rollKind === "forced_movement") return forcedMovementLabel(roll);
   return rollKindLabel(roll.rollKind);
 }
 
@@ -346,7 +391,18 @@ function resultDescription(roll: SpellActionFormState["rolls"][number]) {
     return "Healing rolls against the target use their maximum value.";
   if (roll.rollKind === "area_trigger") return "Shown as a manual area reminder in combat.";
   if (roll.rollKind === "battlefield_object") return "Logged prominently for DM handling.";
+  if (roll.rollKind === "forced_movement") return "Movement or prone state for the target.";
   return rollKindDescription(roll.rollKind);
+}
+
+function forcedMovementLabel(roll: SpellActionFormState["rolls"][number]) {
+  const direction = configText(roll.effectConfig?.direction, "");
+  if (direction === "push") return "Push away";
+  if (direction === "pull") return "Pull toward";
+  if (direction === "move_away") return "Move away using reaction";
+  if (direction === "prone") return "Knock prone";
+  if (direction === "manual_map") return "Manual map movement";
+  return "Forced movement";
 }
 
 function rollKindLabel(kind: string) {

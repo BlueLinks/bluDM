@@ -112,8 +112,15 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block", "start_caster_turn_once")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-5-2-1-chill-touch"), "healing_block", "end_caster_turn_once")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block", "durationMode", "start_caster_next")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-5-2-1-chill-touch"), "healing_block", "durationMode", "end_caster_next")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-harm"), "max_hp_reduction")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-thunderwave"), "forced_movement")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-thunderwave"), "forced_movement", "direction", "push")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-gust-of-wind"), "forced_movement", "triggerTiming", "start_target_turn_each")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-grease"), "terrain_effect")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-grease"), "area_trigger", "trigger", "enter_or_end_turn")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-command"), "action_restriction", "durationMode", "end_target_next")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-hunter-s-mark"), "attack_damage_rider")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-beacon-of-hope"), "healing_maximized")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-power-word-heal"), "heal_to_full")
@@ -215,6 +222,18 @@ func assertSpellHasEffectTiming(t *testing.T, spell standardSpellSeed, rollKind 
 		}
 	}
 	t.Fatalf("expected %s to include %s effect with timing %s, got %+v", spell.Slug, rollKind, timing, spell.Actions)
+}
+
+func assertSpellHasEffectConfig(t *testing.T, spell standardSpellSeed, rollKind string, key string, value string) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind == rollKind && stringValue(roll.EffectConfig[key]) == value {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s effect config %s=%s, got %+v", spell.Slug, rollKind, key, value, spell.Actions)
 }
 
 func assertRayOfFrostSpeedReduction(t *testing.T, spell standardSpellSeed) {

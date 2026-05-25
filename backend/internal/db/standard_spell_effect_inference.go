@@ -33,7 +33,34 @@ func simpleEffectAction(name string, rolls ...standardSpellActionRollSeed) stand
 	}
 }
 
+func fixedSpellLevelRoll(kind string, fixedValue int, scalingFromLevel int, scalingFixedValue int) standardSpellActionRollSeed {
+	return standardSpellActionRollSeed{
+		RollKind:          kind,
+		DamageType:        "healing",
+		Magical:           true,
+		FixedValue:        fixedValue,
+		Timing:            "immediate",
+		ScalingType:       "spell_level",
+		ScalingFromLevel:  scalingFromLevel,
+		ScalingFixedValue: scalingFixedValue,
+		ScalingStepSize:   1,
+	}
+}
+
 func effectRoll(kind string, fixedValue int, timing string, config map[string]any) standardSpellActionRollSeed {
+	if config == nil {
+		config = map[string]any{}
+	}
+	if _, ok := config["durationMode"]; !ok {
+		if durationMode := durationModeForTiming(timing); durationMode != "" {
+			config["durationMode"] = durationMode
+		}
+	}
+	if _, ok := config["triggerTiming"]; !ok {
+		if triggerTiming := triggerTimingForTiming(timing); triggerTiming != "" {
+			config["triggerTiming"] = triggerTiming
+		}
+	}
 	return standardSpellActionRollSeed{
 		RollKind:        kind,
 		Magical:         true,
@@ -42,6 +69,32 @@ func effectRoll(kind string, fixedValue int, timing string, config map[string]an
 		ScalingType:     "none",
 		ScalingStepSize: 1,
 		EffectConfig:    config,
+	}
+}
+
+func durationModeForTiming(timing string) string {
+	switch timing {
+	case "start_caster_turn_once":
+		return "start_caster_next"
+	case "end_caster_turn_once":
+		return "end_caster_next"
+	case "start_target_turn_once":
+		return "start_target_next"
+	case "end_target_turn_once":
+		return "end_target_next"
+	case "end_spell":
+		return "spell_duration"
+	default:
+		return ""
+	}
+}
+
+func triggerTimingForTiming(timing string) string {
+	switch timing {
+	case "start_target_turn_each", "end_target_turn_each", "start_caster_turn_each", "end_caster_turn_each", "manual":
+		return timing
+	default:
+		return ""
 	}
 }
 

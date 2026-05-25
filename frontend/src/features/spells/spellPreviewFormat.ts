@@ -35,7 +35,20 @@ export function formatRollPart(roll: Spell["actions"][number]["rolls"][number]) 
     return `${configText(roll.effectConfig?.state, "Advantage")} on ${configText(roll.effectConfig?.category, "rolls")}`;
   }
   if (roll.rollKind === "forced_movement") {
-    return `${configText(roll.effectConfig?.direction, "Forced movement")} ${roll.fixedValue ? `${roll.fixedValue} ft.` : ""}`;
+    const direction = configText(roll.effectConfig?.direction, "forced movement");
+    const label =
+      direction === "prone"
+        ? "Knock prone"
+        : direction === "push"
+          ? "Push away"
+          : direction === "pull"
+            ? "Pull toward"
+            : direction === "move_away"
+              ? "Move away using reaction"
+              : direction === "manual_map"
+                ? "Manual map movement"
+                : "Forced movement";
+    return `${label}${direction !== "prone" && roll.fixedValue ? ` ${roll.fixedValue} ft.` : ""}`;
   }
   if (roll.rollKind === "action_restriction") {
     return `Action restriction: ${configText(roll.effectConfig?.mode, "manual")}`;

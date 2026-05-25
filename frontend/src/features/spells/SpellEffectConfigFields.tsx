@@ -1,6 +1,5 @@
 import { Field, Input, Select } from "../../components/ui";
 import { configText } from "../../lib/domain/effectConfig";
-import { spellEffectTimings } from "../../lib/domain/options";
 import {
   actionRestrictionModes,
   areaTriggerModes,
@@ -53,7 +52,6 @@ export function AdvancedEffectConfigFields({
           label="Details"
           placeholder="Allowed actions, trigger, or limitation"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -76,7 +74,6 @@ export function AdvancedEffectConfigFields({
           label="On success"
           placeholder="end_effect"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -99,7 +96,6 @@ export function AdvancedEffectConfigFields({
           label="Effect"
           placeholder="Save for damage, restrained, prone..."
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -122,7 +118,6 @@ export function AdvancedEffectConfigFields({
           label="Light radius"
           placeholder="5"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -145,7 +140,6 @@ export function AdvancedEffectConfigFields({
           label="Range"
           placeholder="60"
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -160,7 +154,6 @@ export function AdvancedEffectConfigFields({
           label="Terrain rule"
           options={terrainEffectModes}
         />
-        <TimingField roll={roll} rolls={rolls} onChange={onChange} />
       </div>
     );
   }
@@ -174,7 +167,6 @@ export function AdvancedEffectConfigFields({
         label="Mode / details"
         placeholder="Optional effect detail"
       />
-      <TimingField roll={roll} rolls={rolls} onChange={onChange} />
     </div>
   );
 }
@@ -234,32 +226,7 @@ export function EffectInput({
   );
 }
 
-export function TimingField({
-  help = "Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects.",
-  onChange,
-  roll,
-  rolls,
-}: {
-  help?: string;
-  roll: SpellActionFormState["rolls"][number];
-  rolls: SpellActionFormState["rolls"];
-  onChange: (rolls: SpellActionFormState["rolls"]) => void;
-}) {
-  return (
-    <Field label="Effect timing" help={help}>
-      <Select
-        options={spellEffectTimings}
-        placeholder="Timing"
-        value={roll.timing}
-        onValueChange={(timing) =>
-          onChange(rolls.map((item) => (item.id === roll.id ? { ...item, timing } : item)))
-        }
-      />
-    </Field>
-  );
-}
-
-function updateEffectConfig(
+export function updateEffectConfig(
   rolls: SpellActionFormState["rolls"],
   rollID: string,
   key: string,

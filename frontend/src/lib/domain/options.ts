@@ -108,7 +108,7 @@ export const forcedMovementDirections = [
   { value: "push", label: "Push away" },
   { value: "pull", label: "Pull toward" },
   { value: "move_away", label: "Move away using reaction" },
-  { value: "prone", label: "Knock prone" },
+  { value: "prone", label: "Prone condition" },
   { value: "manual_map", label: "Manual map movement" },
 ];
 

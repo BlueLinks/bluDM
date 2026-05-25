@@ -55,6 +55,39 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Gust of Wind", effectRoll("forced_movement", 15, "start_target_turn_each", map[string]any{"direction": "push"}))}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
+	case "grease":
+		spell.Actions = []standardSpellActionSeed{{
+			Name:                 "Grease",
+			ActionType:           "save",
+			SaveAbility:          "dex",
+			SuccessfulSaveEffect: "negates",
+			HitSpecialEvent:      "none",
+			DamageTypeChoice:     "specific",
+			DamageTypeOptions:    []string{},
+			Rolls: []standardSpellActionRollSeed{
+				effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain", "durationMode": "spell_duration"}),
+				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_end_turn", "effect": "dex_save_or_prone", "durationMode": "spell_duration"}),
+			},
+		}}
+		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
+		return true
+	case "command":
+		spell.Actions = []standardSpellActionSeed{{
+			Name:                 "Command",
+			ActionType:           "save",
+			SaveAbility:          "wis",
+			SuccessfulSaveEffect: "negates",
+			HitSpecialEvent:      "none",
+			DamageTypeChoice:     "specific",
+			DamageTypeOptions:    []string{},
+			Rolls: []standardSpellActionRollSeed{
+				effectRoll("custom", 0, "immediate", map[string]any{"durationMode": "end_target_next"}),
+				effectRoll("action_restriction", 0, "immediate", map[string]any{"mode": "commanded_behavior", "durationMode": "end_target_next"}),
+			},
+		}}
+		spell.Actions[0].Rolls[0].ConditionName = "Target follows the chosen command on its next turn, such as Approach, Drop, Flee, Grovel, or Halt."
+		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
+		return true
 	case "beacon of hope":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Beacon of Hope",
 			effectRoll("advantage_state", 0, "immediate", map[string]any{"state": "advantage", "category": "wisdom_saving_throw,death_save", "appliesTo": "target_rolls"}),
@@ -461,19 +494,5 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		return true
 	default:
 		return false
-	}
-}
-
-func fixedSpellLevelRoll(kind string, fixedValue int, scalingFromLevel int, scalingFixedValue int) standardSpellActionRollSeed {
-	return standardSpellActionRollSeed{
-		RollKind:          kind,
-		DamageType:        "healing",
-		Magical:           true,
-		FixedValue:        fixedValue,
-		Timing:            "immediate",
-		ScalingType:       "spell_level",
-		ScalingFromLevel:  scalingFromLevel,
-		ScalingFixedValue: scalingFixedValue,
-		ScalingStepSize:   1,
 	}
 }

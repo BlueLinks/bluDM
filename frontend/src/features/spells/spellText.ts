@@ -269,6 +269,12 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "battlefield_object") {
     return `Battlefield object: ${configText(roll.effectConfig?.kind, "manual object")}.`;
   }
+  if (roll.rollKind === "forced_movement") {
+    const amount = effectAmount(roll);
+    const direction = configText(roll.effectConfig?.direction, "forced movement");
+    if (direction === "prone") return `${subject} has the Prone condition.`;
+    return `${subject}: ${direction} ${amount ? `${amount} feet` : ""}.`;
+  }
   const amount = effectAmount(roll);
   if (!amount) return "";
   const label = spellRollKinds.find((option) => option.value === roll.rollKind)?.label ?? "Effect";
@@ -300,8 +306,6 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "roll_modifier") {
     return `${subject} ${configText(roll.effectConfig?.mode, "adds")}s ${amount} to ${configText(roll.effectConfig?.category, "a roll")}.`;
   }
-  if (roll.rollKind === "forced_movement")
-    return `${subject}: ${configText(roll.effectConfig?.direction, "forced movement")} ${amount ? `${amount} feet` : ""}.`;
   if (roll.rollKind === "attack_damage_rider")
     return `${subject}'s attacks deal an extra ${amount}.`;
   if (roll.rollKind === "revive") return `${subject} returns to life with ${amount} hit points.`;
