@@ -6,6 +6,7 @@ subheadings into body text. This parser captures reliable browse/search fields
 and preserves extracted text for follow-up validation.
 
 Usage:
+  python3 -m pip install pdfplumber pymupdf
   python3 scripts/build-standard-spells-521.py tmp/SRD_CC_v5.2.1.pdf > /tmp/srd521-spells.json
 """
 
@@ -19,10 +20,16 @@ from typing import Any
 
 import pdfplumber
 
+try:
+    import fitz
+except ImportError as exc:  # pragma: no cover - local extraction dependency
+    raise SystemExit("PyMuPDF is required: python3 -m pip install pymupdf") from exc
+
 LEVEL_RE = re.compile(
     r"^(?:(?P<school1>[A-Z][a-z]+) Cantrip|Level (?P<level>\d+) (?P<school2>[A-Z][a-z]+))(?: \((?P<classes>.*))?$",
 )
 FIELD_RE = re.compile(r"^(Casting Time|Range|Components|Duration):\s*(.*)$")
+INLINE_FIELD_RE = re.compile(r"\s+(?=(?:Casting Time|Range|Components|Duration):)")
 DAMAGE_RE = re.compile(r"(\d+d\d+(?:\s*[+−-]\s*\d+)?)\s+([A-Z][A-Za-z]+) damage")
 DC_RE = re.compile(r"(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw", re.I)
 NAME_RE = re.compile(r"^[A-Z][A-Za-z’' -]*(?:/[A-Z][A-Za-z’' -]*)?$")
@@ -58,6 +65,10 @@ TEXT_OVERRIDES = {
         "description": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns.",
         "higherLevel": "You can target one additional creature for each spell slot level above 1.",
     },
+    "Telekinesis": {
+        "description": "You gain the ability to move or manipulate creatures or objects by thought. When you cast the spell and as a Magic action on your later turns before the spell ends, you can exert your will on one creature or object that you can see within range, causing the appropriate effect below. You can affect the same target round after round or choose a new one at any time. If you switch targets, the prior target is no longer affected by the spell. Creature. You can try to move a Huge or smaller creature. The target must succeed on a Strength saving throw, or you move it up to 30 feet in any direction within the spell’s range. Until the end of your next turn, the creature has the Restrained condition, and if you lift it into the air, it is suspended there. It falls at the end of your next turn unless you use this option on it again and it fails the save. Object. You can try to move a Huge or smaller object. If the object isn’t being worn or carried, you automatically move it up to 30 feet in any direction within the spell’s range. If the object is worn or carried by a creature, that creature must succeed on a Strength saving throw, or you pull the object away and move it up to 30 feet in any direction within the spell’s range. You can exert fine control on objects with your telekinetic grip, such as manipulating a simple tool, opening a door or a container, stowing or retrieving an item from an open container, or pouring the contents from a vial.",
+        "higherLevel": "",
+    },
 }
 
 
@@ -70,13 +81,15 @@ def main() -> None:
 
 
 def parse_spells(pdf_path: Path) -> list[dict[str, Any]]:
+    fitz_doc = fitz.open(str(pdf_path))
     with pdfplumber.open(pdf_path) as pdf:
         headings = spell_headings(pdf)
         spells: list[dict[str, Any]] = []
         for index, heading in enumerate(headings):
             next_heading = headings[index + 1] if index + 1 < len(headings) else None
-            if spell := parse_spell(heading["name"], crop_text(pdf, heading, next_heading)):
+            if spell := parse_spell(heading["name"], crop_text(pdf, fitz_doc, heading, next_heading)):
                 spells.append(spell)
+    fitz_doc.close()
     return sorted(dedupe_by_slug(spells), key=lambda spell: (spell["level"], spell["name"]))
 
 
@@ -135,7 +148,12 @@ def normalize_spell_name(words: list[dict[str, Any]]) -> str:
     return " ".join(word.lower() if 0 < index < len(words) - 1 and word in STOP_WORDS else word for index, word in enumerate(words))
 
 
-def crop_text(pdf: pdfplumber.PDF, start: dict[str, Any], end: dict[str, Any] | None) -> str:
+def crop_text(
+    pdf: pdfplumber.PDF,
+    fitz_doc: Any,
+    start: dict[str, Any],
+    end: dict[str, Any] | None,
+) -> str:
     parts: list[str] = []
     end_page = end["page"] + 1 if end else 175
     for page_index in range(start["page"], end_page):
@@ -150,13 +168,19 @@ def crop_text(pdf: pdfplumber.PDF, start: dict[str, Any], end: dict[str, Any] | 
             y1 = end["top"] if end and page_index == end["page"] and column == end["column"] else page.height
             if y1 <= y0:
                 continue
-            text = page.crop((box[0], y0, box[2], y1)).extract_text(x_tolerance=1, y_tolerance=3) or ""
+            rect = fitz.Rect(box[0], y0, box[2], y1)
+            text = fitz_doc[page_index].get_text("text", clip=rect)
             parts.append(text)
     return "\n".join(parts)
 
 
 def parse_spell(name: str, text: str) -> dict[str, Any] | None:
-    lines = [clean(line) for line in text.splitlines() if clean(line)]
+    lines = [
+        clean(part)
+        for line in text.splitlines()
+        for part in INLINE_FIELD_RE.sub("\n", line).splitlines()
+        if clean(part)
+    ]
     level_index = next((index for index, line in enumerate(lines[:40]) if LEVEL_RE.match(line)), None)
     if level_index is None:
         return None
@@ -182,7 +206,7 @@ def parse_spell(name: str, text: str) -> dict[str, Any] | None:
             fields[current_field] = field_match.group(2)
         elif current_field and current_field != "Duration" and not fields["Duration"]:
             fields[current_field] = clean(fields[current_field] + " " + line)
-        elif current_field == "Duration" and not description and not looks_like_prose(line):
+        elif current_field == "Duration" and not description and duration_continuation(line):
             fields[current_field] = clean(fields[current_field] + " " + line)
         else:
             current_field = None
@@ -201,6 +225,7 @@ def to_seed(
     description: str,
 ) -> dict[str, Any]:
     components = fields["Components"]
+    description = clean_extracted_description(description)
     text_override = TEXT_OVERRIDES.get(name, {})
     if text_override:
         description = text_override["description"]
@@ -252,6 +277,10 @@ def looks_like_prose(line: str) -> bool:
     )
 
 
+def duration_continuation(line: str) -> bool:
+    return bool(re.match(r"^(up to|or until|and up to|to a maximum)\b", line, re.I))
+
+
 def has_component(components: str, component: str) -> bool:
     return bool(re.search(rf"(^|, ){component}(,| |$|\()", components))
 
@@ -292,7 +321,13 @@ def dedupe_by_slug(spells: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def clean(value: str) -> str:
-    return re.sub(r"\s+", " ", value.replace("−", "-")).strip()
+    value = re.sub(r"([A-Za-z])-\s+([a-z])", r"\1\2", value.replace("−", "-"))
+    value = re.sub(r"(\d+)-\s+([A-Za-z])", r"\1-\2", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def clean_extracted_description(value: str) -> str:
+    return re.sub(r"\.([il])$", ".", value)
 
 
 def slugify(value: str) -> str:

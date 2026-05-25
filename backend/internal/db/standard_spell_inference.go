@@ -71,6 +71,31 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		}}
 		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{BaseProjectiles: 3, ScalingType: "none", StepSize: 1}
 		return true
+	case "elementalism":
+		if spell.SourceKey != "srd-5-2-1" {
+			return false
+		}
+		spell.Actions = []standardSpellActionSeed{{
+			Name:              "Elemental effect",
+			ActionType:        "other",
+			HitSpecialEvent:   "none",
+			DamageTypeChoice:  "specific",
+			DamageTypeOptions: []string{},
+			Rolls: []standardSpellActionRollSeed{{
+				RollKind:        "custom",
+				ConditionName:   "Choose one effect: Beckon Air, Beckon Earth, Beckon Fire, Beckon Water, or Sculpt Element.",
+				Timing:          "immediate",
+				ScalingType:     "none",
+				ScalingStepSize: 1,
+			}},
+		}}
+		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{
+			BaseProjectiles: 1,
+			ScalingType:     "none",
+			StepSize:        1,
+			Description:     "Choose one elemental effect within range.",
+		}
+		return true
 	case "healing word":
 		if spell.SourceKey != "srd-5-2-1" {
 			return false

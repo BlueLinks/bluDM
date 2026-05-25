@@ -137,6 +137,17 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	if roll := heroism2024.Actions[0].Rolls[0]; roll.RollKind != "temp_hp" || roll.Timing != "start_target_turn_each" || !roll.AddPrimaryStatModifier {
 		t.Fatalf("expected SRD 5.2.1 Heroism start-turn temp HP, got %+v", roll)
 	}
+
+	elementalism := findStandardSpell(t, spells, "srd-5-2-1-elementalism")
+	if elementalism.Duration != "Instantaneous" {
+		t.Fatalf("expected SRD 5.2.1 Elementalism duration to be clean, got %q", elementalism.Duration)
+	}
+	if !strings.Contains(elementalism.Description, "Beckon Air.") || !strings.Contains(elementalism.Description, "Sculpt Element.") {
+		t.Fatalf("expected SRD 5.2.1 Elementalism option headings to be readable, got %q", elementalism.Description)
+	}
+	if len(elementalism.Actions) != 1 || len(elementalism.Actions[0].Rolls) != 1 || elementalism.Actions[0].Rolls[0].RollKind != "custom" {
+		t.Fatalf("expected SRD 5.2.1 Elementalism to include a custom utility effect, got %+v", elementalism.Actions)
+	}
 }
 
 func TestParseStandardSpellsCleansPDFTextArtifacts(t *testing.T) {
@@ -154,10 +165,24 @@ func TestParseStandardSpellsCleansPDFTextArtifacts(t *testing.T) {
 		"Gsarveae",
 		"pUlassinhegs",
 		"gtahregre",
+		"hBuettcekrosn",
+		"oBue",
+		"ccakuosne",
+		"igBhetc",
+		"itShceurl",
+		"spCealln",
+		"Cflaan",
+		"System Reference Document",
 	}
 	for _, spell := range spells {
 		if spell.SourceKey != "srd-5-2-1" {
 			continue
+		}
+		if strings.TrimSpace(spell.Description) == "" {
+			t.Fatalf("expected %s to include a readable description", spell.Slug)
+		}
+		if len(spell.Duration) > 80 {
+			t.Fatalf("expected %s duration to contain only duration text, got %q", spell.Slug, spell.Duration)
 		}
 		mechanics := map[string]any{}
 		_ = json.Unmarshal(spell.Mechanics, &mechanics)

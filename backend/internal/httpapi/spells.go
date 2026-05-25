@@ -358,8 +358,28 @@ func scanStandardSpell(row scanner) (models.Spell, error) {
 	if err != nil {
 		return models.Spell{}, err
 	}
+	spell.Classes = standardSpellClasses(spell.Mechanics)
 	spell.LibrarySource = "standard"
 	spell.ReadOnly = true
 	spell.Actions = []models.SpellAction{}
 	return spell, nil
+}
+
+func standardSpellClasses(mechanics map[string]any) []string {
+	rawClasses, ok := mechanics["classes"].([]any)
+	if !ok {
+		return []string{}
+	}
+	classes := make([]string, 0, len(rawClasses))
+	for _, rawClass := range rawClasses {
+		className, ok := rawClass.(string)
+		if !ok {
+			continue
+		}
+		className = strings.TrimSpace(className)
+		if className != "" {
+			classes = append(classes, className)
+		}
+	}
+	return classes
 }
