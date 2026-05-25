@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -119,6 +120,35 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	}
 	if roll := heroism2024.Actions[0].Rolls[0]; roll.RollKind != "temp_hp" || roll.Timing != "start_target_turn_each" || !roll.AddPrimaryStatModifier {
 		t.Fatalf("expected SRD 5.2.1 Heroism start-turn temp HP, got %+v", roll)
+	}
+}
+
+func TestParseStandardSpellsCleansPDFTextArtifacts(t *testing.T) {
+	spells, err := parseStandardSpells()
+	if err != nil {
+		t.Fatalf("parse standard spells: %v", err)
+	}
+	corruptMarkers := []string{
+		"Uinsitns",
+		"t aUrgseint",
+		"PoUinsitns",
+		"Hail gtho",
+		"brav- ery",
+		"Ha iHt",
+		"Gsarveae",
+	}
+	for _, spell := range spells {
+		if spell.SourceKey != "srd-5-2-1" {
+			continue
+		}
+		mechanics := map[string]any{}
+		_ = json.Unmarshal(spell.Mechanics, &mechanics)
+		text := spell.Description + "\n" + spell.HigherLevel + "\n" + stringValue(mechanics["rawText"])
+		for _, marker := range corruptMarkers {
+			if strings.Contains(text, marker) {
+				t.Fatalf("expected %s to be free of PDF artifact %q, got %q", spell.Slug, marker, text)
+			}
+		}
 	}
 }
 

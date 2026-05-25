@@ -33,6 +33,24 @@ SOURCE = {
     "sourceUrl": "https://www.dndbeyond.com/srd",
     "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
 }
+TEXT_OVERRIDES = {
+    "Aid": {
+        "description": "Choose up to three creatures within range. Each target's Hit Point maximum and current Hit Points increase by 5 for the duration.",
+        "higherLevel": "Each target's Hit Points increase by 5 for each spell slot level above 2.",
+    },
+    "Animate Objects": {
+        "description": "Objects animate at your command. Choose a number of nonmagical objects within range that aren't being worn or carried, aren't fixed to a surface, and aren't Gargantuan. The maximum number of objects is equal to your spellcasting ability modifier; for this number, a Medium or smaller target counts as one object, a Large target counts as two, and a Huge target counts as three. Each target animates, sprouts legs, and becomes a Construct that uses the Animated Object stat block; this creature is under your control until the spell ends or until it is reduced to 0 Hit Points. Each creature you make with this spell is an ally to you and your allies. In combat, it shares your Initiative count and takes its turn immediately after yours. Until the spell ends, you can take a Bonus Action to mentally command any creature you made with this spell if the creature is within 500 feet of you. If you control multiple creatures, you can command any of them at the same time, issuing the same command to each one. If you issue no commands, the creature takes the Dodge action and moves only to avoid harm. When the creature drops to 0 Hit Points, it reverts to its object form, and any remaining damage carries over to that form.",
+        "higherLevel": "The creature's Slam damage increases by 1d4 (Medium or smaller), 1d6 (Large), or 1d12 (Huge) for each spell slot level above 5.",
+    },
+    "Contact Other Plane": {
+        "description": "You mentally contact a demigod, the spirit of a long-dead sage, or some other knowledgeable entity from another plane. Contacting this otherworldly intelligence can break your mind. When you cast this spell, make a DC 15 Intelligence saving throw. On a successful save, you can ask the entity up to five questions. You must ask your questions before the spell ends. The GM answers each question with one word, such as \"yes,\" \"no,\" \"maybe,\" \"never,\" \"irrelevant,\" or \"unclear\" if the entity doesn't know the answer to the question. If a one-word answer would be misleading, the GM might instead offer a short phrase as an answer. On a failed save, you take 6d6 Psychic damage and have the Incapacitated condition until you finish a Long Rest. A Greater Restoration spell cast on you ends this effect.",
+        "higherLevel": "",
+    },
+    "Heroism": {
+        "description": "A willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns.",
+        "higherLevel": "You can target one additional creature for each spell slot level above 1.",
+    },
+}
 
 
 def main() -> None:
@@ -175,6 +193,9 @@ def to_seed(
     description: str,
 ) -> dict[str, Any]:
     components = fields["Components"]
+    text_override = TEXT_OVERRIDES.get(name, {})
+    if text_override:
+        description = text_override["description"]
     return {
         "sourceKey": "srd-5-2-1",
         "slug": f"srd-5-2-1-{slugify(name)}",
@@ -193,7 +214,7 @@ def to_seed(
         "ritual": "Ritual" in fields["Casting Time"],
         "concentration": fields["Duration"].startswith("Concentration"),
         "description": description,
-        "higherLevel": higher_level_text(description),
+        "higherLevel": text_override.get("higherLevel", higher_level_text(description)),
         "sourceNote": "SRD 5.2.1",
         "sourceLabel": "SRD 5.2.1",
         "sourceUrl": "https://www.dndbeyond.com/srd",
