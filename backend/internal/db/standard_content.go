@@ -213,6 +213,18 @@ func parseStandardSpells() ([]standardSpellSeed, error) {
 
 func cleanStandardSpellText(spell *standardSpellSeed) {
 	switch spell.Slug {
+	case "srd-5-2-1-acid-arrow":
+		setStandardSpellText(
+			spell,
+			"A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.",
+			"The damage, both initial and later, increases by 1d4 for each spell slot level above 2.",
+		)
+	case "srd-5-2-1-acid-splash":
+		setStandardSpellText(
+			spell,
+			"You create an acidic bubble at a point within range, where it explodes in a 5-foot-radius Sphere. Each creature in that Sphere must succeed on a Dexterity saving throw or take 1d6 Acid damage.",
+			"The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+		)
 	case "srd-5-2-1-aid":
 		setStandardSpellText(
 			spell,

@@ -314,6 +314,22 @@ func inferSave(value any, description string) (string, string) {
 func inferTargetsFromDescription(description string) *standardSpellProjectileScalingSeed {
 	lower := strings.ToLower(description)
 	switch {
+	case strings.Contains(lower, "choose one creature within range") &&
+		strings.Contains(lower, "choose two creatures within range") &&
+		strings.Contains(lower, "within 5 feet of each other"):
+		return &standardSpellProjectileScalingSeed{
+			BaseProjectiles: 2,
+			ScalingType:     "none",
+			StepSize:        1,
+			Description:     "Choose one creature, or two creatures within range that are within 5 feet of each other.",
+		}
+	case strings.Contains(lower, "5-foot-radius sphere") && strings.Contains(lower, "each creature in that sphere"):
+		return &standardSpellProjectileScalingSeed{
+			BaseProjectiles: 1,
+			ScalingType:     "none",
+			StepSize:        1,
+			Description:     "Affects each creature in a 5-foot-radius Sphere.",
+		}
 	case strings.Contains(lower, "choose up to three"):
 		return &standardSpellProjectileScalingSeed{BaseProjectiles: 3, ScalingType: "none", StepSize: 1}
 	case strings.Contains(lower, "three glowing darts"):

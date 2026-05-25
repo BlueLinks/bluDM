@@ -34,6 +34,14 @@ SOURCE = {
     "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
 }
 TEXT_OVERRIDES = {
+    "Acid Arrow": {
+        "description": "A shimmering green arrow streaks toward a target within range and bursts in a spray of acid. Make a ranged spell attack against the target. On a hit, the target takes 4d4 Acid damage and 2d4 Acid damage at the end of its next turn. On a miss, the arrow splashes the target with acid for half as much of the initial damage only.",
+        "higherLevel": "The damage, both initial and later, increases by 1d4 for each spell slot level above 2.",
+    },
+    "Acid Splash": {
+        "description": "You create an acidic bubble at a point within range, where it explodes in a 5-foot-radius Sphere. Each creature in that Sphere must succeed on a Dexterity saving throw or take 1d6 Acid damage.",
+        "higherLevel": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+    },
     "Aid": {
         "description": "Choose up to three creatures within range. Each target's Hit Point maximum and current Hit Points increase by 5 for the duration.",
         "higherLevel": "Each target's Hit Points increase by 5 for each spell slot level above 2.",
@@ -149,7 +157,7 @@ def crop_text(pdf: pdfplumber.PDF, start: dict[str, Any], end: dict[str, Any] | 
 
 def parse_spell(name: str, text: str) -> dict[str, Any] | None:
     lines = [clean(line) for line in text.splitlines() if clean(line)]
-    level_index = next((index for index, line in enumerate(lines[:8]) if LEVEL_RE.match(line)), None)
+    level_index = next((index for index, line in enumerate(lines[:40]) if LEVEL_RE.match(line)), None)
     if level_index is None:
         return None
     level_line = lines[level_index]

@@ -19762,6 +19762,52 @@
   },
   {
     "sourceKey": "srd-5-2-1",
+    "slug": "srd-5-2-1-acid-splash",
+    "name": "Acid Splash",
+    "level": 0,
+    "school": "Evocation",
+    "castingTime": "Action",
+    "range": "60 feet",
+    "components": {
+      "verbal": true,
+      "somatic": true,
+      "material": "",
+      "raw": "V, S"
+    },
+    "duration": "Instantaneous",
+    "ritual": false,
+    "concentration": false,
+    "description": "You create an acidic bubble at a point within range, where it explodes in a 5-foot-radius Sphere. Each creature in that Sphere must succeed on a Dexterity saving throw or take 1d6 Acid damage.",
+    "higherLevel": "The damage increases by 1d6 when you reach levels 5 (2d6), 11 (3d6), and 17 (4d6).",
+    "sourceNote": "SRD 5.2.1",
+    "sourceLabel": "SRD 5.2.1",
+    "sourceUrl": "https://www.dndbeyond.com/srd",
+    "licenseName": "Creative Commons Attribution 4.0 International",
+    "mechanics": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "apiVersion": "5.2.1",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf"
+      },
+      "damage": [
+        {
+          "damageDice": "1d6",
+          "damageType": "Acid"
+        }
+      ],
+      "dc": {
+        "dcType": "Dexterity"
+      },
+      "classes": [
+        "Sorcerer",
+        "Wizard"
+      ],
+      "rawText": "You create an acidic bubble at a point within range, where it explodes in a 5-foot-radius Sphere. Each creature in that Sphere must succeed on a Dexterity saving throw or take 1d6 Acid damage."
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
     "slug": "srd-5-2-1-aid",
     "name": "Aid",
     "level": 2,

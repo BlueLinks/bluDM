@@ -73,6 +73,22 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 		t.Fatalf("expected SRD 5.2.1 Burning Hands to infer dex half-save, got %+v", burningHands2024.Actions[0])
 	}
 
+	acidSplash := findStandardSpell(t, spells, "srd-acid-splash")
+	if acidSplash.ProjectileScaling == nil || acidSplash.ProjectileScaling.BaseProjectiles != 2 {
+		t.Fatalf("expected Acid Splash 2014 to support two nearby targets, got %+v", acidSplash.ProjectileScaling)
+	}
+	if acidSplash.ProjectileScaling.Description == "" {
+		t.Fatalf("expected Acid Splash 2014 targeting constraint description")
+	}
+
+	acidSplash2024 := findStandardSpell(t, spells, "srd-5-2-1-acid-splash")
+	if acidSplash2024.Actions[0].SaveAbility != "dex" || acidSplash2024.Actions[0].SuccessfulSaveEffect != "none" {
+		t.Fatalf("expected SRD 5.2.1 Acid Splash to infer dex save, got %+v", acidSplash2024.Actions[0])
+	}
+	if acidSplash2024.ProjectileScaling == nil || acidSplash2024.ProjectileScaling.Description == "" {
+		t.Fatalf("expected SRD 5.2.1 Acid Splash area targeting description, got %+v", acidSplash2024.ProjectileScaling)
+	}
+
 	healingWord := findStandardSpell(t, spells, "srd-healing-word")
 	if len(healingWord.Actions) != 1 || len(healingWord.Actions[0].Rolls) != 1 {
 		t.Fatalf("expected Healing Word to include a healing roll, got %+v", healingWord.Actions)
@@ -136,6 +152,8 @@ func TestParseStandardSpellsCleansPDFTextArtifacts(t *testing.T) {
 		"brav- ery",
 		"Ha iHt",
 		"Gsarveae",
+		"pUlassinhegs",
+		"gtahregre",
 	}
 	for _, spell := range spells {
 		if spell.SourceKey != "srd-5-2-1" {
