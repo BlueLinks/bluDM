@@ -102,6 +102,18 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	rayOfFrost2024 := findStandardSpell(t, spells, "srd-5-2-1-ray-of-frost")
 	assertRayOfFrostSpeedReduction(t, rayOfFrost2024)
 
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-longstrider"), "speed_bonus")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-fly"), "movement_mode")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-shield"), "ac_bonus")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-mage-armor"), "base_ac")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-bless"), "roll_modifier")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-bane"), "roll_modifier")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-protection-from-energy"), "damage_defense")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-chill-touch"), "healing_block")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-harm"), "max_hp_reduction")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-thunderwave"), "forced_movement")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-hunter-s-mark"), "attack_damage_rider")
+
 	aid := findStandardSpell(t, spells, "srd-aid")
 	if aid.ProjectileScaling == nil || aid.ProjectileScaling.BaseProjectiles != 3 {
 		t.Fatalf("expected Aid to target up to three creatures, got %+v", aid.ProjectileScaling)
@@ -153,6 +165,18 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	if len(elementalism.Actions) != 1 || len(elementalism.Actions[0].Rolls) != 1 || elementalism.Actions[0].Rolls[0].RollKind != "custom" {
 		t.Fatalf("expected SRD 5.2.1 Elementalism to include a custom utility effect, got %+v", elementalism.Actions)
 	}
+}
+
+func assertSpellHasEffect(t *testing.T, spell standardSpellSeed, rollKind string) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind == rollKind {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s effect, got %+v", spell.Slug, rollKind, spell.Actions)
 }
 
 func assertRayOfFrostSpeedReduction(t *testing.T, spell standardSpellSeed) {

@@ -215,19 +215,15 @@ function SpellRollEditor({
             ) : (
               <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
             )}
-            {roll.rollKind !== "condition" &&
-              roll.rollKind !== "condition_immunity" &&
-              roll.rollKind !== "custom" && (
-                <Checkbox
-                  label="Magical"
-                  checked={roll.magical}
-                  onChange={(magical) =>
-                    onChange(
-                      rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)),
-                    )
-                  }
-                />
-              )}
+            {usesMagicalToggle(roll.rollKind) && (
+              <Checkbox
+                label="Magical"
+                checked={roll.magical}
+                onChange={(magical) =>
+                  onChange(rolls.map((item) => (item.id === roll.id ? { ...item, magical } : item)))
+                }
+              />
+            )}
             <Button
               type="button"
               icon={Trash2}
@@ -239,73 +235,71 @@ function SpellRollEditor({
           {isFullWidthRollDetail(roll.rollKind) && (
             <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
           )}
-          {roll.rollKind !== "condition" &&
-            roll.rollKind !== "condition_immunity" &&
-            roll.rollKind !== "custom" && (
-              <>
-                <Field label="Amount" help="Set Dice to 0 and use Modifier for a fixed flat value.">
-                  <DiceFormulaInput
-                    allowEmpty
-                    value={roll}
-                    onChange={(next) =>
-                      onChange(
-                        rolls.map((item) =>
-                          item.id === roll.id
-                            ? {
-                                ...item,
-                                diceCount: next.diceCount,
-                                dieSize: next.dieSize,
-                                fixedValue: next.fixedValue,
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                  />
-                  <Checkbox
-                    label="Add Spellcasting Ability Modifier"
-                    checked={roll.addPrimaryStatModifier}
-                    onChange={(addPrimaryStatModifier) =>
-                      onChange(
-                        rolls.map((item) =>
-                          item.id === roll.id ? { ...item, addPrimaryStatModifier } : item,
-                        ),
-                      )
-                    }
-                  />
-                  <p className="mt-2 rounded-md border border-border bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
-                    Result: {effectFormula(roll)}
-                  </p>
-                </Field>
-                <Field
-                  label="Effect timing"
-                  help="Immediate effects apply when cast. Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects."
-                >
-                  <Select
-                    options={spellEffectTimings}
-                    placeholder="Timing"
-                    value={roll.timing}
-                    onValueChange={(timing) =>
-                      onChange(
-                        rolls.map((item) => (item.id === roll.id ? { ...item, timing } : item)),
-                      )
-                    }
-                  />
-                </Field>
-                <RollScalingFields
-                  roll={roll}
+          {usesAmountControls(roll.rollKind) && (
+            <>
+              <Field label="Amount" help="Set Dice to 0 and use Modifier for a fixed flat value.">
+                <DiceFormulaInput
+                  allowEmpty
+                  value={roll}
                   onChange={(next) =>
-                    onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
+                    onChange(
+                      rolls.map((item) =>
+                        item.id === roll.id
+                          ? {
+                              ...item,
+                              diceCount: next.diceCount,
+                              dieSize: next.dieSize,
+                              fixedValue: next.fixedValue,
+                            }
+                          : item,
+                      ),
+                    )
                   }
                 />
-                <CantripBreakpointFields
-                  roll={roll}
-                  onChange={(next) =>
-                    onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
+                <Checkbox
+                  label="Add Spellcasting Ability Modifier"
+                  checked={roll.addPrimaryStatModifier}
+                  onChange={(addPrimaryStatModifier) =>
+                    onChange(
+                      rolls.map((item) =>
+                        item.id === roll.id ? { ...item, addPrimaryStatModifier } : item,
+                      ),
+                    )
                   }
                 />
-              </>
-            )}
+                <p className="mt-2 rounded-md border border-border bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">
+                  Result: {effectFormula(roll)}
+                </p>
+              </Field>
+              <Field
+                label="Effect timing"
+                help="Immediate effects apply when cast. Use each-turn timing for recurring effects, or next-turn-only timing for delayed one-off effects."
+              >
+                <Select
+                  options={spellEffectTimings}
+                  placeholder="Timing"
+                  value={roll.timing}
+                  onValueChange={(timing) =>
+                    onChange(
+                      rolls.map((item) => (item.id === roll.id ? { ...item, timing } : item)),
+                    )
+                  }
+                />
+              </Field>
+              <RollScalingFields
+                roll={roll}
+                onChange={(next) =>
+                  onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
+                }
+              />
+              <CantripBreakpointFields
+                roll={roll}
+                onChange={(next) =>
+                  onChange(rolls.map((item) => (item.id === roll.id ? next : item)))
+                }
+              />
+            </>
+          )}
         </div>
       ))}
       <Button
@@ -323,6 +317,22 @@ function SpellRollEditor({
 
 function isFullWidthRollDetail(rollKind: string) {
   return rollKind === "custom";
+}
+
+function usesMagicalToggle(rollKind: string) {
+  return usesAmountControls(rollKind) || rollKind === "damage_defense";
+}
+
+function usesAmountControls(rollKind: string) {
+  return ![
+    "condition",
+    "condition_immunity",
+    "custom",
+    "advantage_state",
+    "damage_defense",
+    "healing_block",
+    "remove_condition",
+  ].includes(rollKind);
 }
 
 function RollScalingFields({

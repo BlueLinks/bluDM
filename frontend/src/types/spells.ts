@@ -74,6 +74,7 @@ export type SpellActionRollPart = {
   fixedValue: number;
   addPrimaryStatModifier: boolean;
   conditionName: string;
+  effectConfig?: Record<string, unknown>;
   timing: string;
   scalingType: string;
   scalingFromLevel: number;
@@ -164,6 +165,7 @@ export type SpellActionRollFormState = {
   fixedValue: string;
   addPrimaryStatModifier: boolean;
   conditionName: string;
+  effectConfig: Record<string, unknown>;
   timing: string;
   scalingType: string;
   scalingFromLevel: string;

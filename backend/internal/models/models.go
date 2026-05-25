@@ -379,6 +379,7 @@ type SpellActionRollPart struct {
 	FixedValue             int            `json:"fixedValue"`
 	AddPrimaryStatModifier bool           `json:"addPrimaryStatModifier"`
 	ConditionName          string         `json:"conditionName"`
+	EffectConfig           map[string]any `json:"effectConfig,omitempty"`
 	Timing                 string         `json:"timing"`
 	ScalingType            string         `json:"scalingType"`
 	ScalingFromLevel       int            `json:"scalingFromLevel"`

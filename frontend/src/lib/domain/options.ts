@@ -30,11 +30,69 @@ export const spellRollKinds = [
   { value: "damage", label: "Deal damage to target" },
   { value: "healing", label: "Restore target current HP" },
   { value: "max_hp", label: "Increase target HP maximum" },
+  { value: "max_hp_reduction", label: "Reduce target HP maximum" },
   { value: "temp_hp", label: "Set target temporary HP" },
+  { value: "healing_block", label: "Prevent target healing" },
+  { value: "speed_bonus", label: "Increase target speed" },
   { value: "speed_reduction", label: "Reduce target speed" },
+  { value: "speed_multiplier", label: "Multiply target speed" },
+  { value: "movement_mode", label: "Grant movement mode" },
+  { value: "ac_bonus", label: "Modify target AC" },
+  { value: "base_ac", label: "Set target base AC" },
+  { value: "roll_modifier", label: "Modify target rolls" },
+  { value: "advantage_state", label: "Grant advantage/disadvantage" },
+  { value: "damage_defense", label: "Grant damage defense" },
+  { value: "forced_movement", label: "Force movement or prone" },
+  { value: "attack_damage_rider", label: "Add attack damage rider" },
   { value: "condition", label: "Apply condition to target" },
+  { value: "remove_condition", label: "Remove condition from target" },
   { value: "condition_immunity", label: "Grant condition immunity" },
+  { value: "revive", label: "Revive target" },
   { value: "custom", label: "Custom target effect" },
+];
+
+export const movementModes = [
+  { value: "walking", label: "Walking" },
+  { value: "flying", label: "Flying" },
+  { value: "climbing", label: "Climbing" },
+  { value: "swimming", label: "Swimming" },
+  { value: "burrowing", label: "Burrowing" },
+];
+
+export const speedMultipliers = [
+  { value: "0.5", label: "Halve speed" },
+  { value: "2", label: "Double speed" },
+];
+
+export const rollModifierModes = [
+  { value: "add", label: "Add" },
+  { value: "subtract", label: "Subtract" },
+];
+
+export const rollModifierCategories = [
+  { value: "attack_roll", label: "Attack rolls" },
+  { value: "saving_throw", label: "Saving throws" },
+  { value: "ability_check", label: "Ability checks" },
+  { value: "damage_roll", label: "Damage rolls" },
+  { value: "death_save", label: "Death saves" },
+];
+
+export const advantageStates = [
+  { value: "advantage", label: "Advantage" },
+  { value: "disadvantage", label: "Disadvantage" },
+];
+
+export const damageDefenseModes = [
+  { value: "resistance", label: "Resistance" },
+  { value: "immunity", label: "Immunity" },
+  { value: "vulnerability", label: "Vulnerability" },
+];
+
+export const forcedMovementDirections = [
+  { value: "push", label: "Push away" },
+  { value: "pull", label: "Pull toward" },
+  { value: "move_away", label: "Move away using reaction" },
+  { value: "prone", label: "Knock prone" },
 ];
 
 export const spellEffectTimings = [

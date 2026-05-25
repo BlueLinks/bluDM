@@ -1,5 +1,6 @@
 import { damageTypes } from "../../components/shared/damageTypes";
 import { spellRollKinds } from "../../lib/domain/options";
+import { configText } from "../../lib/domain/effectConfig";
 import type { Spell, SpellAreaScalingFormState, SpellFormState } from "../../types";
 
 type SpellLike = Pick<
@@ -212,6 +213,9 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "condition") {
     return roll.conditionName ? `${subject} gains the ${roll.conditionName} condition.` : "";
   }
+  if (roll.rollKind === "remove_condition") {
+    return roll.conditionName ? `${subject} loses the ${roll.conditionName} condition.` : "";
+  }
   if (roll.rollKind === "condition_immunity") {
     return roll.conditionName
       ? `${subject} is immune to the ${roll.conditionName} condition while the effect is active.`
@@ -220,18 +224,51 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "custom") {
     return roll.conditionName ? `${subject}: ${roll.conditionName}` : "";
   }
+  if (roll.rollKind === "healing_block") {
+    return `${subject} can't regain hit points while the effect is active.`;
+  }
+  if (roll.rollKind === "advantage_state") {
+    return `${subject} has ${configText(roll.effectConfig?.state, "advantage")} on ${configText(roll.effectConfig?.category, "configured rolls")}.`;
+  }
+  if (roll.rollKind === "damage_defense") {
+    return `${subject} gains ${configText(roll.effectConfig?.mode, "resistance")} to ${configText(roll.effectConfig?.damageTypes, "the chosen damage type")}.`;
+  }
   const amount = effectAmount(roll);
   if (!amount) return "";
   const label = spellRollKinds.find((option) => option.value === roll.rollKind)?.label ?? "Effect";
   if (roll.rollKind === "damage") return `${subject} takes ${amount} ${roll.damageType} damage.`;
   if (roll.rollKind === "healing") return `${subject} regains ${amount} hit points.`;
   if (roll.rollKind === "max_hp") return `${subject}'s hit point maximum increases by ${amount}.`;
+  if (roll.rollKind === "max_hp_reduction") {
+    return `${subject}'s hit point maximum is reduced by ${amount}.`;
+  }
   if (roll.rollKind === "temp_hp") {
     return `${subject}'s temporary hit points become ${amount}.`;
+  }
+  if (roll.rollKind === "speed_bonus") {
+    return `${subject}'s speed increases by ${amount} feet.`;
   }
   if (roll.rollKind === "speed_reduction") {
     return `${subject}'s speed is reduced by ${amount} feet.`;
   }
+  if (roll.rollKind === "speed_multiplier") {
+    return `${subject}'s speed is ${configText(roll.effectConfig?.multiplier) === "2" ? "doubled" : "halved"}.`;
+  }
+  if (roll.rollKind === "movement_mode") {
+    return `${subject} gains ${configText(roll.effectConfig?.mode, "a movement")} speed ${amount ? `of ${amount} feet` : "based on its walking speed"}.`;
+  }
+  if (roll.rollKind === "ac_bonus")
+    return `${subject} gains a ${(Number(roll.fixedValue) || 0) >= 0 ? "+" : ""}${amount} bonus to AC.`;
+  if (roll.rollKind === "base_ac")
+    return `${subject}'s base AC becomes ${configText(roll.effectConfig?.formula, String(amount))}.`;
+  if (roll.rollKind === "roll_modifier") {
+    return `${subject} ${configText(roll.effectConfig?.mode, "adds")}s ${amount} to ${configText(roll.effectConfig?.category, "a roll")}.`;
+  }
+  if (roll.rollKind === "forced_movement")
+    return `${subject}: ${configText(roll.effectConfig?.direction, "forced movement")} ${amount ? `${amount} feet` : ""}.`;
+  if (roll.rollKind === "attack_damage_rider")
+    return `${subject}'s attacks deal an extra ${amount}.`;
+  if (roll.rollKind === "revive") return `${subject} returns to life with ${amount} hit points.`;
   return `${label}: ${amount}.`;
 }
 

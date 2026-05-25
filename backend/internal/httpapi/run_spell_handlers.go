@@ -58,7 +58,7 @@ func (s *Server) castSpellCommand(w http.ResponseWriter, r *http.Request) {
 		for _, action := range spell.Actions {
 			for _, roll := range action.Rolls {
 				amount := spellEffectAmount(roll, castLevel, modifier)
-				shouldTrack := roll.RollKind == "condition_immunity" || roll.Timing != "" && roll.Timing != "immediate"
+				shouldTrack := shouldTrackSpellEffect(roll)
 				if roll.Timing != "" && roll.Timing != "immediate" {
 					_ = s.createActiveSpellEffect(r.Context(), runID, actor.ID, target.ID, spell, castLevel, roll, amount)
 					applied = append(applied, spellEffectLog(target, roll, amount, "scheduled"))
@@ -251,5 +251,19 @@ func spellEffectAmount(roll models.SpellActionRollPart, castLevel int, spellcast
 }
 
 func spellEffectLog(target models.EncounterRunCombatant, roll models.SpellActionRollPart, amount int, status string) map[string]any {
-	return map[string]any{"targetId": target.ID, "targetName": target.DisplayName, "effectKind": roll.RollKind, "conditionName": roll.ConditionName, "amount": amount, "timing": roll.Timing, "status": status}
+	return map[string]any{"targetId": target.ID, "targetName": target.DisplayName, "effectKind": roll.RollKind, "conditionName": roll.ConditionName, "effectConfig": roll.EffectConfig, "amount": amount, "timing": roll.Timing, "status": status}
+}
+
+func shouldTrackSpellEffect(roll models.SpellActionRollPart) bool {
+	if roll.Timing != "" && roll.Timing != "immediate" {
+		return true
+	}
+	switch roll.RollKind {
+	case "condition_immunity", "healing_block", "speed_bonus", "speed_reduction", "speed_multiplier",
+		"movement_mode", "ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense",
+		"attack_damage_rider":
+		return true
+	default:
+		return false
+	}
 }

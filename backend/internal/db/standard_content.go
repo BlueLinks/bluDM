@@ -365,6 +365,7 @@ create table if not exists standard_spell_action_roll_parts (
     fixed_value integer not null default 0,
     add_primary_stat_modifier boolean not null default false,
     condition_name text not null default '',
+    effect_config jsonb not null default '{}'::jsonb,
     timing text not null default 'immediate',
     scaling_type text not null default 'none',
     scaling_from_level integer not null default 0,
@@ -374,6 +375,7 @@ create table if not exists standard_spell_action_roll_parts (
     scaling_step_size integer not null default 1,
     cantrip_scaling jsonb not null default '{}'::jsonb
 );
+alter table standard_spell_action_roll_parts add column if not exists effect_config jsonb not null default '{}'::jsonb;
 create index if not exists standard_spell_action_roll_parts_action_idx on standard_spell_action_roll_parts(standard_spell_action_id, sort_order);
 `
 

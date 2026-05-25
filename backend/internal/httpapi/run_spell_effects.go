@@ -16,12 +16,25 @@ func (s *Server) applySpellEffect(ctx context.Context, runID, actorID, targetID 
 		return s.applyTemporaryHP(ctx, runID, actorID, targetID, amount, spellName)
 	case "max_hp":
 		return s.applyMaxHPModifier(ctx, runID, actorID, targetID, amount, spellName)
-	case "speed_reduction":
-		return s.appendCombatLogEvent(ctx, runID, "spell_speed_reduction", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
+	case "max_hp_reduction":
+		return s.applyMaxHPModifier(ctx, runID, actorID, targetID, -amount, spellName)
+	case "healing_block", "speed_bonus", "speed_reduction", "speed_multiplier", "movement_mode",
+		"ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense", "forced_movement",
+		"attack_damage_rider":
+		return s.appendCombatLogEvent(ctx, runID, "spell_active_effect", actorID, targetID, map[string]any{
+			"spellName":    spellName,
+			"effectKind":   roll.RollKind,
+			"amount":       amount,
+			"effectConfig": roll.EffectConfig,
+		})
 	case "condition":
 		return s.applyRunCondition(ctx, runID, actorID, targetID, roll.ConditionName, roll.RollKind, spellName)
+	case "remove_condition":
+		return s.removeRunCondition(ctx, runID, actorID, targetID, roll.ConditionName, roll.RollKind, spellName)
 	case "condition_immunity":
 		return s.appendCombatLogEvent(ctx, runID, "spell_condition_immunity", actorID, targetID, map[string]any{"spellName": spellName, "conditionName": roll.ConditionName})
+	case "revive":
+		return s.applyRevive(ctx, runID, actorID, targetID, amount, spellName)
 	case "damage":
 		return s.applyHPChange(ctx, runID, actorID, targetID, amount, "damage", roll.DamageType, "spell_damage")
 	default:
@@ -51,6 +64,33 @@ func (s *Server) applyMaxHPModifier(ctx context.Context, runID, actorID, targetI
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_max_hp", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
+}
+
+func (s *Server) applyRevive(ctx context.Context, runID, actorID, targetID string, amount int, spellName string) error {
+	target, err := s.runCombatantByID(ctx, runID, targetID)
+	if err != nil {
+		return err
+	}
+	before := combatantUndoPayload(target)
+	target.CurrentHitPoints = max(1, amount)
+	target.Defeated = false
+	target.DeathSaveSuccesses = 0
+	target.DeathSaveFailures = 0
+	target.Stable = false
+	if _, err := s.db.Exec(ctx, `
+		update encounter_run_combatants
+		set current_hit_points = $2, defeated = false, death_save_successes = 0,
+			death_save_failures = 0, stable = false
+		where id = $1
+	`, targetID, target.CurrentHitPoints); err != nil {
+		return err
+	}
+	return s.appendCombatLogEvent(ctx, runID, "spell_revive", actorID, targetID, map[string]any{
+		"spellName":    spellName,
+		"amount":       amount,
+		"targetBefore": before,
+		"targetAfter":  combatantUndoPayload(target),
+	})
 }
 
 func (s *Server) applyRunCondition(ctx context.Context, runID, actorID, targetID, conditionName, effectKind, spellName string) error {
@@ -95,7 +135,11 @@ func (s *Server) removeRunCondition(ctx context.Context, runID, actorID, targetI
 }
 
 func (s *Server) createActiveSpellEffect(ctx context.Context, runID, casterID, targetID string, spell models.Spell, castLevel int, roll models.SpellActionRollPart, amount int) error {
-	payload := marshalEffectPayload(map[string]any{"spellId": spell.ID, "conditionName": roll.ConditionName})
+	payloadMap := map[string]any{"spellId": spell.ID, "conditionName": roll.ConditionName, "effectConfig": roll.EffectConfig}
+	for key, value := range roll.EffectConfig {
+		payloadMap[key] = value
+	}
+	payload := marshalEffectPayload(payloadMap)
 	_, err := s.db.Exec(ctx, `
 		insert into encounter_run_active_effects (
 			encounter_run_id, caster_id, target_id, spell_id, library_source, spell_name,

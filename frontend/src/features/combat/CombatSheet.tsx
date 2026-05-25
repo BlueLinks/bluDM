@@ -6,7 +6,6 @@ import { api } from "../../lib/api";
 import {
   abilityScoresFromSheet,
   combatantSheet,
-  effectiveAC,
   effectiveMaxHP,
   proficiencyBonusFromCombatSheet,
   rollDiceDetail,
@@ -15,6 +14,7 @@ import {
   speedFromSheet,
   stringArrayFromSheet,
 } from "../../lib/domain/combat";
+import { configText } from "../../lib/domain/effectConfig";
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
 import type { EncounterRunCombatant, EncounterRunEffect, RollMode } from "../../types";
@@ -107,7 +107,12 @@ export function CombatSheet({
           )}
         </div>
         <div className="grid grid-cols-3 gap-1">
-          <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
+          <IconStat
+            icon={Shield}
+            label="AC"
+            value={effectiveACWithEffects(combatant, activeEffects)}
+            tone="shield"
+          />
           <IconStat
             icon={HeartPulse}
             label="HP"
@@ -159,9 +164,34 @@ export function CombatSheet({
 }
 
 function sheetEffectLabel(effect: EncounterRunEffect) {
+  if (effect.effectKind === "speed_bonus") {
+    return `Speed +${effect.amount} ft.`;
+  }
   if (effect.effectKind === "speed_reduction") {
     return `Speed -${effect.amount} ft.`;
   }
+  if (effect.effectKind === "speed_multiplier") {
+    return configText(effect.payload?.multiplier) === "2" ? "Speed doubled" : "Speed halved";
+  }
+  if (effect.effectKind === "movement_mode") {
+    return `${configText(effect.payload?.mode, "Movement")} ${effect.amount ? `${effect.amount} ft.` : ""}`;
+  }
+  if (effect.effectKind === "ac_bonus") {
+    return `AC ${effect.amount >= 0 ? "+" : ""}${effect.amount}`;
+  }
+  if (effect.effectKind === "base_ac") {
+    return `Base AC ${configText(effect.payload?.formula, String(effect.amount))}`;
+  }
+  if (effect.effectKind === "damage_defense") {
+    return `${configText(effect.payload?.mode, "Resistance")} ${configText(effect.payload?.damageTypes, "")}`.trim();
+  }
+  if (effect.effectKind === "healing_block") return "Healing blocked";
+  if (effect.effectKind === "roll_modifier")
+    return `${configText(effect.payload?.mode, "Add")} ${configText(effect.payload?.dice, String(effect.amount))} to ${configText(effect.payload?.category, "rolls")}`;
+  if (effect.effectKind === "advantage_state")
+    return `${configText(effect.payload?.state, "Advantage")} on ${configText(effect.payload?.category, "rolls")}`;
+  if (effect.effectKind === "attack_damage_rider")
+    return `Damage rider ${effect.amount || configText(effect.payload?.dice, "")}`;
   if (effect.effectKind === "condition_immunity" && effect.conditionName) {
     return `Immune to ${effect.conditionName}`;
   }
@@ -175,11 +205,29 @@ function sheetEffectLabel(effect: EncounterRunEffect) {
 }
 
 function speedValue(baseSpeed: number, effects: EncounterRunEffect[]) {
-  const reduction = effects
-    .filter((effect) => effect.effectKind === "speed_reduction")
-    .reduce((total, effect) => total + Math.max(0, Number(effect.amount) || 0), 0);
-  if (reduction <= 0) return baseSpeed;
-  return `${Math.max(0, baseSpeed - reduction)} (-${reduction})`;
+  let speed = baseSpeed;
+  let note = "";
+  for (const effect of effects) {
+    if (effect.effectKind === "speed_bonus") speed += Math.max(0, Number(effect.amount) || 0);
+    if (effect.effectKind === "speed_reduction") speed -= Math.max(0, Number(effect.amount) || 0);
+    if (effect.effectKind === "speed_multiplier") {
+      const multiplier = Number(effect.payload?.multiplier) || 1;
+      speed = Math.round(speed * multiplier);
+      note = multiplier === 2 ? "doubled" : "halved";
+    }
+  }
+  speed = Math.max(0, speed);
+  if (speed === baseSpeed && !note) return baseSpeed;
+  return `${speed}${note ? ` (${note})` : ""}`;
+}
+
+function effectiveACWithEffects(combatant: EncounterRunCombatant, effects: EncounterRunEffect[]) {
+  const base = combatant.armorClassOverride || combatant.armorClass + combatant.armorClassBonus;
+  return effects.reduce((total, effect) => {
+    if (effect.effectKind === "ac_bonus") return total + (Number(effect.amount) || 0);
+    if (effect.effectKind === "base_ac") return Math.max(total, Number(effect.amount) || total);
+    return total;
+  }, base);
 }
 
 function AbilityTable({

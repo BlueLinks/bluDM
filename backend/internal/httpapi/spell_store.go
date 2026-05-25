@@ -72,17 +72,25 @@ func (s *Server) replaceSpellChildren(ctx context.Context, tx spellDataTx, spell
 			if err != nil {
 				return err
 			}
+			effectConfig := roll.EffectConfig
+			if effectConfig == nil {
+				effectConfig = map[string]any{}
+			}
+			effectConfigBytes, err := json.Marshal(effectConfig)
+			if err != nil {
+				return err
+			}
 			if _, err := tx.Exec(ctx, `
 				insert into spell_action_roll_parts (
 					spell_action_id, sort_order, roll_kind, damage_type, magical,
 					dice_count, die_size, fixed_value, add_primary_stat_modifier,
-					condition_name, timing, scaling_type, scaling_from_level, scaling_dice_count,
+					condition_name, effect_config, timing, scaling_type, scaling_from_level, scaling_dice_count,
 					scaling_die_size, scaling_fixed_value, scaling_step_size, cantrip_scaling
 				)
-				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 			`, actionID, rollIndex, roll.RollKind, roll.DamageType, roll.Magical,
 				nonNegativeOrDefault(roll.DiceCount, 0), positiveOrDefault(roll.DieSize, 6), roll.FixedValue,
-				roll.AddPrimaryStatModifier, roll.ConditionName, roll.Timing, roll.ScalingType, roll.ScalingFromLevel,
+				roll.AddPrimaryStatModifier, roll.ConditionName, effectConfigBytes, roll.Timing, roll.ScalingType, roll.ScalingFromLevel,
 				roll.ScalingDiceCount, positiveOrDefault(roll.ScalingDieSize, 6),
 				roll.ScalingFixedValue, positiveOrDefault(roll.ScalingStepSize, 1), cantripScalingBytes); err != nil {
 				return err
@@ -230,7 +238,7 @@ func (s *Server) standardSpellActions(ctx context.Context, spellID string) ([]mo
 func (s *Server) spellActionRolls(ctx context.Context, actionID string) ([]models.SpellActionRollPart, error) {
 	rows, err := s.db.Query(ctx, `
 		select id, sort_order, roll_kind, damage_type, magical, dice_count, die_size,
-			fixed_value, add_primary_stat_modifier, condition_name, timing, scaling_type,
+			fixed_value, add_primary_stat_modifier, condition_name, effect_config, timing, scaling_type,
 			scaling_from_level, scaling_dice_count, scaling_die_size, scaling_fixed_value,
 			scaling_step_size, cantrip_scaling
 		from spell_action_roll_parts
@@ -246,13 +254,15 @@ func (s *Server) spellActionRolls(ctx context.Context, actionID string) ([]model
 	for rows.Next() {
 		var roll models.SpellActionRollPart
 		var cantripScalingBytes []byte
+		var effectConfigBytes []byte
 		if err := rows.Scan(&roll.ID, &roll.SortOrder, &roll.RollKind, &roll.DamageType,
 			&roll.Magical, &roll.DiceCount, &roll.DieSize, &roll.FixedValue,
-			&roll.AddPrimaryStatModifier, &roll.ConditionName, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
+			&roll.AddPrimaryStatModifier, &roll.ConditionName, &effectConfigBytes, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
 			&roll.ScalingDiceCount, &roll.ScalingDieSize, &roll.ScalingFixedValue,
 			&roll.ScalingStepSize, &cantripScalingBytes); err != nil {
 			return nil, err
 		}
+		roll.EffectConfig, _ = unmarshalJSONMap(effectConfigBytes)
 		roll.CantripScaling, _ = unmarshalJSONMap(cantripScalingBytes)
 		rolls = append(rolls, roll)
 	}
@@ -262,7 +272,7 @@ func (s *Server) spellActionRolls(ctx context.Context, actionID string) ([]model
 func (s *Server) standardSpellActionRolls(ctx context.Context, actionID string) ([]models.SpellActionRollPart, error) {
 	rows, err := s.db.Query(ctx, `
 		select id, sort_order, roll_kind, damage_type, magical, dice_count, die_size,
-			fixed_value, add_primary_stat_modifier, condition_name, timing, scaling_type,
+			fixed_value, add_primary_stat_modifier, condition_name, effect_config, timing, scaling_type,
 			scaling_from_level, scaling_dice_count, scaling_die_size, scaling_fixed_value,
 			scaling_step_size, cantrip_scaling
 		from standard_spell_action_roll_parts
@@ -278,13 +288,15 @@ func (s *Server) standardSpellActionRolls(ctx context.Context, actionID string) 
 	for rows.Next() {
 		var roll models.SpellActionRollPart
 		var cantripScalingBytes []byte
+		var effectConfigBytes []byte
 		if err := rows.Scan(&roll.ID, &roll.SortOrder, &roll.RollKind, &roll.DamageType,
 			&roll.Magical, &roll.DiceCount, &roll.DieSize, &roll.FixedValue,
-			&roll.AddPrimaryStatModifier, &roll.ConditionName, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
+			&roll.AddPrimaryStatModifier, &roll.ConditionName, &effectConfigBytes, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
 			&roll.ScalingDiceCount, &roll.ScalingDieSize, &roll.ScalingFixedValue,
 			&roll.ScalingStepSize, &cantripScalingBytes); err != nil {
 			return nil, err
 		}
+		roll.EffectConfig, _ = unmarshalJSONMap(effectConfigBytes)
 		roll.CantripScaling, _ = unmarshalJSONMap(cantripScalingBytes)
 		rolls = append(rolls, roll)
 	}

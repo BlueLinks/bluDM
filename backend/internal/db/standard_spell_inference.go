@@ -29,7 +29,7 @@ func inferStandardSpellAutomation(spell *standardSpellSeed) {
 	if len(damageRolls) == 0 {
 		return
 	}
-	damageRolls = append(damageRolls, inferSpeedReductionRolls(spell.Description)...)
+	damageRolls = append(damageRolls, inferAdditionalEffectRolls(*spell)...)
 
 	actionType := "damage"
 	if attackType := strings.ToLower(stringValue(mechanics["attackType"])); attackType == "ranged" || attackType == "melee" || descriptionHasSpellAttack(spell.Description) {
@@ -58,129 +58,6 @@ func inferStandardSpellAutomation(spell *standardSpellSeed) {
 func descriptionHasSpellAttack(description string) bool {
 	lowered := strings.ToLower(description)
 	return strings.Contains(lowered, "ranged spell attack") || strings.Contains(lowered, "melee spell attack")
-}
-
-func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
-	switch strings.ToLower(spell.Name) {
-	case "aid":
-		roll := fixedSpellLevelRoll("max_hp", 5, max(1, spell.Level), 5)
-		spell.Actions = []standardSpellActionSeed{{
-			Name:              "Aid",
-			ActionType:        "damage",
-			HitSpecialEvent:   "none",
-			DamageTypeChoice:  "specific",
-			DamageTypeOptions: []string{"healing"},
-			Rolls: []standardSpellActionRollSeed{
-				roll,
-				fixedSpellLevelRoll("healing", 5, max(1, spell.Level), 5),
-			},
-		}}
-		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{BaseProjectiles: 3, ScalingType: "none", StepSize: 1}
-		return true
-	case "elementalism":
-		if spell.SourceKey != "srd-5-2-1" {
-			return false
-		}
-		spell.Actions = []standardSpellActionSeed{{
-			Name:              "Elemental effect",
-			ActionType:        "other",
-			HitSpecialEvent:   "none",
-			DamageTypeChoice:  "specific",
-			DamageTypeOptions: []string{},
-			Rolls: []standardSpellActionRollSeed{{
-				RollKind:        "custom",
-				ConditionName:   "Choose one effect: Beckon Air, Beckon Earth, Beckon Fire, Beckon Water, or Sculpt Element.",
-				Timing:          "immediate",
-				ScalingType:     "none",
-				ScalingStepSize: 1,
-			}},
-		}}
-		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{
-			BaseProjectiles: 1,
-			ScalingType:     "none",
-			StepSize:        1,
-			Description:     "Choose one elemental effect within range.",
-		}
-		return true
-	case "healing word":
-		if spell.SourceKey != "srd-5-2-1" {
-			return false
-		}
-		roll := standardSpellActionRollSeed{
-			RollKind:               "healing",
-			DamageType:             "healing",
-			Magical:                true,
-			DiceCount:              2,
-			DieSize:                4,
-			AddPrimaryStatModifier: true,
-			Timing:                 "immediate",
-			ScalingType:            "spell_level",
-			ScalingFromLevel:       max(1, spell.Level),
-			ScalingDiceCount:       2,
-			ScalingDieSize:         4,
-			ScalingStepSize:        1,
-		}
-		spell.Actions = []standardSpellActionSeed{{
-			Name:              "Healing Word",
-			ActionType:        "damage",
-			HitSpecialEvent:   "none",
-			DamageTypeChoice:  "specific",
-			DamageTypeOptions: []string{"healing"},
-			Rolls:             []standardSpellActionRollSeed{roll},
-		}}
-		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{BaseProjectiles: 1, ScalingType: "none", StepSize: 1}
-		return true
-	case "heroism":
-		spell.Actions = []standardSpellActionSeed{{
-			Name:              "Heroism",
-			ActionType:        "damage",
-			HitSpecialEvent:   "none",
-			DamageTypeChoice:  "specific",
-			DamageTypeOptions: []string{"healing"},
-			Rolls: []standardSpellActionRollSeed{
-				{
-					RollKind:               "temp_hp",
-					DamageType:             "healing",
-					Magical:                true,
-					AddPrimaryStatModifier: true,
-					Timing:                 "start_target_turn_each",
-					ScalingType:            "none",
-					ScalingStepSize:        1,
-				},
-				{
-					RollKind:        "condition_immunity",
-					ConditionName:   "Frightened",
-					Timing:          "immediate",
-					ScalingType:     "none",
-					ScalingStepSize: 1,
-				},
-			},
-		}}
-		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{
-			BaseProjectiles:       1,
-			ScalingType:           "spell_level",
-			ScaleFromLevel:        max(1, spell.Level),
-			AdditionalProjectiles: 1,
-			StepSize:              1,
-		}
-		return true
-	default:
-		return false
-	}
-}
-
-func fixedSpellLevelRoll(kind string, fixedValue int, scalingFromLevel int, scalingFixedValue int) standardSpellActionRollSeed {
-	return standardSpellActionRollSeed{
-		RollKind:          kind,
-		DamageType:        "healing",
-		Magical:           true,
-		FixedValue:        fixedValue,
-		Timing:            "immediate",
-		ScalingType:       "spell_level",
-		ScalingFromLevel:  scalingFromLevel,
-		ScalingFixedValue: scalingFixedValue,
-		ScalingStepSize:   1,
-	}
 }
 
 func inferHealingAction(spell standardSpellSeed, healBySlot map[string]string) (standardSpellActionSeed, bool) {

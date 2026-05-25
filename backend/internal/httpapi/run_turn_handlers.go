@@ -338,9 +338,9 @@ func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 		part.Total = total
 		rolls = append(rolls, part)
 		rawDamage += total
-		adjustedDamage += applyDamageDefense(total, part.DamageType, defensesForCombatant(target))
+		adjustedDamage += applyDamageDefense(total, part.DamageType, s.defensesForRunCombatant(r.Context(), runID, target))
 	}
-	targetAC := effectiveArmorClass(target)
+	targetAC := s.effectiveArmorClassForRun(r.Context(), runID, target)
 	if !usesAttackRoll || targetAC <= 0 {
 		hits = true
 	} else {

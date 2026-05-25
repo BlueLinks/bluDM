@@ -47,6 +47,7 @@ type standardSpellActionRollSeed struct {
 	FixedValue             int            `json:"fixedValue"`
 	AddPrimaryStatModifier bool           `json:"addPrimaryStatModifier"`
 	ConditionName          string         `json:"conditionName"`
+	EffectConfig           map[string]any `json:"effectConfig"`
 	Timing                 string         `json:"timing"`
 	ScalingType            string         `json:"scalingType"`
 	ScalingFromLevel       int            `json:"scalingFromLevel"`
@@ -125,17 +126,25 @@ func replaceStandardSpellAutomation(
 			if err != nil {
 				return err
 			}
+			effectConfig := roll.EffectConfig
+			if effectConfig == nil {
+				effectConfig = map[string]any{}
+			}
+			effectConfigBytes, err := json.Marshal(effectConfig)
+			if err != nil {
+				return err
+			}
 			if _, err := tx.Exec(ctx, `
 				insert into standard_spell_action_roll_parts (
 					standard_spell_action_id, sort_order, roll_kind, damage_type, magical,
 					dice_count, die_size, fixed_value, add_primary_stat_modifier,
-					condition_name, timing, scaling_type, scaling_from_level, scaling_dice_count,
+					condition_name, effect_config, timing, scaling_type, scaling_from_level, scaling_dice_count,
 					scaling_die_size, scaling_fixed_value, scaling_step_size, cantrip_scaling
 				)
-				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 			`, actionID, rollIndex, defaultText(roll.RollKind, "damage"), roll.DamageType, roll.Magical,
 				nonNegativeOrDefault(roll.DiceCount, 0), positiveOrDefault(roll.DieSize, 6), roll.FixedValue,
-				roll.AddPrimaryStatModifier, roll.ConditionName, defaultText(roll.Timing, "immediate"),
+				roll.AddPrimaryStatModifier, roll.ConditionName, effectConfigBytes, defaultText(roll.Timing, "immediate"),
 				defaultText(roll.ScalingType, "none"), roll.ScalingFromLevel, roll.ScalingDiceCount,
 				positiveOrDefault(roll.ScalingDieSize, 6), roll.ScalingFixedValue,
 				positiveOrDefault(roll.ScalingStepSize, 1), cantripScalingBytes); err != nil {

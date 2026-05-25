@@ -142,6 +142,7 @@ create table if not exists spell_action_roll_parts (
     dice_count integer not null default 1, die_size integer not null default 6,
     fixed_value integer not null default 0, add_primary_stat_modifier boolean not null default false,
     condition_name text not null default '',
+    effect_config jsonb not null default '{}'::jsonb,
     timing text not null default 'immediate',
     scaling_type text not null default 'none', scaling_from_level integer not null default 0,
     scaling_dice_count integer not null default 0, scaling_die_size integer not null default 6,
@@ -176,6 +177,7 @@ alter table creatures add column if not exists owner_user_id uuid references use
 alter table spells add column if not exists cast_type text not null default '', add column if not exists range_type text not null default '', add column if not exists range_feet integer not null default 0, add column if not exists material_components text not null default '', add column if not exists classes text[] not null default '{}'::text[], add column if not exists duration_type text not null default '', add column if not exists duration_value integer not null default 0, add column if not exists duration_scale text not null default '', add column if not exists aoe_type text not null default '', add column if not exists aoe_size integer not null default 0, add column if not exists scaling_type text not null default 'none', add column if not exists source_material text not null default '';
 alter table spells add column if not exists owner_user_id uuid references users(id) on delete cascade;
 alter table spell_action_roll_parts add column if not exists condition_name text not null default '';
+alter table spell_action_roll_parts add column if not exists effect_config jsonb not null default '{}'::jsonb;
 alter table spell_action_roll_parts add column if not exists timing text not null default 'immediate';
 alter table spell_action_roll_parts add column if not exists cantrip_scaling jsonb not null default '{}'::jsonb;
 alter table spell_projectile_scaling add column if not exists cantrip_scaling jsonb not null default '{}'::jsonb;
