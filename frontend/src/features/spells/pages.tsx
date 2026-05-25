@@ -288,6 +288,7 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
         <StatPill label="Duration" value={displaySpellDuration(spell)} />
         <StatPill label="Components" value={componentSummary(spell.components)} />
       </div>
+      <ClassList classes={spell.classes} />
       <TextBlock title="Description" value={spell.description || generateSpellDescription(spell)} />
       <TextBlock title="At Higher Levels" value={spell.higherLevel} />
       {hasDetails && (
@@ -304,6 +305,20 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
         </div>
       )}
     </div>
+  );
+}
+
+function ClassList({ classes }: { classes: string[] }) {
+  if (classes.length === 0) return null;
+  return (
+    <section className="rounded-md border border-border bg-background p-3">
+      <h4 className="font-semibold">Classes</h4>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {classes.map((className) => (
+          <Badge key={className}>{className}</Badge>
+        ))}
+      </div>
+    </section>
   );
 }
 
