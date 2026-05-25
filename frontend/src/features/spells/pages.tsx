@@ -251,7 +251,9 @@ function SpellPreviewModal({
 
 function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) => void }) {
   const [showDetails, setShowDetails] = useState(false);
-  const hasDetails = spell.actions.length > 0 || detailMechanicEntries(spell.mechanics).length > 0;
+  const actions = spell.actions ?? [];
+  const mechanics = spell.mechanics ?? {};
+  const hasDetails = actions.length > 0 || detailMechanicEntries(mechanics).length > 0;
   return (
     <div className="grid gap-5">
       {spell.readOnly && (
@@ -286,9 +288,9 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
         <StatPill label="Casting Time" value={spell.castingTime || "-"} />
         <StatPill label="Range" value={displaySpellRange(spell)} />
         <StatPill label="Duration" value={displaySpellDuration(spell)} />
-        <StatPill label="Components" value={componentSummary(spell.components)} />
+        <StatPill label="Components" value={componentSummary(spell.components ?? {})} />
       </div>
-      <ClassList classes={spell.classes} />
+      <ClassList classes={spell.classes ?? []} />
       <TextBlock title="Description" value={spell.description || generateSpellDescription(spell)} />
       <TextBlock title="At Higher Levels" value={spell.higherLevel} />
       {hasDetails && (
@@ -301,7 +303,7 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
           >
             {showDetails ? "Hide structured details" : "Show structured details"}
           </Button>
-          {showDetails && <MechanicsBlock mechanics={spell.mechanics} actions={spell.actions} />}
+          {showDetails && <MechanicsBlock mechanics={mechanics} actions={actions} />}
         </div>
       )}
     </div>
