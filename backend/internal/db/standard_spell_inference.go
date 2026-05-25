@@ -57,7 +57,7 @@ func inferStandardSpellAutomation(spell *standardSpellSeed) {
 func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 	switch strings.ToLower(spell.Name) {
 	case "aid":
-		roll := fixedSpellLevelRoll("max_hp", 5, max(1, spell.Level)+1, 5)
+		roll := fixedSpellLevelRoll("max_hp", 5, max(1, spell.Level), 5)
 		spell.Actions = []standardSpellActionSeed{{
 			Name:              "Aid",
 			ActionType:        "damage",
@@ -66,7 +66,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			DamageTypeOptions: []string{"healing"},
 			Rolls: []standardSpellActionRollSeed{
 				roll,
-				fixedSpellLevelRoll("healing", 5, max(1, spell.Level)+1, 5),
+				fixedSpellLevelRoll("healing", 5, max(1, spell.Level), 5),
 			},
 		}}
 		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{BaseProjectiles: 3, ScalingType: "none", StepSize: 1}
@@ -84,7 +84,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			AddPrimaryStatModifier: true,
 			Timing:                 "immediate",
 			ScalingType:            "spell_level",
-			ScalingFromLevel:       max(1, spell.Level) + 1,
+			ScalingFromLevel:       max(1, spell.Level),
 			ScalingDiceCount:       2,
 			ScalingDieSize:         4,
 			ScalingStepSize:        1,
@@ -128,7 +128,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		spell.ProjectileScaling = &standardSpellProjectileScalingSeed{
 			BaseProjectiles:       1,
 			ScalingType:           "spell_level",
-			ScaleFromLevel:        max(1, spell.Level) + 1,
+			ScaleFromLevel:        max(1, spell.Level),
 			AdditionalProjectiles: 1,
 			StepSize:              1,
 		}
@@ -171,7 +171,7 @@ func inferHealingAction(spell standardSpellSeed, healBySlot map[string]string) (
 		ScalingStepSize:        1,
 	}
 	if nextFormula, ok := formulaForLevel(healBySlot, baseLevel+1); ok {
-		applySpellLevelScaling(&roll, baseLevel+1, baseFormula, nextFormula)
+		applySpellLevelScaling(&roll, baseLevel, baseFormula, nextFormula)
 	}
 	rolls := []standardSpellActionRollSeed{roll}
 	if strings.EqualFold(spell.Name, "Aid") && roll.DiceCount == 0 && roll.FixedValue > 0 {
@@ -213,7 +213,7 @@ func inferDamageRolls(level int, mechanics map[string]any) []standardSpellAction
 			}
 			roll := damageRoll(damageType, baseFormula)
 			if nextFormula, ok := formulaForLevel(slotMap, baseLevel+1); ok {
-				applySpellLevelScaling(&roll, baseLevel+1, baseFormula, nextFormula)
+				applySpellLevelScaling(&roll, baseLevel, baseFormula, nextFormula)
 			}
 			return []standardSpellActionRollSeed{roll}
 		}
@@ -320,7 +320,7 @@ func inferTargetsFromDescription(description string) *standardSpellProjectileSca
 		return &standardSpellProjectileScalingSeed{
 			BaseProjectiles:       3,
 			ScalingType:           "spell_level",
-			ScaleFromLevel:        2,
+			ScaleFromLevel:        1,
 			AdditionalProjectiles: 1,
 			StepSize:              1,
 		}

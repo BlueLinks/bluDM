@@ -240,8 +240,8 @@ func (s *Server) spellForCast(ctx context.Context, spellID string, librarySource
 
 func spellEffectAmount(roll models.SpellActionRollPart, castLevel int, spellcastingMod int) int {
 	total := rollDice(roll.DiceCount, roll.DieSize) + roll.FixedValue
-	if roll.ScalingType == "spell_level" && castLevel >= roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
-		steps := 1 + (castLevel-roll.ScalingFromLevel)/max(1, roll.ScalingStepSize)
+	if roll.ScalingType == "spell_level" && castLevel > roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
+		steps := 1 + (castLevel-roll.ScalingFromLevel-1)/max(1, roll.ScalingStepSize)
 		total += steps * (rollDice(roll.ScalingDiceCount, roll.ScalingDieSize) + roll.ScalingFixedValue)
 	}
 	if roll.AddPrimaryStatModifier {

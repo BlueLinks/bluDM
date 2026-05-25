@@ -87,10 +87,10 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	if len(aid.Actions[0].Rolls) != 2 {
 		t.Fatalf("expected Aid to update max and current HP, got %+v", aid.Actions[0].Rolls)
 	}
-	if roll := aid.Actions[0].Rolls[0]; roll.RollKind != "max_hp" || roll.FixedValue != 5 || roll.ScalingFixedValue != 5 {
+	if roll := aid.Actions[0].Rolls[0]; roll.RollKind != "max_hp" || roll.FixedValue != 5 || roll.ScalingFromLevel != 2 || roll.ScalingFixedValue != 5 {
 		t.Fatalf("expected Aid fixed HP maximum increase with scaling, got %+v", roll)
 	}
-	if roll := aid.Actions[0].Rolls[1]; roll.RollKind != "healing" || roll.FixedValue != 5 || roll.ScalingFixedValue != 5 {
+	if roll := aid.Actions[0].Rolls[1]; roll.RollKind != "healing" || roll.FixedValue != 5 || roll.ScalingFromLevel != 2 || roll.ScalingFixedValue != 5 {
 		t.Fatalf("expected Aid fixed current HP increase with scaling, got %+v", roll)
 	}
 
@@ -103,6 +103,9 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	}
 	if len(aid2024.Actions) != 1 || len(aid2024.Actions[0].Rolls) != 2 {
 		t.Fatalf("expected SRD 5.2.1 Aid max/current HP effects, got %+v", aid2024.Actions)
+	}
+	if roll := aid2024.Actions[0].Rolls[0]; roll.ScalingFromLevel != 2 {
+		t.Fatalf("expected SRD 5.2.1 Aid to scale above 2nd level, got %+v", roll)
 	}
 
 	healingWord2024 := findStandardSpell(t, spells, "srd-5-2-1-healing-word")
