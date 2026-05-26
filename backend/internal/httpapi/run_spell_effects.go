@@ -37,7 +37,7 @@ func (s *Server) applySpellEffect(ctx context.Context, runID, actorID, targetID 
 		"ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense", "forced_movement",
 		"attack_damage_rider", "healing_maximized", "action_restriction", "saving_throw_repeat",
 		"area_trigger", "visibility_effect", "sense_effect", "terrain_effect", "death_protection",
-		"linked_healing", "damage_transfer", "battlefield_object":
+		"linked_healing", "damage_transfer", "battlefield_object", "layered_effect", "roll_table":
 		return s.appendCombatLogEvent(ctx, runID, "spell_active_effect", actorID, targetID, map[string]any{
 			"spellName":    spellName,
 			"effectKind":   roll.RollKind,

@@ -343,6 +343,10 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(spellPayload(payload)),
     }),
+  spell: (spellId: string, librarySource: "user" | "standard" = "user") =>
+    request<{ spell: Spell }>(
+      `/api/library/spells/${spellId}?librarySource=${encodeURIComponent(librarySource)}`,
+    ),
   deleteSpell: (spellId: string) =>
     request<void>(`/api/library/spells/${spellId}`, { method: "DELETE" }),
   seedTestData: () =>

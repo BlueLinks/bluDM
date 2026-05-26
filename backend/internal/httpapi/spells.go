@@ -70,7 +70,7 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 				and ($2 = -1 or level = $2)
 				and (cardinality($3::text[]) = 0 or source_key = any($3::text[]))
 			order by level asc, name asc
-			limit 500
+			limit 1000
 		`, q, level, sources)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list standard spells")
@@ -98,6 +98,24 @@ func (s *Server) listSpells(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"spells": spells})
+}
+
+func (s *Server) getSpell(w http.ResponseWriter, r *http.Request) {
+	spellID := strings.TrimSpace(r.PathValue("spellID"))
+	librarySource := strings.TrimSpace(r.URL.Query().Get("librarySource"))
+	if librarySource == "" {
+		librarySource = "user"
+	}
+	spell, err := s.spellForCast(r.Context(), spellID, librarySource)
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusNotFound, "spell not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not load spell")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"spell": spell})
 }
 
 func (s *Server) createSpell(w http.ResponseWriter, r *http.Request) {

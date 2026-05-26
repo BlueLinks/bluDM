@@ -155,12 +155,22 @@ type executeActionRequest struct {
 }
 
 type castSpellRequest struct {
-	ActorID       string   `json:"actorId"`
-	TargetIDs     []string `json:"targetIds"`
-	SpellID       string   `json:"spellId"`
-	LibrarySource string   `json:"librarySource"`
-	CastLevel     int      `json:"castLevel"`
-	RollMode      string   `json:"rollMode"`
+	ActorID              string                       `json:"actorId"`
+	TargetIDs            []string                     `json:"targetIds"`
+	SpellID              string                       `json:"spellId"`
+	LibrarySource        string                       `json:"librarySource"`
+	CastLevel            int                          `json:"castLevel"`
+	RollMode             string                       `json:"rollMode"`
+	RollTableResolutions []rollTableResolutionRequest `json:"rollTableResolutions"`
+}
+
+type rollTableResolutionRequest struct {
+	TargetID      string `json:"targetId"`
+	RollID        string `json:"rollId"`
+	Mode          string `json:"mode"`
+	Roll          int    `json:"roll"`
+	FollowUpRolls []int  `json:"followUpRolls"`
+	SaveResult    string `json:"saveResult"`
 }
 
 type resolveConcentrationRequest struct {
@@ -172,6 +182,21 @@ type manualSpellSlotRequest struct {
 	CombatantID string `json:"combatantId"`
 	SpellLevel  int    `json:"spellLevel"`
 	Mode        string `json:"mode"`
+}
+
+type moveSpellAreaRequest struct {
+	AreaEffectID string `json:"areaEffectId"`
+	Note         string `json:"note"`
+}
+
+type applySpellAreaRequest struct {
+	AreaEffectID string   `json:"areaEffectId"`
+	TargetIDs    []string `json:"targetIds"`
+	RollMode     string   `json:"rollMode"`
+}
+
+type endSpellAreaRequest struct {
+	AreaEffectID string `json:"areaEffectId"`
 }
 
 type resolveDamageRequest struct {

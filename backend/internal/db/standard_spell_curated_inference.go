@@ -6,6 +6,9 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 	if inferCuratedStandardLateEffectSpellAutomation(spell) {
 		return true
 	}
+	if inferComplexStandardSpellAutomation(spell) {
+		return true
+	}
 	switch strings.ToLower(spell.Name) {
 	case "longstrider":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Longstrider", effectRoll("speed_bonus", 10, "immediate", nil))}
@@ -90,7 +93,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 		return true
 	case "beacon of hope":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Beacon of Hope",
-			effectRoll("advantage_state", 0, "immediate", map[string]any{"state": "advantage", "category": "wisdom_saving_throw,death_save", "appliesTo": "target_rolls"}),
+			effectRoll("advantage_state", 0, "immediate", map[string]any{"state": "advantage", "categories": []string{"wisdom_saving_throw", "death_save"}, "appliesTo": "target_rolls"}),
 			effectRoll("healing_maximized", 0, "immediate", nil),
 		)}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -259,7 +262,7 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 			Rolls: []standardSpellActionRollSeed{
 				effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain,lightly_obscured"}),
 				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "enter_or_start_turn", "outcome": "restrained", "saveAbility": "dex", "durationMode": "spell_duration"}),
-				standardDamageRoll("area_trigger", "fire", 2, 4, 0, "immediate", map[string]any{"trigger": "web_burns", "outcome": "fire_damage", "durationMode": "instant"}),
+				standardDamageRoll("recurring_hp_change", "fire", 2, 4, 0, "immediate", map[string]any{"mode": "damage", "trigger": "web_burns", "outcome": "fire_damage", "durationMode": "instant"}),
 			},
 		}}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
@@ -267,32 +270,12 @@ func inferCuratedStandardSpellAutomation(spell *standardSpellSeed) bool {
 	case "spike growth":
 		spell.Actions = []standardSpellActionSeed{simpleEffectAction("Spike Growth",
 			effectRoll("terrain_effect", 0, "immediate", map[string]any{"mode": "difficult_terrain,camouflaged"}),
-			standardDamageRoll("area_trigger", "piercing", 2, 4, 0, "immediate", map[string]any{"trigger": "moves_into_or_within", "outcome": "save_for_damage", "details": "Damage applies per 5 feet traveled."}),
+			standardDamageRoll("recurring_hp_change", "piercing", 2, 4, 0, "immediate", map[string]any{"mode": "damage", "trigger": "moves_into_or_within", "outcome": "movement_damage", "details": "Damage applies per 5 feet traveled.", "durationMode": "spell_duration"}),
 		)}
 		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
 		return true
 	case "moonbeam":
-		roll := standardDamageRoll("damage", "radiant", 2, 10, 0, "immediate", nil)
-		roll.ScalingType = "spell_level"
-		roll.ScalingFromLevel = max(1, spell.Level)
-		roll.ScalingDiceCount = 1
-		roll.ScalingDieSize = 10
-		roll.ScalingStepSize = 1
-		spell.Actions = []standardSpellActionSeed{{
-			Name:                 "Moonbeam",
-			ActionType:           "save",
-			SaveAbility:          "con",
-			SuccessfulSaveEffect: "half",
-			HitSpecialEvent:      "none",
-			DamageTypeChoice:     "specific",
-			DamageTypeOptions:    []string{"radiant"},
-			Rolls: []standardSpellActionRollSeed{
-				roll,
-				effectRoll("area_trigger", 0, "immediate", map[string]any{"trigger": "appear_enter_moved_into_or_end_turn", "outcome": "save_for_damage", "saveAbility": "con", "details": "Shapechangers revert to their true form on a failed save."}),
-			},
-		}}
-		spell.ProjectileScaling = inferTargetsFromDescription(spell.Description)
-		return true
+		return inferMoonbeamSpell(spell)
 	case "spirit guardians":
 		roll := standardDamageRoll("damage", "radiant", 3, 8, 0, "immediate", map[string]any{"alternateDamageTypes": "radiant,necrotic"})
 		roll.ScalingType = "spell_level"

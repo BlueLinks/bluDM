@@ -248,9 +248,32 @@ func inferTargetsFromDescription(description string) *standardSpellProjectileSca
 			AdditionalProjectiles: 1,
 			StepSize:              1,
 		}
+	case containsAny(lower, "two beams at 5", "two beams at level 5") &&
+		containsAny(lower, "three beams at 11", "three beams at level 11") &&
+		containsAny(lower, "four beams at 17", "four beams at level 17"):
+		return &standardSpellProjectileScalingSeed{
+			BaseProjectiles: 1,
+			ScalingType:     "character_level",
+			StepSize:        1,
+			CantripScaling: map[string]any{
+				"5":  map[string]any{"targets": 2},
+				"11": map[string]any{"targets": 3},
+				"17": map[string]any{"targets": 4},
+			},
+			Description: "Resolve each beam separately; beams can target the same creature or different creatures.",
+		}
 	default:
 		return &standardSpellProjectileScalingSeed{BaseProjectiles: 1, ScalingType: "none", StepSize: 1}
 	}
+}
+
+func containsAny(value string, needles ...string) bool {
+	for _, needle := range needles {
+		if strings.Contains(value, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func cantripDamageScaling(values map[string]string, base parsedSpellFormula) map[string]any {
@@ -335,6 +358,8 @@ func stringValue(value any) string {
 	switch typed := value.(type) {
 	case string:
 		return typed
+	case int:
+		return strconv.Itoa(typed)
 	case float64:
 		if typed == float64(int(typed)) {
 			return strconv.Itoa(int(typed))

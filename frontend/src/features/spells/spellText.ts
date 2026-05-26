@@ -1,14 +1,20 @@
 import { damageTypes } from "../../components/shared/damageTypes";
-import { rollModifierCategories, spellRollKinds } from "../../lib/domain/options";
+import { displayACFormula } from "../../lib/domain/acFormula";
+import { spellRollKinds } from "../../lib/domain/options";
 import { configText } from "../../lib/domain/effectConfig";
+import { baseACAbilityModifiers } from "../../lib/domain/spellEffectOptions";
 import {
-  areaTriggerModes,
-  areaTriggerOutcomes,
-  baseACAbilityModifiers,
-  damageDefenseRestrictions,
-  repeatSaveCheckTypes,
-  repeatSaveSuccessOutcomes,
-} from "../../lib/domain/spellEffectOptions";
+  friendlyAdvantageEffect,
+  friendlyAreaTriggerSummary,
+  friendlyBattlefieldObject,
+  friendlyDamageDefense,
+  friendlyLayeredEffectDetails,
+  friendlyOption,
+  friendlyRepeatSave,
+  friendlyRerollEffect,
+  friendlyRollCategories,
+  friendlyRollTableDetails,
+} from "../../lib/domain/spellMessaging";
 import type { Spell, SpellAreaScalingFormState, SpellFormState } from "../../types";
 
 type SpellLike = Pick<
@@ -242,55 +248,65 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
     return `${subject} regains all missing hit points.`;
   }
   if (roll.rollKind === "advantage_state") {
-    return `${configText(roll.effectConfig?.appliesTo, subject)} has ${configText(roll.effectConfig?.state, "advantage")} on ${configText(roll.effectConfig?.category, "configured rolls")}.`;
+    return friendlyAdvantageEffect(roll.effectConfig);
   }
+  if (roll.rollKind === "roll_reroll") return friendlyRerollEffect(roll.effectConfig);
   if (roll.rollKind === "damage_defense") {
-    return `${subject} gains ${configText(roll.effectConfig?.mode, "resistance")} to ${listOrFallback(roll.effectConfig?.damageTypes, "the chosen damage type")}${restrictionText(roll.effectConfig?.restriction)}.`;
+    return `${subject} gains ${friendlyDamageDefense(roll.effectConfig).toLowerCase()}.`;
   }
   if (roll.rollKind === "action_restriction") {
-    return `${subject}: ${configText(roll.effectConfig?.mode, "restricted actions")}.`;
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "restricted actions")}.`;
   }
   if (roll.rollKind === "saving_throw_repeat") {
-    const checkType = labelFor(repeatSaveCheckTypes, configText(roll.effectConfig?.checkType));
-    const outcome = labelFor(
-      repeatSaveSuccessOutcomes,
-      configText(roll.effectConfig?.successOutcome),
-    );
-    return `${subject} repeats the ${configText(roll.effectConfig?.ability, "configured")} ${checkType || "check"}; on success, ${outcome || "resolve the effect"}.`;
+    return `${subject}: ${friendlyRepeatSave(roll.effectConfig)}.`;
   }
   if (roll.rollKind === "area_trigger") {
-    const trigger = labelFor(areaTriggerModes, configText(roll.effectConfig?.trigger));
-    const outcome = labelFor(areaTriggerOutcomes, configText(roll.effectConfig?.outcome));
-    const save = configText(roll.effectConfig?.saveAbility, "");
+    const save = friendlyOption(roll.effectConfig?.saveAbility, "");
     const details = configText(roll.effectConfig?.details, "");
-    return `Area trigger: ${trigger || "manual trigger"} causes ${outcome || "the configured effect"}${save ? ` (${save} save)` : ""}${details ? `; ${details}` : ""}.`;
+    return `Area trigger: ${friendlyAreaTriggerSummary(roll.effectConfig)}${save ? ` (${save} save)` : ""}${details ? `; ${details}` : ""}.`;
   }
   if (roll.rollKind === "visibility_effect") {
-    return `${subject}: ${configText(roll.effectConfig?.mode, "visibility effect")}.`;
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "visibility effect")}.`;
   }
   if (roll.rollKind === "sense_effect") {
-    return `${subject} gains ${configText(roll.effectConfig?.mode, "a special sense")}.`;
+    return `${subject} gains ${friendlyOption(roll.effectConfig?.mode, "a special sense")}.`;
   }
   if (roll.rollKind === "terrain_effect") {
-    return `Terrain or movement rule: ${configText(roll.effectConfig?.mode, "configured terrain effect")}.`;
+    return `Terrain or movement rule: ${friendlyOption(roll.effectConfig?.mode, "configured terrain effect")}.`;
   }
   if (roll.rollKind === "death_protection") {
-    return `${subject}: ${configText(roll.effectConfig?.mode, "death protection")}.`;
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "death protection")}.`;
   }
   if (roll.rollKind === "linked_healing") {
-    return `${configText(roll.effectConfig?.target, "Caster")} heals from ${configText(roll.effectConfig?.source, "the linked effect")}.`;
+    return `${friendlyOption(roll.effectConfig?.target, "Caster")} heals from ${friendlyOption(roll.effectConfig?.source, "the linked effect")}.`;
   }
   if (roll.rollKind === "damage_transfer") {
-    return `Damage transfer: ${configText(roll.effectConfig?.mode, "configured transfer")}.`;
+    return `Damage transfer: ${friendlyOption(roll.effectConfig?.mode, "configured transfer")}.`;
+  }
+  if (roll.rollKind === "roll_table") {
+    return `${friendlyRollTableDetails(roll.effectConfig)}.`;
+  }
+  if (roll.rollKind === "layered_effect") {
+    const rider = configText(roll.effectConfig?.riderText || roll.effectConfig?.details);
+    return `${friendlyLayeredEffectDetails(roll.effectConfig)}${rider ? ` ${rider}` : ""}.`;
   }
   if (roll.rollKind === "battlefield_object") {
-    return `Battlefield object: ${configText(roll.effectConfig?.kind, "manual object")}.`;
+    const move = configText(roll.effectConfig?.moveDistanceFeet);
+    const rider = configText(roll.effectConfig?.riderText || roll.effectConfig?.details);
+    return [
+      friendlyBattlefieldObject(roll.effectConfig),
+      move ? `can move up to ${move} ft.` : "",
+      rider,
+    ]
+      .filter(Boolean)
+      .join("; ")
+      .concat(".");
   }
   if (roll.rollKind === "forced_movement") {
     const amount = effectAmount(roll);
     const direction = configText(roll.effectConfig?.direction, "forced movement");
     if (direction === "prone") return `${subject} has the Prone condition.`;
-    return `${subject}: ${direction} ${amount ? `${amount} feet` : ""}.`;
+    return `${subject}: ${friendlyOption(direction, "forced movement").toLowerCase()} ${amount ? `${amount} feet` : ""}.`;
   }
   const amount = effectAmount(roll);
   if (!amount) return "";
@@ -314,14 +330,15 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
     return `${subject}'s speed is ${configText(roll.effectConfig?.multiplier) === "2" ? "doubled" : "halved"}.`;
   }
   if (roll.rollKind === "movement_mode") {
-    return `${subject} gains ${configText(roll.effectConfig?.mode, "a movement")} speed ${amount ? `of ${amount} feet` : "based on its walking speed"}.`;
+    return `${subject} gains ${friendlyOption(roll.effectConfig?.mode, "a movement")} speed ${amount ? `of ${amount} feet` : "based on its walking speed"}.`;
   }
   if (roll.rollKind === "ac_bonus")
     return `${subject} gains a ${(Number(roll.fixedValue) || 0) >= 0 ? "+" : ""}${amount} bonus to AC.`;
   if (roll.rollKind === "base_ac")
     return `${subject}'s base AC becomes ${baseACText(roll, amount)}.`;
   if (roll.rollKind === "roll_modifier") {
-    return `${subject} ${configText(roll.effectConfig?.mode, "adds")}s ${amount} to ${rollCategoryText(roll.effectConfig?.categories)}.`;
+    const mode = configText(roll.effectConfig?.mode, "add") === "subtract" ? "subtracts" : "adds";
+    return `${subject} ${mode} ${amount} to ${friendlyRollCategories(roll.effectConfig)}.`;
   }
   if (roll.rollKind === "attack_damage_rider")
     return `${subject}'s attacks deal an extra ${amount}.`;
@@ -352,37 +369,23 @@ function effectAmount(roll: SpellLike["actions"][number]["rolls"][number]) {
 }
 
 function baseACText(roll: SpellLike["actions"][number]["rolls"][number], fallback: string) {
-  if (configText(roll.effectConfig?.calculationMode, "formula") === "standard_ac") {
+  if (configText(roll.effectConfig?.calculationMode, "formula") === "dice") {
     const ability = labelFor(
       baseACAbilityModifiers,
       configText(roll.effectConfig?.abilityModifier),
     );
-    return `${configText(roll.effectConfig?.baseValue, fallback)}${ability ? ` + ${ability}` : ""}`;
+    return `${baseACDiceText(roll)}${ability ? ` + ${ability}` : ""}`;
   }
-  return configText(roll.effectConfig?.formula, fallback);
+  return displayACFormula(roll.effectConfig?.formula, fallback);
 }
 
-function rollCategoryText(value: unknown) {
-  const categories = configStringArray(value)
-    .map((category) => labelFor(rollModifierCategories, category))
-    .filter(Boolean);
-  return categories.length > 0 ? categories.join(", ") : "a configured roll";
-}
-
-function listOrFallback(value: unknown, fallback: string) {
-  const values = configStringArray(value);
-  return values.length > 0 ? values.join(", ") : fallback;
-}
-
-function restrictionText(value: unknown) {
-  const label = labelFor(damageDefenseRestrictions, configText(value));
-  return label && label !== "No restriction" ? ` (${label.toLowerCase()})` : "";
-}
-
-function configStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
+function baseACDiceText(roll: SpellLike["actions"][number]["rolls"][number]) {
+  const dice = Number(roll.diceCount) || 0;
+  const die = Number(roll.dieSize) || 6;
+  const fixed = Number(roll.fixedValue) || 0;
+  const diceText = dice > 0 ? `${dice === 1 ? "" : dice}d${die}` : "";
+  const fixedText = fixed > 0 ? `+${fixed}` : fixed < 0 ? String(fixed) : "";
+  return `${diceText}${fixedText}` || String(fixed);
 }
 
 function labelFor(options: Array<{ value: string; label: string }>, value: string) {

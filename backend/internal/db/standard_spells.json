@@ -59,7 +59,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-chill-touch",
@@ -115,7 +116,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dancing-lights",
@@ -163,7 +165,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-druidcraft",
@@ -206,7 +209,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-eldritch-blast",
@@ -260,7 +264,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fire-bolt",
@@ -313,7 +318,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-guidance",
@@ -359,7 +365,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-light",
@@ -414,7 +421,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mage-hand",
@@ -462,7 +470,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mending",
@@ -512,7 +521,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-message",
@@ -560,7 +570,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-minor-illusion",
@@ -608,7 +619,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-poison-spray",
@@ -670,7 +682,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-prestidigitation",
@@ -718,7 +731,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-produce-flame",
@@ -772,7 +786,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-ray-of-frost",
@@ -827,7 +842,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-resistance",
@@ -874,7 +890,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sacred-flame",
@@ -935,7 +952,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shillelagh",
@@ -981,7 +999,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shocking-grasp",
@@ -1036,7 +1055,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-spare-the-dying",
@@ -1079,7 +1099,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-thaumaturgy",
@@ -1123,7 +1144,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-true-strike",
@@ -1170,7 +1192,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-vicious-mockery",
@@ -1228,7 +1251,8 @@
         "Bard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-alarm",
@@ -1278,7 +1302,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-animal-friendship",
@@ -1331,7 +1356,8 @@
         "Ranger"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-bane",
@@ -1385,7 +1411,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-bless",
@@ -1433,7 +1460,8 @@
         "Lore",
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-burning-hands",
@@ -1504,7 +1532,8 @@
         "Lore",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-charm-person",
@@ -1560,7 +1589,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-color-spray",
@@ -1610,7 +1640,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-command",
@@ -1663,7 +1694,8 @@
         "Lore",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-comprehend-languages",
@@ -1712,7 +1744,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-create-or-destroy-water",
@@ -1762,7 +1795,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-cure-wounds",
@@ -1822,7 +1856,8 @@
         "Lore",
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-detect-evil-and-good",
@@ -1871,7 +1906,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-detect-magic",
@@ -1925,7 +1961,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-detect-poison-and-disease",
@@ -1977,7 +2014,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-disguise-self",
@@ -2024,7 +2062,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-divine-favor",
@@ -2075,7 +2114,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-entangle",
@@ -2130,7 +2170,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-expeditious-retreat",
@@ -2177,7 +2218,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-faerie-fire",
@@ -2231,7 +2273,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-false-life",
@@ -2288,7 +2331,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-feather-fall",
@@ -2335,7 +2379,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-find-familiar",
@@ -2379,7 +2424,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-floating-disk",
@@ -2425,7 +2471,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fog-cloud",
@@ -2476,7 +2523,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-goodberry",
@@ -2521,7 +2569,8 @@
         "Ranger"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-grease",
@@ -2577,7 +2626,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-guiding-bolt",
@@ -2636,7 +2686,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-healing-word",
@@ -2692,7 +2743,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hellish-rebuke",
@@ -2756,7 +2808,8 @@
         "Warlock"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-heroism",
@@ -2802,7 +2855,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hideous-laughter",
@@ -2856,7 +2910,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hunters-mark",
@@ -2898,7 +2953,8 @@
         "Ranger"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-identify",
@@ -2945,7 +3001,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-illusory-script",
@@ -2992,7 +3049,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-inflict-wounds",
@@ -3051,7 +3109,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-jump",
@@ -3100,7 +3159,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-longstrider",
@@ -3149,7 +3209,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mage-armor",
@@ -3196,7 +3257,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magic-missile",
@@ -3256,7 +3318,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-protection-from-evil-and-good",
@@ -3306,7 +3369,8 @@
         "Lore",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-purify-food-and-drink",
@@ -3353,7 +3417,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sanctuary",
@@ -3400,7 +3465,8 @@
         "Lore",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shield",
@@ -3446,7 +3512,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shield-of-faith",
@@ -3493,7 +3560,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-silent-image",
@@ -3544,7 +3612,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sleep",
@@ -3601,7 +3670,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-speak-with-animals",
@@ -3648,7 +3718,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-thunderwave",
@@ -3720,7 +3791,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-unseen-servant",
@@ -3768,7 +3840,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-acid-arrow",
@@ -3828,7 +3901,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-aid",
@@ -3884,7 +3958,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-alter-self",
@@ -3930,7 +4005,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-animal-messenger",
@@ -3978,7 +4054,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-arcane-lock",
@@ -4024,7 +4101,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-arcanists-magic-aura",
@@ -4070,7 +4148,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-augury",
@@ -4116,7 +4195,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-barkskin",
@@ -4164,7 +4244,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-blindness-deafness",
@@ -4219,7 +4300,8 @@
         "Lore",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-blur",
@@ -4265,7 +4347,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-branding-smite",
@@ -4320,7 +4403,8 @@
         "Paladin"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-calm-emotions",
@@ -4376,7 +4460,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-continual-flame",
@@ -4423,7 +4508,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-darkness",
@@ -4474,7 +4560,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-darkvision",
@@ -4523,7 +4610,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-detect-thoughts",
@@ -4571,7 +4659,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-enhance-ability",
@@ -4620,7 +4709,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-enlarge-reduce",
@@ -4674,7 +4764,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-enthrall",
@@ -4727,7 +4818,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-find-steed",
@@ -4772,7 +4864,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-find-traps",
@@ -4819,7 +4912,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-flame-blade",
@@ -4874,7 +4968,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-flaming-sphere",
@@ -4934,7 +5029,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-gentle-repose",
@@ -4981,7 +5077,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-gust-of-wind",
@@ -5039,7 +5136,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-heat-metal",
@@ -5107,7 +5205,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hold-person",
@@ -5166,7 +5265,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-invisibility",
@@ -5216,7 +5316,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-knock",
@@ -5262,7 +5363,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-lesser-restoration",
@@ -5313,7 +5415,8 @@
         "Life",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-levitate",
@@ -5360,7 +5463,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-locate-animals-or-plants",
@@ -5408,7 +5512,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-locate-object",
@@ -5459,7 +5564,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magic-mouth",
@@ -5506,7 +5612,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magic-weapon",
@@ -5552,7 +5659,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mirror-image",
@@ -5600,7 +5708,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-misty-step",
@@ -5647,7 +5756,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-moonbeam",
@@ -5716,7 +5826,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-pass-without-trace",
@@ -5764,7 +5875,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-prayer-of-healing",
@@ -5817,7 +5929,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-protection-from-poison",
@@ -5865,7 +5978,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-ray-of-enfeeblement",
@@ -5918,7 +6032,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-rope-trick",
@@ -5964,7 +6079,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-scorching-ray",
@@ -6017,7 +6133,8 @@
         "Lore",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-see-invisibility",
@@ -6065,7 +6182,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shatter",
@@ -6137,7 +6255,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-silence",
@@ -6188,7 +6307,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-spider-climb",
@@ -6237,7 +6357,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-spike-growth",
@@ -6288,7 +6409,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-spiritual-weapon",
@@ -6347,7 +6469,8 @@
         "Lore",
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-suggestion",
@@ -6402,7 +6525,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-warding-bond",
@@ -6448,7 +6572,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-web",
@@ -6499,7 +6624,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-zone-of-truth",
@@ -6550,7 +6676,8 @@
         "Lore",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-animate-dead",
@@ -6597,7 +6724,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-beacon-of-hope",
@@ -6644,7 +6772,8 @@
         "Life",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-bestow-curse",
@@ -6699,7 +6828,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-blink",
@@ -6745,7 +6875,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-call-lightning",
@@ -6806,7 +6937,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-clairvoyance",
@@ -6855,7 +6987,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-animals",
@@ -6901,7 +7034,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-counterspell",
@@ -6945,7 +7079,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-create-food-and-water",
@@ -6993,7 +7128,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-daylight",
@@ -7046,7 +7182,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dispel-magic",
@@ -7098,7 +7235,8 @@
         "Lore",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fear",
@@ -7158,7 +7296,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fireball",
@@ -7228,7 +7367,8 @@
         "Lore",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fly",
@@ -7276,7 +7416,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-gaseous-form",
@@ -7325,7 +7466,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-glyph-of-warding",
@@ -7373,7 +7515,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-haste",
@@ -7421,7 +7564,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hypnotic-pattern",
@@ -7477,7 +7621,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-lightning-bolt",
@@ -7547,7 +7692,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magic-circle",
@@ -7607,7 +7753,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-major-image",
@@ -7656,7 +7803,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mass-healing-word",
@@ -7708,7 +7856,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-meld-into-stone",
@@ -7754,7 +7903,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-nondetection",
@@ -7802,7 +7952,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-phantom-steed",
@@ -7847,7 +7998,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-plant-growth",
@@ -7895,7 +8047,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-protection-from-energy",
@@ -7945,7 +8098,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-remove-curse",
@@ -7993,7 +8147,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-revivify",
@@ -8041,7 +8196,8 @@
         "Lore",
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sending",
@@ -8089,7 +8245,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sleet-storm",
@@ -8141,7 +8298,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-slow",
@@ -8200,7 +8358,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-speak-with-dead",
@@ -8247,7 +8406,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-speak-with-plants",
@@ -8297,7 +8457,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-spirit-guardians",
@@ -8343,7 +8504,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-stinking-cloud",
@@ -8404,7 +8566,8 @@
         "Land",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-tiny-hut",
@@ -8454,7 +8617,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-tongues",
@@ -8503,7 +8667,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-vampiric-touch",
@@ -8561,7 +8726,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-water-breathing",
@@ -8611,7 +8777,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-water-walk",
@@ -8661,7 +8828,8 @@
         "Lore",
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wind-wall",
@@ -8724,7 +8892,8 @@
       "subclasses": [
         "Lore"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-arcane-eye",
@@ -8772,7 +8941,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-banishment",
@@ -8827,7 +8997,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-black-tentacles",
@@ -8888,7 +9059,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-blight",
@@ -8954,7 +9126,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-compulsion",
@@ -9004,7 +9177,8 @@
         "Bard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-confusion",
@@ -9061,7 +9235,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-minor-elementals",
@@ -9105,7 +9280,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-woodland-beings",
@@ -9150,7 +9326,8 @@
         "Ranger"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-control-water",
@@ -9212,7 +9389,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-death-ward",
@@ -9258,7 +9436,8 @@
       "subclasses": [
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dimension-door",
@@ -9309,7 +9488,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-divination",
@@ -9355,7 +9535,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dominate-beast",
@@ -9406,7 +9587,8 @@
         "Sorcerer"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fabricate",
@@ -9449,7 +9631,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-faithful-hound",
@@ -9499,7 +9682,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fire-shield",
@@ -9554,7 +9738,8 @@
       "subclasses": [
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-freedom-of-movement",
@@ -9604,7 +9789,8 @@
         "Land",
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-giant-insect",
@@ -9647,7 +9833,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-greater-invisibility",
@@ -9694,7 +9881,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-guardian-of-faith",
@@ -9752,7 +9940,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hallucinatory-terrain",
@@ -9804,7 +9993,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-ice-storm",
@@ -9873,7 +10063,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-locate-creature",
@@ -9924,7 +10115,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-phantasmal-killer",
@@ -9980,7 +10172,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-polymorph",
@@ -10034,7 +10227,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-private-sanctum",
@@ -10081,7 +10275,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-resilient-sphere",
@@ -10132,7 +10327,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-secret-chest",
@@ -10176,7 +10372,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-stone-shape",
@@ -10224,7 +10421,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-stoneskin",
@@ -10273,7 +10471,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wall-of-fire",
@@ -10337,7 +10536,8 @@
       "subclasses": [
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-animate-objects",
@@ -10382,7 +10582,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-antilife-shell",
@@ -10428,7 +10629,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-arcane-hand",
@@ -10472,7 +10674,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-awaken",
@@ -10517,7 +10720,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-cloudkill",
@@ -10584,7 +10788,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-commune",
@@ -10630,7 +10835,8 @@
       "subclasses": [
         "Devotion"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-commune-with-nature",
@@ -10676,7 +10882,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-cone-of-cold",
@@ -10744,7 +10951,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-elemental",
@@ -10794,7 +11002,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-contact-other-plane",
@@ -10845,7 +11054,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-contagion",
@@ -10897,7 +11107,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-creation",
@@ -10945,7 +11156,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dispel-evil-and-good",
@@ -10998,7 +11210,8 @@
         "Paladin"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dominate-person",
@@ -11051,7 +11264,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dream",
@@ -11113,7 +11327,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-flame-strike",
@@ -11180,7 +11395,8 @@
         "Devotion",
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-geas",
@@ -11233,7 +11449,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-greater-restoration",
@@ -11279,7 +11496,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hallow",
@@ -11335,7 +11553,8 @@
       "subclasses": [
         "Fiend"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-hold-monster",
@@ -11389,7 +11608,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-insect-plague",
@@ -11457,7 +11677,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-legend-lore",
@@ -11503,7 +11724,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mass-cure-wounds",
@@ -11559,7 +11781,8 @@
       "subclasses": [
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mislead",
@@ -11602,7 +11825,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-modify-memory",
@@ -11653,7 +11877,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-passwall",
@@ -11699,7 +11924,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-planar-binding",
@@ -11753,7 +11979,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-raise-dead",
@@ -11801,7 +12028,8 @@
       "subclasses": [
         "Life"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-reincarnate",
@@ -11845,7 +12073,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-scrying",
@@ -11902,7 +12131,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-seeming",
@@ -11947,7 +12177,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-telekinesis",
@@ -11994,7 +12225,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-telepathic-bond",
@@ -12038,7 +12270,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-teleportation-circle",
@@ -12086,7 +12319,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-tree-stride",
@@ -12132,7 +12366,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wall-of-force",
@@ -12176,7 +12411,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wall-of-stone",
@@ -12224,7 +12460,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-blade-barrier",
@@ -12283,7 +12520,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-chain-lightning",
@@ -12341,7 +12579,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-circle-of-death",
@@ -12406,7 +12645,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-fey",
@@ -12450,7 +12690,8 @@
         "Warlock"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-contingency",
@@ -12494,7 +12735,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-create-undead",
@@ -12540,7 +12782,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-disintegrate",
@@ -12601,7 +12844,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-eyebite",
@@ -12655,7 +12899,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-find-the-path",
@@ -12701,7 +12946,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-flesh-to-stone",
@@ -12754,7 +13000,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-forbiddance",
@@ -12801,7 +13048,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-freezing-sphere",
@@ -12861,7 +13109,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-globe-of-invulnerability",
@@ -12909,7 +13158,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-guards-and-wards",
@@ -12957,7 +13207,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-harm",
@@ -13013,7 +13264,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-heal",
@@ -13062,7 +13314,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-heroes-feast",
@@ -13107,7 +13360,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-instant-summons",
@@ -13151,7 +13405,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-irresistible-dance",
@@ -13194,7 +13449,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magic-jar",
@@ -13246,7 +13502,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mass-suggestion",
@@ -13299,7 +13556,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-move-earth",
@@ -13348,7 +13606,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-planar-ally",
@@ -13391,7 +13650,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-programmed-illusion",
@@ -13439,7 +13699,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sunbeam",
@@ -13502,7 +13763,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-transport-via-plants",
@@ -13545,7 +13807,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-true-seeing",
@@ -13593,7 +13856,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wall-of-ice",
@@ -13656,7 +13920,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wall-of-thorns",
@@ -13719,7 +13984,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wind-walk",
@@ -13763,7 +14029,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-word-of-recall",
@@ -13808,7 +14075,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-arcane-sword",
@@ -13859,7 +14127,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-conjure-celestial",
@@ -13902,7 +14171,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-delayed-blast-fireball",
@@ -13965,7 +14235,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-divine-word",
@@ -14015,7 +14286,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-etherealness",
@@ -14062,7 +14334,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-finger-of-death",
@@ -14120,7 +14393,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-fire-storm",
@@ -14181,7 +14455,8 @@
         "Sorcerer"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-forcecage",
@@ -14230,7 +14505,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-magnificent-mansion",
@@ -14278,7 +14554,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mirage-arcane",
@@ -14326,7 +14603,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-plane-shift",
@@ -14382,7 +14660,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-prismatic-spray",
@@ -14443,7 +14722,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-project-image",
@@ -14488,7 +14768,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-regenerate",
@@ -14536,7 +14817,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-resurrection",
@@ -14581,7 +14863,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-reverse-gravity",
@@ -14638,7 +14921,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sequester",
@@ -14682,7 +14966,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-simulacrum",
@@ -14726,7 +15011,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-symbol",
@@ -14775,7 +15061,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-teleport",
@@ -14822,7 +15109,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-animal-shapes",
@@ -14865,7 +15153,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-antimagic-field",
@@ -14913,7 +15202,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-antipathy-sympathy",
@@ -14961,7 +15251,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-clone",
@@ -15005,7 +15296,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-control-weather",
@@ -15053,7 +15345,8 @@
       "subclasses": [
         "Land"
       ]
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-demiplane",
@@ -15096,7 +15389,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-dominate-monster",
@@ -15150,7 +15444,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-earthquake",
@@ -15199,7 +15494,8 @@
         "Sorcerer"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-feeblemind",
@@ -15260,7 +15556,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-glibness",
@@ -15303,7 +15600,8 @@
         "Warlock"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-holy-aura",
@@ -15350,7 +15648,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-incendiary-cloud",
@@ -15410,7 +15709,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-maze",
@@ -15453,7 +15753,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mind-blank",
@@ -15497,7 +15798,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-power-word-stun",
@@ -15542,7 +15844,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-sunburst",
@@ -15605,7 +15908,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-astral-projection",
@@ -15651,7 +15955,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-foresight",
@@ -15698,7 +16003,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-gate",
@@ -15744,7 +16050,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-imprisonment",
@@ -15797,7 +16104,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-mass-heal",
@@ -15842,7 +16150,8 @@
         "Cleric"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-meteor-swarm",
@@ -15902,7 +16211,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-power-word-kill",
@@ -15947,7 +16257,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-prismatic-wall",
@@ -15993,7 +16304,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-shapechange",
@@ -16038,7 +16350,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-storm-of-vengeance",
@@ -16098,7 +16411,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-time-stop",
@@ -16141,7 +16455,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-true-polymorph",
@@ -16187,7 +16502,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-true-resurrection",
@@ -16232,7 +16548,8 @@
         "Druid"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-weird",
@@ -16285,7 +16602,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "slug": "srd-wish",
@@ -16328,7 +16646,8 @@
         "Wizard"
       ],
       "subclasses": []
-    }
+    },
+    "sourceKey": "srd-2014"
   },
   {
     "sourceKey": "srd-5-2-1",

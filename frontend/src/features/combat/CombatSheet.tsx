@@ -14,9 +14,9 @@ import {
   speedFromSheet,
   stringArrayFromSheet,
 } from "../../lib/domain/combat";
-import { configText } from "../../lib/domain/effectConfig";
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
+import { friendlyEffectLabel } from "../../lib/domain/spellMessaging";
 import type { EncounterRunCombatant, EncounterRunEffect, RollMode } from "../../types";
 
 type AbilityOption = (typeof abilities)[number];
@@ -164,64 +164,7 @@ export function CombatSheet({
 }
 
 function sheetEffectLabel(effect: EncounterRunEffect) {
-  if (effect.effectKind === "speed_bonus") {
-    return `Speed +${effect.amount} ft.`;
-  }
-  if (effect.effectKind === "speed_reduction") {
-    return `Speed -${effect.amount} ft.`;
-  }
-  if (effect.effectKind === "speed_multiplier") {
-    return configText(effect.payload?.multiplier) === "2" ? "Speed doubled" : "Speed halved";
-  }
-  if (effect.effectKind === "movement_mode") {
-    return `${configText(effect.payload?.mode, "Movement")} ${effect.amount ? `${effect.amount} ft.` : ""}`;
-  }
-  if (effect.effectKind === "ac_bonus") {
-    return `AC ${effect.amount >= 0 ? "+" : ""}${effect.amount}`;
-  }
-  if (effect.effectKind === "base_ac") {
-    return `Base AC ${configText(effect.payload?.formula, String(effect.amount))}`;
-  }
-  if (effect.effectKind === "damage_defense") {
-    return `${configText(effect.payload?.mode, "Resistance")} ${configText(effect.payload?.damageTypes, "")}`.trim();
-  }
-  if (effect.effectKind === "healing_block") return "Healing blocked";
-  if (effect.effectKind === "healing_maximized") return "Healing maximized";
-  if (effect.effectKind === "heal_to_full") return "Heal to full";
-  if (effect.effectKind === "recurring_hp_change") return `${effect.spellName}: recurring HP`;
-  if (effect.effectKind === "roll_modifier")
-    return `${configText(effect.payload?.mode, "Add")} ${configText(effect.payload?.dice, String(effect.amount))} to ${configText(effect.payload?.category, "rolls")}`;
-  if (effect.effectKind === "advantage_state")
-    return `${configText(effect.payload?.state, "Advantage")} on ${configText(effect.payload?.category, "rolls")}`;
-  if (effect.effectKind === "attack_damage_rider")
-    return `Damage rider ${effect.amount || configText(effect.payload?.dice, "")}`;
-  if (effect.effectKind === "action_restriction")
-    return `Restriction: ${configText(effect.payload?.mode, "manual")}`;
-  if (effect.effectKind === "saving_throw_repeat")
-    return `Repeat save: ${configText(effect.payload?.ability, "")}`;
-  if (effect.effectKind === "area_trigger")
-    return `Area: ${configText(effect.payload?.trigger, "trigger")}`;
-  if (effect.effectKind === "visibility_effect")
-    return `Visibility: ${configText(effect.payload?.mode, "effect")}`;
-  if (effect.effectKind === "sense_effect")
-    return `Sense: ${configText(effect.payload?.mode, "effect")}`;
-  if (effect.effectKind === "terrain_effect")
-    return `Terrain: ${configText(effect.payload?.mode, "effect")}`;
-  if (effect.effectKind === "death_protection") return "Death protection";
-  if (effect.effectKind === "linked_healing") return "Linked healing";
-  if (effect.effectKind === "damage_transfer") return "Damage transfer";
-  if (effect.effectKind === "battlefield_object")
-    return `Object: ${configText(effect.payload?.kind, effect.spellName)}`;
-  if (effect.effectKind === "condition_immunity" && effect.conditionName) {
-    return `Immune to ${effect.conditionName}`;
-  }
-  if (effect.effectKind === "concentration") {
-    return `Concentration: ${effect.spellName}`;
-  }
-  if (effect.timing === "start_target_turn") {
-    return `${effect.spellName} at turn start`;
-  }
-  return effect.spellName;
+  return friendlyEffectLabel(effect);
 }
 
 function speedValue(baseSpeed: number, effects: EncounterRunEffect[]) {

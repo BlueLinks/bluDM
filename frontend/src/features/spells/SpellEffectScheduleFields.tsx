@@ -99,7 +99,7 @@ export function EffectScheduleFields({
             }}
           />
           {durationUsesCount(durationValue(roll)) && (
-            <div className="mt-2 grid grid-cols-[minmax(0,7rem)_minmax(0,8rem)] gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2">
               <FlatNumberInput
                 value={configText(roll.effectConfig?.durationValue, "1")}
                 onChange={(durationValue) =>

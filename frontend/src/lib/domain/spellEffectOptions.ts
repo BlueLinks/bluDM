@@ -50,6 +50,8 @@ export const spellEffectKindCategories: Record<string, SpellEffectCategory> = {
   damage_transfer: "defense",
   roll_modifier: "rolls",
   advantage_state: "rolls",
+  roll_reroll: "rolls",
+  roll_table: "rolls",
   saving_throw_repeat: "rolls",
   condition: "conditions",
   remove_condition: "conditions",
@@ -60,6 +62,7 @@ export const spellEffectKindCategories: Record<string, SpellEffectCategory> = {
   recurring_hp_change: "area",
   area_trigger: "area",
   battlefield_object: "area",
+  layered_effect: "area",
   custom: "utility",
 };
 
@@ -114,11 +117,13 @@ const persistentEffectKinds = new Set([
   "healing_block",
   "healing_maximized",
   "linked_healing",
+  "layered_effect",
   "max_hp",
   "max_hp_reduction",
   "movement_mode",
   "remove_condition",
   "roll_modifier",
+  "roll_reroll",
   "saving_throw_repeat",
   "sense_effect",
   "speed_bonus",
@@ -243,7 +248,7 @@ export const areaTriggerModes = [
   { value: "enter_or_start_turn", label: "Enters or starts turn in area" },
   { value: "enter_or_end_turn", label: "Enters or ends turn in area" },
   {
-    value: "appear_enter_moved_into_or_end_turn",
+    value: "appear_move_enter_or_end_turn",
     label: "Appears, enters, is moved in, or ends turn there",
   },
   { value: "moves_into_or_within", label: "Moves into or within area" },
@@ -262,7 +267,7 @@ export const areaTriggerOutcomes = [
 
 export const baseACCalculationModes = [
   { value: "formula", label: "Formula" },
-  { value: "standard_ac", label: "Standard AC" },
+  { value: "dice", label: "Dice" },
 ];
 
 export const baseACAbilityModifiers = [
@@ -298,4 +303,25 @@ export const terrainEffectModes = [
     label: "Movement can't be magically restricted",
   },
   { value: "obscured", label: "Obscured area" },
+];
+
+export const battlefieldObjectTypes = [
+  { value: "spell_area", label: "Persistent spell area" },
+  { value: "wall", label: "Wall or barrier" },
+  { value: "sphere", label: "Sphere or dome" },
+  { value: "summoned_object", label: "Summoned object" },
+  { value: "spectral_object", label: "Spectral object or hand" },
+  { value: "terrain_feature", label: "Terrain feature" },
+  { value: "body_part_regrowth", label: "Body part regrowth reminder" },
+  { value: "manual_object", label: "Manual battlefield reminder" },
+];
+
+export const battlefieldAreaShapes = [
+  { value: "cylinder", label: "Cylinder" },
+  { value: "sphere", label: "Sphere" },
+  { value: "cube", label: "Cube" },
+  { value: "line", label: "Line" },
+  { value: "cone", label: "Cone" },
+  { value: "wall", label: "Wall" },
+  { value: "special", label: "Special" },
 ];

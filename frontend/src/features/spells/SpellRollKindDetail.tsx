@@ -1,6 +1,5 @@
 import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { Field, Select, Textarea } from "../../components/ui";
-import { configText } from "../../lib/domain/effectConfig";
 import {
   advantageStates,
   conditionImmunities,
@@ -12,22 +11,18 @@ import {
   speedMultipliers,
   spellRollKinds,
 } from "../../lib/domain/options";
-import {
-  advantageAppliesTo,
-  baseACAbilityModifiers,
-  baseACCalculationModes,
-  damageDefenseRestrictions,
-} from "../../lib/domain/spellEffectOptions";
+import { advantageAppliesTo, damageDefenseRestrictions } from "../../lib/domain/spellEffectOptions";
 import type { SpellActionFormState } from "../../types";
+import { BaseACFields } from "./SpellBaseACFields";
 import {
   AdvancedEffectConfigFields,
-  EffectConfigInput,
   EffectConfigMultiCheck,
-  EffectConfigSegmented,
   EffectConfigSelect,
   advancedEffectKinds,
 } from "./SpellEffectConfigFields";
-import { FlatNumberInput } from "./SpellEffectScheduleFields";
+import { SpellLayerEditor } from "./SpellLayerEditor";
+import { EffectConfigDiceFormula, RollConfigLayout } from "./SpellRollConfigLayout";
+import { SpellRollTableEditor } from "./SpellRollTableEditor";
 
 export function RollKindDetail({
   roll,
@@ -133,98 +128,168 @@ export function RollKindDetail({
   }
   if (roll.rollKind === "roll_modifier") {
     return (
-      <div className="grid gap-3 md:grid-cols-[12rem_minmax(16rem,1fr)_12rem]">
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="mode"
-          label="Mode"
-          options={rollModifierModes}
-        />
-        <EffectConfigMultiCheck
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="categories"
-          label="Roll categories"
-          options={rollModifierCategories}
-          help="Choose every roll type this modifier applies to."
-        />
-        <EffectConfigInput
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="dice"
-          label="Dice / fixed"
-          placeholder="1d4 or +2"
-        />
-      </div>
+      <RollConfigLayout
+        top={
+          <>
+            <EffectConfigSelect
+              className="md:max-w-48"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="mode"
+              label="Mode"
+              options={rollModifierModes}
+            />
+            <EffectConfigDiceFormula roll={roll} rolls={rolls} onChange={onChange} />
+          </>
+        }
+        bottom={
+          <EffectConfigMultiCheck
+            roll={roll}
+            rolls={rolls}
+            onChange={onChange}
+            configKey="categories"
+            label="Roll categories"
+            options={rollModifierCategories}
+            help="Choose every roll type this modifier applies to."
+          />
+        }
+      />
     );
   }
   if (roll.rollKind === "advantage_state") {
     return (
-      <div className="grid gap-2 sm:grid-cols-3">
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="state"
-          label="State"
-          options={advantageStates}
-        />
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="category"
-          label="Roll type"
-          options={rollModifierCategories}
-        />
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="appliesTo"
-          label="Applies to"
-          options={advantageAppliesTo}
-        />
-      </div>
+      <RollConfigLayout
+        top={
+          <>
+            <EffectConfigSelect
+              className="md:max-w-56"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="state"
+              label="State"
+              options={advantageStates}
+            />
+            <EffectConfigSelect
+              className="md:max-w-64"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="appliesTo"
+              label="Applies to"
+              options={advantageAppliesTo}
+            />
+          </>
+        }
+        bottom={
+          <EffectConfigMultiCheck
+            roll={roll}
+            rolls={rolls}
+            onChange={onChange}
+            configKey="categories"
+            label="Roll categories"
+            options={rollModifierCategories}
+            help="Choose every roll type this advantage or disadvantage applies to."
+          />
+        }
+      />
     );
+  }
+  if (roll.rollKind === "roll_reroll") {
+    return (
+      <RollConfigLayout
+        top={
+          <>
+            <EffectConfigSelect
+              className="md:max-w-64"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="mode"
+              label="Reroll result"
+              options={[
+                { value: "reroll_use_lower", label: "Reroll and use lower" },
+                { value: "reroll_use_higher", label: "Reroll and use higher" },
+                { value: "reroll_choose", label: "DM chooses roll" },
+              ]}
+              help="Use this for effects that force a d20 to be rerolled, such as using the lower result."
+            />
+            <EffectConfigSelect
+              className="md:max-w-64"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="appliesTo"
+              label="Applies to"
+              options={[
+                { value: "triggering_creature", label: "Triggering creature" },
+                ...advantageAppliesTo,
+              ]}
+            />
+          </>
+        }
+        bottom={
+          <EffectConfigMultiCheck
+            roll={roll}
+            rolls={rolls}
+            onChange={onChange}
+            configKey="categories"
+            label="Roll categories"
+            options={rollModifierCategories}
+            help="Choose every d20 roll type this reroll can affect."
+          />
+        }
+      />
+    );
+  }
+  if (roll.rollKind === "roll_table") {
+    return <SpellRollTableEditor roll={roll} rolls={rolls} onChange={onChange} />;
+  }
+  if (roll.rollKind === "layered_effect") {
+    return <SpellLayerEditor roll={roll} rolls={rolls} onChange={onChange} />;
   }
   if (roll.rollKind === "damage_defense") {
     return (
-      <div className="grid gap-3 md:grid-cols-[12rem_minmax(16rem,1fr)_12rem]">
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="mode"
-          label="Defense"
-          options={damageDefenseModes}
-          help="The defensive relationship this effect grants."
-        />
-        <EffectConfigMultiCheck
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="damageTypes"
-          label="Damage types"
-          options={[
-            { value: "all", label: "All damage" },
-            ...damageTypeOptions().map(({ value, label }) => ({ value, label })),
-          ]}
-          help="Choose all damage types covered by this defense."
-        />
-        <EffectConfigSelect
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="restriction"
-          label="Restriction"
-          options={damageDefenseRestrictions}
-        />
-      </div>
+      <RollConfigLayout
+        top={
+          <>
+            <EffectConfigSelect
+              className="md:max-w-48"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="mode"
+              label="Defense"
+              options={damageDefenseModes}
+              help="The defensive relationship this effect grants."
+            />
+            <EffectConfigSelect
+              className="md:max-w-56"
+              roll={roll}
+              rolls={rolls}
+              onChange={onChange}
+              configKey="restriction"
+              label="Restriction"
+              options={damageDefenseRestrictions}
+            />
+          </>
+        }
+        bottom={
+          <EffectConfigMultiCheck
+            roll={roll}
+            rolls={rolls}
+            onChange={onChange}
+            configKey="damageTypes"
+            label="Damage types"
+            options={[
+              { value: "all", label: "All damage" },
+              ...damageTypeOptions().map(({ value, label }) => ({ value, label })),
+            ]}
+            help="Choose all damage types covered by this defense."
+          />
+        }
+      />
     );
   }
   if (roll.rollKind === "forced_movement") {
@@ -272,77 +337,9 @@ export function RollKindDetail({
     <div className="grid gap-2 sm:grid-cols-2">
       <Field label="Effect target" help={effectTargetHelp(roll.rollKind)}>
         <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
-          {rollKindLabel(roll.rollKind)}
+          {spellRollKinds.find((option) => option.value === roll.rollKind)?.label ?? "Effect"}
         </div>
       </Field>
-    </div>
-  );
-}
-
-function BaseACFields({
-  roll,
-  rolls,
-  onChange,
-}: {
-  roll: SpellActionFormState["rolls"][number];
-  rolls: SpellActionFormState["rolls"];
-  onChange: (rolls: SpellActionFormState["rolls"]) => void;
-}) {
-  const mode = configText(roll.effectConfig?.calculationMode, "formula");
-  return (
-    <div className="grid gap-3">
-      <Field
-        label="AC calculation"
-        help="Use Formula for printed rules text, or Standard AC when it is a base number plus an optional ability modifier."
-      >
-        <EffectConfigSegmented
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="calculationMode"
-          options={baseACCalculationModes}
-        />
-      </Field>
-      {mode === "standard_ac" ? (
-        <div className="grid gap-3 sm:grid-cols-[11rem_16rem]">
-          <Field label="Base AC">
-            <FlatNumberInput
-              value={configText(roll.effectConfig?.baseValue, roll.fixedValue || "13")}
-              onChange={(baseValue) =>
-                onChange(
-                  rolls.map((item) =>
-                    item.id === roll.id
-                      ? {
-                          ...item,
-                          fixedValue: baseValue,
-                          effectConfig: { ...item.effectConfig, baseValue },
-                        }
-                      : item,
-                  ),
-                )
-              }
-            />
-          </Field>
-          <EffectConfigSelect
-            roll={roll}
-            rolls={rolls}
-            onChange={onChange}
-            configKey="abilityModifier"
-            label="Ability modifier"
-            options={baseACAbilityModifiers}
-          />
-        </div>
-      ) : (
-        <EffectConfigInput
-          roll={roll}
-          rolls={rolls}
-          onChange={onChange}
-          configKey="formula"
-          label="AC formula"
-          placeholder="13 + Dex modifier"
-          help="Use this for exact rules wording or formulas that need a DM to interpret."
-        />
-      )}
     </div>
   );
 }
@@ -376,6 +373,8 @@ export function rollKindDescription(kind: string) {
   if (kind === "base_ac") return "base AC";
   if (kind === "roll_modifier") return "roll modifier";
   if (kind === "advantage_state") return "advantage state";
+  if (kind === "roll_table") return "roll table";
+  if (kind === "layered_effect") return "layered battlefield effect";
   if (kind === "damage_defense") return "damage defense";
   if (kind === "forced_movement") return "forced movement";
   if (kind === "attack_damage_rider") return "attack damage rider";
@@ -396,27 +395,16 @@ export function rollKindDescription(kind: string) {
 }
 
 function effectTargetHelp(rollKind: string) {
-  if (rollKind === "max_hp") {
-    return "Changes the target's hit point maximum. If current HP should also increase, add a second healing effect with the same fixed amount.";
-  }
-  if (rollKind === "temp_hp") {
-    return "Sets the target's temporary hit points to this amount. It replaces current temp HP instead of stacking.";
-  }
-  if (rollKind === "speed_bonus") {
-    return "Increases the target's speed while this effect is active.";
-  }
-  if (rollKind === "speed_reduction") {
-    return "Reduces the target's speed by the configured amount while the effect is active.";
-  }
-  if (rollKind === "ac_bonus") {
-    return "Adds this amount to the target's Armor Class while active.";
-  }
-  if (rollKind === "healing_block") {
-    return "Prevents the target from regaining hit points while active.";
-  }
-  return "Restores or changes the target using the configured amount.";
-}
-
-function rollKindLabel(kind: string) {
-  return spellRollKinds.find((option) => option.value === kind)?.label ?? "Effect";
+  const help: Record<string, string> = {
+    ac_bonus: "Adds this amount to the target's Armor Class while active.",
+    healing_block: "Prevents the target from regaining hit points while active.",
+    max_hp:
+      "Changes the target's hit point maximum. If current HP should also increase, add a second healing effect with the same fixed amount.",
+    speed_bonus: "Increases the target's speed while this effect is active.",
+    speed_reduction:
+      "Reduces the target's speed by the configured amount while the effect is active.",
+    temp_hp:
+      "Sets the target's temporary hit points to this amount. It replaces current temp HP instead of stacking.",
+  };
+  return help[rollKind] ?? "Restores or changes the target using the configured amount.";
 }

@@ -1,6 +1,15 @@
 import type { EncounterRun, EncounterRunCombatant, RollMode } from "../../types";
 import { request } from "./request";
 
+export type RollTableResolutionPayload = {
+  targetId: string;
+  rollId: string;
+  mode: "auto" | "entered";
+  roll: number;
+  followUpRolls: number[];
+  saveResult: "manual" | "failed" | "success";
+};
+
 export const encounterRunApi = {
   encounterRun: (id: string) => request<{ run: EncounterRun }>(`/api/encounter-runs/${id}`),
   rollInitiative: (runId: string, sides: string[]) =>
@@ -84,6 +93,7 @@ export const encounterRunApi = {
       librarySource: "user" | "standard";
       castLevel: number;
       rollMode?: RollMode;
+      rollTableResolutions?: RollTableResolutionPayload[];
     },
   ) =>
     request<{ run: EncounterRun; result: Record<string, unknown> }>(
@@ -100,6 +110,24 @@ export const encounterRunApi = {
     payload: { combatantId: string; spellLevel: number; mode: "consume" | "restore" },
   ) =>
     request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/manual-spell-slot`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  moveSpellArea: (runId: string, payload: { areaEffectId: string; note?: string }) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/move-spell-area`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  applySpellArea: (
+    runId: string,
+    payload: { areaEffectId: string; targetIds: string[]; rollMode?: RollMode },
+  ) =>
+    request<{ run: EncounterRun; result: Record<string, unknown> }>(
+      `/api/encounter-runs/${runId}/commands/apply-spell-area`,
+      { method: "POST", body: JSON.stringify(payload) },
+    ),
+  endSpellArea: (runId: string, payload: { areaEffectId: string }) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/end-spell-area`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),

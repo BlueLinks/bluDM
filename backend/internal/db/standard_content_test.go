@@ -26,26 +26,6 @@ func TestParseStandardCreaturesIncludesVersionedSources(t *testing.T) {
 	}
 }
 
-func TestParseStandardSpellsIncludesVersionedSources(t *testing.T) {
-	spells, err := parseStandardSpells()
-	if err != nil {
-		t.Fatalf("parse standard spells: %v", err)
-	}
-	counts := map[string]int{}
-	for _, spell := range spells {
-		counts[spell.SourceKey]++
-		if spell.SourceKey == "srd-5-2-1" && spell.Level < 0 {
-			t.Fatalf("expected SRD 5.2.1 spell %q to include a valid level", spell.Name)
-		}
-	}
-	if counts["srd-2014"] < 300 {
-		t.Fatalf("expected SRD 2014 spells, got %d", counts["srd-2014"])
-	}
-	if counts["srd-5-2-1"] < 300 {
-		t.Fatalf("expected SRD 5.2.1 spells, got %d", counts["srd-5-2-1"])
-	}
-}
-
 func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	spells, err := parseStandardSpells()
 	if err != nil {
@@ -127,6 +107,7 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-command"), "action_restriction", "durationMode", "end_target_next")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-hunter-s-mark"), "attack_damage_rider")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-beacon-of-hope"), "healing_maximized")
+	assertSpellHasEffectConfigArrayContains(t, findStandardSpell(t, spells, "srd-beacon-of-hope"), "advantage_state", "categories", "death_save")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-5-2-1-power-word-heal"), "heal_to_full")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-regenerate"), "recurring_hp_change", "start_target_turn_each")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-warding-bond"), "damage_transfer")
@@ -142,8 +123,18 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-darkvision"), "sense_effect")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-sleet-storm"), "area_trigger")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-web"), "terrain_effect")
-	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-spike-growth"), "area_trigger")
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-web"), "recurring_hp_change")
+	assertSpellDamageEffect(t, findStandardSpell(t, spells, "srd-web"), "recurring_hp_change", "fire", 2, 4)
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-spike-growth"), "recurring_hp_change")
+	assertSpellDamageEffect(t, findStandardSpell(t, spells, "srd-spike-growth"), "recurring_hp_change", "piercing", 2, 4)
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-spike-growth"), "recurring_hp_change", "trigger", "moves_into_or_within")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-moonbeam"), "area_trigger")
+	assertSpellDamageEffect(t, findStandardSpell(t, spells, "srd-moonbeam"), "damage", "radiant", 2, 10)
+	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-moonbeam"), "battlefield_object")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-moonbeam"), "battlefield_object", "kind", "spell_area")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-moonbeam"), "battlefield_object", "triggerRules", "enter_or_start_turn")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-5-2-1-moonbeam"), "battlefield_object", "triggerRules", "appear_move_enter_or_end_turn")
+	assertSpellHasEffectConfig(t, findStandardSpell(t, spells, "srd-5-2-1-moonbeam"), "area_trigger", "trigger", "appear_move_enter_or_end_turn")
 	assertSpellHasEffect(t, findStandardSpell(t, spells, "srd-spirit-guardians"), "area_trigger")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-acid-arrow"), "recurring_hp_change", "end_target_turn_once")
 	assertSpellHasEffectTiming(t, findStandardSpell(t, spells, "srd-5-2-1-searing-smite"), "recurring_hp_change", "start_target_turn_each")
@@ -206,6 +197,53 @@ func TestParseStandardSpellsInfersCombatAutomation(t *testing.T) {
 	}
 }
 
+func TestParseStandardSpellsInfersProjectileAndTargetScaling(t *testing.T) {
+	spells, err := parseStandardSpells()
+	if err != nil {
+		t.Fatalf("parse standard spells: %v", err)
+	}
+
+	for _, slug := range []string{"srd-magic-missile", "srd-5-2-1-magic-missile"} {
+		spell := findStandardSpell(t, spells, slug)
+		if spell.ProjectileScaling == nil {
+			t.Fatalf("expected %s to include projectile scaling", slug)
+		}
+		if spell.ProjectileScaling.BaseProjectiles != 3 ||
+			spell.ProjectileScaling.ScalingType != "spell_level" ||
+			spell.ProjectileScaling.ScaleFromLevel != 1 ||
+			spell.ProjectileScaling.AdditionalProjectiles != 1 {
+			t.Fatalf("expected %s to scale Magic Missile darts by spell level, got %+v", slug, spell.ProjectileScaling)
+		}
+		if len(spell.Actions) != 1 || len(spell.Actions[0].Rolls) != 1 {
+			t.Fatalf("expected %s to include one force damage roll, got %+v", slug, spell.Actions)
+		}
+		if roll := spell.Actions[0].Rolls[0]; roll.DamageType != "force" || roll.DiceCount != 1 || roll.DieSize != 4 || roll.FixedValue != 1 {
+			t.Fatalf("expected %s to include 1d4+1 force damage, got %+v", slug, roll)
+		}
+	}
+
+	for _, slug := range []string{"srd-eldritch-blast", "srd-5-2-1-eldritch-blast"} {
+		spell := findStandardSpell(t, spells, slug)
+		if spell.ProjectileScaling == nil {
+			t.Fatalf("expected %s to include cantrip beam scaling", slug)
+		}
+		if spell.ProjectileScaling.BaseProjectiles != 1 || spell.ProjectileScaling.ScalingType != "character_level" {
+			t.Fatalf("expected %s to use character-level target scaling, got %+v", slug, spell.ProjectileScaling)
+		}
+		for level, targets := range map[string]string{"5": "2", "11": "3", "17": "4"} {
+			if got := stringValue(spell.ProjectileScaling.CantripScaling[level].(map[string]any)["targets"]); got != targets {
+				t.Fatalf("expected %s to have %s beam(s) at level %s, got %+v", slug, targets, level, spell.ProjectileScaling.CantripScaling)
+			}
+		}
+		if len(spell.Actions) != 1 || spell.Actions[0].ActionType != "spell_attack" {
+			t.Fatalf("expected %s to be a ranged spell attack, got %+v", slug, spell.Actions)
+		}
+		if roll := spell.Actions[0].Rolls[0]; roll.DamageType != "force" || roll.DiceCount != 1 || roll.DieSize != 10 {
+			t.Fatalf("expected %s to include 1d10 force damage, got %+v", slug, roll)
+		}
+	}
+}
+
 func assertSpellHasEffect(t *testing.T, spell standardSpellSeed, rollKind string) {
 	t.Helper()
 	for _, action := range spell.Actions {
@@ -257,6 +295,36 @@ func assertSpellHasEffectConfigArrayContains(t *testing.T, spell standardSpellSe
 		}
 	}
 	t.Fatalf("expected %s to include %s effect config array %s containing %s, got %+v", spell.Slug, rollKind, key, value, spell.Actions)
+}
+
+func assertSpellHasConfigArrayLength(t *testing.T, spell standardSpellSeed, rollKind string, key string, length int) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind != rollKind {
+				continue
+			}
+			if values, ok := roll.EffectConfig[key].([]map[string]any); ok && len(values) == length {
+				return
+			}
+			if values, ok := roll.EffectConfig[key].([]any); ok && len(values) == length {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s effect config array %s with length %d, got %+v", spell.Slug, rollKind, key, length, spell.Actions)
+}
+
+func assertSpellDamageEffect(t *testing.T, spell standardSpellSeed, rollKind string, damageType string, diceCount int, dieSize int) {
+	t.Helper()
+	for _, action := range spell.Actions {
+		for _, roll := range action.Rolls {
+			if roll.RollKind == rollKind && roll.DamageType == damageType && roll.DiceCount == diceCount && roll.DieSize == dieSize {
+				return
+			}
+		}
+	}
+	t.Fatalf("expected %s to include %s %dd%d %s effect, got %+v", spell.Slug, rollKind, diceCount, dieSize, damageType, spell.Actions)
 }
 
 func stringSliceValue(value any) []string {

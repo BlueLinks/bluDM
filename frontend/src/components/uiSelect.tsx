@@ -2,6 +2,8 @@ import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronsUpDown } from "lucide-react";
 import React from "react";
 
+const EMPTY_SELECT_VALUE = "__bludm_empty_select_value__";
+
 export function Select({
   value,
   placeholder,
@@ -21,7 +23,10 @@ export function Select({
   const selected = options.find((option) => option.value === value);
   const SelectedIcon = selected?.icon;
   return (
-    <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
+    <SelectPrimitive.Root
+      value={value === "" ? EMPTY_SELECT_VALUE : value}
+      onValueChange={(next) => onValueChange(next === EMPTY_SELECT_VALUE ? "" : next)}
+    >
       <SelectPrimitive.Trigger className="inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left text-sm outline-none ring-primary/30 transition hover:bg-muted/60 focus:ring-2">
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {SelectedIcon && (
@@ -44,7 +49,7 @@ export function Select({
               <SelectPrimitive.Item
                 className="relative flex min-w-0 cursor-pointer select-none items-center rounded-sm py-2 pl-8 pr-3 text-sm outline-none hover:bg-muted focus:bg-muted data-[state=checked]:font-semibold"
                 key={option.value}
-                value={option.value}
+                value={option.value === "" ? EMPTY_SELECT_VALUE : option.value}
               >
                 {option.icon &&
                   React.createElement(option.icon, {

@@ -1,10 +1,12 @@
 import { Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DiceFormulaInput } from "../../components/shared/CharacterFormControls";
 import { Button, Checkbox, Field, Select } from "../../components/ui";
+import { displayACFormula } from "../../lib/domain/acFormula";
 import { configText } from "../../lib/domain/effectConfig";
 import { spellRollKinds } from "../../lib/domain/options";
 import {
+  baseACAbilityModifiers,
   type SpellEffectCategory,
   type SpellEffectAmountControl,
   spellEffectCategories,
@@ -12,21 +14,41 @@ import {
   spellEffectMetadata,
   spellEffectOptionsForCategory,
 } from "../../lib/domain/spellEffectOptions";
+import {
+  friendlyAdvantageEffect,
+  friendlyAreaTriggerSummary,
+  friendlyLayeredEffect,
+  friendlyOption,
+  friendlyRepeatSave,
+  friendlyRerollEffect,
+  friendlyRollCategories,
+  friendlyRollTable,
+  stringArray,
+} from "../../lib/domain/spellMessaging";
 import type { SpellActionFormState } from "../../types";
 import { effectFormula, rollKindDescription, RollKindDetail } from "./SpellRollKindDetail";
 import { SpellSubsection } from "./SpellFormLayout";
 import { scalingPhrase, SpellScalingFields } from "./SpellScalingFields";
 import { CantripBreakpointFields } from "./SpellWeaponAndCantripFields";
 import { EffectScheduleFields, FlatNumberInput } from "./SpellEffectScheduleFields";
+import { categoryAccent } from "./spellEffectAccent";
+import {
+  OutcomeEffectResolutionFields,
+  SpellEffectCategoryPicker,
+  defaultsForRollKind,
+  outcomeEffectKinds,
+} from "./SpellEffectCardControls";
 
 export function SpellEffectCard({
   index,
+  mode = "normal",
   onChange,
   onRemove,
   roll,
   rolls,
 }: {
   index: number;
+  mode?: "normal" | "outcome";
   roll: SpellActionFormState["rolls"][number];
   rolls: SpellActionFormState["rolls"];
   onChange: (rolls: SpellActionFormState["rolls"]) => void;
@@ -34,16 +56,34 @@ export function SpellEffectCard({
 }) {
   const rollCategory = spellEffectCategoryForKind(roll.rollKind);
   const [selectedCategory, setSelectedCategory] = useState<SpellEffectCategory>(rollCategory);
-  const categoryOptions = spellEffectOptionsForCategory(selectedCategory);
+  const allowedRollKinds = mode === "outcome" ? outcomeEffectKinds : null;
+  const categoryOptions = spellEffectOptionsForCategory(selectedCategory).filter(
+    (option) => !allowedRollKinds || allowedRollKinds.includes(option.value),
+  );
+  const categoryChoices = useMemo(
+    () =>
+      spellEffectCategories.filter((category) =>
+        spellEffectOptionsForCategory(category.value).some(
+          (option) => !allowedRollKinds || allowedRollKinds.includes(option.value),
+        ),
+      ),
+    [allowedRollKinds],
+  );
   const selectedLabel = rollKindLabel(roll.rollKind);
-  const accent = categoryAccent(rollCategory);
+  const selectedEffectInCategory = categoryOptions.some((option) => option.value === roll.rollKind);
+  const displayCategory = selectedEffectInCategory ? rollCategory : selectedCategory;
+  const accent = categoryAccent(displayCategory);
   const metadata = spellEffectMetadata(roll.rollKind);
   const amountControl = effectAmountControl(roll, metadata.amountControl);
-  const selectedEffectInCategory = categoryOptions.some((option) => option.value === roll.rollKind);
+  const fullWidthRollDetail = ["custom", "roll_table", "layered_effect"].includes(roll.rollKind);
 
   useEffect(() => {
-    setSelectedCategory(rollCategory);
-  }, [rollCategory]);
+    const nextCategory =
+      categoryChoices.find((category) => category.value === rollCategory)?.value ??
+      categoryChoices[0]?.value ??
+      rollCategory;
+    setSelectedCategory(nextCategory);
+  }, [categoryChoices, rollCategory]);
 
   function updateRoll(next: Partial<SpellActionFormState["rolls"][number]>) {
     onChange(rolls.map((item) => (item.id === roll.id ? { ...item, ...next } : item)));
@@ -63,7 +103,7 @@ export function SpellEffectCard({
             <span
               className={["rounded-full px-2 py-0.5 text-xs font-bold", accent.badge].join(" ")}
             >
-              Effect {index + 1}
+              {mode === "outcome" ? "Outcome effect" : "Effect"} {index + 1}
             </span>
             <h5 className="text-sm font-semibold">{selectedLabel}</h5>
           </div>
@@ -74,7 +114,11 @@ export function SpellEffectCard({
         </Button>
       </div>
 
-      <SpellEffectCategoryPicker value={selectedCategory} onChange={setSelectedCategory} />
+      <SpellEffectCategoryPicker
+        categories={categoryChoices}
+        value={selectedCategory}
+        onChange={setSelectedCategory}
+      />
 
       <div className="grid items-start gap-3 lg:grid-cols-[13rem_minmax(12rem,1fr)_auto]">
         <Field
@@ -85,14 +129,14 @@ export function SpellEffectCard({
             options={categoryOptions}
             placeholder="Effect"
             value={selectedEffectInCategory ? roll.rollKind : ""}
-            onValueChange={(rollKind) => updateRoll({ rollKind })}
+            onValueChange={(rollKind) => updateRoll(defaultsForRollKind(rollKind))}
           />
         </Field>
         {!selectedEffectInCategory ? (
           <div className="rounded-md border border-dashed border-border bg-muted/40 px-3 py-2 text-sm font-medium text-muted-foreground">
             Choose a {selectedCategoryLabel(selectedCategory)} effect to edit its details.
           </div>
-        ) : isFullWidthRollDetail(roll.rollKind) ? (
+        ) : fullWidthRollDetail ? (
           <div className="hidden lg:block" />
         ) : (
           <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
@@ -106,7 +150,11 @@ export function SpellEffectCard({
         )}
       </div>
 
-      {selectedEffectInCategory && isFullWidthRollDetail(roll.rollKind) && (
+      {selectedEffectInCategory && mode === "outcome" && (
+        <OutcomeEffectResolutionFields roll={roll} updateRoll={updateRoll} />
+      )}
+
+      {selectedEffectInCategory && fullWidthRollDetail && (
         <RollKindDetail roll={roll} rolls={rolls} onChange={onChange} />
       )}
 
@@ -198,42 +246,6 @@ function EffectAmountFields({
   );
 }
 
-function SpellEffectCategoryPicker({
-  onChange,
-  value,
-}: {
-  value: SpellEffectCategory;
-  onChange: (value: SpellEffectCategory) => void;
-}) {
-  return (
-    <div className="grid gap-2">
-      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-        Effect category
-      </p>
-      <div className="grid gap-1 sm:grid-cols-2 lg:grid-cols-5">
-        {spellEffectCategories.map((category) => {
-          const active = category.value === value;
-          return (
-            <button
-              key={category.value}
-              type="button"
-              className={[
-                "rounded-md border px-2 py-2 text-left text-xs font-semibold transition",
-                active
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
-              ].join(" ")}
-              onClick={() => onChange(category.value)}
-            >
-              {category.label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 function SpellEffectResult({ roll }: { roll: SpellActionFormState["rolls"][number] }) {
   const amountControl = effectAmountControl(roll, spellEffectMetadata(roll.rollKind).amountControl);
   const headline =
@@ -300,10 +312,6 @@ function RollScalingFields({
       />
     </SpellSubsection>
   );
-}
-
-function isFullWidthRollDetail(rollKind: string) {
-  return rollKind === "custom";
 }
 
 function usesMagicalToggle(rollKind: string) {
@@ -378,23 +386,36 @@ function effectSummary(roll: SpellActionFormState["rolls"][number]) {
   if (roll.rollKind === "custom") return roll.conditionName || "Custom DM-facing effect";
   if (roll.rollKind === "forced_movement") return forcedMovementLabel(roll);
   if (roll.rollKind === "base_ac") {
-    return configText(roll.effectConfig?.calculationMode, "formula") === "standard_ac"
-      ? `Base AC ${configText(roll.effectConfig?.baseValue, roll.fixedValue)}`
-      : configText(roll.effectConfig?.formula, "Base AC formula");
+    return configText(roll.effectConfig?.calculationMode, "formula") === "dice"
+      ? `Base AC ${baseACDiceSummary(roll)}`
+      : displayACFormula(roll.effectConfig?.formula, "Base AC formula");
   }
   if (roll.rollKind === "roll_modifier") {
-    const categories = configStringArray(roll.effectConfig?.categories).join(", ");
-    return `${configText(roll.effectConfig?.mode, "Modify")} ${configText(roll.effectConfig?.dice, roll.fixedValue)}${categories ? ` · ${categories}` : ""}`;
+    return `${friendlyOption(roll.effectConfig?.mode, "Modify")} ${configText(roll.effectConfig?.dice, roll.fixedValue)} · ${friendlyRollCategories(roll.effectConfig)}`;
+  }
+  if (roll.rollKind === "advantage_state") {
+    return friendlyAdvantageEffect(roll.effectConfig).replace(/\.$/, "");
+  }
+  if (roll.rollKind === "roll_reroll") {
+    return friendlyRerollEffect(roll.effectConfig).replace(/\.$/, "");
+  }
+  if (roll.rollKind === "roll_table") {
+    return friendlyRollTable(roll.effectConfig);
+  }
+  if (roll.rollKind === "layered_effect") {
+    return friendlyLayeredEffect(roll.effectConfig);
   }
   if (roll.rollKind === "damage_defense") {
-    const damageTypes = configStringArray(roll.effectConfig?.damageTypes).join(", ");
-    return `${configText(roll.effectConfig?.mode, "Defense")}${damageTypes ? ` · ${damageTypes}` : ""}`;
+    const damageTypes = stringArray(roll.effectConfig?.damageTypes)
+      .map((type) => friendlyOption(type))
+      .join(", ");
+    return `${friendlyOption(roll.effectConfig?.mode, "Defense")}${damageTypes ? ` · ${damageTypes}` : ""}`;
   }
   if (roll.rollKind === "saving_throw_repeat") {
-    return `Repeat ${configText(roll.effectConfig?.ability, "save")} · ${configText(roll.effectConfig?.successOutcome, "outcome")}`;
+    return friendlyRepeatSave(roll.effectConfig);
   }
   if (roll.rollKind === "area_trigger") {
-    return `${configText(roll.effectConfig?.trigger, "Area trigger")} · ${configText(roll.effectConfig?.outcome, "outcome")}`;
+    return friendlyAreaTriggerSummary(roll.effectConfig);
   }
   return rollKindLabel(roll.rollKind);
 }
@@ -408,8 +429,12 @@ function resultDescription(roll: SpellActionFormState["rolls"][number]) {
   if (roll.rollKind === "healing_block") return "Prevents the target from regaining hit points.";
   if (roll.rollKind === "healing_maximized")
     return "Healing rolls against the target use their maximum value.";
-  if (roll.rollKind === "area_trigger") return "Shown as a manual area reminder in combat.";
+  if (roll.rollKind === "area_trigger") return areaTriggerDescription(roll);
   if (roll.rollKind === "battlefield_object") return "Logged prominently for DM handling.";
+  if (roll.rollKind === "layered_effect")
+    return "Shows each layer with its save, effect, and removal rule for DM handling.";
+  if (roll.rollKind === "roll_table")
+    return "Roll once for each applicable target and apply the matching outcome.";
   if (roll.rollKind === "forced_movement") return "Movement or prone state for the target.";
   return rollKindDescription(roll.rollKind);
 }
@@ -424,6 +449,32 @@ function forcedMovementLabel(roll: SpellActionFormState["rolls"][number]) {
   return "Forced movement";
 }
 
+function areaTriggerDescription(roll: SpellActionFormState["rolls"][number]) {
+  const trigger = friendlyOption(roll.effectConfig?.trigger, "the area trigger").toLowerCase();
+  const outcome = configText(roll.effectConfig?.outcome, "");
+  const save = configText(roll.effectConfig?.saveAbility, "");
+  const saveLabel = save ? `${friendlyOption(save)} save` : "the configured save";
+  if (outcome === "dex_save_or_prone") {
+    return `When ${trigger || "the area trigger"} occurs, affected creatures make a Dexterity save; on failure, they fall prone.`;
+  }
+  if (outcome === "save_for_damage") {
+    return `When ${trigger || "the area trigger"} occurs, affected creatures make ${saveLabel} against the area effect.`;
+  }
+  if (outcome === "restrained") {
+    return `Creatures that fail the configured save are restrained by the area.`;
+  }
+  if (outcome === "fire_damage") {
+    return `The area deals fire damage when the trigger occurs.`;
+  }
+  return "Shown as a clear DM-facing area reminder in combat.";
+}
+
+function baseACDiceSummary(roll: SpellActionFormState["rolls"][number]) {
+  const ability = labelFor(baseACAbilityModifiers, configText(roll.effectConfig?.abilityModifier));
+  const formula = effectFormula(roll);
+  return `${formula}${ability ? ` + ${ability}` : ""}`;
+}
+
 function rollKindLabel(kind: string) {
   return spellRollKinds.find((option) => option.value === kind)?.label ?? "Effect";
 }
@@ -432,52 +483,10 @@ function selectedCategoryLabel(category: SpellEffectCategory) {
   return spellEffectCategories.find((option) => option.value === category)?.label ?? "selected";
 }
 
+function labelFor(options: Array<{ value: string; label: string }>, value: string) {
+  return options.find((option) => option.value === value)?.label ?? "";
+}
+
 function titleCase(value: string) {
   return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function configStringArray(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-function categoryAccent(category: SpellEffectCategory) {
-  const accents: Record<SpellEffectCategory, { border: string; badge: string }> = {
-    hp: { border: "border-l-rose-400", badge: "bg-rose-500/15 text-rose-700 dark:text-rose-200" },
-    damage: { border: "border-l-red-400", badge: "bg-red-500/15 text-red-700 dark:text-red-200" },
-    movement: {
-      border: "border-l-emerald-400",
-      badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
-    },
-    defense: {
-      border: "border-l-sky-400",
-      badge: "bg-sky-500/15 text-sky-700 dark:text-sky-200",
-    },
-    rolls: {
-      border: "border-l-violet-400",
-      badge: "bg-violet-500/15 text-violet-700 dark:text-violet-200",
-    },
-    conditions: {
-      border: "border-l-amber-400",
-      badge: "bg-amber-500/15 text-amber-700 dark:text-amber-200",
-    },
-    action: {
-      border: "border-l-orange-400",
-      badge: "bg-orange-500/15 text-orange-700 dark:text-orange-200",
-    },
-    senses: {
-      border: "border-l-cyan-400",
-      badge: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-200",
-    },
-    area: {
-      border: "border-l-lime-400",
-      badge: "bg-lime-500/15 text-lime-700 dark:text-lime-200",
-    },
-    utility: {
-      border: "border-l-slate-400",
-      badge: "bg-slate-500/15 text-slate-700 dark:text-slate-200",
-    },
-  };
-  return accents[category];
 }

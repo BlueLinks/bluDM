@@ -146,5 +146,7 @@ func damageRider(damageType string, diceCount int, dieSize int, config map[strin
 	config["dieSize"] = dieSize
 	roll := effectRoll("attack_damage_rider", 0, "immediate", config)
 	roll.DamageType = damageType
+	roll.DiceCount = diceCount
+	roll.DieSize = dieSize
 	return roll
 }

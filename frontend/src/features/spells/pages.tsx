@@ -14,6 +14,7 @@ import {
   StatPill,
 } from "../../components/ui";
 import { api } from "../../lib/api";
+import { friendlyMechanicKey, friendlyMechanicValue } from "../../lib/domain/spellMessaging";
 import type { Spell, SpellFormState } from "../../types";
 import { SpellDialog } from "./SpellDialog";
 import { formatRollPart } from "./spellPreviewFormat";
@@ -35,11 +36,11 @@ export function SpellsPage() {
   useEffect(() => {
     setLoading(true);
     api
-      .spells({ includeStandard: true, source: selectedSources })
+      .spells({ includeStandard: true, q: search.trim(), source: selectedSources })
       .then((payload) => setSpells(payload.spells))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load spells"))
       .finally(() => setLoading(false));
-  }, [selectedSources]);
+  }, [search, selectedSources]);
 
   const visibleSpells = spells.filter((spell) =>
     spellVisible(spell, {
@@ -346,7 +347,7 @@ function MechanicsBlock({
   if (entries.length === 0 && actions.length === 0) return null;
   return (
     <section className="rounded-md border border-border bg-background p-3">
-      <h4 className="font-semibold">Mechanics</h4>
+      <h4 className="font-semibold">Structured details</h4>
       {actions.length > 0 && (
         <div className="mt-2 grid gap-2 text-sm">
           {actions.map((action) => (
@@ -362,8 +363,8 @@ function MechanicsBlock({
       <dl className="mt-2 grid gap-1 text-sm">
         {entries.map(([key, value]) => (
           <div className="flex justify-between gap-3" key={key}>
-            <dt className="capitalize text-muted-foreground">{key}</dt>
-            <dd className="text-right font-medium">{formatMechanic(value)}</dd>
+            <dt className="text-muted-foreground">{friendlyMechanicKey(key)}</dt>
+            <dd className="text-right font-medium">{friendlyMechanicValue(key, value)}</dd>
           </div>
         ))}
       </dl>
@@ -374,8 +375,7 @@ function MechanicsBlock({
 function detailMechanicEntries(mechanics: Record<string, unknown>) {
   return Object.entries(mechanics).filter(
     ([key, value]) =>
-      key !== "source" &&
-      key !== "rawText" &&
+      !["source", "rawText"].includes(key) &&
       value !== null &&
       value !== "" &&
       !(Array.isArray(value) && value.length === 0),
@@ -402,17 +402,6 @@ function componentSummary(components: Record<string, unknown>) {
   if (components.somatic) parts.push("S");
   if (components.material) parts.push("M");
   return parts.length > 0 ? parts.join(", ") : "-";
-}
-
-function formatMechanic(value: unknown): string {
-  if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "object" && value) {
-    return Object.entries(value as Record<string, unknown>)
-      .filter(([, item]) => item !== null && item !== "")
-      .map(([key, item]) => `${key}: ${formatMechanic(item)}`)
-      .join("; ");
-  }
-  return String(value);
 }
 
 function sortSpells(spells: Spell[]) {
