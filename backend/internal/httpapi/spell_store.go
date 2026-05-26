@@ -72,17 +72,25 @@ func (s *Server) replaceSpellChildren(ctx context.Context, tx spellDataTx, spell
 			if err != nil {
 				return err
 			}
+			effectConfig := roll.EffectConfig
+			if effectConfig == nil {
+				effectConfig = map[string]any{}
+			}
+			effectConfigBytes, err := json.Marshal(effectConfig)
+			if err != nil {
+				return err
+			}
 			if _, err := tx.Exec(ctx, `
 				insert into spell_action_roll_parts (
 					spell_action_id, sort_order, roll_kind, damage_type, magical,
 					dice_count, die_size, fixed_value, add_primary_stat_modifier,
-					condition_name, timing, scaling_type, scaling_from_level, scaling_dice_count,
+					condition_name, effect_config, timing, scaling_type, scaling_from_level, scaling_dice_count,
 					scaling_die_size, scaling_fixed_value, scaling_step_size, cantrip_scaling
 				)
-				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+				values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 			`, actionID, rollIndex, roll.RollKind, roll.DamageType, roll.Magical,
 				nonNegativeOrDefault(roll.DiceCount, 0), positiveOrDefault(roll.DieSize, 6), roll.FixedValue,
-				roll.AddPrimaryStatModifier, roll.ConditionName, roll.Timing, roll.ScalingType, roll.ScalingFromLevel,
+				roll.AddPrimaryStatModifier, roll.ConditionName, effectConfigBytes, roll.Timing, roll.ScalingType, roll.ScalingFromLevel,
 				roll.ScalingDiceCount, positiveOrDefault(roll.ScalingDieSize, 6),
 				roll.ScalingFixedValue, positiveOrDefault(roll.ScalingStepSize, 1), cantripScalingBytes); err != nil {
 				return err
@@ -94,14 +102,7 @@ func (s *Server) replaceSpellChildren(ctx context.Context, tx spellDataTx, spell
 
 func (s *Server) attachSpellChildren(ctx context.Context, spells []models.Spell) ([]models.Spell, error) {
 	for index := range spells {
-		if spells[index].LibrarySource != "user" {
-			continue
-		}
-		projectiles, err := s.spellProjectileScaling(ctx, spells[index].ID)
-		if err != nil {
-			return nil, err
-		}
-		actions, err := s.spellActions(ctx, spells[index].ID)
+		projectiles, actions, err := s.spellAutomation(ctx, spells[index])
 		if err != nil {
 			return nil, err
 		}
@@ -111,6 +112,29 @@ func (s *Server) attachSpellChildren(ctx context.Context, spells []models.Spell)
 	return spells, nil
 }
 
+func (s *Server) spellAutomation(ctx context.Context, spell models.Spell) (*models.SpellProjectileScaling, []models.SpellAction, error) {
+	if spell.LibrarySource == "standard" {
+		projectiles, err := s.standardSpellProjectileScaling(ctx, spell.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		actions, err := s.standardSpellActions(ctx, spell.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		return projectiles, actions, nil
+	}
+	projectiles, err := s.spellProjectileScaling(ctx, spell.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	actions, err := s.spellActions(ctx, spell.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return projectiles, actions, nil
+}
+
 func (s *Server) spellProjectileScaling(ctx context.Context, spellID string) (*models.SpellProjectileScaling, error) {
 	var scaling models.SpellProjectileScaling
 	err := s.db.QueryRow(ctx, `
@@ -118,6 +142,24 @@ func (s *Server) spellProjectileScaling(ctx context.Context, spellID string) (*m
 			step_size, description, cantrip_scaling
 		from spell_projectile_scaling
 		where spell_id = $1
+	`, spellID).Scan(&scaling.BaseProjectiles, &scaling.ScalingType, &scaling.ScaleFromLevel,
+		&scaling.AdditionalProjectiles, &scaling.StepSize, &scaling.Description, &scaling.CantripScaling)
+	if err == pgx.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &scaling, nil
+}
+
+func (s *Server) standardSpellProjectileScaling(ctx context.Context, spellID string) (*models.SpellProjectileScaling, error) {
+	var scaling models.SpellProjectileScaling
+	err := s.db.QueryRow(ctx, `
+		select base_projectiles, scaling_type, scale_from_level, additional_projectiles,
+			step_size, description, cantrip_scaling
+		from standard_spell_projectile_scaling
+		where standard_spell_id = $1
 	`, spellID).Scan(&scaling.BaseProjectiles, &scaling.ScalingType, &scaling.ScaleFromLevel,
 		&scaling.AdditionalProjectiles, &scaling.StepSize, &scaling.Description, &scaling.CantripScaling)
 	if err == pgx.ErrNoRows {
@@ -161,10 +203,42 @@ func (s *Server) spellActions(ctx context.Context, spellID string) ([]models.Spe
 	return actions, rows.Err()
 }
 
+func (s *Server) standardSpellActions(ctx context.Context, spellID string) ([]models.SpellAction, error) {
+	rows, err := s.db.Query(ctx, `
+		select id, name, sort_order, action_type, save_ability, successful_save_effect,
+			attack_modifier, hit_special_event, weapon_source, attack_ability_override,
+			damage_ability_override, damage_type_choice, damage_type_options
+		from standard_spell_actions
+		where standard_spell_id = $1
+		order by sort_order asc, name asc
+	`, spellID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	actions := []models.SpellAction{}
+	for rows.Next() {
+		var action models.SpellAction
+		if err := rows.Scan(&action.ID, &action.Name, &action.SortOrder, &action.ActionType,
+			&action.SaveAbility, &action.SuccessfulSaveEffect, &action.AttackModifier,
+			&action.HitSpecialEvent, &action.WeaponSource, &action.AttackAbilityOverride,
+			&action.DamageAbilityOverride, &action.DamageTypeChoice, &action.DamageTypeOptions); err != nil {
+			return nil, err
+		}
+		action.Rolls, err = s.standardSpellActionRolls(ctx, action.ID)
+		if err != nil {
+			return nil, err
+		}
+		actions = append(actions, action)
+	}
+	return actions, rows.Err()
+}
+
 func (s *Server) spellActionRolls(ctx context.Context, actionID string) ([]models.SpellActionRollPart, error) {
 	rows, err := s.db.Query(ctx, `
 		select id, sort_order, roll_kind, damage_type, magical, dice_count, die_size,
-			fixed_value, add_primary_stat_modifier, condition_name, timing, scaling_type,
+			fixed_value, add_primary_stat_modifier, condition_name, effect_config, timing, scaling_type,
 			scaling_from_level, scaling_dice_count, scaling_die_size, scaling_fixed_value,
 			scaling_step_size, cantrip_scaling
 		from spell_action_roll_parts
@@ -180,13 +254,49 @@ func (s *Server) spellActionRolls(ctx context.Context, actionID string) ([]model
 	for rows.Next() {
 		var roll models.SpellActionRollPart
 		var cantripScalingBytes []byte
+		var effectConfigBytes []byte
 		if err := rows.Scan(&roll.ID, &roll.SortOrder, &roll.RollKind, &roll.DamageType,
 			&roll.Magical, &roll.DiceCount, &roll.DieSize, &roll.FixedValue,
-			&roll.AddPrimaryStatModifier, &roll.ConditionName, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
+			&roll.AddPrimaryStatModifier, &roll.ConditionName, &effectConfigBytes, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
 			&roll.ScalingDiceCount, &roll.ScalingDieSize, &roll.ScalingFixedValue,
 			&roll.ScalingStepSize, &cantripScalingBytes); err != nil {
 			return nil, err
 		}
+		roll.EffectConfig, _ = unmarshalJSONMap(effectConfigBytes)
+		roll.CantripScaling, _ = unmarshalJSONMap(cantripScalingBytes)
+		rolls = append(rolls, roll)
+	}
+	return rolls, rows.Err()
+}
+
+func (s *Server) standardSpellActionRolls(ctx context.Context, actionID string) ([]models.SpellActionRollPart, error) {
+	rows, err := s.db.Query(ctx, `
+		select id, sort_order, roll_kind, damage_type, magical, dice_count, die_size,
+			fixed_value, add_primary_stat_modifier, condition_name, effect_config, timing, scaling_type,
+			scaling_from_level, scaling_dice_count, scaling_die_size, scaling_fixed_value,
+			scaling_step_size, cantrip_scaling
+		from standard_spell_action_roll_parts
+		where standard_spell_action_id = $1
+		order by sort_order asc
+	`, actionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	rolls := []models.SpellActionRollPart{}
+	for rows.Next() {
+		var roll models.SpellActionRollPart
+		var cantripScalingBytes []byte
+		var effectConfigBytes []byte
+		if err := rows.Scan(&roll.ID, &roll.SortOrder, &roll.RollKind, &roll.DamageType,
+			&roll.Magical, &roll.DiceCount, &roll.DieSize, &roll.FixedValue,
+			&roll.AddPrimaryStatModifier, &roll.ConditionName, &effectConfigBytes, &roll.Timing, &roll.ScalingType, &roll.ScalingFromLevel,
+			&roll.ScalingDiceCount, &roll.ScalingDieSize, &roll.ScalingFixedValue,
+			&roll.ScalingStepSize, &cantripScalingBytes); err != nil {
+			return nil, err
+		}
+		roll.EffectConfig, _ = unmarshalJSONMap(effectConfigBytes)
 		roll.CantripScaling, _ = unmarshalJSONMap(cantripScalingBytes)
 		rolls = append(rolls, roll)
 	}

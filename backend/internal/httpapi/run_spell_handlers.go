@@ -50,15 +50,40 @@ func (s *Server) castSpellCommand(w http.ResponseWriter, r *http.Request) {
 	}
 	modifier := s.spellcastingModifier(r.Context(), actor)
 	applied := []map[string]any{}
+	areaObjectsCreated := map[int]bool{}
+	tableResolutions := rollTableResolutionIndex(req.RollTableResolutions)
 	for _, targetID := range req.TargetIDs {
 		target, err := s.runCombatantByID(r.Context(), runID, strings.TrimSpace(targetID))
 		if err != nil {
 			continue
 		}
-		for _, action := range spell.Actions {
-			for _, roll := range action.Rolls {
+		for actionIndex, action := range spell.Actions {
+			for rollIndex, roll := range action.Rolls {
 				amount := spellEffectAmount(roll, castLevel, modifier)
-				shouldTrack := roll.RollKind == "condition_immunity" || roll.Timing != "" && roll.Timing != "immediate"
+				if roll.RollKind == "roll_table" {
+					results, err := s.applyRollTableSpellEffect(r.Context(), runID, actor.ID, target.ID, spell, castLevel, roll, tableResolutions[rollTableResolutionKey(target.ID, roll.ID)])
+					if err != nil {
+						writeError(w, http.StatusBadRequest, err.Error())
+						return
+					}
+					applied = append(applied, results...)
+					continue
+				}
+				if roll.RollKind == "healing" && s.hasActiveHealingMaximized(r.Context(), runID, target.ID) {
+					amount = spellEffectMaxAmount(roll, castLevel, modifier)
+				}
+				shouldTrack := shouldTrackSpellEffect(roll)
+				rollKey := actionIndex*1000 + rollIndex
+				if isSpellAreaObjectRoll(roll) {
+					if areaObjectsCreated[rollKey] {
+						continue
+					}
+					areaObjectsCreated[rollKey] = true
+					_ = s.applySpellEffect(r.Context(), runID, actor.ID, actor.ID, roll, amount, spell.Name)
+					_ = s.createActiveSpellEffect(r.Context(), runID, actor.ID, actor.ID, spell, castLevel, roll, amount)
+					applied = append(applied, spellEffectLog(actor, roll, amount, "area-created"))
+					continue
+				}
 				if roll.Timing != "" && roll.Timing != "immediate" {
 					_ = s.createActiveSpellEffect(r.Context(), runID, actor.ID, target.ID, spell, castLevel, roll, amount)
 					applied = append(applied, spellEffectLog(target, roll, amount, "scheduled"))
@@ -92,6 +117,27 @@ func (s *Server) castSpellCommand(w http.ResponseWriter, r *http.Request) {
 	_ = s.appendCombatLogEvent(r.Context(), runID, "spell_cast", actor.ID, "", result)
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run, "result": result})
+}
+
+func rollTableResolutionIndex(resolutions []rollTableResolutionRequest) map[string]rollTableResolutionRequest {
+	index := map[string]rollTableResolutionRequest{}
+	for _, resolution := range resolutions {
+		targetID := strings.TrimSpace(resolution.TargetID)
+		rollID := strings.TrimSpace(resolution.RollID)
+		if targetID == "" || rollID == "" {
+			continue
+		}
+		resolution.TargetID = targetID
+		resolution.RollID = rollID
+		resolution.Mode = strings.TrimSpace(resolution.Mode)
+		resolution.SaveResult = strings.TrimSpace(resolution.SaveResult)
+		index[rollTableResolutionKey(targetID, rollID)] = resolution
+	}
+	return index
+}
+
+func rollTableResolutionKey(targetID string, rollID string) string {
+	return targetID + ":" + rollID
 }
 
 func (s *Server) resolveConcentrationCommand(w http.ResponseWriter, r *http.Request) {
@@ -207,7 +253,15 @@ func (s *Server) spellForCast(ctx context.Context, spellID string, librarySource
 			from standard_spells
 			where id = $1
 		`, spellID)
-		return scanStandardSpell(row)
+		spell, err := scanStandardSpell(row)
+		if err != nil {
+			return models.Spell{}, err
+		}
+		spells, err := s.attachSpellChildren(ctx, []models.Spell{spell})
+		if err != nil {
+			return models.Spell{}, err
+		}
+		return spells[0], nil
 	}
 	userID, _ := currentUserID(ctx)
 	row := s.db.QueryRow(ctx, `
@@ -230,10 +284,14 @@ func (s *Server) spellForCast(ctx context.Context, spellID string, librarySource
 	return spells[0], nil
 }
 
+func isSpellAreaObjectRoll(roll models.SpellActionRollPart) bool {
+	return (roll.RollKind == "battlefield_object" || roll.RollKind == "layered_effect") && boolishFromAny(roll.EffectConfig["areaSpell"])
+}
+
 func spellEffectAmount(roll models.SpellActionRollPart, castLevel int, spellcastingMod int) int {
 	total := rollDice(roll.DiceCount, roll.DieSize) + roll.FixedValue
-	if roll.ScalingType == "spell_level" && castLevel >= roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
-		steps := 1 + (castLevel-roll.ScalingFromLevel)/max(1, roll.ScalingStepSize)
+	if roll.ScalingType == "spell_level" && castLevel > roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
+		steps := 1 + (castLevel-roll.ScalingFromLevel-1)/max(1, roll.ScalingStepSize)
 		total += steps * (rollDice(roll.ScalingDiceCount, roll.ScalingDieSize) + roll.ScalingFixedValue)
 	}
 	if roll.AddPrimaryStatModifier {
@@ -242,6 +300,34 @@ func spellEffectAmount(roll models.SpellActionRollPart, castLevel int, spellcast
 	return max(0, total)
 }
 
+func spellEffectMaxAmount(roll models.SpellActionRollPart, castLevel int, spellcastingMod int) int {
+	total := max(0, roll.DiceCount)*max(0, roll.DieSize) + roll.FixedValue
+	if roll.ScalingType == "spell_level" && castLevel > roll.ScalingFromLevel && roll.ScalingFromLevel > 0 {
+		steps := 1 + (castLevel-roll.ScalingFromLevel-1)/max(1, roll.ScalingStepSize)
+		total += steps * (max(0, roll.ScalingDiceCount)*max(0, roll.ScalingDieSize) + roll.ScalingFixedValue)
+	}
+	if roll.AddPrimaryStatModifier {
+		total += spellcastingMod
+	}
+	return max(0, total)
+}
+
 func spellEffectLog(target models.EncounterRunCombatant, roll models.SpellActionRollPart, amount int, status string) map[string]any {
-	return map[string]any{"targetId": target.ID, "targetName": target.DisplayName, "effectKind": roll.RollKind, "conditionName": roll.ConditionName, "amount": amount, "timing": roll.Timing, "status": status}
+	return map[string]any{"targetId": target.ID, "targetName": target.DisplayName, "effectKind": roll.RollKind, "conditionName": roll.ConditionName, "effectConfig": roll.EffectConfig, "amount": amount, "timing": roll.Timing, "status": status}
+}
+
+func shouldTrackSpellEffect(roll models.SpellActionRollPart) bool {
+	if roll.Timing != "" && roll.Timing != "immediate" {
+		return true
+	}
+	switch roll.RollKind {
+	case "condition_immunity", "healing_block", "speed_bonus", "speed_reduction", "speed_multiplier",
+		"movement_mode", "ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense",
+		"attack_damage_rider", "healing_maximized", "action_restriction", "saving_throw_repeat",
+		"area_trigger", "visibility_effect", "sense_effect", "terrain_effect", "death_protection",
+		"linked_healing", "damage_transfer", "battlefield_object", "layered_effect":
+		return true
+	default:
+		return false
+	}
 }

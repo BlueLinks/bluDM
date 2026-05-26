@@ -51,6 +51,9 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 	targetBefore := combatantUndoPayload(target)
 	actorBefore := combatantUndoPayload(actor)
 	if mode == "damage" {
+		if strings.TrimSpace(damageType) != "" {
+			amount = s.applyActiveDamageDefenses(ctx, runID, target.ID, amount, damageType)
+		}
 		remaining := amount
 		if target.TemporaryHitPoints > 0 {
 			used := min(target.TemporaryHitPoints, remaining)
@@ -74,6 +77,13 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 			}
 		}
 	} else {
+		if s.hasActiveHealingBlock(ctx, runID, target.ID) {
+			return s.appendCombatLogEvent(ctx, runID, "healing_blocked", actorID, targetID, map[string]any{
+				"amount":       amount,
+				"targetBefore": targetBefore,
+				"targetAfter":  targetBefore,
+			})
+		}
 		target.CurrentHitPoints = min(effectiveMaxHitPoints(target), target.CurrentHitPoints+amount)
 		if target.CurrentHitPoints > 0 {
 			target.Defeated = false
@@ -186,6 +196,22 @@ func effectiveArmorClass(combatant models.EncounterRunCombatant) int {
 	return combatant.ArmorClass + combatant.ArmorClassBonus
 }
 
+func (s *Server) effectiveArmorClassForRun(ctx context.Context, runID string, combatant models.EncounterRunCombatant) int {
+	ac := effectiveArmorClass(combatant)
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, combatant.ID) {
+		switch effect.EffectKind {
+		case "ac_bonus":
+			ac += effect.Amount
+		case "base_ac":
+			base := effect.Amount + abilityModFromSnapshot(combatant.Snapshot, "dex")
+			if base > ac {
+				ac = base
+			}
+		}
+	}
+	return ac
+}
+
 func effectiveMaxHitPoints(combatant models.EncounterRunCombatant) int {
 	if combatant.MaxHitPointsOverride > 0 {
 		return combatant.MaxHitPointsOverride
@@ -199,6 +225,111 @@ func defensesForCombatant(combatant models.EncounterRunCombatant) damageDefenseR
 		Vulnerabilities: stringSliceFromAny(source["damageVulnerabilities"]),
 		Resistances:     stringSliceFromAny(source["damageResistances"]),
 		Immunities:      stringSliceFromAny(source["damageImmunities"]),
+	}
+}
+
+func (s *Server) defensesForRunCombatant(ctx context.Context, runID string, combatant models.EncounterRunCombatant) damageDefenseRequest {
+	defenses := defensesForCombatant(combatant)
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, combatant.ID) {
+		if effect.EffectKind != "damage_defense" {
+			continue
+		}
+		mode := strings.ToLower(stringFromAny(effect.Payload["mode"]))
+		if mode == "" {
+			if config, ok := effect.Payload["effectConfig"].(map[string]any); ok {
+				mode = strings.ToLower(stringFromAny(config["mode"]))
+			}
+		}
+		types := effectDamageTypes(effect)
+		switch mode {
+		case "immunity":
+			defenses.Immunities = append(defenses.Immunities, types...)
+		case "vulnerability":
+			defenses.Vulnerabilities = append(defenses.Vulnerabilities, types...)
+		default:
+			defenses.Resistances = append(defenses.Resistances, types...)
+		}
+	}
+	return defenses
+}
+
+func (s *Server) applyActiveDamageDefenses(ctx context.Context, runID, targetID string, amount int, damageType string) int {
+	combatant, err := s.runCombatantByID(ctx, runID, targetID)
+	if err != nil {
+		return amount
+	}
+	return applyDamageDefense(amount, damageType, s.defensesForRunCombatant(ctx, runID, combatant))
+}
+
+func (s *Server) hasActiveHealingBlock(ctx context.Context, runID, targetID string) bool {
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, targetID) {
+		if effect.EffectKind == "healing_block" {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) hasActiveDeathProtection(ctx context.Context, runID, targetID string, mode string) bool {
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, targetID) {
+		if effect.EffectKind != "death_protection" {
+			continue
+		}
+		if mode == "" || strings.EqualFold(stringFromAny(effect.Payload["mode"]), mode) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) hasActiveHealingMaximized(ctx context.Context, runID, targetID string) bool {
+	for _, effect := range s.activeEffectsForTarget(ctx, runID, targetID) {
+		if effect.EffectKind == "healing_maximized" {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Server) activeEffectsForTarget(ctx context.Context, runID, targetID string) []models.EncounterRunEffect {
+	effects, err := s.runActiveEffects(ctx, runID)
+	if err != nil {
+		return nil
+	}
+	filtered := []models.EncounterRunEffect{}
+	for _, effect := range effects {
+		if effect.TargetID == targetID {
+			filtered = append(filtered, effect)
+		}
+	}
+	return filtered
+}
+
+func effectDamageTypes(effect models.EncounterRunEffect) []string {
+	value := effect.Payload["damageTypes"]
+	if config, ok := effect.Payload["effectConfig"].(map[string]any); ok && value == nil {
+		value = config["damageTypes"]
+	}
+	switch typed := value.(type) {
+	case []string:
+		return typed
+	case []any:
+		values := []string{}
+		for _, item := range typed {
+			values = append(values, stringFromAny(item))
+		}
+		return values
+	case string:
+		parts := strings.Split(typed, ",")
+		values := []string{}
+		for _, part := range parts {
+			if trimmed := strings.TrimSpace(part); trimmed != "" {
+				values = append(values, trimmed)
+			}
+		}
+		return values
+	default:
+		return nil
 	}
 }
 
@@ -231,13 +362,13 @@ func sourceMap(snapshot map[string]any) map[string]any {
 
 func applyDamageDefense(amount int, damageType string, defenses damageDefenseRequest) int {
 	damageType = strings.TrimSpace(strings.ToLower(damageType))
-	if containsFold(defenses.Immunities, damageType) {
+	if containsFold(defenses.Immunities, damageType) || containsFold(defenses.Immunities, "all") {
 		return 0
 	}
-	if containsFold(defenses.Vulnerabilities, damageType) {
+	if containsFold(defenses.Vulnerabilities, damageType) || containsFold(defenses.Vulnerabilities, "all") {
 		return amount * 2
 	}
-	if containsFold(defenses.Resistances, damageType) {
+	if containsFold(defenses.Resistances, damageType) || containsFold(defenses.Resistances, "all") {
 		return amount / 2
 	}
 	return amount

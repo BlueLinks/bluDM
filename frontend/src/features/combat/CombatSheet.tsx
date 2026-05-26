@@ -6,7 +6,6 @@ import { api } from "../../lib/api";
 import {
   abilityScoresFromSheet,
   combatantSheet,
-  effectiveAC,
   effectiveMaxHP,
   proficiencyBonusFromCombatSheet,
   rollDiceDetail,
@@ -17,6 +16,7 @@ import {
 } from "../../lib/domain/combat";
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
+import { friendlyEffectLabel } from "../../lib/domain/spellMessaging";
 import type { EncounterRunCombatant, EncounterRunEffect, RollMode } from "../../types";
 
 type AbilityOption = (typeof abilities)[number];
@@ -107,14 +107,24 @@ export function CombatSheet({
           )}
         </div>
         <div className="grid grid-cols-3 gap-1">
-          <IconStat icon={Shield} label="AC" value={effectiveAC(combatant)} tone="shield" />
+          <IconStat
+            icon={Shield}
+            label="AC"
+            value={effectiveACWithEffects(combatant, activeEffects)}
+            tone="shield"
+          />
           <IconStat
             icon={HeartPulse}
             label="HP"
             value={`${combatant.currentHitPoints}/${effectiveMaxHP(combatant)}`}
             tone="heart"
           />
-          <IconStat icon={Zap} label="Speed" value={speedFromSheet(sheet)} tone="speed" />
+          <IconStat
+            icon={Zap}
+            label="Speed"
+            value={speedValue(speedFromSheet(sheet), activeEffects)}
+            tone="speed"
+          />
         </div>
         <div className="combat-ability-grid grid grid-cols-2 gap-1.5 overflow-hidden xl:gap-2">
           {[leftAbilities, rightAbilities].map((group) => (
@@ -154,16 +164,33 @@ export function CombatSheet({
 }
 
 function sheetEffectLabel(effect: EncounterRunEffect) {
-  if (effect.effectKind === "condition_immunity" && effect.conditionName) {
-    return `Immune to ${effect.conditionName}`;
+  return friendlyEffectLabel(effect);
+}
+
+function speedValue(baseSpeed: number, effects: EncounterRunEffect[]) {
+  let speed = baseSpeed;
+  let note = "";
+  for (const effect of effects) {
+    if (effect.effectKind === "speed_bonus") speed += Math.max(0, Number(effect.amount) || 0);
+    if (effect.effectKind === "speed_reduction") speed -= Math.max(0, Number(effect.amount) || 0);
+    if (effect.effectKind === "speed_multiplier") {
+      const multiplier = Number(effect.payload?.multiplier) || 1;
+      speed = Math.round(speed * multiplier);
+      note = multiplier === 2 ? "doubled" : "halved";
+    }
   }
-  if (effect.effectKind === "concentration") {
-    return `Concentration: ${effect.spellName}`;
-  }
-  if (effect.timing === "start_target_turn") {
-    return `${effect.spellName} at turn start`;
-  }
-  return effect.spellName;
+  speed = Math.max(0, speed);
+  if (speed === baseSpeed && !note) return baseSpeed;
+  return `${speed}${note ? ` (${note})` : ""}`;
+}
+
+function effectiveACWithEffects(combatant: EncounterRunCombatant, effects: EncounterRunEffect[]) {
+  const base = combatant.armorClassOverride || combatant.armorClass + combatant.armorClassBonus;
+  return effects.reduce((total, effect) => {
+    if (effect.effectKind === "ac_bonus") return total + (Number(effect.amount) || 0);
+    if (effect.effectKind === "base_ac") return Math.max(total, Number(effect.amount) || total);
+    return total;
+  }, base);
 }
 
 function AbilityTable({

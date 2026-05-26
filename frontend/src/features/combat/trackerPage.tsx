@@ -14,6 +14,7 @@ import {
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
+import type { RollTableResolutionPayload } from "../../lib/api/encounterRuns";
 import { isDownEnemy, rotateCombatantsFromActive } from "../../lib/domain/combat";
 import { createId } from "../../lib/domain/ids";
 import {
@@ -30,6 +31,7 @@ import type {
   RollMode,
 } from "../../types";
 import { ActionResult } from "./actionResult";
+import { ActiveSpellAreas } from "./ActiveSpellAreas";
 import { AddRunTargetDialog } from "./AddRunTargetDialog";
 import { CombatBoard } from "./CombatBoard";
 import { ConcentrationAlerts } from "./ConcentrationAlerts";
@@ -248,6 +250,7 @@ export function CombatTrackerPage() {
     targetIds: string[];
     castLevel: number;
     rollMode: RollMode;
+    rollTableResolutions?: RollTableResolutionPayload[];
   }) {
     if (!run || !active) return;
     try {
@@ -284,6 +287,32 @@ export function CombatTrackerPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update spell slot");
     }
+  }
+
+  async function moveSpellArea(areaEffectId: string) {
+    if (!run) return;
+    await refreshFrom(api.moveSpellArea(run.id, { areaEffectId }));
+    toast.push("Spell area moved.");
+  }
+
+  async function applySpellArea(areaEffectId: string, targetIds: string[], rollMode: RollMode) {
+    if (!run) return;
+    try {
+      const response = await api.applySpellArea(run.id, { areaEffectId, targetIds, rollMode });
+      setRun(response.run);
+      const results = Array.isArray(response.result.results) ? response.result.results : [];
+      toast.push(
+        `Applied area effect to ${results.length} target${results.length === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not apply spell area");
+    }
+  }
+
+  async function endSpellArea(areaEffectId: string) {
+    if (!run) return;
+    await refreshFrom(api.endSpellArea(run.id, { areaEffectId }));
+    toast.push("Spell area ended.");
   }
 
   async function updateDeathSaveFor(
@@ -330,6 +359,13 @@ export function CombatTrackerPage() {
           alerts={run.alerts ?? []}
           combatants={combatants}
           onResolve={(alert, action) => void resolveConcentration(alert.id, action)}
+        />
+        <ActiveSpellAreas
+          combatants={combatants}
+          effects={run.activeEffects ?? []}
+          onApply={(area, targetIds, rollMode) => void applySpellArea(area.id, targetIds, rollMode)}
+          onEnd={(area) => void endSpellArea(area.id)}
+          onMove={(area) => void moveSpellArea(area.id)}
         />
         <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
           <ActiveTurnHeader combatant={active} selected={selected}>

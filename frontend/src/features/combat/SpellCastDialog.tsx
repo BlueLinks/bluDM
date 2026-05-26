@@ -1,18 +1,28 @@
 import { Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Button, Checkbox, Field, Modal, Select } from "../../components/ui";
+import { api } from "../../lib/api";
+import type { RollTableResolutionPayload } from "../../lib/api/encounterRuns";
 import type {
   CreatureSpell,
   EncounterRunCombatant,
   EncounterRunSpellSlot,
   RollMode,
+  Spell,
 } from "../../types";
+import {
+  RollTableCastPanel,
+  rollTableResolutionPayloads,
+  rollTableRolls,
+  type TableResolutionState,
+} from "./RollTableCastPanel";
 
 type CastPayload = {
   spell: CreatureSpell;
   targetIds: string[];
   castLevel: number;
   rollMode: RollMode;
+  rollTableResolutions?: RollTableResolutionPayload[];
 };
 
 export function SpellCastDialog({
@@ -46,6 +56,8 @@ export function SpellCastDialog({
   const minLevel = spell?.spellLevel ?? 0;
   const [castLevel, setCastLevel] = useState(String(Math.max(1, minLevel)));
   const [rollMode, setRollMode] = useState<RollMode>("normal");
+  const [spellDetail, setSpellDetail] = useState<Spell | null>(null);
+  const [resolutions, setResolutions] = useState<Record<string, TableResolutionState>>({});
   const [targetIds, setTargetIds] = useState<string[]>(() =>
     selectedID ? [selectedID] : actor ? [actor.id] : [],
   );
@@ -58,6 +70,24 @@ export function SpellCastDialog({
   useEffect(() => {
     if (open) setTargetIds(selectedID ? [selectedID] : [actor.id]);
   }, [actor.id, open, selectedID]);
+  useEffect(() => {
+    if (!open || !spell) {
+      setSpellDetail(null);
+      return;
+    }
+    let cancelled = false;
+    api
+      .spell(spell.spellId, spell.librarySource)
+      .then((payload) => {
+        if (!cancelled) setSpellDetail(payload.spell);
+      })
+      .catch(() => {
+        if (!cancelled) setSpellDetail(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, spell?.librarySource, spell?.spellId]);
   const actualCastLevel = Math.max(minLevel, Number(castLevel) || minLevel);
   const slot = slots.find(
     (item) => item.combatantId === actor.id && item.spellLevel === actualCastLevel,
@@ -148,6 +178,14 @@ export function SpellCastDialog({
             ))}
           </div>
         </div>
+        {spellDetail && rollTableRolls(spellDetail).length > 0 && (
+          <RollTableCastPanel
+            resolutions={resolutions}
+            rollTables={rollTableRolls(spellDetail)}
+            targets={combatants.filter((combatant) => targetIds.includes(combatant.id))}
+            onChange={setResolutions}
+          />
+        )}
         {!hasSlot && (
           <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm font-semibold text-red-700 dark:text-red-200">
             No level {actualCastLevel} spell slots remain for {actor.displayName}.
@@ -169,6 +207,14 @@ export function SpellCastDialog({
                 targetIds,
                 castLevel: actualCastLevel,
                 rollMode,
+                rollTableResolutions:
+                  spellDetail && rollTableRolls(spellDetail).length > 0
+                    ? rollTableResolutionPayloads(
+                        rollTableRolls(spellDetail),
+                        combatants.filter((combatant) => targetIds.includes(combatant.id)),
+                        resolutions,
+                      )
+                    : undefined,
               })
             }
           >

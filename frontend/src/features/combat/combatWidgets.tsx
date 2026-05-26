@@ -26,6 +26,7 @@ import type {
   EncounterRunCombatant,
   EncounterRunEffect,
 } from "../../types";
+import { friendlyEffectLabel } from "../../lib/domain/spellMessaging";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
 export function CombatStatusBar({
@@ -392,7 +393,7 @@ export function TargetRow({
                 >
                   <Shield className="absolute h-7 w-7 opacity-20 xl:h-8 xl:w-8" />
                   <span className="relative text-base font-black xl:text-lg">
-                    {effectiveAC(combatant)}
+                    {effectiveACForRow(combatant, activeEffects)}
                   </span>
                 </div>
                 <div className="grid min-w-0 flex-1 gap-1">
@@ -468,16 +469,16 @@ export function TargetRow({
 }
 
 function effectLabel(effect: EncounterRunEffect) {
-  if (effect.effectKind === "condition_immunity" && effect.conditionName) {
-    return `Immune: ${effect.conditionName}`;
-  }
-  if (effect.effectKind === "concentration") {
-    return `Concentration: ${effect.spellName}`;
-  }
-  if (effect.timing === "start_target_turn") {
-    return `${effect.spellName}: start turn`;
-  }
-  return effect.spellName;
+  return friendlyEffectLabel(effect);
+}
+
+function effectiveACForRow(combatant: EncounterRunCombatant, effects: EncounterRunEffect[]) {
+  const base = effectiveAC(combatant);
+  return effects.reduce((total, effect) => {
+    if (effect.effectKind === "ac_bonus") return total + (Number(effect.amount) || 0);
+    if (effect.effectKind === "base_ac") return Math.max(total, Number(effect.amount) || total);
+    return total;
+  }, base);
 }
 
 function StateBadge({ tone, children }: { tone: "acting" | "target"; children: React.ReactNode }) {

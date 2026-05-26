@@ -129,6 +129,7 @@ export function spellPayload(payload: SpellFormState) {
         fixedValue: Number(roll.fixedValue) || 0,
         addPrimaryStatModifier: roll.addPrimaryStatModifier,
         conditionName: roll.conditionName,
+        effectConfig: roll.effectConfig ?? {},
         timing: roll.timing,
         scalingType: roll.scalingType,
         scalingFromLevel: roll.scalingType === "none" ? 0 : Number(roll.scalingFromLevel) || 0,

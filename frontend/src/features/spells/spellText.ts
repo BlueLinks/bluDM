@@ -1,5 +1,20 @@
 import { damageTypes } from "../../components/shared/damageTypes";
+import { displayACFormula } from "../../lib/domain/acFormula";
 import { spellRollKinds } from "../../lib/domain/options";
+import { configText } from "../../lib/domain/effectConfig";
+import { baseACAbilityModifiers } from "../../lib/domain/spellEffectOptions";
+import {
+  friendlyAdvantageEffect,
+  friendlyAreaTriggerSummary,
+  friendlyBattlefieldObject,
+  friendlyDamageDefense,
+  friendlyLayeredEffectDetails,
+  friendlyOption,
+  friendlyRepeatSave,
+  friendlyRerollEffect,
+  friendlyRollCategories,
+  friendlyRollTableDetails,
+} from "../../lib/domain/spellMessaging";
 import type { Spell, SpellAreaScalingFormState, SpellFormState } from "../../types";
 
 type SpellLike = Pick<
@@ -212,6 +227,9 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "condition") {
     return roll.conditionName ? `${subject} gains the ${roll.conditionName} condition.` : "";
   }
+  if (roll.rollKind === "remove_condition") {
+    return roll.conditionName ? `${subject} loses the ${roll.conditionName} condition.` : "";
+  }
   if (roll.rollKind === "condition_immunity") {
     return roll.conditionName
       ? `${subject} is immune to the ${roll.conditionName} condition while the effect is active.`
@@ -220,15 +238,111 @@ function effectSentence(spell: SpellLike, roll: SpellLike["actions"][number]["ro
   if (roll.rollKind === "custom") {
     return roll.conditionName ? `${subject}: ${roll.conditionName}` : "";
   }
+  if (roll.rollKind === "healing_block") {
+    return `${subject} can't regain hit points while the effect is active.`;
+  }
+  if (roll.rollKind === "healing_maximized") {
+    return `${subject} regains the maximum possible hit points from healing.`;
+  }
+  if (roll.rollKind === "heal_to_full") {
+    return `${subject} regains all missing hit points.`;
+  }
+  if (roll.rollKind === "advantage_state") {
+    return friendlyAdvantageEffect(roll.effectConfig);
+  }
+  if (roll.rollKind === "roll_reroll") return friendlyRerollEffect(roll.effectConfig);
+  if (roll.rollKind === "damage_defense") {
+    return `${subject} gains ${friendlyDamageDefense(roll.effectConfig).toLowerCase()}.`;
+  }
+  if (roll.rollKind === "action_restriction") {
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "restricted actions")}.`;
+  }
+  if (roll.rollKind === "saving_throw_repeat") {
+    return `${subject}: ${friendlyRepeatSave(roll.effectConfig)}.`;
+  }
+  if (roll.rollKind === "area_trigger") {
+    const save = friendlyOption(roll.effectConfig?.saveAbility, "");
+    const details = configText(roll.effectConfig?.details, "");
+    return `Area trigger: ${friendlyAreaTriggerSummary(roll.effectConfig)}${save ? ` (${save} save)` : ""}${details ? `; ${details}` : ""}.`;
+  }
+  if (roll.rollKind === "visibility_effect") {
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "visibility effect")}.`;
+  }
+  if (roll.rollKind === "sense_effect") {
+    return `${subject} gains ${friendlyOption(roll.effectConfig?.mode, "a special sense")}.`;
+  }
+  if (roll.rollKind === "terrain_effect") {
+    return `Terrain or movement rule: ${friendlyOption(roll.effectConfig?.mode, "configured terrain effect")}.`;
+  }
+  if (roll.rollKind === "death_protection") {
+    return `${subject}: ${friendlyOption(roll.effectConfig?.mode, "death protection")}.`;
+  }
+  if (roll.rollKind === "linked_healing") {
+    return `${friendlyOption(roll.effectConfig?.target, "Caster")} heals from ${friendlyOption(roll.effectConfig?.source, "the linked effect")}.`;
+  }
+  if (roll.rollKind === "damage_transfer") {
+    return `Damage transfer: ${friendlyOption(roll.effectConfig?.mode, "configured transfer")}.`;
+  }
+  if (roll.rollKind === "roll_table") {
+    return `${friendlyRollTableDetails(roll.effectConfig)}.`;
+  }
+  if (roll.rollKind === "layered_effect") {
+    const rider = configText(roll.effectConfig?.riderText || roll.effectConfig?.details);
+    return `${friendlyLayeredEffectDetails(roll.effectConfig)}${rider ? ` ${rider}` : ""}.`;
+  }
+  if (roll.rollKind === "battlefield_object") {
+    const move = configText(roll.effectConfig?.moveDistanceFeet);
+    const rider = configText(roll.effectConfig?.riderText || roll.effectConfig?.details);
+    return [
+      friendlyBattlefieldObject(roll.effectConfig),
+      move ? `can move up to ${move} ft.` : "",
+      rider,
+    ]
+      .filter(Boolean)
+      .join("; ")
+      .concat(".");
+  }
+  if (roll.rollKind === "forced_movement") {
+    const amount = effectAmount(roll);
+    const direction = configText(roll.effectConfig?.direction, "forced movement");
+    if (direction === "prone") return `${subject} has the Prone condition.`;
+    return `${subject}: ${friendlyOption(direction, "forced movement").toLowerCase()} ${amount ? `${amount} feet` : ""}.`;
+  }
   const amount = effectAmount(roll);
   if (!amount) return "";
   const label = spellRollKinds.find((option) => option.value === roll.rollKind)?.label ?? "Effect";
   if (roll.rollKind === "damage") return `${subject} takes ${amount} ${roll.damageType} damage.`;
   if (roll.rollKind === "healing") return `${subject} regains ${amount} hit points.`;
   if (roll.rollKind === "max_hp") return `${subject}'s hit point maximum increases by ${amount}.`;
+  if (roll.rollKind === "max_hp_reduction") {
+    return `${subject}'s hit point maximum is reduced by ${amount}.`;
+  }
   if (roll.rollKind === "temp_hp") {
     return `${subject}'s temporary hit points become ${amount}.`;
   }
+  if (roll.rollKind === "speed_bonus") {
+    return `${subject}'s speed increases by ${amount} feet.`;
+  }
+  if (roll.rollKind === "speed_reduction") {
+    return `${subject}'s speed is reduced by ${amount} feet.`;
+  }
+  if (roll.rollKind === "speed_multiplier") {
+    return `${subject}'s speed is ${configText(roll.effectConfig?.multiplier) === "2" ? "doubled" : "halved"}.`;
+  }
+  if (roll.rollKind === "movement_mode") {
+    return `${subject} gains ${friendlyOption(roll.effectConfig?.mode, "a movement")} speed ${amount ? `of ${amount} feet` : "based on its walking speed"}.`;
+  }
+  if (roll.rollKind === "ac_bonus")
+    return `${subject} gains a ${(Number(roll.fixedValue) || 0) >= 0 ? "+" : ""}${amount} bonus to AC.`;
+  if (roll.rollKind === "base_ac")
+    return `${subject}'s base AC becomes ${baseACText(roll, amount)}.`;
+  if (roll.rollKind === "roll_modifier") {
+    const mode = configText(roll.effectConfig?.mode, "add") === "subtract" ? "subtracts" : "adds";
+    return `${subject} ${mode} ${amount} to ${friendlyRollCategories(roll.effectConfig)}.`;
+  }
+  if (roll.rollKind === "attack_damage_rider")
+    return `${subject}'s attacks deal an extra ${amount}.`;
+  if (roll.rollKind === "revive") return `${subject} returns to life with ${amount} hit points.`;
   return `${label}: ${amount}.`;
 }
 
@@ -252,6 +366,30 @@ function effectAmount(roll: SpellLike["actions"][number]["rolls"][number]) {
       return part.startsWith("-") ? `- ${part.slice(1)}` : `+ ${part}`;
     })
     .join(" ");
+}
+
+function baseACText(roll: SpellLike["actions"][number]["rolls"][number], fallback: string) {
+  if (configText(roll.effectConfig?.calculationMode, "formula") === "dice") {
+    const ability = labelFor(
+      baseACAbilityModifiers,
+      configText(roll.effectConfig?.abilityModifier),
+    );
+    return `${baseACDiceText(roll)}${ability ? ` + ${ability}` : ""}`;
+  }
+  return displayACFormula(roll.effectConfig?.formula, fallback);
+}
+
+function baseACDiceText(roll: SpellLike["actions"][number]["rolls"][number]) {
+  const dice = Number(roll.diceCount) || 0;
+  const die = Number(roll.dieSize) || 6;
+  const fixed = Number(roll.fixedValue) || 0;
+  const diceText = dice > 0 ? `${dice === 1 ? "" : dice}d${die}` : "";
+  const fixedText = fixed > 0 ? `+${fixed}` : fixed < 0 ? String(fixed) : "";
+  return `${diceText}${fixedText}` || String(fixed);
+}
+
+function labelFor(options: Array<{ value: string; label: string }>, value: string) {
+  return options.find((option) => option.value === value)?.label ?? value;
 }
 
 function plural(value: string, count: number) {

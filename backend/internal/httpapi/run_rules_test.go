@@ -83,3 +83,23 @@ func TestNormalizeSide(t *testing.T) {
 		t.Fatalf("normalizeSide(nonsense) = %q, want enemy", got)
 	}
 }
+
+func TestSpellEffectAmountScalesAboveBaseSlot(t *testing.T) {
+	roll := models.SpellActionRollPart{
+		FixedValue:        5,
+		ScalingType:       "spell_level",
+		ScalingFromLevel:  2,
+		ScalingFixedValue: 5,
+		ScalingStepSize:   1,
+	}
+
+	if got := spellEffectAmount(roll, 2, 0); got != 5 {
+		t.Fatalf("spellEffectAmount(level 2) = %d, want base 5", got)
+	}
+	if got := spellEffectAmount(roll, 3, 0); got != 10 {
+		t.Fatalf("spellEffectAmount(level 3) = %d, want one scaling step", got)
+	}
+	if got := spellEffectAmount(roll, 4, 0); got != 15 {
+		t.Fatalf("spellEffectAmount(level 4) = %d, want two scaling steps", got)
+	}
+}

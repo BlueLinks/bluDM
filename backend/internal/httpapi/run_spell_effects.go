@@ -16,10 +16,42 @@ func (s *Server) applySpellEffect(ctx context.Context, runID, actorID, targetID 
 		return s.applyTemporaryHP(ctx, runID, actorID, targetID, amount, spellName)
 	case "max_hp":
 		return s.applyMaxHPModifier(ctx, runID, actorID, targetID, amount, spellName)
+	case "max_hp_reduction":
+		return s.applyMaxHPModifier(ctx, runID, actorID, targetID, -amount, spellName)
+	case "heal_to_full":
+		return s.applyHealToFull(ctx, runID, actorID, targetID, spellName)
+	case "recurring_hp_change":
+		mode := strings.TrimSpace(stringFromAny(roll.EffectConfig["mode"]))
+		if mode == "" {
+			mode = "damage"
+		}
+		if expectedHP, ok := roll.EffectConfig["onlyIfCurrentHP"]; ok {
+			target, err := s.runCombatantByID(ctx, runID, targetID)
+			if err == nil && target.CurrentHitPoints != intFromAny(expectedHP) {
+				return nil
+			}
+		}
+		damageType := strings.TrimSpace(roll.DamageType)
+		return s.applyHPChange(ctx, runID, actorID, targetID, amount, mode, damageType, "spell_recurring_hp")
+	case "healing_block", "speed_bonus", "speed_reduction", "speed_multiplier", "movement_mode",
+		"ac_bonus", "base_ac", "roll_modifier", "advantage_state", "damage_defense", "forced_movement",
+		"attack_damage_rider", "healing_maximized", "action_restriction", "saving_throw_repeat",
+		"area_trigger", "visibility_effect", "sense_effect", "terrain_effect", "death_protection",
+		"linked_healing", "damage_transfer", "battlefield_object", "layered_effect", "roll_table":
+		return s.appendCombatLogEvent(ctx, runID, "spell_active_effect", actorID, targetID, map[string]any{
+			"spellName":    spellName,
+			"effectKind":   roll.RollKind,
+			"amount":       amount,
+			"effectConfig": roll.EffectConfig,
+		})
 	case "condition":
 		return s.applyRunCondition(ctx, runID, actorID, targetID, roll.ConditionName, roll.RollKind, spellName)
+	case "remove_condition":
+		return s.removeRunCondition(ctx, runID, actorID, targetID, roll.ConditionName, roll.RollKind, spellName)
 	case "condition_immunity":
 		return s.appendCombatLogEvent(ctx, runID, "spell_condition_immunity", actorID, targetID, map[string]any{"spellName": spellName, "conditionName": roll.ConditionName})
+	case "revive":
+		return s.applyRevive(ctx, runID, actorID, targetID, amount, spellName)
 	case "damage":
 		return s.applyHPChange(ctx, runID, actorID, targetID, amount, "damage", roll.DamageType, "spell_damage")
 	default:
@@ -41,6 +73,9 @@ func (s *Server) applyTemporaryHP(ctx context.Context, runID, actorID, targetID 
 }
 
 func (s *Server) applyMaxHPModifier(ctx context.Context, runID, actorID, targetID string, amount int, spellName string) error {
+	if amount < 0 && s.hasActiveDeathProtection(ctx, runID, targetID, "hp_max_cannot_be_reduced") {
+		return s.appendCombatLogEvent(ctx, runID, "spell_max_hp_reduction_blocked", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
+	}
 	if _, err := s.db.Exec(ctx, `
 		update encounter_run_combatants
 		set max_hit_points_modifier = max_hit_points_modifier + $2
@@ -49,6 +84,42 @@ func (s *Server) applyMaxHPModifier(ctx context.Context, runID, actorID, targetI
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_max_hp", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
+}
+
+func (s *Server) applyHealToFull(ctx context.Context, runID, actorID, targetID string, spellName string) error {
+	target, err := s.runCombatantByID(ctx, runID, targetID)
+	if err != nil {
+		return err
+	}
+	amount := max(0, effectiveMaxHitPoints(target)-target.CurrentHitPoints)
+	return s.applyHPChange(ctx, runID, actorID, targetID, amount, "healing", "", "spell_heal_to_full")
+}
+
+func (s *Server) applyRevive(ctx context.Context, runID, actorID, targetID string, amount int, spellName string) error {
+	target, err := s.runCombatantByID(ctx, runID, targetID)
+	if err != nil {
+		return err
+	}
+	before := combatantUndoPayload(target)
+	target.CurrentHitPoints = max(1, amount)
+	target.Defeated = false
+	target.DeathSaveSuccesses = 0
+	target.DeathSaveFailures = 0
+	target.Stable = false
+	if _, err := s.db.Exec(ctx, `
+		update encounter_run_combatants
+		set current_hit_points = $2, defeated = false, death_save_successes = 0,
+			death_save_failures = 0, stable = false
+		where id = $1
+	`, targetID, target.CurrentHitPoints); err != nil {
+		return err
+	}
+	return s.appendCombatLogEvent(ctx, runID, "spell_revive", actorID, targetID, map[string]any{
+		"spellName":    spellName,
+		"amount":       amount,
+		"targetBefore": before,
+		"targetAfter":  combatantUndoPayload(target),
+	})
 }
 
 func (s *Server) applyRunCondition(ctx context.Context, runID, actorID, targetID, conditionName, effectKind, spellName string) error {
@@ -93,7 +164,11 @@ func (s *Server) removeRunCondition(ctx context.Context, runID, actorID, targetI
 }
 
 func (s *Server) createActiveSpellEffect(ctx context.Context, runID, casterID, targetID string, spell models.Spell, castLevel int, roll models.SpellActionRollPart, amount int) error {
-	payload := marshalEffectPayload(map[string]any{"spellId": spell.ID, "conditionName": roll.ConditionName})
+	payloadMap := map[string]any{"spellId": spell.ID, "conditionName": roll.ConditionName, "damageType": roll.DamageType, "effectConfig": roll.EffectConfig}
+	for key, value := range roll.EffectConfig {
+		payloadMap[key] = value
+	}
+	payload := marshalEffectPayload(payloadMap)
 	_, err := s.db.Exec(ctx, `
 		insert into encounter_run_active_effects (
 			encounter_run_id, caster_id, target_id, spell_id, library_source, spell_name,
@@ -117,13 +192,39 @@ func (s *Server) createConcentrationMarker(ctx context.Context, runID, casterID,
 }
 
 func (s *Server) applyStartTurnEffects(ctx context.Context, runID, targetID string) []map[string]any {
+	return s.applyTurnEffects(ctx, runID, targetID, "start")
+}
+
+func (s *Server) applyEndTurnEffects(ctx context.Context, runID, targetID string) []map[string]any {
+	return s.applyTurnEffects(ctx, runID, targetID, "end")
+}
+
+func (s *Server) applyTurnEffects(ctx context.Context, runID, targetID string, phase string) []map[string]any {
 	effects, err := s.runActiveEffects(ctx, runID)
 	if err != nil {
 		return nil
 	}
 	applied := []map[string]any{}
 	for _, effect := range effects {
-		if effect.TargetID != targetID || !isStartTurnEffect(effect.Timing) {
+		if effect.CasterID == targetID && shouldExpireCasterEffect(effect.Timing, phase) {
+			if _, err := s.db.Exec(ctx, `update encounter_run_active_effects set active = false where id = $1`, effect.ID); err == nil {
+				applied = append(applied, map[string]any{
+					"effectId":  effect.ID,
+					"spellName": effect.SpellName,
+					"timing":    effect.Timing,
+					"expired":   true,
+				})
+			}
+			continue
+		}
+		if effect.CasterID == targetID && shouldApplyCasterEffect(effect.Timing, phase) {
+			change, err := s.applyTimedSpellEffect(ctx, runID, effect)
+			if err == nil {
+				applied = append(applied, change)
+			}
+			continue
+		}
+		if effect.TargetID != targetID || !isTargetTurnEffect(effect.Timing, phase) {
 			continue
 		}
 		change, err := s.applyTimedSpellEffect(ctx, runID, effect)
@@ -137,8 +238,21 @@ func (s *Server) applyStartTurnEffects(ctx context.Context, runID, targetID stri
 	return applied
 }
 
-func isStartTurnEffect(timing string) bool {
-	return timing == "start_target_turn" || timing == "start_target_turn_each" || timing == "start_target_turn_once"
+func shouldExpireCasterEffect(timing string, phase string) bool {
+	return (phase == "start" && timing == "start_caster_turn_once") ||
+		(phase == "end" && timing == "end_caster_turn_once")
+}
+
+func shouldApplyCasterEffect(timing string, phase string) bool {
+	return (phase == "start" && timing == "start_caster_turn_each") ||
+		(phase == "end" && timing == "end_caster_turn_each")
+}
+
+func isTargetTurnEffect(timing string, phase string) bool {
+	if phase == "start" {
+		return timing == "start_target_turn" || timing == "start_target_turn_each" || timing == "start_target_turn_once"
+	}
+	return timing == "end_target_turn" || timing == "end_target_turn_each" || timing == "end_target_turn_once"
 }
 
 func (s *Server) applyTimedSpellEffect(ctx context.Context, runID string, effect models.EncounterRunEffect) (map[string]any, error) {
@@ -146,7 +260,12 @@ func (s *Server) applyTimedSpellEffect(ctx context.Context, runID string, effect
 	if err != nil {
 		return nil, err
 	}
-	roll := models.SpellActionRollPart{RollKind: effect.EffectKind, ConditionName: effect.ConditionName}
+	roll := models.SpellActionRollPart{
+		RollKind:      effect.EffectKind,
+		DamageType:    strings.TrimSpace(stringFromAny(effect.Payload["damageType"])),
+		ConditionName: effect.ConditionName,
+		EffectConfig:  effect.Payload,
+	}
 	if err := s.applySpellEffect(ctx, runID, effect.CasterID, effect.TargetID, roll, effect.Amount, effect.SpellName); err != nil {
 		return nil, err
 	}

@@ -147,6 +147,7 @@ type spellActionRollRequest struct {
 	FixedValue             int            `json:"fixedValue"`
 	AddPrimaryStatModifier bool           `json:"addPrimaryStatModifier"`
 	ConditionName          string         `json:"conditionName"`
+	EffectConfig           map[string]any `json:"effectConfig"`
 	Timing                 string         `json:"timing"`
 	ScalingType            string         `json:"scalingType"`
 	ScalingFromLevel       int            `json:"scalingFromLevel"`
@@ -161,6 +162,9 @@ func (req *spellActionRollRequest) normalize() {
 	req.RollKind = strings.TrimSpace(req.RollKind)
 	req.DamageType = strings.TrimSpace(req.DamageType)
 	req.ConditionName = strings.TrimSpace(req.ConditionName)
+	if req.EffectConfig == nil {
+		req.EffectConfig = map[string]any{}
+	}
 	req.Timing = strings.TrimSpace(req.Timing)
 	req.ScalingType = strings.TrimSpace(req.ScalingType)
 	if req.Timing == "" {
