@@ -40,18 +40,18 @@ func (s *Server) applyRollTableSpellEffect(ctx context.Context, runID, actorID, 
 func resolvedRollTableRows(rows []map[string]any, row map[string]any, rolled int, autoRoll bool, followUps []int) ([]map[string]any, []int, error) {
 	appliedRows := []map[string]any{row}
 	rolledValues := []int{rolled}
-	if rolled != 8 {
+	if !rollTableRowRequiresFollowUps(row) {
 		return appliedRows, rolledValues, nil
 	}
 	if autoRoll {
-		followUps = []int{rollDice(1, 7), rollDice(1, 7)}
+		followUps = []int{rollTableFollowUpRoll(rows, rolled), rollTableFollowUpRoll(rows, rolled)}
 	}
 	if len(followUps) != 2 {
-		return nil, nil, errors.New("roll table outcome 8 requires two follow-up rolls")
+		return nil, nil, fmt.Errorf("roll table outcome %d requires two follow-up rolls", rolled)
 	}
 	for _, followUp := range followUps {
-		if followUp == 8 {
-			return nil, nil, errors.New("follow-up rolls for outcome 8 must reroll any 8")
+		if followUp == rolled {
+			return nil, nil, fmt.Errorf("follow-up rolls for outcome %d must reroll that result", rolled)
 		}
 		followUpRow, ok := rowForRoll(rows, followUp)
 		if !ok {
@@ -61,6 +61,29 @@ func resolvedRollTableRows(rows []map[string]any, row map[string]any, rolled int
 		rolledValues = append(rolledValues, followUp)
 	}
 	return appliedRows, rolledValues, nil
+}
+
+func rollTableRowRequiresFollowUps(row map[string]any) bool {
+	reminder := strings.ToLower(strings.TrimSpace(strings.Join([]string{
+		stringFromAny(row["rerollRule"]),
+		stringFromAny(row["effectText"]),
+		stringFromAny(row["effect"]),
+	}, " ")))
+	return strings.Contains(reminder, "roll twice") || strings.Contains(reminder, "twice more")
+}
+
+func rollTableFollowUpRoll(rows []map[string]any, excluded int) int {
+	candidates := []int{}
+	for _, row := range rows {
+		roll := intFromAny(row["roll"])
+		if roll > 0 && roll != excluded {
+			candidates = append(candidates, roll)
+		}
+	}
+	if len(candidates) == 0 {
+		return 0
+	}
+	return candidates[rollDice(1, len(candidates))-1]
 }
 
 func (s *Server) applyRollTableRow(ctx context.Context, runID, actorID, targetID string, spell models.Spell, castLevel int, row map[string]any, rolledValues []int, saveResult string) (map[string]any, error) {

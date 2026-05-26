@@ -46,8 +46,6 @@ describe("SpellCastDialog", () => {
     fireEvent.click(await screen.findByText("Enter result"));
     fireEvent.click(screen.getByLabelText("d8 result"));
     fireEvent.click(await screen.findByText("8. Special"));
-    fireEvent.click(screen.getByLabelText("Follow-up 1"));
-    fireEvent.click(await screen.findByText("1. Red"));
     fireEvent.click(screen.getByLabelText("Follow-up 2"));
     fireEvent.click(await screen.findByText("7. Violet"));
     fireEvent.click(screen.getByText("Resolve manually"));

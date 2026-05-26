@@ -100,12 +100,12 @@ function RollTableTargetResolution({
               placeholder="Result"
               options={tableFaceOptions(dieSize, rows)}
               onValueChange={(roll) =>
-                updateResolution(onChange, resolutions, key, {
-                  ...resolution,
-                  followUpA: "",
-                  followUpB: "",
-                  roll,
-                })
+                updateResolution(
+                  onChange,
+                  resolutions,
+                  key,
+                  resolutionWithSelectedRoll(resolution, roll, dieSize, rows),
+                )
               }
             />
           </Field>
@@ -218,6 +218,22 @@ function tableFaceOptions(dieSize: number, rows: Record<string, unknown>[]) {
     const name = row ? configText(row.name, "Outcome") : "Outcome";
     return { value, label: `${value}. ${name}` };
   });
+}
+
+function resolutionWithSelectedRoll(
+  resolution: TableResolutionState,
+  roll: string,
+  dieSize: number,
+  rows: Record<string, unknown>[],
+): TableResolutionState {
+  const row = rowForRoll(rows, roll);
+  if (!row || !rowRequiresFollowUps(row)) {
+    return { ...resolution, followUpA: "", followUpB: "", roll };
+  }
+  const followUps = tableFaceOptions(dieSize, rows)
+    .map((option) => option.value)
+    .filter((value) => value !== roll);
+  return { ...resolution, followUpA: followUps[0] ?? "", followUpB: followUps[1] ?? "", roll };
 }
 
 function rowForRoll(rows: Record<string, unknown>[], roll: string) {
