@@ -2,6 +2,18 @@
 
 A self-hosted D&D 5e encounter tracker built with a Go backend, React frontend, and PostgreSQL.
 
+## Screenshots
+
+| Campaign dashboard                                             | Encounter tracker                                            |
+| -------------------------------------------------------------- | ------------------------------------------------------------ |
+| ![Campaign dashboard](docs/screenshots/campaign-dashboard.png) | ![Encounter tracker](docs/screenshots/encounter-tracker.png) |
+
+| Spell preview                                                          | Combat casting                                                |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Fireball spell preview](docs/screenshots/spell-preview-fireball.png) | ![Spell cast dialog](docs/screenshots/combat-cast-dialog.png) |
+
+More screenshots are available in [docs/screenshots](docs/screenshots/README.md).
+
 The first implementation slice includes:
 
 - Single-DM setup flow and optional `.env` bootstrap admin.
@@ -11,7 +23,7 @@ The first implementation slice includes:
 - Protected creature and spell library create/list APIs.
 - React setup/login flow, campaign dashboard, and starter creature/spell library screens.
 
-See [ENCOUNTER_TRACKER_PLAN.md](/Users/bluelinks/Developer/bluDM/ENCOUNTER_TRACKER_PLAN.md) for the product plan.
+See [ENCOUNTER_TRACKER_PLAN.md](ENCOUNTER_TRACKER_PLAN.md) for the product plan.
 
 ## Local Development
 
@@ -55,7 +67,7 @@ bluDM is set up for a simple Portainer Git deployment:
 - The frontend nginx container serves React and proxies `/api` to the backend.
 - Only the web port is exposed by default; Postgres and the API stay internal.
 
-See [PORTAINER_DEPLOYMENT.md](/Users/bluelinks/Developer/bluDM/PORTAINER_DEPLOYMENT.md) for the deployment checklist, backup notes, and CI/CD behavior.
+See [PORTAINER_DEPLOYMENT.md](PORTAINER_DEPLOYMENT.md) for the deployment checklist, backup notes, and CI/CD behavior.
 
 ## Initial Login
 
