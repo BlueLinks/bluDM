@@ -76,6 +76,29 @@ create table spells (
     updated_at timestamptz not null default now()
 );
 
+create table items (
+    id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid not null references users(id) on delete cascade,
+    name text not null,
+    category text not null default '',
+    item_type text not null default '',
+    rarity text not null default '',
+    attunement boolean not null default false,
+    value_amount integer not null default 0,
+    value_unit text not null default 'gp',
+    weight double precision not null default 0,
+    description text not null default '',
+    properties text[] not null default array[]::text[],
+    damage jsonb not null default '{}'::jsonb,
+    armor_class jsonb not null default '{}'::jsonb,
+    data jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create index items_owner_user_id_idx on items(owner_user_id, updated_at desc);
+create index items_owner_category_name_idx on items(owner_user_id, category, name);
+
 create table action_templates (
     id uuid primary key default gen_random_uuid(),
     name text not null,

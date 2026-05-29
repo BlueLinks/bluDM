@@ -1,6 +1,7 @@
 import type {
   ActionFormState,
   CreatureFormState,
+  ItemFormState,
   PlayerFormState,
   SpellFormState,
 } from "../../types";
@@ -141,6 +142,158 @@ export function spellPayload(payload: SpellFormState) {
       })),
     })),
   };
+}
+
+export function itemPayload(payload: ItemFormState) {
+  const damage: Record<string, unknown> = {};
+  const itemKind = itemCategoryKind(payload.category);
+  if (itemKind === "weapon" && (payload.damageDice || payload.damageType)) {
+    damage.damage = {
+      damage_dice: payload.damageDice,
+      damage_type: payload.damageType ? { name: payload.damageType } : undefined,
+    };
+  }
+  if (itemKind === "weapon" && payload.twoHandedDamageDice) {
+    damage.two_handed_damage = { damage_dice: payload.twoHandedDamageDice };
+  }
+  if (itemKind === "weapon" && (payload.normalRange || payload.longRange)) {
+    damage.range = {
+      normal: Number(payload.normalRange) || 0,
+      long: Number(payload.longRange) || 0,
+    };
+  }
+  if (itemKind === "weapon" && (payload.thrownNormalRange || payload.thrownLongRange)) {
+    damage.throw_range = {
+      normal: Number(payload.thrownNormalRange) || 0,
+      long: Number(payload.thrownLongRange) || 0,
+    };
+  }
+
+  const armorClass: Record<string, unknown> = {};
+  if (itemKind === "armor") {
+    if (payload.acMode === "bonus") {
+      addNumber(armorClass, "bonus", payload.acBonus);
+    } else {
+      addNumber(armorClass, "base", payload.acBase);
+    }
+    if (payload.dexModifier && payload.dexModifier !== "none") {
+      armorClass.dex_modifier = payload.dexModifier;
+    }
+    addNumber(armorClass, "str_minimum", payload.strengthMinimum);
+    if (payload.stealthDisadvantage) armorClass.stealth_disadvantage = true;
+    if (payload.shield) armorClass.shield = true;
+  }
+
+  const data: Record<string, unknown> = {
+    inventory: {
+      carried: payload.inventoryCarried,
+      equippable: payload.inventoryEquippable,
+      consumable: payload.inventoryConsumable,
+      stackable: payload.inventoryStackable,
+    },
+  };
+  if (itemKind === "weapon") {
+    addString(data, "weaponCategory", payload.weaponCategory);
+    addString(data, "weaponRange", payload.weaponRange);
+    addString(data, "mastery", payload.mastery);
+  }
+  if (itemKind === "armor") {
+    addString(data, "armorCategory", payload.armorCategory);
+  }
+  if (itemKind === "tool") {
+    addString(data, "toolCategory", payload.toolCategory);
+    addString(data, "ability", payload.ability);
+    addString(data, "utilize", payload.utilize);
+    addList(data, "craft_outputs", splitList(payload.craftOutputs));
+    addList(data, "variants", splitList(payload.variants));
+  }
+  if (itemKind === "focus") {
+    addString(data, "focusFamily", payload.focusFamily);
+    addString(data, "variant", payload.focusVariant);
+    addString(data, "focus_usage", payload.focusUsage);
+  }
+  if (itemKind === "ammunition") {
+    addNumber(data, "quantity", payload.quantity);
+    addString(data, "compatible_weapon", payload.compatibleWeapon);
+  }
+  if (itemKind === "pack") {
+    addList(data, "contents", splitList(payload.contents));
+  }
+  if (itemKind === "consumable" || itemKind === "food") {
+    addNumber(data, "quantity", payload.quantity);
+    addNumber(data, "uses", payload.uses);
+    addNumber(data, "charges", payload.charges);
+    addString(data, "effect", payload.effect);
+    addString(data, "consumableType", payload.consumableType);
+    addString(data, "consumeBehavior", payload.consumeBehavior);
+  }
+  if (itemKind === "food") {
+    addString(data, "serviceDuration", payload.serviceDuration);
+    addString(data, "quality", payload.quality);
+  }
+  if (itemKind === "mount" || itemKind === "vehicle") {
+    addString(data, "speed", payload.speed);
+    addString(data, "carrying_capacity", payload.carryingCapacity);
+    addString(data, "cargo", payload.cargo);
+    addString(data, "crew", payload.crew);
+    addString(data, "passengers", payload.passengers);
+    addNumber(data, "vehicleArmorClass", payload.vehicleArmorClass);
+    addNumber(data, "vehicleHitPoints", payload.vehicleHitPoints);
+  }
+  if (itemKind === "generic") {
+    addString(data, "effect", payload.effect);
+  }
+
+  return {
+    name: payload.name,
+    category: payload.category,
+    itemType: payload.itemType,
+    rarity: payload.rarity,
+    attunement: payload.attunement,
+    valueAmount: Number(payload.valueAmount) || 0,
+    valueUnit: payload.valueUnit,
+    weight: Number(payload.weight) || 0,
+    description: payload.description,
+    properties: itemKind === "weapon" ? payload.properties : [],
+    damage,
+    armorClass,
+    data,
+  };
+}
+
+function itemCategoryKind(category: string) {
+  const normalized = category.toLowerCase();
+  if (normalized.includes("weapon")) return "weapon";
+  if (normalized.includes("armor")) return "armor";
+  if (normalized.includes("tool")) return "tool";
+  if (normalized.includes("focus")) return "focus";
+  if (normalized.includes("pack")) return "pack";
+  if (normalized.includes("ammunition")) return "ammunition";
+  if (normalized.includes("food")) return "food";
+  if (normalized.includes("mount")) return "mount";
+  if (normalized.includes("vehicle")) return "vehicle";
+  if (normalized.includes("wondrous")) return "consumable";
+  return "generic";
+}
+
+function addString(target: Record<string, unknown>, key: string, value: string) {
+  if (value.trim()) target[key] = value.trim();
+}
+
+function addNumber(target: Record<string, unknown>, key: string, value: string) {
+  const number = Number(value) || 0;
+  if (number > 0) target[key] = number;
+}
+
+function addList(target: Record<string, unknown>, key: string, value: string[]) {
+  if (value.length > 0) target[key] = value;
+}
+
+function splitList(value: string) {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function spellCastingTime(payload: SpellFormState) {

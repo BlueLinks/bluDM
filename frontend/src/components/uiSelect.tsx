@@ -36,7 +36,11 @@ export function Select({
                 .join(" ")}
             />
           )}
-          <SelectPrimitive.Value className="truncate" placeholder={placeholder} />
+          {selected ? (
+            <span className="truncate">{selected.label}</span>
+          ) : (
+            <SelectPrimitive.Value className="truncate" placeholder={placeholder} />
+          )}
         </span>
         <SelectPrimitive.Icon asChild>
           <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />

@@ -165,7 +165,7 @@ export function WorkspaceShell({
                 >
                   Back
                 </Button>
-                <div className="min-w-0">
+                <div className="hidden min-w-0 sm:block">
                   <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
                   <nav
                     className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
@@ -300,6 +300,7 @@ function ThemeMenu({
   return (
     <div className="relative">
       <Button
+        className="hidden sm:inline-flex"
         type="button"
         variant="ghost"
         size="sm"
