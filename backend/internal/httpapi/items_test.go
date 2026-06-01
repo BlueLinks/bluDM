@@ -5,6 +5,108 @@ import (
 	"testing"
 )
 
+func TestItemRequestNormalizeAndValidateForCreateUpdate(t *testing.T) {
+	req := itemRequest{
+		Name:        "  Moonblade  ",
+		Category:    " Weapon ",
+		ItemType:    " Martial Melee Weapons ",
+		Rarity:      " Rare ",
+		ValueUnit:   " GP ",
+		Description: "  A silvered campaign blade.  ",
+		Properties:  []string{" Finesse ", "Finesse", "", "Light"},
+	}
+
+	req.normalize()
+
+	if err := req.validate(); err != nil {
+		t.Fatalf("expected normalized request to validate: %v", err)
+	}
+	if req.Name != "Moonblade" || req.Category != "Weapon" || req.ItemType != "Martial Melee Weapons" {
+		t.Fatalf("expected text fields to be trimmed, got %+v", req)
+	}
+	if req.ValueUnit != "gp" {
+		t.Fatalf("expected value unit to lower-case, got %q", req.ValueUnit)
+	}
+	if len(req.Properties) != 2 || req.Properties[0] != "Finesse" || req.Properties[1] != "Light" {
+		t.Fatalf("expected properties to be trimmed and deduped, got %+v", req.Properties)
+	}
+	if req.Damage == nil || req.ArmorClass == nil || req.Data == nil {
+		t.Fatalf("expected nil maps to normalize to empty maps, got damage=%v armor=%v data=%v", req.Damage, req.ArmorClass, req.Data)
+	}
+}
+
+func TestItemRequestValidationRejectsInvalidCrudPayloads(t *testing.T) {
+	tests := []struct {
+		name string
+		req  itemRequest
+	}{
+		{name: "missing name", req: itemRequest{}},
+		{name: "negative value", req: itemRequest{Name: "Cursed Coin", ValueAmount: -1}},
+		{name: "negative weight", req: itemRequest{Name: "Heavy Feather", Weight: -0.5}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.req.normalize()
+			if err := test.req.validate(); err == nil {
+				t.Fatal("expected validation error")
+			}
+		})
+	}
+}
+
+func TestCloneItemRequestCopiesSourceForEditableCustomItem(t *testing.T) {
+	source := models.Item{
+		ID:            "standard-1",
+		Name:          "Longsword",
+		Category:      "Weapon",
+		ItemType:      "Martial Melee Weapons",
+		Rarity:        "Common",
+		ValueAmount:   15,
+		ValueUnit:     "GP",
+		Weight:        3,
+		Description:   "A versatile blade.",
+		Properties:    []string{"Versatile"},
+		Damage:        map[string]any{"damage": map[string]any{"damage_dice": "1d8"}},
+		ArmorClass:    map[string]any{},
+		Data:          map[string]any{"weaponCategory": "Martial"},
+		LibrarySource: "standard",
+		ReadOnly:      true,
+		SourceKey:     "srd-2014",
+		SourceLabel:   "SRD 2014",
+	}
+
+	req := cloneItemRequest(source)
+
+	if req.Name != "Copy of Longsword" {
+		t.Fatalf("expected copy name, got %q", req.Name)
+	}
+	if req.Category != source.Category || req.ItemType != source.ItemType || req.ValueAmount != source.ValueAmount {
+		t.Fatalf("expected source item fields to copy, got %+v", req)
+	}
+	if req.ValueUnit != "gp" {
+		t.Fatalf("expected clone request to normalize value unit, got %q", req.ValueUnit)
+	}
+	clonedFrom, ok := req.Data["clonedFrom"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected clonedFrom metadata, got %+v", req.Data)
+	}
+	if clonedFrom["id"] != source.ID || clonedFrom["librarySource"] != source.LibrarySource || clonedFrom["sourceKey"] != source.SourceKey {
+		t.Fatalf("expected clone metadata to reference source, got %+v", clonedFrom)
+	}
+	if req.Data["sourceData"] == nil || req.Data["weaponCategory"] != "Martial" {
+		t.Fatalf("expected source data to be preserved, got %+v", req.Data)
+	}
+}
+
+func TestCloneItemRequestUsesNextCopyName(t *testing.T) {
+	req := cloneItemRequest(models.Item{Name: "Copy of Longsword", Data: map[string]any{}})
+
+	if req.Name != "Copy of Longsword" {
+		t.Fatalf("expected clone name to avoid duplicate copy prefix, got %q", req.Name)
+	}
+}
+
 func TestNormalizeStandardItemFromSRDEquipment(t *testing.T) {
 	item := testStandardItem("Longsword", "Weapon · Martial", map[string]any{
 		"equipment_category": map[string]any{"name": "Weapon"},

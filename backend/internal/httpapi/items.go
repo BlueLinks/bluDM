@@ -258,6 +258,16 @@ func (s *Server) cloneItem(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load item")
 		return
 	}
+	cloneReq := cloneItemRequest(source)
+	item, err := s.insertItem(r.Context(), currentUserIDMust(r.Context()), cloneReq)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not clone item")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"item": item})
+}
+
+func cloneItemRequest(source models.Item) itemRequest {
 	cloneData := map[string]any{}
 	for key, value := range source.Data {
 		cloneData[key] = value
@@ -285,12 +295,7 @@ func (s *Server) cloneItem(w http.ResponseWriter, r *http.Request) {
 		Data:        cloneData,
 	}
 	cloneReq.normalize()
-	item, err := s.insertItem(r.Context(), currentUserIDMust(r.Context()), cloneReq)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not clone item")
-		return
-	}
-	writeJSON(w, http.StatusCreated, map[string]any{"item": item})
+	return cloneReq
 }
 
 func (s *Server) itemByID(ctx context.Context, itemID string, librarySource string) (models.Item, error) {
