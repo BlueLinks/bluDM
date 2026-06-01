@@ -1,180 +1,280 @@
-import { Eye, Package, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
-  Badge,
   Button,
   Callout,
   FloatingInput,
-  Modal,
   MutedPanel,
   Page,
   PageHeader,
   Select,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import type { StandardLibraryEntry } from "../../types";
-
-const itemCategories = [
-  { value: "", label: "All item-like content" },
-  { value: "equipment", label: "Equipment" },
-  { value: "weapon-properties", label: "Weapon properties" },
-  { value: "damage-types", label: "Damage types" },
-  { value: "magic-schools", label: "Magic schools" },
-];
-const itemCategoryKeys = new Set(itemCategories.slice(1).map((option) => option.value));
+import type { Item } from "../../types";
+import { ItemFormModal } from "./ItemFormModal";
+import { ItemCatalogCard } from "./ItemCatalogCard";
+import { itemSearchText } from "./itemCatalogDisplay";
+import { itemCategoryOptions } from "./itemFormOptions";
+import { ItemPreviewModal } from "./ItemPreviewModal";
 
 export function ItemsPage() {
-  const [entries, setEntries] = useState<StandardLibraryEntry[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [showUser, setShowUser] = useState(true);
   const [showStandard, setShowStandard] = useState(true);
   const [sources, setSources] = useState(["srd-2014", "srd-5-2-1"]);
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
-  const [preview, setPreview] = useState<StandardLibraryEntry | null>(null);
+  const [preview, setPreview] = useState<Item | null>(null);
+  const [editing, setEditing] = useState<Item | null>(null);
+  const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const loadItems = () => {
     setLoading(true);
+    setError("");
     api
-      .standardLibraryEntries({ source: sources })
-      .then((payload) => setEntries(payload.entries))
+      .items({
+        includeUser: showUser,
+        includeStandard: showStandard,
+        source: showStandard ? sources : [],
+        q: search.trim(),
+      })
+      .then((payload) => setItems(payload.items))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load items"))
       .finally(() => setLoading(false));
-  }, [sources]);
+  };
 
-  const visibleEntries = useMemo(
-    () =>
-      entries.filter((entry) => {
-        if (!showStandard) return false;
-        if (category ? entry.category !== category : !itemCategoryKeys.has(entry.category)) {
-          return false;
-        }
-        const query = search.trim().toLowerCase();
-        if (!query) return true;
-        return [entry.name, entry.summary, entry.description]
-          .join(" ")
-          .toLowerCase()
-          .includes(query);
-      }),
-    [category, entries, search, showStandard],
-  );
+  useEffect(() => {
+    loadItems();
+  }, [search, showStandard, showUser, sources]);
+
+  const categoryOptions = useMemo(() => {
+    const categories = Array.from(
+      new Set([
+        ...itemCategoryOptions.map((option) => option.value),
+        ...items.map((item) => item.category).filter(Boolean),
+      ]),
+    );
+    return [
+      { value: "", label: "All categories" },
+      ...categories.sort().map((value) => ({ value, label: value })),
+    ];
+  }, [items]);
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const item of items) {
+      const key = item.category || "Equipment";
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const categories = new Set([
+      ...itemCategoryOptions.map((option) => option.value),
+      ...Array.from(counts.keys()),
+    ]);
+    return Array.from(categories)
+      .sort((left, right) => left.localeCompare(right))
+      .map((label) => [label, counts.get(label) ?? 0] as const);
+  }, [items]);
+
+  const visibleItems = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return items.filter((item) => {
+      if (category && item.category !== category) return false;
+      if (!query) return true;
+      return itemSearchText(item).includes(query);
+    });
+  }, [category, items, search]);
+
+  const closeForm = () => {
+    setCreating(false);
+    setEditing(null);
+  };
+
+  const saveItem = async (form: Parameters<typeof api.createItem>[0]) => {
+    if (editing) {
+      await api.updateItem(editing.id, form);
+    } else {
+      await api.createItem(form);
+    }
+    closeForm();
+    loadItems();
+  };
+
+  const cloneItem = async (item: Item) => {
+    try {
+      const payload = await api.cloneItem(item.id, item.librarySource);
+      setPreview(payload.item);
+      loadItems();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not clone item");
+    }
+  };
+
+  const deleteItem = async (item: Item) => {
+    if (!window.confirm(`Delete ${item.name}?`)) return;
+    try {
+      await api.deleteItem(item.id);
+      if (preview?.id === item.id) setPreview(null);
+      loadItems();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete item");
+    }
+  };
 
   return (
     <Page>
       <PageHeader
         eyebrow="Items"
         title="Items and equipment"
-        copy="Browse read-only SRD equipment, weapon properties, and related reference entries. User-created item management can build on this library later."
+        copy="Browse SRD equipment alongside custom table items. Standard items stay read-only; clone one when your campaign needs its own version."
         action={
-          <InfoHelpButton title="Why is SRD content read-only?">
-            <p>
-              Standard entries are shared across every user and campaign. Keeping them read-only
-              prevents accidental changes to the reference copy.
-            </p>
-            <p>Create private items later when your table needs custom gear or loot.</p>
-          </InfoHelpButton>
+          <div className="flex flex-wrap items-center gap-2">
+            <InfoHelpButton title="Catalog foundation">
+              <p>
+                This catalog is the base layer for player inventories, encounter rewards, material
+                components, ration tracking, and shops.
+              </p>
+            </InfoHelpButton>
+            <Button icon={Plus} onClick={() => setCreating(true)}>
+              New item
+            </Button>
+          </div>
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
       <ContentSourceFilter
         showStandard={showStandard}
         showUser={showUser}
-        standardCopy="SRD equipment and rules references"
-        userCopy="Custom items are planned next"
+        standardCopy="Read-only SRD equipment"
+        userCopy="Custom items and cloned equipment"
         onShowStandardChange={setShowStandard}
         onShowUserChange={setShowUser}
       />
-      <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
-        <FloatingInput icon={Search} label="Search items" value={search} onChange={setSearch} />
-        <Select
-          value={category}
-          placeholder="Category"
-          options={itemCategories}
-          onValueChange={setCategory}
-        />
-      </div>
-      {showStandard && <StandardSourceToggles selected={sources} onChange={setSources} />}
-      {showUser && (
-        <MutedPanel>
-          User-created items are not implemented yet. This page is ready for them.
-        </MutedPanel>
-      )}
-      {loading && <MutedPanel>Loading item library...</MutedPanel>}
-      {!loading && visibleEntries.length === 0 && (
-        <MutedPanel>No standard entries match the current filters.</MutedPanel>
-      )}
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-        {visibleEntries.map((entry) => (
-          <article
-            key={entry.id}
-            className="rounded-lg border border-sky-300/80 bg-card p-4 dark:border-sky-800"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-semibold">{entry.name}</h3>
-                  <Badge>{entry.sourceLabel}</Badge>
-                </div>
-                <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                  {entry.category.replaceAll("-", " ")}
-                </p>
+      <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+        <div className="grid gap-3 border-b border-border bg-background p-3 lg:grid-cols-[1fr_240px]">
+          <FloatingInput icon={Search} label="Search items" value={search} onChange={setSearch} />
+          <Select
+            value={category}
+            placeholder="Category"
+            options={categoryOptions}
+            onValueChange={setCategory}
+          />
+        </div>
+        {showStandard && (
+          <div className="border-b border-border bg-background px-3 py-2">
+            <StandardSourceToggles selected={sources} onChange={setSources} />
+          </div>
+        )}
+        <div className="grid lg:grid-cols-[250px_minmax(0,1fr)]">
+          <aside className="grid content-start gap-4 border-b border-border bg-muted/35 p-3 lg:border-b-0 lg:border-r">
+            <FilterGroup title="Category">
+              <FilterButton
+                active={category === ""}
+                count={items.length}
+                label="All categories"
+                onClick={() => setCategory("")}
+              />
+              {categoryCounts.map(([label, count]) => (
+                <FilterButton
+                  key={label}
+                  active={category === label}
+                  count={count}
+                  label={label}
+                  onClick={() => setCategory(label)}
+                />
+              ))}
+            </FilterGroup>
+          </aside>
+          <div className="grid min-w-0 gap-3 p-3">
+            {loading && <MutedPanel>Loading item catalog...</MutedPanel>}
+            {!loading && visibleItems.length === 0 && (
+              <MutedPanel>No items match the current filters.</MutedPanel>
+            )}
+            {!loading && visibleItems.length > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+                <span>
+                  Showing {visibleItems.length} item{visibleItems.length === 1 ? "" : "s"} across
+                  SRD and custom catalog entries
+                </span>
+                <span className="font-medium">
+                  {category || "All categories"} · {showStandard ? "SRD on" : "SRD off"} ·{" "}
+                  {showUser ? "Custom on" : "Custom off"}
+                </span>
               </div>
-              <Button icon={Eye} size="sm" variant="secondary" onClick={() => setPreview(entry)}>
-                View
-              </Button>
+            )}
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {visibleItems.map((item) => (
+                <ItemCatalogCard
+                  key={`${item.librarySource}-${item.id}`}
+                  item={item}
+                  onPreview={setPreview}
+                  onEdit={setEditing}
+                  onClone={cloneItem}
+                  onDelete={deleteItem}
+                />
+              ))}
             </div>
-            <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
-              {entry.summary || entry.description || "SRD item reference."}
-            </p>
-          </article>
-        ))}
-      </div>
-      <EntryPreviewModal entry={preview} onClose={() => setPreview(null)} />
+          </div>
+        </div>
+      </section>
+      <ItemPreviewModal
+        item={preview}
+        onClose={() => setPreview(null)}
+        onClone={cloneItem}
+        onEdit={setEditing}
+        onDelete={deleteItem}
+      />
+      <ItemFormModal
+        open={creating || Boolean(editing)}
+        item={editing}
+        onClose={closeForm}
+        onSave={saveItem}
+      />
     </Page>
   );
 }
 
-function EntryPreviewModal({
-  entry,
-  onClose,
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="grid content-start gap-2">
+      <h3 className="text-[0.72rem] font-extrabold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h3>
+      <div className="grid auto-rows-min gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function FilterButton({
+  active,
+  count,
+  label,
+  onClick,
 }: {
-  entry: StandardLibraryEntry | null;
-  onClose: () => void;
+  active: boolean;
+  count: number;
+  label: string;
+  onClick: () => void;
 }) {
   return (
-    <Modal
-      title={entry ? entry.name : "Library entry"}
-      open={Boolean(entry)}
-      onOpenChange={(open) => !open && onClose()}
-      trigger={<span />}
+    <button
+      aria-pressed={active}
+      className={[
+        "flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-sm font-semibold transition",
+        active
+          ? "border-primary/25 bg-primary/10 text-primary"
+          : "border-transparent text-muted-foreground hover:border-border hover:bg-card",
+      ].join(" ")}
+      type="button"
+      onClick={onClick}
     >
-      {entry && (
-        <div className="grid gap-4">
-          <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge>{entry.sourceLabel}</Badge>
-              <Badge>{entry.category.replaceAll("-", " ")}</Badge>
-            </div>
-            <p className="mt-2 text-sm opacity-90">Read-only standard library content.</p>
-          </div>
-          <div>
-            <h3 className="flex items-center gap-2 text-2xl font-bold">
-              <Package className="h-6 w-6" />
-              {entry.name}
-            </h3>
-            {entry.summary && <p className="mt-2 text-muted-foreground">{entry.summary}</p>}
-          </div>
-          {entry.description && (
-            <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-              {entry.description}
-            </p>
-          )}
-        </div>
-      )}
-    </Modal>
+      <span className="min-w-0 truncate">{label}</span>
+      <span className="rounded-full bg-card px-2 py-0.5 text-[0.68rem]">{count}</span>
+    </button>
   );
 }

@@ -114,6 +114,22 @@ create table if not exists spells (
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
 );
+create table if not exists items (
+    id uuid primary key default gen_random_uuid(),
+    owner_user_id uuid references users(id) on delete cascade,
+    name text not null, category text not null default '', item_type text not null default '',
+    rarity text not null default '', attunement boolean not null default false,
+    value_amount integer not null default 0, value_unit text not null default 'gp',
+    weight double precision not null default 0, description text not null default '',
+    properties text[] not null default array[]::text[],
+    damage jsonb not null default '{}'::jsonb, armor_class jsonb not null default '{}'::jsonb,
+    data jsonb not null default '{}'::jsonb, created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+alter table items add column if not exists owner_user_id uuid references users(id) on delete cascade;
+alter table items add column if not exists category text not null default '', add column if not exists item_type text not null default '', add column if not exists rarity text not null default '', add column if not exists attunement boolean not null default false, add column if not exists value_amount integer not null default 0, add column if not exists value_unit text not null default 'gp', add column if not exists weight double precision not null default 0, add column if not exists description text not null default '', add column if not exists properties text[] not null default array[]::text[], add column if not exists damage jsonb not null default '{}'::jsonb, add column if not exists armor_class jsonb not null default '{}'::jsonb, add column if not exists data jsonb not null default '{}'::jsonb;
+create index if not exists items_owner_user_id_idx on items(owner_user_id, updated_at desc);
+create index if not exists items_owner_category_name_idx on items(owner_user_id, category, name);
 create table if not exists spell_projectile_scaling (
     spell_id uuid primary key references spells(id) on delete cascade,
     base_projectiles integer not null default 1, scaling_type text not null default 'none',

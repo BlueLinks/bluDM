@@ -12,6 +12,8 @@ import type {
   Encounter,
   EncounterCombatant,
   EncounterRun,
+  Item,
+  ItemFormState,
   LongRestSnapshot,
   Player,
   PlayerFormState,
@@ -23,7 +25,13 @@ import type {
 } from "../../types";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
-import { actionPayload, creaturePayload, playerPayload, spellPayload } from "./payloads";
+import {
+  actionPayload,
+  creaturePayload,
+  itemPayload,
+  playerPayload,
+  spellPayload,
+} from "./payloads";
 import { request } from "./request";
 export const api = {
   ...actionTemplateApi,
@@ -333,6 +341,47 @@ export const api = {
       `/api/library/entries${query ? `?${query}` : ""}`,
     );
   },
+  items: (
+    options: {
+      includeStandard?: boolean;
+      includeUser?: boolean;
+      q?: string;
+      category?: string;
+      source?: string[];
+    } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (options.includeStandard !== undefined) {
+      params.set("includeStandard", String(options.includeStandard));
+    }
+    if (options.includeUser !== undefined) params.set("includeUser", String(options.includeUser));
+    if (options.q) params.set("q", options.q);
+    if (options.category) params.set("category", options.category);
+    if (options.source?.length) params.set("source", options.source.join(","));
+    const query = params.toString();
+    return request<{ items: Item[] }>(`/api/library/items${query ? `?${query}` : ""}`);
+  },
+  item: (itemId: string, librarySource = "user") =>
+    request<{ item: Item }>(
+      `/api/library/items/${itemId}?librarySource=${encodeURIComponent(librarySource)}`,
+    ),
+  createItem: (payload: ItemFormState) =>
+    request<{ item: Item }>("/api/library/items", {
+      method: "POST",
+      body: JSON.stringify(itemPayload(payload)),
+    }),
+  updateItem: (itemId: string, payload: ItemFormState) =>
+    request<{ item: Item }>(`/api/library/items/${itemId}`, {
+      method: "PUT",
+      body: JSON.stringify(itemPayload(payload)),
+    }),
+  deleteItem: (itemId: string) =>
+    request<void>(`/api/library/items/${itemId}`, { method: "DELETE" }),
+  cloneItem: (itemId: string, librarySource: Item["librarySource"]) =>
+    request<{ item: Item }>(`/api/library/items/${itemId}/clone`, {
+      method: "POST",
+      body: JSON.stringify({ librarySource }),
+    }),
   createSpell: (payload: SpellFormState) =>
     request<{ spell: Spell }>("/api/library/spells", {
       method: "POST",

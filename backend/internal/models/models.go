@@ -390,6 +390,29 @@ type SpellActionRollPart struct {
 	CantripScaling         map[string]any `json:"cantripScaling,omitempty"`
 }
 
+type Item struct {
+	ID            string         `json:"id"`
+	Name          string         `json:"name"`
+	Category      string         `json:"category"`
+	ItemType      string         `json:"itemType"`
+	Rarity        string         `json:"rarity"`
+	Attunement    bool           `json:"attunement"`
+	ValueAmount   int            `json:"valueAmount"`
+	ValueUnit     string         `json:"valueUnit"`
+	Weight        float64        `json:"weight"`
+	Description   string         `json:"description"`
+	Properties    []string       `json:"properties"`
+	Damage        map[string]any `json:"damage"`
+	ArmorClass    map[string]any `json:"armorClass"`
+	Data          map[string]any `json:"data"`
+	LibrarySource string         `json:"librarySource"`
+	ReadOnly      bool           `json:"readOnly"`
+	SourceKey     string         `json:"sourceKey"`
+	SourceLabel   string         `json:"sourceLabel"`
+	CreatedAt     time.Time      `json:"createdAt"`
+	UpdatedAt     time.Time      `json:"updatedAt"`
+}
+
 type StandardSource struct {
 	Key         string    `json:"key"`
 	Label       string    `json:"label"`

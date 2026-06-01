@@ -265,6 +265,7 @@ export type {
   SpellProjectileScaling,
   SpellProjectileScalingFormState,
 } from "./types/spells";
+export type { Item, ItemFormState } from "./types/items";
 
 export type CreatureSpellRef = {
   spellId: string;
