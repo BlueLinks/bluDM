@@ -137,6 +137,7 @@ function srd521Entries() {
       data: { source },
     },
     ...srd521CharacterOptions(source),
+    ...srd521ArmorEntries(source),
     {
       sourceKey: "srd-5-2-1",
       category: "glossary",
@@ -148,6 +149,111 @@ function srd521Entries() {
       data: { source },
     },
   ];
+}
+
+function srd521ArmorEntries(source) {
+  const armor = [
+    armorEntry("Padded Armor", "Light", 11, "dex", null, true, 8, 5),
+    armorEntry("Leather Armor", "Light", 11, "dex", null, false, 10, 10),
+    armorEntry("Studded Leather Armor", "Light", 12, "dex", null, false, 13, 45),
+    armorEntry("Hide Armor", "Medium", 12, "dexMax2", null, false, 12, 10),
+    armorEntry("Chain Shirt", "Medium", 13, "dexMax2", null, false, 20, 50),
+    armorEntry("Scale Mail", "Medium", 14, "dexMax2", null, true, 45, 50),
+    armorEntry("Breastplate", "Medium", 14, "dexMax2", null, false, 20, 400),
+    armorEntry("Half Plate Armor", "Medium", 15, "dexMax2", null, true, 40, 750),
+    armorEntry("Ring Mail", "Heavy", 14, "none", null, true, 40, 30),
+    armorEntry("Chain Mail", "Heavy", 16, "none", 13, true, 55, 75),
+    armorEntry("Splint Armor", "Heavy", 17, "none", 15, true, 60, 200),
+    armorEntry("Plate Armor", "Heavy", 18, "none", 15, true, 65, 1500),
+    shieldEntry("Shield", 2, 6, 10),
+  ];
+  return armor.map((entry) => toSrd521EquipmentEntry(entry, source));
+}
+
+function armorEntry(
+  name,
+  armorCategory,
+  base,
+  dexMode,
+  strengthMinimum,
+  stealthDisadvantage,
+  weight,
+  cost,
+) {
+  const armorClass = { base };
+  if (dexMode !== "none") armorClass.dex_bonus = true;
+  if (dexMode === "dexMax2") armorClass.max_bonus = 2;
+  return {
+    name,
+    armorCategory,
+    armorClass,
+    strengthMinimum,
+    stealthDisadvantage,
+    weight,
+    cost,
+  };
+}
+
+function shieldEntry(name, bonus, weight, cost) {
+  return {
+    name,
+    armorCategory: "Shield",
+    armorClass: { base: bonus },
+    strengthMinimum: null,
+    stealthDisadvantage: false,
+    weight,
+    cost,
+  };
+}
+
+function toSrd521EquipmentEntry(entry, source) {
+  const raw = {
+    index: slugify(entry.name),
+    name: entry.name,
+    equipment_category: { name: "Armor" },
+    armor_category: { name: entry.armorCategory },
+    armor_class: entry.armorClass,
+    cost: { quantity: entry.cost, unit: "gp" },
+    weight: entry.weight,
+    stealth_disadvantage: entry.stealthDisadvantage,
+    url: `/api/2024/equipment/${slugify(entry.name)}`,
+  };
+  if (entry.strengthMinimum) raw.str_minimum = entry.strengthMinimum;
+  return {
+    sourceKey: "srd-5-2-1",
+    category: "equipment",
+    slug: `srd-5-2-1-equipment-${slugify(entry.name)}`,
+    name: entry.name,
+    summary: `Armor · ${entry.armorCategory}`,
+    description: srd521ArmorDescription(entry),
+    data: {
+      source,
+      index: raw.index,
+      apiUrl: raw.url,
+      category: "equipment",
+      raw,
+    },
+  };
+}
+
+function srd521ArmorDescription(entry) {
+  const parts = [
+    `${entry.name} is ${entry.armorCategory.toLowerCase()} armor from SRD 5.2.1.`,
+    `Armor Class: ${armorClassLabel(entry)}.`,
+    entry.strengthMinimum ? `Strength: Str ${entry.strengthMinimum}.` : "",
+    entry.stealthDisadvantage ? "Stealth: Disadvantage." : "",
+    `Weight: ${entry.weight} lb.`,
+    `Cost: ${entry.cost.toLocaleString("en-US")} GP.`,
+  ].filter(Boolean);
+  return parts.join(" ");
+}
+
+function armorClassLabel(entry) {
+  if (entry.armorCategory === "Shield") return "+2";
+  const base = entry.armorClass.base;
+  if (!entry.armorClass.dex_bonus) return String(base);
+  if (entry.armorClass.max_bonus) return `${base} + Dex modifier (max 2)`;
+  return `${base} + Dex modifier`;
 }
 
 function srd521CharacterOptions(source) {

@@ -34,4 +34,31 @@ func TestParseStandardLibraryEntries(t *testing.T) {
 			t.Fatalf("expected SRD 5.2.1 character picker entries for %q", key)
 		}
 	}
+	expectedArmor := map[string]bool{
+		"Padded Armor":          false,
+		"Leather Armor":         false,
+		"Studded Leather Armor": false,
+		"Hide Armor":            false,
+		"Chain Shirt":           false,
+		"Scale Mail":            false,
+		"Breastplate":           false,
+		"Half Plate Armor":      false,
+		"Ring Mail":             false,
+		"Chain Mail":            false,
+		"Splint Armor":          false,
+		"Plate Armor":           false,
+		"Shield":                false,
+	}
+	for _, entry := range entries {
+		if entry.SourceKey == "srd-5-2-1" && entry.Category == "equipment" {
+			if _, ok := expectedArmor[entry.Name]; ok {
+				expectedArmor[entry.Name] = true
+			}
+		}
+	}
+	for name, found := range expectedArmor {
+		if !found {
+			t.Fatalf("expected SRD 5.2.1 armor entry %q", name)
+		}
+	}
 }

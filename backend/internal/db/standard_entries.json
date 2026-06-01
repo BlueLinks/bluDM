@@ -42200,6 +42200,529 @@
   },
   {
     "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-breastplate",
+    "name": "Breastplate",
+    "summary": "Armor · Medium",
+    "description": "Breastplate is medium armor from SRD 5.2.1. Armor Class: 14 + Dex modifier (max 2). Weight: 20 lb. Cost: 400 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "breastplate",
+      "apiUrl": "/api/2024/equipment/breastplate",
+      "category": "equipment",
+      "raw": {
+        "index": "breastplate",
+        "name": "Breastplate",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Medium"
+        },
+        "armor_class": {
+          "base": 14,
+          "dex_bonus": true,
+          "max_bonus": 2
+        },
+        "cost": {
+          "quantity": 400,
+          "unit": "gp"
+        },
+        "weight": 20,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/breastplate"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-chain-mail",
+    "name": "Chain Mail",
+    "summary": "Armor · Heavy",
+    "description": "Chain Mail is heavy armor from SRD 5.2.1. Armor Class: 16. Strength: Str 13. Stealth: Disadvantage. Weight: 55 lb. Cost: 75 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "chain-mail",
+      "apiUrl": "/api/2024/equipment/chain-mail",
+      "category": "equipment",
+      "raw": {
+        "index": "chain-mail",
+        "name": "Chain Mail",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Heavy"
+        },
+        "armor_class": {
+          "base": 16
+        },
+        "cost": {
+          "quantity": 75,
+          "unit": "gp"
+        },
+        "weight": 55,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/chain-mail",
+        "str_minimum": 13
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-chain-shirt",
+    "name": "Chain Shirt",
+    "summary": "Armor · Medium",
+    "description": "Chain Shirt is medium armor from SRD 5.2.1. Armor Class: 13 + Dex modifier (max 2). Weight: 20 lb. Cost: 50 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "chain-shirt",
+      "apiUrl": "/api/2024/equipment/chain-shirt",
+      "category": "equipment",
+      "raw": {
+        "index": "chain-shirt",
+        "name": "Chain Shirt",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Medium"
+        },
+        "armor_class": {
+          "base": 13,
+          "dex_bonus": true,
+          "max_bonus": 2
+        },
+        "cost": {
+          "quantity": 50,
+          "unit": "gp"
+        },
+        "weight": 20,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/chain-shirt"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-half-plate-armor",
+    "name": "Half Plate Armor",
+    "summary": "Armor · Medium",
+    "description": "Half Plate Armor is medium armor from SRD 5.2.1. Armor Class: 15 + Dex modifier (max 2). Stealth: Disadvantage. Weight: 40 lb. Cost: 750 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "half-plate-armor",
+      "apiUrl": "/api/2024/equipment/half-plate-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "half-plate-armor",
+        "name": "Half Plate Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Medium"
+        },
+        "armor_class": {
+          "base": 15,
+          "dex_bonus": true,
+          "max_bonus": 2
+        },
+        "cost": {
+          "quantity": 750,
+          "unit": "gp"
+        },
+        "weight": 40,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/half-plate-armor"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-hide-armor",
+    "name": "Hide Armor",
+    "summary": "Armor · Medium",
+    "description": "Hide Armor is medium armor from SRD 5.2.1. Armor Class: 12 + Dex modifier (max 2). Weight: 12 lb. Cost: 10 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "hide-armor",
+      "apiUrl": "/api/2024/equipment/hide-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "hide-armor",
+        "name": "Hide Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Medium"
+        },
+        "armor_class": {
+          "base": 12,
+          "dex_bonus": true,
+          "max_bonus": 2
+        },
+        "cost": {
+          "quantity": 10,
+          "unit": "gp"
+        },
+        "weight": 12,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/hide-armor"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-leather-armor",
+    "name": "Leather Armor",
+    "summary": "Armor · Light",
+    "description": "Leather Armor is light armor from SRD 5.2.1. Armor Class: 11 + Dex modifier. Weight: 10 lb. Cost: 10 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "leather-armor",
+      "apiUrl": "/api/2024/equipment/leather-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "leather-armor",
+        "name": "Leather Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Light"
+        },
+        "armor_class": {
+          "base": 11,
+          "dex_bonus": true
+        },
+        "cost": {
+          "quantity": 10,
+          "unit": "gp"
+        },
+        "weight": 10,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/leather-armor"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-padded-armor",
+    "name": "Padded Armor",
+    "summary": "Armor · Light",
+    "description": "Padded Armor is light armor from SRD 5.2.1. Armor Class: 11 + Dex modifier. Stealth: Disadvantage. Weight: 8 lb. Cost: 5 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "padded-armor",
+      "apiUrl": "/api/2024/equipment/padded-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "padded-armor",
+        "name": "Padded Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Light"
+        },
+        "armor_class": {
+          "base": 11,
+          "dex_bonus": true
+        },
+        "cost": {
+          "quantity": 5,
+          "unit": "gp"
+        },
+        "weight": 8,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/padded-armor"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-plate-armor",
+    "name": "Plate Armor",
+    "summary": "Armor · Heavy",
+    "description": "Plate Armor is heavy armor from SRD 5.2.1. Armor Class: 18. Strength: Str 15. Stealth: Disadvantage. Weight: 65 lb. Cost: 1,500 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "plate-armor",
+      "apiUrl": "/api/2024/equipment/plate-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "plate-armor",
+        "name": "Plate Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Heavy"
+        },
+        "armor_class": {
+          "base": 18
+        },
+        "cost": {
+          "quantity": 1500,
+          "unit": "gp"
+        },
+        "weight": 65,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/plate-armor",
+        "str_minimum": 15
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-ring-mail",
+    "name": "Ring Mail",
+    "summary": "Armor · Heavy",
+    "description": "Ring Mail is heavy armor from SRD 5.2.1. Armor Class: 14. Stealth: Disadvantage. Weight: 40 lb. Cost: 30 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "ring-mail",
+      "apiUrl": "/api/2024/equipment/ring-mail",
+      "category": "equipment",
+      "raw": {
+        "index": "ring-mail",
+        "name": "Ring Mail",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Heavy"
+        },
+        "armor_class": {
+          "base": 14
+        },
+        "cost": {
+          "quantity": 30,
+          "unit": "gp"
+        },
+        "weight": 40,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/ring-mail"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-scale-mail",
+    "name": "Scale Mail",
+    "summary": "Armor · Medium",
+    "description": "Scale Mail is medium armor from SRD 5.2.1. Armor Class: 14 + Dex modifier (max 2). Stealth: Disadvantage. Weight: 45 lb. Cost: 50 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "scale-mail",
+      "apiUrl": "/api/2024/equipment/scale-mail",
+      "category": "equipment",
+      "raw": {
+        "index": "scale-mail",
+        "name": "Scale Mail",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Medium"
+        },
+        "armor_class": {
+          "base": 14,
+          "dex_bonus": true,
+          "max_bonus": 2
+        },
+        "cost": {
+          "quantity": 50,
+          "unit": "gp"
+        },
+        "weight": 45,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/scale-mail"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-shield",
+    "name": "Shield",
+    "summary": "Armor · Shield",
+    "description": "Shield is shield armor from SRD 5.2.1. Armor Class: +2. Weight: 6 lb. Cost: 10 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "shield",
+      "apiUrl": "/api/2024/equipment/shield",
+      "category": "equipment",
+      "raw": {
+        "index": "shield",
+        "name": "Shield",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Shield"
+        },
+        "armor_class": {
+          "base": 2
+        },
+        "cost": {
+          "quantity": 10,
+          "unit": "gp"
+        },
+        "weight": 6,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/shield"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-splint-armor",
+    "name": "Splint Armor",
+    "summary": "Armor · Heavy",
+    "description": "Splint Armor is heavy armor from SRD 5.2.1. Armor Class: 17. Strength: Str 15. Stealth: Disadvantage. Weight: 60 lb. Cost: 200 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "splint-armor",
+      "apiUrl": "/api/2024/equipment/splint-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "splint-armor",
+        "name": "Splint Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Heavy"
+        },
+        "armor_class": {
+          "base": 17
+        },
+        "cost": {
+          "quantity": 200,
+          "unit": "gp"
+        },
+        "weight": 60,
+        "stealth_disadvantage": true,
+        "url": "/api/2024/equipment/splint-armor",
+        "str_minimum": 15
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
+    "category": "equipment",
+    "slug": "srd-5-2-1-equipment-studded-leather-armor",
+    "name": "Studded Leather Armor",
+    "summary": "Armor · Light",
+    "description": "Studded Leather Armor is light armor from SRD 5.2.1. Armor Class: 12 + Dex modifier. Weight: 13 lb. Cost: 45 GP.",
+    "data": {
+      "source": {
+        "provider": "Wizards of the Coast",
+        "sourceUrl": "https://www.dndbeyond.com/srd",
+        "pdfUrl": "https://media.dndbeyond.com/compendium-images/srd/5.2/SRD_CC_v5.2.1.pdf",
+        "licenseName": "Creative Commons Attribution 4.0 International"
+      },
+      "index": "studded-leather-armor",
+      "apiUrl": "/api/2024/equipment/studded-leather-armor",
+      "category": "equipment",
+      "raw": {
+        "index": "studded-leather-armor",
+        "name": "Studded Leather Armor",
+        "equipment_category": {
+          "name": "Armor"
+        },
+        "armor_category": {
+          "name": "Light"
+        },
+        "armor_class": {
+          "base": 12,
+          "dex_bonus": true
+        },
+        "cost": {
+          "quantity": 45,
+          "unit": "gp"
+        },
+        "weight": 13,
+        "stealth_disadvantage": false,
+        "url": "/api/2024/equipment/studded-leather-armor"
+      }
+    }
+  },
+  {
+    "sourceKey": "srd-5-2-1",
     "category": "feats",
     "slug": "srd-5-2-1-feats-ability-score-improvement",
     "name": "Ability Score Improvement",
