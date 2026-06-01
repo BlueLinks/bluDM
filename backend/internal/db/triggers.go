@@ -42,6 +42,9 @@ begin
     if not exists (select 1 from pg_trigger where tgname = 'encounters_touch_updated_at') then
         create trigger encounters_touch_updated_at before update on encounters for each row execute function touch_updated_at();
     end if;
+    if not exists (select 1 from pg_trigger where tgname = 'campaign_journeys_touch_updated_at') then
+        create trigger campaign_journeys_touch_updated_at before update on campaign_journeys for each row execute function touch_updated_at();
+    end if;
     if not exists (select 1 from pg_trigger where tgname = 'encounter_combatants_touch_updated_at') then
         create trigger encounter_combatants_touch_updated_at before update on encounter_combatants for each row execute function touch_updated_at();
     end if;

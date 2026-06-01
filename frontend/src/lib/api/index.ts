@@ -23,6 +23,11 @@ import type {
   StandardSource,
   User,
 } from "../../types";
+import type {
+  Journey,
+  JourneyCalculation,
+  JourneyFormState,
+} from "../../features/campaigns/journeyTypes";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
 import {
@@ -120,6 +125,28 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ players }),
     }),
+  campaignJourneys: (campaignId: string) =>
+    request<{ journeys: Journey[] }>(`/api/campaigns/${campaignId}/journeys`),
+  calculateJourney: (campaignId: string, payload: JourneyFormState, rerollWeather = false) =>
+    request<{ calculation: JourneyCalculation }>(
+      `/api/campaigns/${campaignId}/journeys/calculate`,
+      {
+        method: "POST",
+        body: JSON.stringify(journeyPayload(payload, rerollWeather)),
+      },
+    ),
+  createJourney: (campaignId: string, payload: JourneyFormState) =>
+    request<{ journey: Journey }>(`/api/campaigns/${campaignId}/journeys`, {
+      method: "POST",
+      body: JSON.stringify(journeyPayload(payload, false)),
+    }),
+  updateJourney: (campaignId: string, journeyId: string, payload: JourneyFormState) =>
+    request<{ journey: Journey }>(`/api/campaigns/${campaignId}/journeys/${journeyId}`, {
+      method: "PUT",
+      body: JSON.stringify(journeyPayload(payload, false)),
+    }),
+  deleteJourney: (campaignId: string, journeyId: string) =>
+    request<void>(`/api/campaigns/${campaignId}/journeys/${journeyId}`, { method: "DELETE" }),
 
   createEncounter: (
     campaignId: string,
@@ -401,3 +428,20 @@ export const api = {
   seedTestData: () =>
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };
+
+function journeyPayload(payload: JourneyFormState, rerollWeather: boolean) {
+  return {
+    name: payload.name,
+    origin: payload.origin,
+    destination: payload.destination,
+    distance: Number(payload.distance) || 0,
+    distanceUnit: payload.distanceUnit,
+    terrain: payload.terrain,
+    pace: payload.pace,
+    routeCondition: payload.routeCondition,
+    climate: payload.climate,
+    weather: payload.weather,
+    notes: payload.notes,
+    rerollWeather,
+  };
+}

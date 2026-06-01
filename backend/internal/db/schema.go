@@ -482,6 +482,9 @@ create index if not exists combat_log_events_run_sequence_idx on combat_log_even
 	if err != nil {
 		return err
 	}
+	if err := ensureJourneySchema(ctx, pool); err != nil {
+		return err
+	}
 	if err := ensureTouchTriggers(ctx, pool); err != nil {
 		return err
 	}

@@ -26,6 +26,35 @@ type Campaign struct {
 	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
+type JourneyWeather struct {
+	Severity string `json:"severity"`
+	Title    string `json:"title"`
+	Text     string `json:"text"`
+	Prompt   string `json:"prompt"`
+}
+
+type Journey struct {
+	ID             string         `json:"id"`
+	CampaignID     string         `json:"campaignId"`
+	Name           string         `json:"name"`
+	Origin         string         `json:"origin"`
+	Destination    string         `json:"destination"`
+	Distance       float64        `json:"distance"`
+	DistanceUnit   string         `json:"distanceUnit"`
+	Terrain        string         `json:"terrain"`
+	Pace           string         `json:"pace"`
+	RouteCondition string         `json:"routeCondition"`
+	Climate        string         `json:"climate"`
+	DurationHours  float64        `json:"durationHours"`
+	DurationDays   float64        `json:"durationDays"`
+	DurationLabel  string         `json:"durationLabel"`
+	Weather        JourneyWeather `json:"weather"`
+	Assumptions    []string       `json:"assumptions"`
+	Notes          string         `json:"notes"`
+	CreatedAt      time.Time      `json:"createdAt"`
+	UpdatedAt      time.Time      `json:"updatedAt"`
+}
+
 type Encounter struct {
 	ID             string               `json:"id"`
 	CampaignID     string               `json:"campaignId"`
