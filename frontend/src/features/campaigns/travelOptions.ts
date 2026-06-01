@@ -1,4 +1,4 @@
-import type { JourneyFormState, JourneyWeather } from "./journeyTypes";
+import type { TravelFormState, TravelWeather } from "./travelTypes";
 
 export const distanceUnitOptions = [
   { value: "miles", label: "Miles" },
@@ -52,10 +52,9 @@ export const climateOptions = [
   { value: "autumn", label: "Autumn" },
 ];
 
-export const blankWeather: JourneyWeather = { severity: "", title: "", text: "", prompt: "" };
+export const blankWeather: TravelWeather = { severity: "", title: "", text: "", prompt: "" };
 
-export const blankJourneyForm: JourneyFormState = {
-  name: "",
+export const blankTravelForm: TravelFormState = {
   origin: "",
   destination: "",
   distance: "",
@@ -65,7 +64,6 @@ export const blankJourneyForm: JourneyFormState = {
   routeCondition: "road-or-trail",
   climate: "temperate",
   weather: blankWeather,
-  notes: "",
 };
 
 export function labelFor(options: Array<{ value: string; label: string }>, value: string) {

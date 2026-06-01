@@ -1,0 +1,272 @@
+import { CalendarDays, CloudSun, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Badge, Button, Callout, Field, Input, Modal, Select, Textarea } from "../../components/ui";
+import { api } from "../../lib/api";
+import {
+  blankTravelForm,
+  climateOptions,
+  distanceUnitOptions,
+  paceOptions,
+  routeConditionOptions,
+  terrainOptions,
+  sentenceCase,
+} from "./travelOptions";
+import type {
+  CampaignLocation,
+  TravelCalculation,
+  TravelFormState,
+  TravelWeather,
+} from "./travelTypes";
+
+export function TravelCalculatorModal({
+  campaignId,
+  locations,
+  open,
+  onOpenChange,
+}: {
+  campaignId: string;
+  locations: CampaignLocation[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const [form, setForm] = useState<TravelFormState>(blankTravelForm);
+  const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
+  const [error, setError] = useState("");
+  const canCalculate = Number(form.distance) > 0;
+
+  useEffect(() => {
+    if (!open || !canCalculate) {
+      setCalculation(null);
+      return;
+    }
+    const timer = window.setTimeout(() => void calculate(false), 250);
+    return () => window.clearTimeout(timer);
+  }, [
+    open,
+    form.origin,
+    form.destination,
+    form.distance,
+    form.distanceUnit,
+    form.terrain,
+    form.pace,
+    form.routeCondition,
+    form.climate,
+  ]);
+
+  function setField<K extends keyof TravelFormState>(field: K, value: TravelFormState[K]) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function setWeather<K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) {
+    setForm((current) => ({ ...current, weather: { ...current.weather, [field]: value } }));
+  }
+
+  async function calculate(rerollWeather = false) {
+    if (!canCalculate) return;
+    setError("");
+    try {
+      const payload = await api.calculateTravel(campaignId, form, rerollWeather);
+      setCalculation(payload.calculation);
+      setForm((current) => ({ ...current, weather: payload.calculation.weather }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not calculate travel");
+    }
+  }
+
+  const locationNames = locations.map((location) => location.name);
+
+  return (
+    <Modal
+      title="Travel calculator"
+      open={open}
+      onOpenChange={onOpenChange}
+      className="max-w-6xl"
+      trigger={null}
+    >
+      <div className="grid gap-5">
+        {error && <Callout tone="danger">{error}</Callout>}
+        <datalist id="campaign-location-options">
+          {locationNames.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
+          <div className="grid content-start gap-4 md:grid-cols-2">
+            <Field label="Origin">
+              <Input
+                list="campaign-location-options"
+                value={form.origin}
+                placeholder="Choose or type a place"
+                onChange={(event) => setField("origin", event.target.value)}
+              />
+            </Field>
+            <Field label="Destination">
+              <Input
+                list="campaign-location-options"
+                value={form.destination}
+                placeholder="Choose or type a place"
+                onChange={(event) => setField("destination", event.target.value)}
+              />
+            </Field>
+            <Field label="Distance">
+              <Input
+                min="0"
+                step="0.1"
+                type="number"
+                value={form.distance}
+                placeholder="24"
+                onChange={(event) => setField("distance", event.target.value)}
+              />
+            </Field>
+            <Field label="Unit">
+              <Select
+                value={form.distanceUnit}
+                placeholder="Unit"
+                options={distanceUnitOptions}
+                onValueChange={(value) => setField("distanceUnit", value)}
+              />
+            </Field>
+            <Field label="Terrain">
+              <Select
+                value={form.terrain}
+                placeholder="Terrain"
+                options={terrainOptions}
+                onValueChange={(value) => setField("terrain", value)}
+              />
+            </Field>
+            <Field label="Pace">
+              <Select
+                value={form.pace}
+                placeholder="Pace"
+                options={paceOptions}
+                onValueChange={(value) => setField("pace", value)}
+              />
+            </Field>
+            <Field label="Route condition">
+              <Select
+                value={form.routeCondition}
+                placeholder="Route condition"
+                options={routeConditionOptions}
+                onValueChange={(value) => setField("routeCondition", value)}
+              />
+            </Field>
+            <Field label="Climate / season">
+              <Select
+                value={form.climate}
+                placeholder="Climate / season"
+                options={climateOptions}
+                onValueChange={(value) => setField("climate", value)}
+              />
+            </Field>
+          </div>
+          <aside className="grid content-start gap-4">
+            <TravelDurationSummary calculation={calculation} />
+            <TravelWeatherSummary weather={form.weather} />
+            <EditableWeather form={form} setWeather={setWeather} />
+            <TravelAssumptions assumptions={calculation?.assumptions ?? []} />
+            <Button
+              type="button"
+              icon={RefreshCw}
+              variant="secondary"
+              disabled={!canCalculate}
+              onClick={() => void calculate(true)}
+            >
+              Random weather
+            </Button>
+          </aside>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function TravelDurationSummary({ calculation }: { calculation: TravelCalculation | null }) {
+  return (
+    <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-200">
+        <CalendarDays className="h-4 w-4" />
+        Travel time
+      </div>
+      <div className="mt-2 text-3xl font-semibold text-emerald-800 dark:text-emerald-100">
+        {calculation?.durationLabel || "Enter a distance"}
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {calculation
+          ? `${calculation.durationHours.toLocaleString()} hours from the current route assumptions.`
+          : "Travel time updates when distance, pace, terrain, or route conditions change."}
+      </p>
+    </div>
+  );
+}
+
+function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
+  return (
+    <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
+            <CloudSun className="h-4 w-4" />
+            Weather
+          </div>
+          <h4 className="mt-2 font-semibold">{weather.title || "Specify or randomize weather"}</h4>
+        </div>
+        {weather.severity && <Badge>{sentenceCase(weather.severity)}</Badge>}
+      </div>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        {weather.text || "Type your own weather, or click Random weather."}
+      </p>
+      {weather.prompt && (
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          <strong>Prompt:</strong> {weather.prompt}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EditableWeather({
+  form,
+  setWeather,
+}: {
+  form: TravelFormState;
+  setWeather: <K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) => void;
+}) {
+  return (
+    <div className="grid gap-3">
+      <Field label="Weather title">
+        <Input
+          value={form.weather.title}
+          onChange={(event) => setWeather("title", event.target.value)}
+        />
+      </Field>
+      <Field label="Weather text">
+        <Textarea
+          rows={4}
+          value={form.weather.text}
+          onChange={(event) => setWeather("text", event.target.value)}
+        />
+      </Field>
+      <Field label="Weather prompt">
+        <Textarea
+          rows={3}
+          value={form.weather.prompt}
+          onChange={(event) => setWeather("prompt", event.target.value)}
+        />
+      </Field>
+    </div>
+  );
+}
+
+function TravelAssumptions({ assumptions }: { assumptions: string[] }) {
+  if (assumptions.length === 0) return null;
+  return (
+    <div className="rounded-lg border border-border bg-background p-3">
+      <div className="text-xs font-bold uppercase text-muted-foreground">Assumptions</div>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+        {assumptions.map((assumption) => (
+          <li key={assumption}>{assumption}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}

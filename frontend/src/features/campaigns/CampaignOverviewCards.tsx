@@ -25,9 +25,9 @@ export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
       />
       <DashboardCard
         icon={Route}
-        title="Journeys"
-        value={detail.journeyCount}
-        copy="Saved routes with travel time, weather, assumptions, and DM notes."
+        title="Travel"
+        value={detail.locationCount}
+        copy="Saved campaign locations plus a pop-up travel time and weather calculator."
       />
     </div>
   );

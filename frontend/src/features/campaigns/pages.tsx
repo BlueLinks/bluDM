@@ -39,12 +39,12 @@ import {
 import { api } from "../../lib/api";
 import { encounterStatusOptions } from "../../lib/domain/options";
 import type { Campaign, CampaignDetail, Creature, Encounter, Player } from "../../types";
-import type { Journey } from "./journeyTypes";
 import { CampaignNpcDialog, CampaignPartyDialog } from "./CampaignDialogs";
 import { CampaignForm } from "./CampaignForm";
 import { CampaignOverviewCards } from "./CampaignOverviewCards";
 import { CampaignSourceSettings } from "./CampaignSourceSettings";
-import { JourneyPanel } from "./JourneyPanel";
+import { TravelPanel } from "./TravelPanel";
+import type { CampaignLocation } from "./travelTypes";
 
 function encounterStatusLabel(status: string) {
   return encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
@@ -135,7 +135,7 @@ export function CampaignDetailPage() {
   const { campaignID } = useParams();
   const navigate = useNavigate();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
-  const [journeys, setJourneys] = useState<Journey[]>([]);
+  const [locations, setLocations] = useState<CampaignLocation[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [partyOpen, setPartyOpen] = useState(false);
@@ -157,12 +157,12 @@ export function CampaignDetailPage() {
     setLoading(true);
     setError("");
     try {
-      const [campaignDetail, journeyPayload] = await Promise.all([
+      const [campaignDetail, locationPayload] = await Promise.all([
         api.campaign(campaignID),
-        api.campaignJourneys(campaignID),
+        api.campaignLocations(campaignID),
       ]);
-      setDetail({ ...campaignDetail, journeyCount: journeyPayload.journeys.length });
-      setJourneys(journeyPayload.journeys);
+      setDetail({ ...campaignDetail, locationCount: locationPayload.locations.length });
+      setLocations(locationPayload.locations);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load campaign");
     } finally {
@@ -324,9 +324,9 @@ export function CampaignDetailPage() {
         }
       />
       <div className="grid gap-4 lg:grid-cols-2">
-        <JourneyPanel
+        <TravelPanel
           campaignId={detail.campaign.id}
-          journeys={journeys}
+          locations={locations}
           onChanged={loadCampaign}
         />
         <SectionPanel title="Party" icon={UsersRound}>

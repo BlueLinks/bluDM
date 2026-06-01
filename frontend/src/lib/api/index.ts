@@ -24,10 +24,10 @@ import type {
   User,
 } from "../../types";
 import type {
-  Journey,
-  JourneyCalculation,
-  JourneyFormState,
-} from "../../features/campaigns/journeyTypes";
+  CampaignLocation,
+  TravelCalculation,
+  TravelFormState,
+} from "../../features/campaigns/travelTypes";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
 import {
@@ -125,28 +125,32 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ players }),
     }),
-  campaignJourneys: (campaignId: string) =>
-    request<{ journeys: Journey[] }>(`/api/campaigns/${campaignId}/journeys`),
-  calculateJourney: (campaignId: string, payload: JourneyFormState, rerollWeather = false) =>
-    request<{ calculation: JourneyCalculation }>(
-      `/api/campaigns/${campaignId}/journeys/calculate`,
+  campaignLocations: (campaignId: string) =>
+    request<{ locations: CampaignLocation[] }>(`/api/campaigns/${campaignId}/locations`),
+  createCampaignLocation: (campaignId: string, payload: { name: string; notes: string }) =>
+    request<{ location: CampaignLocation }>(`/api/campaigns/${campaignId}/locations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateCampaignLocation: (
+    campaignId: string,
+    locationId: string,
+    payload: { name: string; notes: string },
+  ) =>
+    request<{ location: CampaignLocation }>(
+      `/api/campaigns/${campaignId}/locations/${locationId}`,
       {
-        method: "POST",
-        body: JSON.stringify(journeyPayload(payload, rerollWeather)),
+        method: "PUT",
+        body: JSON.stringify(payload),
       },
     ),
-  createJourney: (campaignId: string, payload: JourneyFormState) =>
-    request<{ journey: Journey }>(`/api/campaigns/${campaignId}/journeys`, {
+  deleteCampaignLocation: (campaignId: string, locationId: string) =>
+    request<void>(`/api/campaigns/${campaignId}/locations/${locationId}`, { method: "DELETE" }),
+  calculateTravel: (campaignId: string, payload: TravelFormState, rerollWeather = false) =>
+    request<{ calculation: TravelCalculation }>(`/api/campaigns/${campaignId}/travel/calculate`, {
       method: "POST",
-      body: JSON.stringify(journeyPayload(payload, false)),
+      body: JSON.stringify(travelPayload(payload, rerollWeather)),
     }),
-  updateJourney: (campaignId: string, journeyId: string, payload: JourneyFormState) =>
-    request<{ journey: Journey }>(`/api/campaigns/${campaignId}/journeys/${journeyId}`, {
-      method: "PUT",
-      body: JSON.stringify(journeyPayload(payload, false)),
-    }),
-  deleteJourney: (campaignId: string, journeyId: string) =>
-    request<void>(`/api/campaigns/${campaignId}/journeys/${journeyId}`, { method: "DELETE" }),
 
   createEncounter: (
     campaignId: string,
@@ -429,9 +433,8 @@ export const api = {
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };
 
-function journeyPayload(payload: JourneyFormState, rerollWeather: boolean) {
+function travelPayload(payload: TravelFormState, rerollWeather: boolean) {
   return {
-    name: payload.name,
     origin: payload.origin,
     destination: payload.destination,
     distance: Number(payload.distance) || 0,
@@ -441,7 +444,6 @@ function journeyPayload(payload: JourneyFormState, rerollWeather: boolean) {
     routeCondition: payload.routeCondition,
     climate: payload.climate,
     weather: payload.weather,
-    notes: payload.notes,
     rerollWeather,
   };
 }

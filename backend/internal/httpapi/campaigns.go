@@ -130,9 +130,9 @@ func (s *Server) getCampaign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not load campaign encounters")
 		return
 	}
-	journeyCount, err := s.countCampaignRows(r.Context(), "campaign_journeys", campaignID)
+	locationCount, err := s.countCampaignRows(r.Context(), "campaign_locations", campaignID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load campaign journeys")
+		writeError(w, http.StatusInternalServerError, "could not load campaign locations")
 		return
 	}
 	npcs, err := s.creaturesForCampaign(r.Context(), campaignID)
@@ -154,7 +154,7 @@ func (s *Server) getCampaign(w http.ResponseWriter, r *http.Request) {
 		"npcs":           npcs,
 		"playerCount":    len(players),
 		"encounterCount": encounterCount,
-		"journeyCount":   journeyCount,
+		"locationCount":  locationCount,
 	})
 }
 
