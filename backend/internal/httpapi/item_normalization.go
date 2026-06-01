@@ -62,6 +62,7 @@ func deriveStandardItemTaxonomy(item *models.Item, raw map[string]any, summary s
 		item.ItemType = weaponItemType(weaponCategory, weaponRange, itemStringFromAny(raw["category_range"]), summary)
 		setItemData(item, "weaponCategory", firstNonEmpty(weaponCategory, weaponCategoryFromType(item.ItemType)))
 		setItemData(item, "weaponRange", firstNonEmpty(weaponRange, weaponRangeFromType(item.ItemType)))
+		setItemData(item, "mastery", itemStringFromAny(raw["mastery"]))
 	case equipmentCategory == "Armor":
 		item.Category = "Armor"
 		item.ItemType = armorItemType(armorCategory, summary)
@@ -324,6 +325,8 @@ func isMountName(name string) bool {
 		"Donkey",
 		"Draft horse",
 		"Elephant",
+		"Horse, Draft",
+		"Horse, Riding",
 		"Mastiff",
 		"Mule",
 		"Pony",

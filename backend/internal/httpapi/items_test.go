@@ -113,6 +113,7 @@ func TestNormalizeStandardItemFromSRDEquipment(t *testing.T) {
 		"weapon_category":    "Martial",
 		"weapon_range":       "Melee",
 		"category_range":     "Martial Melee",
+		"mastery":            "Sap",
 		"cost":               map[string]any{"quantity": float64(10), "unit": "gp"},
 		"weight":             float64(3),
 		"properties": []any{
@@ -141,6 +142,9 @@ func TestNormalizeStandardItemFromSRDEquipment(t *testing.T) {
 	}
 	if item.Data["weaponCategory"] != "Martial" || item.Data["weaponRange"] != "Melee" {
 		t.Fatalf("expected weapon subtype data, got %+v", item.Data)
+	}
+	if item.Data["mastery"] != "Sap" {
+		t.Fatalf("expected weapon mastery data, got %+v", item.Data)
 	}
 }
 
