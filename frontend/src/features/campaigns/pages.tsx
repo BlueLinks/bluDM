@@ -43,12 +43,11 @@ import { CampaignNpcDialog, CampaignPartyDialog } from "./CampaignDialogs";
 import { CampaignForm } from "./CampaignForm";
 import { CampaignOverviewCards } from "./CampaignOverviewCards";
 import { CampaignSourceSettings } from "./CampaignSourceSettings";
+import { CampaignTravelTool } from "./CampaignTravelTool";
 import { TravelPanel } from "./TravelPanel";
 import type { CampaignLocation } from "./travelTypes";
-
-function encounterStatusLabel(status: string) {
-  return encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
-}
+const encounterStatusLabel = (status: string) =>
+  encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -303,6 +302,7 @@ export function CampaignDetailPage() {
   return (
     <Page>
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
+      <CampaignTravelTool campaignId={detail.campaign.id} locations={locations} />
       <BackButton to="/campaigns">Back to campaigns</BackButton>
       <Breadcrumbs
         items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name }]}

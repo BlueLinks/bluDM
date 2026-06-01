@@ -34,23 +34,23 @@ Calculation is stateless. It accepts origin, destination, distance, unit, terrai
 
 ## Weather
 
-- Weather tables are bluDM-authored/open text.
+- Weather tables are bluDM-authored/open text exposed as a curated selection list.
 - `rerollWeather: true` returns a random weather payload.
-- Otherwise valid submitted weather is preserved.
-- Weather is editable in the modal and is not persisted as a journey.
+- Otherwise valid submitted weather from the curated list is preserved.
+- Weather is selected in the modal and is not persisted as a journey.
 
 ## Frontend
 
 - Add `CampaignLocation`, `TravelWeather`, `TravelCalculation`, and `TravelFormState`.
 - Add API helpers for campaign locations and travel calculation.
 - Replace saved journey UI with a `TravelPanel` and `TravelCalculatorModal`.
-- The calculator modal uses the existing modal pattern, practical form controls, live calculated result, assumptions, and editable weather fields.
+- The calculator modal uses the existing modal pattern, practical form controls, explicit saved/custom origin and destination inputs, live calculated result, assumptions, and curated weather selection.
 
 ## Tests
 
 - Backend travel math for miles, kilometers, and hexes.
 - Backend validation for invalid distance/options.
-- Backend weather generation and edited weather preservation.
+- Backend weather generation and selected weather preservation.
 - Frontend renders saved locations.
 - Frontend creates/edits locations.
 - Frontend calculator recalculates when inputs change.

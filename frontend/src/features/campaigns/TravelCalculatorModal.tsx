@@ -1,6 +1,6 @@
 import { CalendarDays, CloudSun, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Badge, Button, Callout, Field, Input, Modal, Select, Textarea } from "../../components/ui";
+import { Badge, Button, Callout, Field, Input, Modal, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import {
   blankTravelForm,
@@ -9,6 +9,7 @@ import {
   paceOptions,
   routeConditionOptions,
   terrainOptions,
+  travelWeatherOptions,
   sentenceCase,
 } from "./travelOptions";
 import type {
@@ -31,6 +32,8 @@ export function TravelCalculatorModal({
 }) {
   const [form, setForm] = useState<TravelFormState>(blankTravelForm);
   const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
+  const [originMode, setOriginMode] = useState<"saved" | "custom">("saved");
+  const [destinationMode, setDestinationMode] = useState<"saved" | "custom">("saved");
   const [error, setError] = useState("");
   const canCalculate = Number(form.distance) > 0;
 
@@ -57,10 +60,6 @@ export function TravelCalculatorModal({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  function setWeather<K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) {
-    setForm((current) => ({ ...current, weather: { ...current.weather, [field]: value } }));
-  }
-
   async function calculate(rerollWeather = false) {
     if (!canCalculate) return;
     setError("");
@@ -73,7 +72,13 @@ export function TravelCalculatorModal({
     }
   }
 
-  const locationNames = locations.map((location) => location.name);
+  const locationOptions = locations.map((location) => ({
+    value: location.name,
+    label: location.name,
+  }));
+  const selectedWeather = travelWeatherOptions.find(
+    (option) => option.title === form.weather.title,
+  );
 
   return (
     <Modal
@@ -85,29 +90,24 @@ export function TravelCalculatorModal({
     >
       <div className="grid gap-5">
         {error && <Callout tone="danger">{error}</Callout>}
-        <datalist id="campaign-location-options">
-          {locationNames.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
         <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
           <div className="grid content-start gap-4 md:grid-cols-2">
-            <Field label="Origin">
-              <Input
-                list="campaign-location-options"
-                value={form.origin}
-                placeholder="Choose or type a place"
-                onChange={(event) => setField("origin", event.target.value)}
-              />
-            </Field>
-            <Field label="Destination">
-              <Input
-                list="campaign-location-options"
-                value={form.destination}
-                placeholder="Choose or type a place"
-                onChange={(event) => setField("destination", event.target.value)}
-              />
-            </Field>
+            <RoutePointField
+              label="Origin"
+              mode={originMode}
+              options={locationOptions}
+              value={form.origin}
+              onModeChange={setOriginMode}
+              onValueChange={(value) => setField("origin", value)}
+            />
+            <RoutePointField
+              label="Destination"
+              mode={destinationMode}
+              options={locationOptions}
+              value={form.destination}
+              onModeChange={setDestinationMode}
+              onValueChange={(value) => setField("destination", value)}
+            />
             <Field label="Distance">
               <Input
                 min="0"
@@ -162,7 +162,27 @@ export function TravelCalculatorModal({
           <aside className="grid content-start gap-4">
             <TravelDurationSummary calculation={calculation} />
             <TravelWeatherSummary weather={form.weather} />
-            <EditableWeather form={form} setWeather={setWeather} />
+            <Field label="Weather">
+              <Select
+                value={selectedWeather?.value ?? ""}
+                placeholder="Choose weather"
+                options={travelWeatherOptions.map((option) => ({
+                  value: option.value,
+                  label: `${option.title} (${sentenceCase(option.severity)})`,
+                }))}
+                onValueChange={(value) => {
+                  const weather = travelWeatherOptions.find((option) => option.value === value);
+                  if (weather) {
+                    setField("weather", {
+                      severity: weather.severity,
+                      title: weather.title,
+                      text: weather.text,
+                      prompt: weather.prompt,
+                    });
+                  }
+                }}
+              />
+            </Field>
             <TravelAssumptions assumptions={calculation?.assumptions ?? []} />
             <Button
               type="button"
@@ -177,6 +197,65 @@ export function TravelCalculatorModal({
         </div>
       </div>
     </Modal>
+  );
+}
+
+function RoutePointField({
+  label,
+  mode,
+  onModeChange,
+  onValueChange,
+  options,
+  value,
+}: {
+  label: string;
+  mode: "saved" | "custom";
+  onModeChange: (mode: "saved" | "custom") => void;
+  onValueChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  value: string;
+}) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold text-muted-foreground">{label}</span>
+        <div className="inline-flex overflow-hidden rounded-md border border-border bg-background text-xs font-semibold">
+          <button
+            className={
+              mode === "saved" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
+            }
+            type="button"
+            onClick={() => onModeChange("saved")}
+          >
+            Saved
+          </button>
+          <button
+            className={
+              mode === "custom" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
+            }
+            type="button"
+            onClick={() => onModeChange("custom")}
+          >
+            Custom
+          </button>
+        </div>
+      </div>
+      {mode === "saved" ? (
+        <Select
+          value={value}
+          placeholder={options.length ? "Select location" : "No saved locations"}
+          options={options}
+          onValueChange={onValueChange}
+        />
+      ) : (
+        <Input
+          aria-label={label}
+          value={value}
+          placeholder="Type a place"
+          onChange={(event) => onValueChange(event.target.value)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -208,51 +287,18 @@ function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
             <CloudSun className="h-4 w-4" />
             Weather
           </div>
-          <h4 className="mt-2 font-semibold">{weather.title || "Specify or randomize weather"}</h4>
+          <h4 className="mt-2 font-semibold">{weather.title || "Choose or randomize weather"}</h4>
         </div>
         {weather.severity && <Badge>{sentenceCase(weather.severity)}</Badge>}
       </div>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {weather.text || "Type your own weather, or click Random weather."}
+        {weather.text || "Select weather from the list, or click Random weather."}
       </p>
       {weather.prompt && (
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           <strong>Prompt:</strong> {weather.prompt}
         </p>
       )}
-    </div>
-  );
-}
-
-function EditableWeather({
-  form,
-  setWeather,
-}: {
-  form: TravelFormState;
-  setWeather: <K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) => void;
-}) {
-  return (
-    <div className="grid gap-3">
-      <Field label="Weather title">
-        <Input
-          value={form.weather.title}
-          onChange={(event) => setWeather("title", event.target.value)}
-        />
-      </Field>
-      <Field label="Weather text">
-        <Textarea
-          rows={4}
-          value={form.weather.text}
-          onChange={(event) => setWeather("text", event.target.value)}
-        />
-      </Field>
-      <Field label="Weather prompt">
-        <Textarea
-          rows={3}
-          value={form.weather.prompt}
-          onChange={(event) => setWeather("prompt", event.target.value)}
-        />
-      </Field>
     </div>
   );
 }

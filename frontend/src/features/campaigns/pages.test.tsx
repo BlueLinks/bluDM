@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WorkspaceShell } from "../../app/shell";
 import { api } from "../../lib/api";
 import type { CampaignDetail } from "../../types";
 import type { CampaignLocation, TravelCalculation } from "./travelTypes";
@@ -32,10 +33,15 @@ vi.mock("../../lib/api", () => ({
 describe("CampaignDetailPage travel", () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllGlobals();
   });
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal("localStorage", {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+    });
     vi.mocked(api.campaign).mockResolvedValue(campaignDetail());
     vi.mocked(api.campaignLocations).mockResolvedValue({ locations: [location()] });
     vi.mocked(api.standardSources).mockResolvedValue({
@@ -111,8 +117,11 @@ describe("CampaignDetailPage travel", () => {
   it("opens the calculator and recalculates when travel inputs change", async () => {
     renderCampaign();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Calculator" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
+    fireEvent.click(customButtons[0]);
+    fireEvent.click(customButtons[1]);
     fireEvent.change(within(dialog).getByLabelText("Origin"), { target: { value: "Waterdeep" } });
     fireEvent.change(within(dialog).getByLabelText("Destination"), {
       target: { value: "Ironford" },
@@ -133,8 +142,11 @@ describe("CampaignDetailPage travel", () => {
   it("randomizes weather without losing selected route inputs", async () => {
     renderCampaign();
 
-    fireEvent.click(await screen.findByRole("button", { name: "Calculator" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
+    fireEvent.click(customButtons[0]);
+    fireEvent.click(customButtons[1]);
     fireEvent.change(within(dialog).getByLabelText("Origin"), { target: { value: "Waterdeep" } });
     fireEvent.change(within(dialog).getByLabelText("Destination"), {
       target: { value: "Ironford" },
@@ -156,11 +168,37 @@ describe("CampaignDetailPage travel", () => {
 function renderCampaign() {
   render(
     <MemoryRouter initialEntries={["/campaigns/campaign-1"]}>
-      <Routes>
-        <Route path="/campaigns/:campaignID" element={<CampaignDetailPage />} />
-      </Routes>
+      <WorkspaceShell
+        resolvedTheme="light"
+        theme="light"
+        onLoadAccount={() => Promise.resolve(accountInfo())}
+        onLogout={() => Promise.resolve()}
+        onSetPassword={() => Promise.resolve(accountInfo())}
+        onThemeChange={() => undefined}
+      >
+        <Routes>
+          <Route path="/campaigns/:campaignID" element={<CampaignDetailPage />} />
+        </Routes>
+      </WorkspaceShell>
     </MemoryRouter>,
   );
+}
+
+function accountInfo() {
+  return {
+    avatarUrl: "",
+    email: "dm@example.test",
+    hasPassword: true,
+    identities: [],
+    stats: {
+      actionTemplates: 0,
+      campaigns: 0,
+      creatures: 0,
+      encounters: 0,
+      playerCharacters: 0,
+      spells: 0,
+    },
+  };
 }
 
 function campaignDetail(): CampaignDetail {

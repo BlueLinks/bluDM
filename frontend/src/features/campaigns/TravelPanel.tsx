@@ -11,7 +11,6 @@ import {
   Textarea,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import { TravelCalculatorModal } from "./TravelCalculatorModal";
 import type { CampaignLocation } from "./travelTypes";
 
 export function TravelPanel({
@@ -23,7 +22,6 @@ export function TravelPanel({
   locations: CampaignLocation[];
   onChanged: () => Promise<void>;
 }) {
-  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<CampaignLocation | null>(null);
   const [deleteLocation, setDeleteLocation] = useState<CampaignLocation | null>(null);
   const [name, setName] = useState("");
@@ -70,15 +68,7 @@ export function TravelPanel({
   }
 
   return (
-    <SectionPanel
-      title="Travel"
-      icon={Route}
-      action={
-        <Button type="button" icon={Route} size="sm" onClick={() => setCalculatorOpen(true)}>
-          Calculator
-        </Button>
-      }
-    >
+    <SectionPanel title="Travel" icon={Route}>
       {error && <Callout tone="danger">{error}</Callout>}
       <LocationForm
         editing={Boolean(editingLocation)}
@@ -131,12 +121,6 @@ export function TravelPanel({
           ))}
         </div>
       )}
-      <TravelCalculatorModal
-        campaignId={campaignId}
-        locations={locations}
-        open={calculatorOpen}
-        onOpenChange={setCalculatorOpen}
-      />
       <ConfirmDialog
         open={Boolean(deleteLocation)}
         title="Delete location?"

@@ -9,7 +9,7 @@ Issue: [#67 feat(campaigns): add journey travel time and weather calculator](htt
 - Add a campaign detail overview card for `Travel`.
 - Add a `Travel` panel near Party, Encounters, NPCs, and Recent Notes.
 - The panel manages saved campaign locations.
-- The panel action opens a `Travel calculator` modal.
+- A top-bar `Travel` button sits next to the dice roller and opens the `Travel calculator` modal.
 - Do not add a top-level nav item in v1.
 
 ## Campaign Locations
@@ -30,30 +30,28 @@ The modal should be a transient tool. Closing it does not save a journey.
 
 Inputs:
 
-- Origin, selected from saved campaign locations or typed manually.
-- Destination, selected from saved campaign locations or typed manually.
+- Origin, with an explicit `Saved` location select or `Custom` free-text mode.
+- Destination, with an explicit `Saved` location select or `Custom` free-text mode.
 - Distance.
 - Unit: miles, kilometers, hexes.
 - Terrain.
 - Pace.
 - Route condition.
 - Climate / season.
-- Editable weather title.
-- Editable weather text.
-- Editable weather prompt.
+- Weather, selected from the curated travel-weather list or generated with `Random weather`.
 
 Outputs:
 
 - Travel time updates whenever distance, unit, terrain, pace, route condition, or climate changes.
 - Assumptions show the conversion and multipliers used.
-- Weather can be typed manually.
-- `Random weather` generates a bluDM-authored editable weather payload.
+- Weather can be selected from the list.
+- `Random weather` generates a bluDM-authored weather payload.
 
 ## Behavior
 
 - The calculator requires a positive distance before calculating.
 - Origin and destination are labels only in v1; the DM can use saved locations or type one-off places.
-- Weather generation preserves typed weather unless the DM clicks `Random weather`.
+- Weather generation preserves selected weather unless the DM clicks `Random weather`.
 - No journey records are persisted.
 
 ## Out Of Scope

@@ -27,7 +27,13 @@
         background: var(--bg);
         color: var(--ink);
         font-family:
-          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
       }
 
       main {
@@ -218,15 +224,24 @@
         <p class="eyebrow">Campaign tool</p>
         <h1>Travel Calculator And Weather</h1>
         <p class="muted">
-          A dice-roller-style calculator popup with saved campaign locations, live travel time, and
-          editable weather.
+          A top-bar calculator popup beside the dice roller, with saved campaign locations, live
+          travel time, and curated weather.
         </p>
       </section>
 
       <section class="grid cards">
-        <article class="card"><strong>4</strong><h3>Player Characters</h3></article>
-        <article class="card"><strong>3</strong><h3>Encounters</h3></article>
-        <article class="card"><strong>8</strong><h3>Campaign NPCs</h3></article>
+        <article class="card">
+          <strong>4</strong>
+          <h3>Player Characters</h3>
+        </article>
+        <article class="card">
+          <strong>3</strong>
+          <h3>Encounters</h3>
+        </article>
+        <article class="card">
+          <strong>8</strong>
+          <h3>Campaign NPCs</h3>
+        </article>
         <article class="card">
           <strong>5</strong>
           <h3>Travel</h3>
@@ -237,7 +252,6 @@
       <section class="panel grid">
         <div class="panel-head">
           <h2>Travel</h2>
-          <button class="btn primary">↝ Calculator</button>
         </div>
         <div class="grid">
           <label>
@@ -271,14 +285,38 @@
           <h2>Travel calculator</h2>
           <div class="modal-layout">
             <div class="form-grid">
-              <label>Origin<input list="places" value="Waterdeep" /></label>
-              <label>Destination<input list="places" value="Ironford" /></label>
+              <label
+                >Origin<select>
+                  <option>Waterdeep</option>
+                </select></label
+              >
+              <label>Destination<input value="Ironford" /></label>
               <label>Distance<input value="63" /></label>
-              <label>Unit<select><option>Miles</option></select></label>
-              <label>Terrain<select><option>Forest</option></select></label>
-              <label>Pace<select><option>Normal</option></select></label>
-              <label>Route condition<select><option>Road or trail</option></select></label>
-              <label>Climate / season<select><option>Temperate</option></select></label>
+              <label
+                >Unit<select>
+                  <option>Miles</option>
+                </select></label
+              >
+              <label
+                >Terrain<select>
+                  <option>Forest</option>
+                </select></label
+              >
+              <label
+                >Pace<select>
+                  <option>Normal</option>
+                </select></label
+              >
+              <label
+                >Route condition<select>
+                  <option>Road or trail</option>
+                </select></label
+              >
+              <label
+                >Climate / season<select>
+                  <option>Temperate</option>
+                </select></label
+              >
             </div>
             <aside class="grid">
               <section class="summary green">
@@ -294,8 +332,11 @@
                   the mud.
                 </p>
               </section>
-              <label>Weather title<input value="Cool Rain" /></label>
-              <label>Weather text<textarea>A steady rain follows the road.</textarea></label>
+              <label
+                >Weather<select>
+                  <option>Cool Rain (Notable)</option>
+                </select></label
+              >
               <button class="btn">↻ Random weather</button>
             </aside>
           </div>
