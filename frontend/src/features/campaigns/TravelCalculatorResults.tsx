@@ -13,22 +13,26 @@ export type TravelResultTab = "travel" | "encounters" | "weather";
 
 export function TravelCalculatorResults({
   activeTab,
+  animationKey,
   calculation,
   canCalculate,
   encounterDistanceFeet,
   onEncounterDistanceChange,
   onRollEncounterDistance,
   onTabChange,
+  rollingEncounter,
   terrain,
   weather,
 }: {
   activeTab: TravelResultTab;
+  animationKey: number;
   calculation: TravelCalculation | null;
   canCalculate: boolean;
   encounterDistanceFeet: number | null;
   onEncounterDistanceChange: (value: string) => void;
   onRollEncounterDistance: () => void;
   onTabChange: (tab: TravelResultTab) => void;
+  rollingEncounter: boolean;
   terrain: string;
   weather: TravelWeather;
 }) {
@@ -59,18 +63,30 @@ export function TravelCalculatorResults({
         ))}
       </div>
       <div role="tabpanel">
-        {activeTab === "travel" && <TravelDurationSummary calculation={calculation} />}
+        {activeTab === "travel" && (
+          <TravelDurationSummary
+            key={`travel-${calculation?.durationLabel ?? "empty"}-${animationKey}`}
+            calculation={calculation}
+          />
+        )}
         {activeTab === "encounters" && (
           <EncounterSummary
+            key={`encounter-${calculation?.encounterDistance.rolledFeet ?? "empty"}-${animationKey}`}
             calculation={calculation}
             canCalculate={canCalculate}
             encounterDistanceFeet={encounterDistanceFeet}
+            rolling={rollingEncounter}
             terrain={terrain}
             onEncounterDistanceChange={onEncounterDistanceChange}
             onRollEncounterDistance={onRollEncounterDistance}
           />
         )}
-        {activeTab === "weather" && <TravelWeatherSummary weather={weather} />}
+        {activeTab === "weather" && (
+          <TravelWeatherSummary
+            key={`weather-${weatherSummary(weather)}-${animationKey}`}
+            weather={weather}
+          />
+        )}
       </div>
     </section>
   );
@@ -80,12 +96,12 @@ function TravelDurationSummary({ calculation }: { calculation: TravelCalculation
   const capped =
     calculation && calculation.effectivePace !== "" && calculation.effectivePace !== undefined;
   return (
-    <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
+    <div className="action-roll-card rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
       <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-200">
         <CalendarDays className="h-4 w-4" />
         Travel time
       </div>
-      <div className="mt-2 text-3xl font-semibold text-emerald-800 dark:text-emerald-100">
+      <div className="action-roll-value mt-2 text-3xl font-semibold text-emerald-800 dark:text-emerald-100">
         {calculation?.durationLabel || "Enter a distance"}
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -109,6 +125,7 @@ function EncounterSummary({
   encounterDistanceFeet,
   onEncounterDistanceChange,
   onRollEncounterDistance,
+  rolling,
   terrain,
 }: {
   calculation: TravelCalculation | null;
@@ -116,17 +133,18 @@ function EncounterSummary({
   encounterDistanceFeet: number | null;
   onEncounterDistanceChange: (value: string) => void;
   onRollEncounterDistance: () => void;
+  rolling: boolean;
   terrain: string;
 }) {
   const distanceOptions = encounterDistanceOptionsForTerrain(terrain);
   return (
-    <div className="grid gap-4 rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <div className="action-roll-card grid gap-4 rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-700 dark:text-amber-200">
           <Route className="h-4 w-4" />
           Encounter distance
         </div>
-        <div className="mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
+        <div className="action-roll-value mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
           {calculation
             ? `${calculation.encounterDistance.encounterCount.toLocaleString()} possible encounters`
             : "Choose a route"}
@@ -155,6 +173,11 @@ function EncounterSummary({
           type="button"
           icon={RefreshCw}
           variant="secondary"
+          className={
+            rolling
+              ? "travel-roll-button -translate-y-px shadow-[0_0_0_3px_hsl(var(--primary)/14%)] [&>svg]:rotate-[360deg] [&>svg]:scale-110 [&>svg]:transition-transform [&>svg]:duration-500"
+              : "travel-roll-button"
+          }
           disabled={!canCalculate}
           onClick={onRollEncounterDistance}
         >
@@ -167,12 +190,12 @@ function EncounterSummary({
 
 function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
   return (
-    <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-4">
+    <div className="action-roll-card rounded-lg border border-sky-500/25 bg-sky-500/10 p-4">
       <div className="flex items-center gap-2 text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
         <CloudSun className="h-4 w-4" />
         Weather
       </div>
-      <h4 className="mt-2 font-semibold">{weatherSummary(weather)}</h4>
+      <h4 className="action-roll-value mt-2 font-semibold">{weatherSummary(weather)}</h4>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{weatherRollSummary(weather)}</p>
     </div>
   );

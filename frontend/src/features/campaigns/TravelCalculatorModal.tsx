@@ -22,6 +22,7 @@ import type {
 import { TravelCalculatorResults, type TravelResultTab } from "./TravelCalculatorResults";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
+type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";
 
 export function TravelCalculatorModal({
   campaignId,
@@ -39,6 +40,8 @@ export function TravelCalculatorModal({
   const [originMode, setOriginMode] = useState<"saved" | "custom">("saved");
   const [destinationMode, setDestinationMode] = useState<"saved" | "custom">("saved");
   const [activeTab, setActiveTab] = useState<TravelResultTab>("travel");
+  const [rollAnimationKey, setRollAnimationKey] = useState(0);
+  const [rollingTarget, setRollingTarget] = useState<TravelRollTarget | null>(null);
   const [error, setError] = useState("");
   const canCalculate = Number(form.distance) > 0;
 
@@ -94,6 +97,18 @@ export function TravelCalculatorModal({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not calculate travel");
     }
+  }
+
+  async function rollWithAnimation(
+    target: TravelRollTarget,
+    rollWeather: TravelWeatherRollRequest,
+    rollEncounterDistance = false,
+    nextForm = form,
+  ) {
+    setRollingTarget(target);
+    await calculate(rollWeather, rollEncounterDistance, nextForm);
+    setRollAnimationKey((current) => current + 1);
+    window.setTimeout(() => setRollingTarget(null), 520);
   }
 
   function setTerrain(value: string) {
@@ -186,16 +201,22 @@ export function TravelCalculatorModal({
               <WeatherControls
                 weather={form.weather}
                 canRoll={canCalculate}
+                rollingTarget={rollingTarget}
                 onWeatherChange={setWeather}
-                onRoll={(rollWeather) => void calculate(rollWeather)}
+                onRoll={(target, rollWeather) => void rollWithAnimation(target, rollWeather)}
               />
               <Button
                 type="button"
                 icon={RefreshCw}
                 variant="secondary"
+                className={rollButtonClass(rollingTarget === "weather")}
                 disabled={!canCalculate}
                 onClick={() =>
-                  void calculate({ temperature: true, wind: true, precipitation: true })
+                  void rollWithAnimation("weather", {
+                    temperature: true,
+                    wind: true,
+                    precipitation: true,
+                  })
                 }
               >
                 Roll all weather
@@ -204,14 +225,18 @@ export function TravelCalculatorModal({
           </div>
           <TravelCalculatorResults
             activeTab={activeTab}
+            animationKey={rollAnimationKey}
             calculation={calculation}
             canCalculate={canCalculate}
             encounterDistanceFeet={form.encounterDistanceFeet}
             terrain={form.terrain}
             weather={form.weather}
             onEncounterDistanceChange={setEncounterDistance}
-            onRollEncounterDistance={() => void calculate(noWeatherRolls, true)}
+            onRollEncounterDistance={() =>
+              void rollWithAnimation("encounter", noWeatherRolls, true)
+            }
             onTabChange={setActiveTab}
+            rollingEncounter={rollingTarget === "encounter"}
           />
         </div>
       </div>
@@ -282,11 +307,13 @@ function WeatherControls({
   canRoll,
   onRoll,
   onWeatherChange,
+  rollingTarget,
   weather,
 }: {
   canRoll: boolean;
-  onRoll: (rollWeather: TravelWeatherRollRequest) => void;
+  onRoll: (target: TravelRollTarget, rollWeather: TravelWeatherRollRequest) => void;
   onWeatherChange: <K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) => void;
+  rollingTarget: TravelRollTarget | null;
   weather: TravelWeather;
 }) {
   return (
@@ -317,8 +344,11 @@ function WeatherControls({
           type="button"
           icon={RefreshCw}
           variant="secondary"
+          className={rollButtonClass(rollingTarget === "temperature")}
           disabled={!canRoll}
-          onClick={() => onRoll({ temperature: true, wind: false, precipitation: false })}
+          onClick={() =>
+            onRoll("temperature", { temperature: true, wind: false, precipitation: false })
+          }
         >
           Roll temperature
         </Button>
@@ -327,21 +357,25 @@ function WeatherControls({
         label="Wind"
         buttonLabel="Roll wind"
         canRoll={canRoll}
+        rolling={rollingTarget === "wind"}
         options={windOptions}
         value={weather.wind}
         onChange={(value) => onWeatherChange("wind", value as TravelWeather["wind"])}
-        onRoll={() => onRoll({ temperature: false, wind: true, precipitation: false })}
+        onRoll={() => onRoll("wind", { temperature: false, wind: true, precipitation: false })}
       />
       <WeatherSelectRow
         label="Precipitation"
         buttonLabel="Roll precipitation"
         canRoll={canRoll}
+        rolling={rollingTarget === "precipitation"}
         options={precipitationOptions}
         value={weather.precipitation}
         onChange={(value) =>
           onWeatherChange("precipitation", value as TravelWeather["precipitation"])
         }
-        onRoll={() => onRoll({ temperature: false, wind: false, precipitation: true })}
+        onRoll={() =>
+          onRoll("precipitation", { temperature: false, wind: false, precipitation: true })
+        }
       />
     </>
   );
@@ -354,6 +388,7 @@ function WeatherSelectRow({
   onChange,
   onRoll,
   options,
+  rolling,
   value,
 }: {
   buttonLabel: string;
@@ -362,6 +397,7 @@ function WeatherSelectRow({
   onChange: (value: string) => void;
   onRoll: () => void;
   options: Array<{ value: string; label: string }>;
+  rolling: boolean;
   value: string;
 }) {
   return (
@@ -373,6 +409,7 @@ function WeatherSelectRow({
         type="button"
         icon={RefreshCw}
         variant="secondary"
+        className={rollButtonClass(rolling)}
         disabled={!canRoll}
         onClick={onRoll}
       >
@@ -380,4 +417,10 @@ function WeatherSelectRow({
       </Button>
     </div>
   );
+}
+
+function rollButtonClass(rolling: boolean) {
+  return rolling
+    ? "travel-roll-button -translate-y-px shadow-[0_0_0_3px_hsl(var(--primary)/14%)] [&>svg]:rotate-[360deg] [&>svg]:scale-110 [&>svg]:transition-transform [&>svg]:duration-500"
+    : "travel-roll-button";
 }
