@@ -27,6 +27,7 @@ import type {
   CampaignLocation,
   TravelCalculation,
   TravelFormState,
+  TravelWeatherRollRequest,
 } from "../../features/campaigns/travelTypes";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
@@ -146,10 +147,18 @@ export const api = {
     ),
   deleteCampaignLocation: (campaignId: string, locationId: string) =>
     request<void>(`/api/campaigns/${campaignId}/locations/${locationId}`, { method: "DELETE" }),
-  calculateTravel: (campaignId: string, payload: TravelFormState, rerollWeather = false) =>
+  calculateTravel: (
+    campaignId: string,
+    payload: TravelFormState,
+    rollWeather: TravelWeatherRollRequest = {
+      temperature: false,
+      wind: false,
+      precipitation: false,
+    },
+  ) =>
     request<{ calculation: TravelCalculation }>(`/api/campaigns/${campaignId}/travel/calculate`, {
       method: "POST",
-      body: JSON.stringify(travelPayload(payload, rerollWeather)),
+      body: JSON.stringify(travelPayload(payload, rollWeather)),
     }),
 
   createEncounter: (
@@ -433,7 +442,7 @@ export const api = {
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };
 
-function travelPayload(payload: TravelFormState, rerollWeather: boolean) {
+function travelPayload(payload: TravelFormState, rollWeather: TravelWeatherRollRequest) {
   return {
     origin: payload.origin,
     destination: payload.destination,
@@ -441,9 +450,8 @@ function travelPayload(payload: TravelFormState, rerollWeather: boolean) {
     distanceUnit: payload.distanceUnit,
     terrain: payload.terrain,
     pace: payload.pace,
-    routeCondition: payload.routeCondition,
-    climate: payload.climate,
+    goodRoads: payload.goodRoads,
     weather: payload.weather,
-    rerollWeather,
+    rollWeather,
   };
 }

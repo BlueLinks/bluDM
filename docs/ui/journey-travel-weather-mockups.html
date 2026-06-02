@@ -307,37 +307,41 @@
                   <option>Normal</option>
                 </select></label
               >
-              <label
-                >Route condition<select>
-                  <option>Road or trail</option>
-                </select></label
-              >
-              <label
-                >Climate / season<select>
-                  <option>Temperate</option>
-                </select></label
-              >
+              <label><input type="checkbox" /> Good roads</label>
             </div>
             <aside class="grid">
               <section class="summary green">
                 <p class="eyebrow">Travel time</p>
-                <div class="time">3.5 days</div>
-                <p class="muted">84 hours from the current route assumptions.</p>
+                <div class="time">2.6 days</div>
+                <p class="muted">62.4 hours at Normal pace.</p>
+                <p><span class="chip">Terrain max: Normal</span></p>
+              </section>
+              <section class="summary">
+                <p class="eyebrow">Encounter distance</p>
+                <h3>2d8 x 10 feet</h3>
+                <p class="muted">3,696 possible encounter-distance windows at 90 feet average.</p>
               </section>
               <section class="summary sky">
-                <p class="eyebrow">Weather <span class="chip">Notable</span></p>
-                <h3>Cool Rain</h3>
-                <p class="muted">
-                  A steady rain follows the road through the afternoon. Tracks are easier to spot in
-                  the mud.
-                </p>
+                <p class="eyebrow">Weather</p>
+                <h3>20°F colder, Light wind, Heavy rain or heavy snow</h3>
+                <p class="muted">Set manually, or roll each weather component.</p>
               </section>
               <label
-                >Weather<select>
-                  <option>Cool Rain (Notable)</option>
+                >Temperature<select>
+                  <option>Colder</option>
                 </select></label
               >
-              <button class="btn">↻ Random weather</button>
+              <label
+                >Wind<select>
+                  <option>Light</option>
+                </select></label
+              >
+              <label
+                >Precipitation<select>
+                  <option>Heavy rain or heavy snow</option>
+                </select></label
+              >
+              <button class="btn">↻ Roll all weather</button>
             </aside>
           </div>
         </div>

@@ -1,23 +1,27 @@
-import { CalendarDays, CloudSun, RefreshCw } from "lucide-react";
+import { CalendarDays, CloudSun, RefreshCw, Route } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Badge, Button, Callout, Field, Input, Modal, Select } from "../../components/ui";
+import { Badge, Button, Callout, Checkbox, Field, Input, Modal, Select } from "../../components/ui";
 import { api } from "../../lib/api";
 import {
   blankTravelForm,
-  climateOptions,
   distanceUnitOptions,
+  labelFor,
   paceOptions,
-  routeConditionOptions,
+  precipitationOptions,
+  temperatureDeltaOptions,
+  temperatureOptions,
   terrainOptions,
-  travelWeatherOptions,
-  sentenceCase,
+  windOptions,
 } from "./travelOptions";
 import type {
   CampaignLocation,
   TravelCalculation,
   TravelFormState,
   TravelWeather,
+  TravelWeatherRollRequest,
 } from "./travelTypes";
+
+const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
 
 export function TravelCalculatorModal({
   campaignId,
@@ -42,7 +46,7 @@ export function TravelCalculatorModal({
       setCalculation(null);
       return;
     }
-    const timer = window.setTimeout(() => void calculate(false), 250);
+    const timer = window.setTimeout(() => void calculate(noWeatherRolls), 250);
     return () => window.clearTimeout(timer);
   }, [
     open,
@@ -52,19 +56,22 @@ export function TravelCalculatorModal({
     form.distanceUnit,
     form.terrain,
     form.pace,
-    form.routeCondition,
-    form.climate,
+    form.goodRoads,
   ]);
 
   function setField<K extends keyof TravelFormState>(field: K, value: TravelFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  async function calculate(rerollWeather = false) {
+  function setWeather<K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) {
+    setForm((current) => ({ ...current, weather: { ...current.weather, [field]: value } }));
+  }
+
+  async function calculate(rollWeather: TravelWeatherRollRequest) {
     if (!canCalculate) return;
     setError("");
     try {
-      const payload = await api.calculateTravel(campaignId, form, rerollWeather);
+      const payload = await api.calculateTravel(campaignId, form, rollWeather);
       setCalculation(payload.calculation);
       setForm((current) => ({ ...current, weather: payload.calculation.weather }));
     } catch (err) {
@@ -76,9 +83,6 @@ export function TravelCalculatorModal({
     value: location.name,
     label: location.name,
   }));
-  const selectedWeather = travelWeatherOptions.find(
-    (option) => option.title === form.weather.title,
-  );
 
   return (
     <Modal
@@ -90,7 +94,7 @@ export function TravelCalculatorModal({
     >
       <div className="grid gap-5">
         {error && <Callout tone="danger">{error}</Callout>}
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(300px,0.9fr)]">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(320px,0.9fr)]">
           <div className="grid content-start gap-4 md:grid-cols-2">
             <RoutePointField
               label="Origin"
@@ -142,57 +146,38 @@ export function TravelCalculatorModal({
                 onValueChange={(value) => setField("pace", value)}
               />
             </Field>
-            <Field label="Route condition">
-              <Select
-                value={form.routeCondition}
-                placeholder="Route condition"
-                options={routeConditionOptions}
-                onValueChange={(value) => setField("routeCondition", value)}
+            <div className="md:col-span-2">
+              <Checkbox
+                label="Good roads"
+                checked={form.goodRoads}
+                onChange={(checked) => setField("goodRoads", checked)}
               />
-            </Field>
-            <Field label="Climate / season">
-              <Select
-                value={form.climate}
-                placeholder="Climate / season"
-                options={climateOptions}
-                onValueChange={(value) => setField("climate", value)}
-              />
-            </Field>
+            </div>
           </div>
           <aside className="grid content-start gap-4">
             <TravelDurationSummary calculation={calculation} />
+            <EncounterSummary calculation={calculation} />
             <TravelWeatherSummary weather={form.weather} />
-            <Field label="Weather">
-              <Select
-                value={selectedWeather?.value ?? ""}
-                placeholder="Choose weather"
-                options={travelWeatherOptions.map((option) => ({
-                  value: option.value,
-                  label: `${option.title} (${sentenceCase(option.severity)})`,
-                }))}
-                onValueChange={(value) => {
-                  const weather = travelWeatherOptions.find((option) => option.value === value);
-                  if (weather) {
-                    setField("weather", {
-                      severity: weather.severity,
-                      title: weather.title,
-                      text: weather.text,
-                      prompt: weather.prompt,
-                    });
-                  }
-                }}
+            <div className="grid gap-3">
+              <WeatherControls
+                weather={form.weather}
+                canRoll={canCalculate}
+                onWeatherChange={setWeather}
+                onRoll={(rollWeather) => void calculate(rollWeather)}
               />
-            </Field>
+              <Button
+                type="button"
+                icon={RefreshCw}
+                variant="secondary"
+                disabled={!canCalculate}
+                onClick={() =>
+                  void calculate({ temperature: true, wind: true, precipitation: true })
+                }
+              >
+                Roll all weather
+              </Button>
+            </div>
             <TravelAssumptions assumptions={calculation?.assumptions ?? []} />
-            <Button
-              type="button"
-              icon={RefreshCw}
-              variant="secondary"
-              disabled={!canCalculate}
-              onClick={() => void calculate(true)}
-            >
-              Random weather
-            </Button>
           </aside>
         </div>
       </div>
@@ -260,6 +245,8 @@ function RoutePointField({
 }
 
 function TravelDurationSummary({ calculation }: { calculation: TravelCalculation | null }) {
+  const capped =
+    calculation && calculation.effectivePace !== "" && calculation.effectivePace !== undefined;
   return (
     <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
       <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-200">
@@ -271,8 +258,33 @@ function TravelDurationSummary({ calculation }: { calculation: TravelCalculation
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
         {calculation
-          ? `${calculation.durationHours.toLocaleString()} hours from the current route assumptions.`
-          : "Travel time updates when distance, pace, terrain, or route conditions change."}
+          ? `${calculation.durationHours.toLocaleString()} hours at ${labelFor(paceOptions, calculation.effectivePace)} pace.`
+          : "Travel time updates when distance, terrain, pace, or road quality changes."}
+      </p>
+      {capped && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Badge>Terrain max: {labelFor(paceOptions, calculation.terrainMaximumPace)}</Badge>
+          <Badge>Road max: {labelFor(paceOptions, calculation.goodRoadsMaximumPace)}</Badge>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EncounterSummary({ calculation }: { calculation: TravelCalculation | null }) {
+  return (
+    <div className="rounded-lg border border-amber-500/25 bg-amber-500/10 p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-700 dark:text-amber-200">
+        <Route className="h-4 w-4" />
+        Encounter distance
+      </div>
+      <div className="mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
+        {calculation?.encounterDistance.diceExpression || "Choose a route"}
+      </div>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {calculation
+          ? `${calculation.encounterDistance.windows.toLocaleString()} possible encounter-distance windows using an average of ${calculation.encounterDistance.averageFeet.toLocaleString()} feet.`
+          : "The terrain sets how far apart creatures might notice each other."}
       </p>
     </div>
   );
@@ -281,24 +293,116 @@ function TravelDurationSummary({ calculation }: { calculation: TravelCalculation
 function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
   return (
     <div className="rounded-lg border border-sky-500/25 bg-sky-500/10 p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="flex items-center gap-2 text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
-            <CloudSun className="h-4 w-4" />
-            Weather
-          </div>
-          <h4 className="mt-2 font-semibold">{weather.title || "Choose or randomize weather"}</h4>
-        </div>
-        {weather.severity && <Badge>{sentenceCase(weather.severity)}</Badge>}
+      <div className="flex items-center gap-2 text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
+        <CloudSun className="h-4 w-4" />
+        Weather
       </div>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {weather.text || "Select weather from the list, or click Random weather."}
-      </p>
-      {weather.prompt && (
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          <strong>Prompt:</strong> {weather.prompt}
-        </p>
-      )}
+      <h4 className="mt-2 font-semibold">{weatherSummary(weather)}</h4>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">{weatherRollSummary(weather)}</p>
+    </div>
+  );
+}
+
+function WeatherControls({
+  canRoll,
+  onRoll,
+  onWeatherChange,
+  weather,
+}: {
+  canRoll: boolean;
+  onRoll: (rollWeather: TravelWeatherRollRequest) => void;
+  onWeatherChange: <K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) => void;
+  weather: TravelWeather;
+}) {
+  return (
+    <>
+      <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
+        <Field label="Temperature">
+          <Select
+            value={weather.temperature}
+            placeholder="Temperature"
+            options={temperatureOptions}
+            onValueChange={(value) => {
+              onWeatherChange("temperature", value as TravelWeather["temperature"]);
+              onWeatherChange("temperatureDeltaF", value === "normal" ? null : 10);
+            }}
+          />
+        </Field>
+        {weather.temperature !== "normal" && (
+          <Field label="Temperature shift">
+            <Select
+              value={String(weather.temperatureDeltaF ?? 10)}
+              placeholder="Degrees"
+              options={temperatureDeltaOptions}
+              onValueChange={(value) => onWeatherChange("temperatureDeltaF", Number(value))}
+            />
+          </Field>
+        )}
+        <Button
+          type="button"
+          icon={RefreshCw}
+          variant="secondary"
+          disabled={!canRoll}
+          onClick={() => onRoll({ temperature: true, wind: false, precipitation: false })}
+        >
+          Roll temperature
+        </Button>
+      </div>
+      <WeatherSelectRow
+        label="Wind"
+        buttonLabel="Roll wind"
+        canRoll={canRoll}
+        options={windOptions}
+        value={weather.wind}
+        onChange={(value) => onWeatherChange("wind", value as TravelWeather["wind"])}
+        onRoll={() => onRoll({ temperature: false, wind: true, precipitation: false })}
+      />
+      <WeatherSelectRow
+        label="Precipitation"
+        buttonLabel="Roll precipitation"
+        canRoll={canRoll}
+        options={precipitationOptions}
+        value={weather.precipitation}
+        onChange={(value) =>
+          onWeatherChange("precipitation", value as TravelWeather["precipitation"])
+        }
+        onRoll={() => onRoll({ temperature: false, wind: false, precipitation: true })}
+      />
+    </>
+  );
+}
+
+function WeatherSelectRow({
+  buttonLabel,
+  canRoll,
+  label,
+  onChange,
+  onRoll,
+  options,
+  value,
+}: {
+  buttonLabel: string;
+  canRoll: boolean;
+  label: string;
+  onChange: (value: string) => void;
+  onRoll: () => void;
+  options: Array<{ value: string; label: string }>;
+  value: string;
+}) {
+  return (
+    <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
+      <Field label={label}>
+        <Select value={value} placeholder={label} options={options} onValueChange={onChange} />
+      </Field>
+      <Button
+        type="button"
+        icon={RefreshCw}
+        variant="secondary"
+        disabled={!canRoll}
+        onClick={onRoll}
+      >
+        {buttonLabel}
+      </Button>
     </div>
   );
 }
@@ -315,4 +419,29 @@ function TravelAssumptions({ assumptions }: { assumptions: string[] }) {
       </ul>
     </div>
   );
+}
+
+function weatherSummary(weather: TravelWeather) {
+  return [
+    temperatureLabel(weather),
+    `${labelFor(windOptions, weather.wind)} wind`,
+    labelFor(precipitationOptions, weather.precipitation),
+  ].join(", ");
+}
+
+function temperatureLabel(weather: TravelWeather) {
+  if (weather.temperature === "normal") return "Normal for season";
+  const delta = weather.temperatureDeltaF ?? 10;
+  return `${delta}°F ${weather.temperature}`;
+}
+
+function weatherRollSummary(weather: TravelWeather) {
+  if (!weather.rolls) return "Set manually, or roll each weather component.";
+  const rolls = [
+    weather.rolls.temperatureD20 ? `temperature d20: ${weather.rolls.temperatureD20}` : "",
+    weather.rolls.temperatureD4 ? `temperature d4: ${weather.rolls.temperatureD4}` : "",
+    weather.rolls.windD20 ? `wind d20: ${weather.rolls.windD20}` : "",
+    weather.rolls.precipitationD20 ? `precipitation d20: ${weather.rolls.precipitationD20}` : "",
+  ].filter(Boolean);
+  return rolls.length ? `Rolled ${rolls.join(", ")}.` : "Weather set manually.";
 }

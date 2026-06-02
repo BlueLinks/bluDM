@@ -27,10 +27,18 @@ type Campaign struct {
 }
 
 type TravelWeather struct {
-	Severity string `json:"severity"`
-	Title    string `json:"title"`
-	Text     string `json:"text"`
-	Prompt   string `json:"prompt"`
+	Temperature       string              `json:"temperature"`
+	TemperatureDeltaF *int                `json:"temperatureDeltaF"`
+	Wind              string              `json:"wind"`
+	Precipitation     string              `json:"precipitation"`
+	Rolls             *TravelWeatherRolls `json:"rolls,omitempty"`
+}
+
+type TravelWeatherRolls struct {
+	TemperatureD20   *int `json:"temperatureD20,omitempty"`
+	TemperatureD4    *int `json:"temperatureD4,omitempty"`
+	WindD20          *int `json:"windD20,omitempty"`
+	PrecipitationD20 *int `json:"precipitationD20,omitempty"`
 }
 
 type CampaignLocation struct {

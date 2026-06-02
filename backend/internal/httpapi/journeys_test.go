@@ -7,70 +7,91 @@ import (
 	"testing"
 )
 
-func TestTravelCalculationConvertsUnitsAndAppliesMultipliers(t *testing.T) {
-	tests := []struct {
-		name          string
-		req           travelRequest
-		expectedHours float64
-		expectedLabel string
-	}{
-		{
-			name: "miles normal forest road",
-			req: travelRequest{
-				Distance: 63, DistanceUnit: "miles", Terrain: "forest",
-				Pace: "normal", RouteCondition: "road-or-trail", Climate: "temperate",
-				Weather: models.TravelWeather{Severity: "notable", Title: "Cool Rain", Text: "Rain."},
-			},
-			expectedHours: 84,
-			expectedLabel: "3.5 days",
-		},
-		{
-			name: "kilometers fast plains road",
-			req: travelRequest{
-				Distance: 30, DistanceUnit: "kilometers", Terrain: "plains",
-				Pace: "fast", RouteCondition: "road-or-trail", Climate: "temperate",
-				Weather: models.TravelWeather{Severity: "calm", Title: "Clear", Text: "Clear."},
-			},
-			expectedHours: 14.91,
-			expectedLabel: "15 hours",
-		},
-		{
-			name: "hexes slow swamp hazardous",
-			req: travelRequest{
-				Distance: 3, DistanceUnit: "hexes", Terrain: "swamp",
-				Pace: "slow", RouteCondition: "hazardous-terrain", Climate: "wet",
-				Weather: models.TravelWeather{Severity: "harsh", Title: "Rain", Text: "Rain."},
-			},
-			expectedHours: 96,
-			expectedLabel: "4 days",
-		},
+func TestTravelCalculationUsesTerrainMaximumPace(t *testing.T) {
+	req := travelRequest{
+		Distance: 30, DistanceUnit: "miles", Terrain: "mountain",
+		Pace: "fast", Weather: clearWeather(),
 	}
+	req.normalize()
+	calculation, err := calculateTravelRequest(req)
+	if err != nil {
+		t.Fatalf("expected valid calculation: %v", err)
+	}
+	if calculation.EffectivePace != "slow" {
+		t.Fatalf("expected slow effective pace, got %q", calculation.EffectivePace)
+	}
+	if calculation.DurationHours != 40 {
+		t.Fatalf("expected 40 hours, got %.2f", calculation.DurationHours)
+	}
+	if calculation.DurationLabel != "1.7 days" {
+		t.Fatalf("expected 1.7 days, got %q", calculation.DurationLabel)
+	}
+}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			test.req.normalize()
-			calculation, err := calculateTravelRequest(test.req)
-			if err != nil {
-				t.Fatalf("expected valid calculation: %v", err)
-			}
-			if math.Abs(calculation.DurationHours-test.expectedHours) > 0.02 {
-				t.Fatalf("expected %.2f hours, got %.2f", test.expectedHours, calculation.DurationHours)
-			}
-			if calculation.DurationLabel != test.expectedLabel {
-				t.Fatalf("expected label %q, got %q", test.expectedLabel, calculation.DurationLabel)
-			}
-			if len(calculation.Assumptions) != 5 {
-				t.Fatalf("expected assumptions, got %+v", calculation.Assumptions)
-			}
-		})
+func TestTravelCalculationGoodRoadsRaiseMaximumPace(t *testing.T) {
+	req := travelRequest{
+		Distance: 30, DistanceUnit: "miles", Terrain: "mountain",
+		Pace: "fast", GoodRoads: true, Weather: clearWeather(),
+	}
+	req.normalize()
+	calculation, err := calculateTravelRequest(req)
+	if err != nil {
+		t.Fatalf("expected valid calculation: %v", err)
+	}
+	if calculation.GoodRoadsMaximumPace != "normal" || calculation.EffectivePace != "normal" {
+		t.Fatalf("expected normal road/effective pace, got %+v", calculation)
+	}
+	if calculation.DurationHours != 30 {
+		t.Fatalf("expected 30 hours, got %.2f", calculation.DurationHours)
+	}
+}
+
+func TestTravelCalculationConvertsUnitsAndEncounterWindows(t *testing.T) {
+	req := travelRequest{
+		Distance: 1, DistanceUnit: "hexes", Terrain: "forest",
+		Pace: "normal", Weather: clearWeather(),
+	}
+	req.normalize()
+	calculation, err := calculateTravelRequest(req)
+	if err != nil {
+		t.Fatalf("expected valid calculation: %v", err)
+	}
+	if math.Abs(calculation.DurationHours-6) > 0.02 {
+		t.Fatalf("expected 6 hours, got %.2f", calculation.DurationHours)
+	}
+	if calculation.EncounterDistance.DiceExpression != "2d8 x 10 feet" {
+		t.Fatalf("expected forest encounter dice, got %+v", calculation.EncounterDistance)
+	}
+	if calculation.EncounterDistance.AverageFeet != 90 {
+		t.Fatalf("expected 90 average feet, got %.2f", calculation.EncounterDistance.AverageFeet)
+	}
+	if calculation.EncounterDistance.Windows != 352 {
+		t.Fatalf("expected 352 windows, got %d", calculation.EncounterDistance.Windows)
+	}
+}
+
+func TestTravelCalculationWaterborneUsesNormalPace(t *testing.T) {
+	req := travelRequest{
+		Distance: 24, DistanceUnit: "miles", Terrain: "waterborne",
+		Pace: "fast", GoodRoads: true, Weather: clearWeather(),
+	}
+	req.normalize()
+	calculation, err := calculateTravelRequest(req)
+	if err != nil {
+		t.Fatalf("expected valid calculation: %v", err)
+	}
+	if calculation.TerrainMaximumPace != "special" || calculation.EffectivePace != "normal" {
+		t.Fatalf("expected waterborne to resolve to normal pace, got %+v", calculation)
+	}
+	if calculation.DurationLabel != "1 day" {
+		t.Fatalf("expected 1 day, got %q", calculation.DurationLabel)
 	}
 }
 
 func TestTravelRequestValidationRejectsInvalidPayloads(t *testing.T) {
 	valid := travelRequest{
-		Distance: 12, DistanceUnit: "miles", Terrain: "road",
-		Pace: "normal", RouteCondition: "road-or-trail", Climate: "temperate",
-		Weather: models.TravelWeather{Severity: "calm", Title: "Clear", Text: "Clear."},
+		Distance: 12, DistanceUnit: "miles", Terrain: "grassland",
+		Pace: "normal", Weather: clearWeather(),
 	}
 	tests := []struct {
 		name    string
@@ -81,8 +102,15 @@ func TestTravelRequestValidationRejectsInvalidPayloads(t *testing.T) {
 		{name: "bad unit", mutate: func(req *travelRequest) { req.DistanceUnit = "yards" }, message: "distanceUnit"},
 		{name: "bad pace", mutate: func(req *travelRequest) { req.Pace = "sprint" }, message: "pace"},
 		{name: "bad terrain", mutate: func(req *travelRequest) { req.Terrain = "moon" }, message: "terrain"},
-		{name: "bad route", mutate: func(req *travelRequest) { req.RouteCondition = "lost" }, message: "routeCondition"},
-		{name: "bad climate", mutate: func(req *travelRequest) { req.Climate = "volcanic" }, message: "climate"},
+		{name: "bad temperature", mutate: func(req *travelRequest) { req.Weather.Temperature = "boiling" }, message: "temperature"},
+		{name: "bad wind", mutate: func(req *travelRequest) { req.Weather.Wind = "sideways" }, message: "wind"},
+		{name: "bad precipitation", mutate: func(req *travelRequest) { req.Weather.Precipitation = "hail" }, message: "precipitation"},
+		{name: "missing temperature delta", mutate: func(req *travelRequest) { req.Weather.Temperature = "colder" }, message: "temperatureDeltaF"},
+		{name: "bad temperature delta", mutate: func(req *travelRequest) {
+			delta := 5
+			req.Weather.Temperature = "warmer"
+			req.Weather.TemperatureDeltaF = &delta
+		}, message: "temperatureDeltaF"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -97,41 +125,38 @@ func TestTravelRequestValidationRejectsInvalidPayloads(t *testing.T) {
 	}
 }
 
-func TestTravelWeatherGenerationReturnsEditablePayload(t *testing.T) {
+func TestTravelWeatherRollsPreserveManualComponents(t *testing.T) {
 	req := travelRequest{
-		Distance: 12, DistanceUnit: "miles", Terrain: "swamp",
-		Pace: "normal", RouteCondition: "road-or-trail", Climate: "wet", RerollWeather: true,
+		Distance: 12, DistanceUnit: "miles", Terrain: "grassland",
+		Pace: "normal",
+		Weather: models.TravelWeather{
+			Temperature:       "colder",
+			TemperatureDeltaF: intPointer(20),
+			Wind:              "strong",
+			Precipitation:     "heavy-rain-or-heavy-snow",
+		},
+		RollWeather: travelWeatherRolls{Wind: true},
 	}
 	req.normalize()
 	calculation, err := calculateTravelRequest(req)
 	if err != nil {
 		t.Fatalf("expected weather calculation: %v", err)
 	}
-	if calculation.Weather.Severity == "" || calculation.Weather.Title == "" || calculation.Weather.Text == "" {
-		t.Fatalf("expected generated weather, got %+v", calculation.Weather)
+	if calculation.Weather.Temperature != "colder" || *calculation.Weather.TemperatureDeltaF != 20 {
+		t.Fatalf("expected temperature to be preserved, got %+v", calculation.Weather)
 	}
-	if !travelWeatherSeverities[calculation.Weather.Severity] {
-		t.Fatalf("expected known severity, got %+v", calculation.Weather)
+	if calculation.Weather.Precipitation != "heavy-rain-or-heavy-snow" {
+		t.Fatalf("expected precipitation to be preserved, got %+v", calculation.Weather)
+	}
+	if calculation.Weather.Rolls == nil || calculation.Weather.Rolls.WindD20 == nil {
+		t.Fatalf("expected wind roll metadata, got %+v", calculation.Weather)
 	}
 }
 
-func TestTravelCalculationPreservesEditedWeatherWhenNotRerolling(t *testing.T) {
-	req := travelRequest{
-		Distance: 12, DistanceUnit: "miles", Terrain: "road",
-		Pace: "normal", RouteCondition: "road-or-trail", Climate: "temperate",
-		Weather: models.TravelWeather{
-			Severity: "notable",
-			Title:    "Custom Drizzle",
-			Text:     "The DM changed this forecast.",
-			Prompt:   "Use the edited prompt.",
-		},
-	}
-	req.normalize()
-	calculation, err := calculateTravelRequest(req)
-	if err != nil {
-		t.Fatalf("expected weather calculation: %v", err)
-	}
-	if calculation.Weather.Title != "Custom Drizzle" || calculation.Weather.Text != "The DM changed this forecast." {
-		t.Fatalf("expected edited weather to be preserved, got %+v", calculation.Weather)
-	}
+func clearWeather() models.TravelWeather {
+	return models.TravelWeather{Temperature: "normal", Wind: "none", Precipitation: "none"}
+}
+
+func intPointer(value int) *int {
+	return &value
 }

@@ -34,24 +34,24 @@ Inputs:
 - Destination, with an explicit `Saved` location select or `Custom` free-text mode.
 - Distance.
 - Unit: miles, kilometers, hexes.
-- Terrain.
+- Terrain: Arctic, Coastal, Desert, Forest, Grassland, Hill, Mountain, Swamp, Underdark, Urban, Waterborne.
 - Pace.
-- Route condition.
-- Climate / season.
-- Weather, selected from the curated travel-weather list or generated with `Random weather`.
+- Good roads, which raises the terrain maximum pace by one stage.
+- Weather temperature, wind, and precipitation, each set manually or rolled independently.
 
 Outputs:
 
-- Travel time updates whenever distance, unit, terrain, pace, route condition, or climate changes.
-- Assumptions show the conversion and multipliers used.
-- Weather can be selected from the list.
-- `Random weather` generates a bluDM-authored weather payload.
+- Travel time updates whenever distance, unit, terrain, pace, or road quality changes.
+- Effective pace shows when terrain caps the requested pace.
+- Encounter distance summary shows the terrain dice, average feet, and possible encounter-distance windows.
+- Assumptions show conversion, terrain maximum pace, effective pace, and encounter-window math.
+- Weather summary combines temperature, wind, and precipitation.
 
 ## Behavior
 
 - The calculator requires a positive distance before calculating.
 - Origin and destination are labels only in v1; the DM can use saved locations or type one-off places.
-- Weather generation preserves selected weather unless the DM clicks `Random weather`.
+- Rolling one weather component preserves the other manual weather values.
 - No journey records are persisted.
 
 ## Out Of Scope

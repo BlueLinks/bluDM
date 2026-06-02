@@ -119,6 +119,9 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByText("Climate / season")).toBeNull();
+    expect(within(dialog).queryByText("Route condition")).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Random weather" })).toBeNull();
     const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
     fireEvent.click(customButtons[0]);
     fireEvent.click(customButtons[1]);
@@ -130,16 +133,41 @@ describe("CampaignDetailPage travel", () => {
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
     await waitFor(() =>
-      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), false),
+      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
+        temperature: false,
+        wind: false,
+        precipitation: false,
+      }),
     );
     expect(vi.mocked(api.calculateTravel).mock.calls[0][1]).toMatchObject({
       origin: "Waterdeep",
       destination: "Ironford",
       distance: "63",
+      goodRoads: false,
     });
   });
 
-  it("randomizes weather without losing selected route inputs", async () => {
+  it("recalculates when good roads changes effective pace", async () => {
+    vi.mocked(api.calculateTravel).mockResolvedValue({
+      calculation: { ...calculation(), durationLabel: "2 days", effectivePace: "fast" },
+    });
+    renderCampaign();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "60" } });
+    fireEvent.click(within(dialog).getByLabelText("Good roads"));
+
+    expect(await within(dialog).findByText("2 days")).toBeTruthy();
+    await waitFor(() =>
+      expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[1]).toMatchObject({
+        distance: "60",
+        goodRoads: true,
+      }),
+    );
+  });
+
+  it("rolls one weather component without losing selected route inputs", async () => {
     renderCampaign();
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
@@ -152,16 +180,37 @@ describe("CampaignDetailPage travel", () => {
       target: { value: "Ironford" },
     });
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Random weather" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Roll wind" }));
 
     await waitFor(() =>
-      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), true),
+      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
+        temperature: false,
+        wind: true,
+        precipitation: false,
+      }),
     );
     expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[1]).toMatchObject({
       origin: "Waterdeep",
       destination: "Ironford",
       distance: "12",
     });
+  });
+
+  it("rolls all weather components", async () => {
+    renderCampaign();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Roll all weather" }));
+
+    await waitFor(() =>
+      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
+        temperature: true,
+        wind: true,
+        precipitation: true,
+      }),
+    );
   });
 });
 
@@ -237,11 +286,19 @@ function calculation(): TravelCalculation {
     durationHours: 62.4,
     durationDays: 2.6,
     durationLabel: "2.6 days",
+    effectivePace: "normal",
+    terrainMaximumPace: "fast",
+    goodRoadsMaximumPace: "fast",
+    encounterDistance: {
+      diceExpression: "6d6 x 10 feet",
+      averageFeet: 210,
+      windows: 1584,
+    },
     weather: {
-      severity: "notable",
-      title: "Cool Rain",
-      text: "A steady rain follows the road.",
-      prompt: "Offer advantage to tracking checks.",
+      temperature: "normal",
+      temperatureDeltaF: null,
+      wind: "light",
+      precipitation: "none",
     },
     assumptions: ["63 miles converted to 63 miles."],
   };
