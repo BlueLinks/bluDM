@@ -133,10 +133,9 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "63" } });
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
-    expect(within(dialog).getByRole("tab", { name: "Travel" })).toBeTruthy();
-    expect(within(dialog).getByRole("tab", { name: "Encounters" })).toBeTruthy();
-    expect(within(dialog).getByRole("tab", { name: "Weather" })).toBeTruthy();
-    expect(within(dialog).queryByRole("tab", { name: "Assumptions" })).toBeNull();
+    expect(within(dialog).queryByRole("tab")).toBeNull();
+    expect(within(dialog).getByText("Encounter intervals")).toBeTruthy();
+    expect(within(dialog).getByText("Weather")).toBeTruthy();
     await waitFor(() =>
       expect(api.calculateTravel).toHaveBeenCalledWith(
         "campaign-1",
@@ -166,10 +165,8 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "60" } });
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
     expect(await within(dialog).findByText("210 ft")).toBeTruthy();
     fireEvent.click(within(dialog).getByLabelText("Good roads"));
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Travel" }));
 
     expect(await within(dialog).findByText("2 days")).toBeTruthy();
     await waitFor(() =>
@@ -195,7 +192,6 @@ describe("CampaignDetailPage travel", () => {
         true,
       ),
     );
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
     expect(await within(dialog).findByText("210 ft")).toBeTruthy();
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "24" } });
     await waitFor(() =>
@@ -225,9 +221,11 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
-    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
 
     expect(await within(dialog).findByText("1,584 possible encounters")).toBeTruthy();
+    expect(
+      within(dialog).getByText("One possible encounter every 210 feet from 6d6 x 10 feet."),
+    ).toBeTruthy();
     expect(within(dialog).queryByText("Rolls:")).toBeNull();
   });
 

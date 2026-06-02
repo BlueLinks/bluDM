@@ -9,85 +9,47 @@ import {
 } from "./travelOptions";
 import type { TravelCalculation, TravelWeather } from "./travelTypes";
 
-export type TravelResultTab = "travel" | "encounters" | "weather";
-
 export function TravelCalculatorResults({
-  activeTab,
   animationKey,
   calculation,
   canCalculate,
   encounterDistanceFeet,
   onEncounterDistanceChange,
   onRollEncounterDistance,
-  onTabChange,
   rollingEncounter,
   terrain,
   weather,
 }: {
-  activeTab: TravelResultTab;
   animationKey: number;
   calculation: TravelCalculation | null;
   canCalculate: boolean;
   encounterDistanceFeet: number | null;
   onEncounterDistanceChange: (value: string) => void;
   onRollEncounterDistance: () => void;
-  onTabChange: (tab: TravelResultTab) => void;
   rollingEncounter: boolean;
   terrain: string;
   weather: TravelWeather;
 }) {
-  const tabs: Array<{ value: TravelResultTab; label: string }> = [
-    { value: "travel", label: "Travel" },
-    { value: "encounters", label: "Encounters" },
-    { value: "weather", label: "Weather" },
-  ];
   return (
-    <section className="rounded-lg border border-border bg-card p-3">
-      <div className="mb-3 grid grid-cols-3 gap-2" role="tablist">
-        {tabs.map((tab) => (
-          <button
-            key={tab.value}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab.value}
-            className={[
-              "rounded-md border px-3 py-2 text-sm font-semibold transition",
-              activeTab === tab.value
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-            ].join(" ")}
-            onClick={() => onTabChange(tab.value)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-      <div role="tabpanel">
-        {activeTab === "travel" && (
-          <TravelDurationSummary
-            key={`travel-${calculation?.durationLabel ?? "empty"}-${animationKey}`}
-            calculation={calculation}
-          />
-        )}
-        {activeTab === "encounters" && (
-          <EncounterSummary
-            key={`encounter-${calculation?.encounterDistance.rolledFeet ?? "empty"}-${animationKey}`}
-            calculation={calculation}
-            canCalculate={canCalculate}
-            encounterDistanceFeet={encounterDistanceFeet}
-            rolling={rollingEncounter}
-            terrain={terrain}
-            onEncounterDistanceChange={onEncounterDistanceChange}
-            onRollEncounterDistance={onRollEncounterDistance}
-          />
-        )}
-        {activeTab === "weather" && (
-          <TravelWeatherSummary
-            key={`weather-${weatherSummary(weather)}-${animationKey}`}
-            weather={weather}
-          />
-        )}
-      </div>
+    <section className="grid gap-3 md:grid-cols-[minmax(0,0.85fr)_minmax(280px,1.25fr)_minmax(0,0.9fr)]">
+      <TravelDurationSummary
+        key={`travel-${calculation?.durationLabel ?? "empty"}-${animationKey}`}
+        calculation={calculation}
+      />
+      <EncounterSummary
+        key={`encounter-${calculation?.encounterDistance.rolledFeet ?? "empty"}-${animationKey}`}
+        calculation={calculation}
+        canCalculate={canCalculate}
+        encounterDistanceFeet={encounterDistanceFeet}
+        rolling={rollingEncounter}
+        terrain={terrain}
+        onEncounterDistanceChange={onEncounterDistanceChange}
+        onRollEncounterDistance={onRollEncounterDistance}
+      />
+      <TravelWeatherSummary
+        key={`weather-${weatherSummary(weather)}-${animationKey}`}
+        weather={weather}
+      />
     </section>
   );
 }
@@ -138,11 +100,11 @@ function EncounterSummary({
 }) {
   const distanceOptions = encounterDistanceOptionsForTerrain(terrain);
   return (
-    <div className="action-roll-card grid gap-4 rounded-lg border border-amber-500/25 bg-amber-500/10 p-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <div className="action-roll-card grid gap-4 rounded-lg border border-amber-500/25 bg-amber-500/10 p-4">
       <div>
         <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-700 dark:text-amber-200">
           <Route className="h-4 w-4" />
-          Encounter distance
+          Encounter intervals
         </div>
         <div className="action-roll-value mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
           {calculation
@@ -151,9 +113,14 @@ function EncounterSummary({
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           {calculation
-            ? `${calculation.encounterDistance.diceExpression} rolled ${calculation.encounterDistance.rolledFeet.toLocaleString()} feet.`
+            ? `One possible encounter every ${calculation.encounterDistance.rolledFeet.toLocaleString()} feet from ${calculation.encounterDistance.diceExpression}.`
             : "The terrain sets how far apart creatures might notice each other."}
         </p>
+        {calculation ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            Count uses route distance in feet divided by the rolled interval.
+          </p>
+        ) : null}
         {calculation?.encounterDistance.rolls?.length ? (
           <p className="mt-2 text-sm text-muted-foreground">
             Rolls: {calculation.encounterDistance.rolls.join(", ")}

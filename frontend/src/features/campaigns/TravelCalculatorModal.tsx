@@ -19,7 +19,7 @@ import type {
   TravelWeather,
   TravelWeatherRollRequest,
 } from "./travelTypes";
-import { TravelCalculatorResults, type TravelResultTab } from "./TravelCalculatorResults";
+import { TravelCalculatorResults } from "./TravelCalculatorResults";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
 type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";
@@ -39,7 +39,6 @@ export function TravelCalculatorModal({
   const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
   const [originMode, setOriginMode] = useState<"saved" | "custom">("saved");
   const [destinationMode, setDestinationMode] = useState<"saved" | "custom">("saved");
-  const [activeTab, setActiveTab] = useState<TravelResultTab>("travel");
   const [rollAnimationKey, setRollAnimationKey] = useState(0);
   const [rollingTarget, setRollingTarget] = useState<TravelRollTarget | null>(null);
   const [error, setError] = useState("");
@@ -224,7 +223,6 @@ export function TravelCalculatorModal({
             </div>
           </div>
           <TravelCalculatorResults
-            activeTab={activeTab}
             animationKey={rollAnimationKey}
             calculation={calculation}
             canCalculate={canCalculate}
@@ -235,7 +233,6 @@ export function TravelCalculatorModal({
             onRollEncounterDistance={() =>
               void rollWithAnimation("encounter", noWeatherRolls, true)
             }
-            onTabChange={setActiveTab}
             rollingEncounter={rollingTarget === "encounter"}
           />
         </div>
