@@ -135,6 +135,8 @@ describe("CampaignDetailPage travel", () => {
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
     expect(within(dialog).getByRole("tab", { name: "Travel" })).toBeTruthy();
     expect(within(dialog).getByRole("tab", { name: "Encounters" })).toBeTruthy();
+    expect(within(dialog).getByRole("tab", { name: "Weather" })).toBeTruthy();
+    expect(within(dialog).queryByRole("tab", { name: "Assumptions" })).toBeNull();
     await waitFor(() =>
       expect(api.calculateTravel).toHaveBeenCalledWith(
         "campaign-1",
@@ -209,6 +211,24 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(await screen.findByRole("option", { name: "Forest" }));
 
     await waitFor(() => expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[3]).toBe(true));
+  });
+
+  it("renders encounters when manual encounter rolls have no roll detail", async () => {
+    vi.mocked(api.calculateTravel).mockResolvedValue({
+      calculation: {
+        ...calculation(),
+        encounterDistance: { ...calculation().encounterDistance, rolls: [] },
+      },
+    });
+    renderCampaign();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
+
+    expect(await within(dialog).findByText("1,584 possible encounters")).toBeTruthy();
+    expect(within(dialog).queryByText("Rolls:")).toBeNull();
   });
 
   it("rolls one weather component without losing selected route inputs", async () => {

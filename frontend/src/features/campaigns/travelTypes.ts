@@ -31,7 +31,7 @@ export type TravelCalculation = {
     diceExpression: string;
     averageFeet: number;
     rolledFeet: number;
-    rolls: number[];
+    rolls?: number[] | null;
     encounterCount: number;
     windows: number;
   };

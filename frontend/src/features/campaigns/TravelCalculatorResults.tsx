@@ -9,7 +9,7 @@ import {
 } from "./travelOptions";
 import type { TravelCalculation, TravelWeather } from "./travelTypes";
 
-export type TravelResultTab = "travel" | "encounters" | "weather" | "assumptions";
+export type TravelResultTab = "travel" | "encounters" | "weather";
 
 export function TravelCalculatorResults({
   activeTab,
@@ -36,11 +36,10 @@ export function TravelCalculatorResults({
     { value: "travel", label: "Travel" },
     { value: "encounters", label: "Encounters" },
     { value: "weather", label: "Weather" },
-    { value: "assumptions", label: "Assumptions" },
   ];
   return (
     <section className="rounded-lg border border-border bg-card p-3">
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist">
+      <div className="mb-3 grid grid-cols-3 gap-2" role="tablist">
         {tabs.map((tab) => (
           <button
             key={tab.value}
@@ -72,9 +71,6 @@ export function TravelCalculatorResults({
           />
         )}
         {activeTab === "weather" && <TravelWeatherSummary weather={weather} />}
-        {activeTab === "assumptions" && (
-          <TravelAssumptions assumptions={calculation?.assumptions ?? []} />
-        )}
       </div>
     </section>
   );
@@ -140,7 +136,7 @@ function EncounterSummary({
             ? `${calculation.encounterDistance.diceExpression} rolled ${calculation.encounterDistance.rolledFeet.toLocaleString()} feet.`
             : "The terrain sets how far apart creatures might notice each other."}
         </p>
-        {calculation?.encounterDistance.rolls.length ? (
+        {calculation?.encounterDistance.rolls?.length ? (
           <p className="mt-2 text-sm text-muted-foreground">
             Rolls: {calculation.encounterDistance.rolls.join(", ")}
           </p>
@@ -178,20 +174,6 @@ function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
       </div>
       <h4 className="mt-2 font-semibold">{weatherSummary(weather)}</h4>
       <p className="mt-2 text-sm leading-6 text-muted-foreground">{weatherRollSummary(weather)}</p>
-    </div>
-  );
-}
-
-function TravelAssumptions({ assumptions }: { assumptions: string[] }) {
-  if (assumptions.length === 0) return null;
-  return (
-    <div className="rounded-lg border border-border bg-background p-3">
-      <div className="text-xs font-bold uppercase text-muted-foreground">Assumptions</div>
-      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-        {assumptions.map((assumption) => (
-          <li key={assumption}>{assumption}</li>
-        ))}
-      </ul>
     </div>
   );
 }

@@ -249,7 +249,7 @@ func (req travelRequest) encounterDistance(terrain travelTerrainRule) (int, []in
 	if req.RollEncounterDistance || req.EncounterDistanceFeet == nil {
 		return terrain.rollEncounterDistance()
 	}
-	return *req.EncounterDistanceFeet, nil
+	return *req.EncounterDistanceFeet, []int{}
 }
 
 func normalizeTravelWeather(weather models.TravelWeather) models.TravelWeather {
