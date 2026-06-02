@@ -30,6 +30,9 @@ export type TravelCalculation = {
   encounterDistance: {
     diceExpression: string;
     averageFeet: number;
+    rolledFeet: number;
+    rolls: number[];
+    encounterCount: number;
     windows: number;
   };
   weather: TravelWeather;
@@ -44,6 +47,7 @@ export type TravelFormState = {
   terrain: string;
   pace: string;
   goodRoads: boolean;
+  encounterDistanceFeet: number | null;
   weather: TravelWeather;
 };
 

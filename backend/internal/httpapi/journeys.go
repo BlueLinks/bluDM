@@ -16,15 +16,17 @@ type locationRequest struct {
 }
 
 type travelRequest struct {
-	Origin       string               `json:"origin"`
-	Destination  string               `json:"destination"`
-	Distance     float64              `json:"distance"`
-	DistanceUnit string               `json:"distanceUnit"`
-	Terrain      string               `json:"terrain"`
-	Pace         string               `json:"pace"`
-	GoodRoads    bool                 `json:"goodRoads"`
-	Weather      models.TravelWeather `json:"weather"`
-	RollWeather  travelWeatherRolls   `json:"rollWeather"`
+	Origin                string               `json:"origin"`
+	Destination           string               `json:"destination"`
+	Distance              float64              `json:"distance"`
+	DistanceUnit          string               `json:"distanceUnit"`
+	Terrain               string               `json:"terrain"`
+	Pace                  string               `json:"pace"`
+	GoodRoads             bool                 `json:"goodRoads"`
+	EncounterDistanceFeet *int                 `json:"encounterDistanceFeet"`
+	RollEncounterDistance bool                 `json:"rollEncounterDistance"`
+	Weather               models.TravelWeather `json:"weather"`
+	RollWeather           travelWeatherRolls   `json:"rollWeather"`
 }
 
 type travelCalculation struct {
@@ -48,6 +50,9 @@ type travelWeatherRolls struct {
 type travelEncounterDistance struct {
 	DiceExpression string  `json:"diceExpression"`
 	AverageFeet    float64 `json:"averageFeet"`
+	RolledFeet     int     `json:"rolledFeet"`
+	Rolls          []int   `json:"rolls"`
+	EncounterCount int     `json:"encounterCount"`
 	Windows        int     `json:"windows"`
 }
 
@@ -193,10 +198,15 @@ func calculateTravelRequest(req travelRequest) (travelCalculation, error) {
 	durationDays := convertedMiles / effectiveMilesPerDay
 	durationHours := durationDays * 24
 	weather := applyTravelWeatherRolls(req.Weather, req.RollWeather)
+	rolledFeet, rolls := req.encounterDistance(terrain)
+	encounterCount := int(math.Floor(convertedMiles * 5280 / float64(rolledFeet)))
 	encounterDistance := travelEncounterDistance{
 		DiceExpression: terrain.EncounterDice,
 		AverageFeet:    roundTo(terrain.EncounterAverageFeet, 2),
-		Windows:        int(math.Floor(convertedMiles * 5280 / terrain.EncounterAverageFeet)),
+		RolledFeet:     rolledFeet,
+		Rolls:          rolls,
+		EncounterCount: encounterCount,
+		Windows:        encounterCount,
 	}
 	return travelCalculation{
 		DurationHours:        roundTo(durationHours, 2),
@@ -212,7 +222,7 @@ func calculateTravelRequest(req travelRequest) (travelCalculation, error) {
 			fmt.Sprintf("Good roads maximum pace is %s.", travelOptionLabel(goodRoadsMaximumPace)),
 			fmt.Sprintf("Requested %s pace resolves to %s pace.", travelOptionLabel(req.Pace), travelOptionLabel(effectivePace)),
 			fmt.Sprintf("Effective travel pace is %s miles per day.", formatTravelNumber(effectiveMilesPerDay)),
-			fmt.Sprintf("%s creates about %d possible encounter-distance windows.", terrain.EncounterDice, encounterDistance.Windows),
+			fmt.Sprintf("%s rolled %d feet for %d possible encounters.", terrain.EncounterDice, encounterDistance.RolledFeet, encounterDistance.EncounterCount),
 		},
 		Weather: weather,
 	}, nil
@@ -228,9 +238,18 @@ func validateTravelRequest(req travelRequest) error {
 		return errors.New("pace must be slow, normal, or fast")
 	case travelTerrains[req.Terrain].MaximumPace == "":
 		return errors.New("terrain is invalid")
+	case !req.RollEncounterDistance && req.EncounterDistanceFeet != nil && !travelTerrains[req.Terrain].validEncounterDistance(*req.EncounterDistanceFeet):
+		return errors.New("encounterDistanceFeet is invalid for terrain")
 	default:
 		return validateTravelWeather(req.Weather, req.RollWeather)
 	}
+}
+
+func (req travelRequest) encounterDistance(terrain travelTerrainRule) (int, []int) {
+	if req.RollEncounterDistance || req.EncounterDistanceFeet == nil {
+		return terrain.rollEncounterDistance()
+	}
+	return *req.EncounterDistanceFeet, nil
 }
 
 func normalizeTravelWeather(weather models.TravelWeather) models.TravelWeather {

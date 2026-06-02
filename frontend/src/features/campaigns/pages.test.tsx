@@ -42,6 +42,7 @@ describe("CampaignDetailPage travel", () => {
       getItem: vi.fn(() => null),
       setItem: vi.fn(),
     });
+    Element.prototype.scrollIntoView = vi.fn();
     vi.mocked(api.campaign).mockResolvedValue(campaignDetail());
     vi.mocked(api.campaignLocations).mockResolvedValue({ locations: [location()] });
     vi.mocked(api.standardSources).mockResolvedValue({
@@ -132,12 +133,19 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "63" } });
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
+    expect(within(dialog).getByRole("tab", { name: "Travel" })).toBeTruthy();
+    expect(within(dialog).getByRole("tab", { name: "Encounters" })).toBeTruthy();
     await waitFor(() =>
-      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
-        temperature: false,
-        wind: false,
-        precipitation: false,
-      }),
+      expect(api.calculateTravel).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.anything(),
+        {
+          temperature: false,
+          wind: false,
+          precipitation: false,
+        },
+        true,
+      ),
     );
     expect(vi.mocked(api.calculateTravel).mock.calls[0][1]).toMatchObject({
       origin: "Waterdeep",
@@ -156,15 +164,51 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "60" } });
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
+    expect(await within(dialog).findByText("210 ft")).toBeTruthy();
     fireEvent.click(within(dialog).getByLabelText("Good roads"));
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Travel" }));
 
     expect(await within(dialog).findByText("2 days")).toBeTruthy();
     await waitFor(() =>
       expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[1]).toMatchObject({
         distance: "60",
         goodRoads: true,
+        encounterDistanceFeet: 210,
       }),
     );
+  });
+
+  it("preserves encounter distance for distance edits and rerolls after terrain changes", async () => {
+    renderCampaign();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
+    await waitFor(() =>
+      expect(api.calculateTravel).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.anything(),
+        expect.anything(),
+        true,
+      ),
+    );
+    fireEvent.click(within(dialog).getByRole("tab", { name: "Encounters" }));
+    expect(await within(dialog).findByText("210 ft")).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "24" } });
+    await waitFor(() =>
+      expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[1]).toMatchObject({
+        distance: "24",
+        encounterDistanceFeet: 210,
+      }),
+    );
+    expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[3]).toBe(false);
+
+    const terrainButton = within(dialog).getByRole("combobox", { name: "Terrain" });
+    fireEvent.click(terrainButton);
+    fireEvent.click(await screen.findByRole("option", { name: "Forest" }));
+
+    await waitFor(() => expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[3]).toBe(true));
   });
 
   it("rolls one weather component without losing selected route inputs", async () => {
@@ -183,11 +227,16 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll wind" }));
 
     await waitFor(() =>
-      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
-        temperature: false,
-        wind: true,
-        precipitation: false,
-      }),
+      expect(api.calculateTravel).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.anything(),
+        {
+          temperature: false,
+          wind: true,
+          precipitation: false,
+        },
+        false,
+      ),
     );
     expect(vi.mocked(api.calculateTravel).mock.calls.at(-1)?.[1]).toMatchObject({
       origin: "Waterdeep",
@@ -205,11 +254,16 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll all weather" }));
 
     await waitFor(() =>
-      expect(api.calculateTravel).toHaveBeenCalledWith("campaign-1", expect.anything(), {
-        temperature: true,
-        wind: true,
-        precipitation: true,
-      }),
+      expect(api.calculateTravel).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.anything(),
+        {
+          temperature: true,
+          wind: true,
+          precipitation: true,
+        },
+        false,
+      ),
     );
   });
 });
@@ -292,6 +346,9 @@ function calculation(): TravelCalculation {
     encounterDistance: {
       diceExpression: "6d6 x 10 feet",
       averageFeet: 210,
+      rolledFeet: 210,
+      rolls: [3, 4, 5, 2, 4, 3],
+      encounterCount: 1584,
       windows: 1584,
     },
     weather: {

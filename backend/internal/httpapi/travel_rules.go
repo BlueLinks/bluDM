@@ -15,7 +15,7 @@ func distanceInMiles(distance float64, unit string) float64 {
 	case "kilometers":
 		return distance * 0.621371
 	case "hexes":
-		return distance * 6
+		return distance * 5
 	default:
 		return distance
 	}
@@ -190,21 +190,51 @@ var travelPaceOrder = map[string]int{"slow": 1, "normal": 2, "fast": 3}
 type travelTerrainRule struct {
 	MaximumPace          string
 	EncounterDice        string
+	EncounterDiceCount   int
+	EncounterDieSides    int
+	EncounterMultiplier  int
 	EncounterAverageFeet float64
 }
 
+func (rule travelTerrainRule) rollEncounterDistance() (int, []int) {
+	rolls := make([]int, 0, rule.EncounterDiceCount)
+	total := 0
+	for range rule.EncounterDiceCount {
+		roll := rollDie(rule.EncounterDieSides)
+		rolls = append(rolls, roll)
+		total += roll
+	}
+	return total * rule.EncounterMultiplier, rolls
+}
+
+func (rule travelTerrainRule) validEncounterDistance(feet int) bool {
+	if rule.EncounterMultiplier <= 0 || feet%rule.EncounterMultiplier != 0 {
+		return false
+	}
+	total := feet / rule.EncounterMultiplier
+	return total >= rule.EncounterDiceCount && total <= rule.EncounterDiceCount*rule.EncounterDieSides
+}
+
+func (rule travelTerrainRule) encounterDistanceOptions() []int {
+	options := []int{}
+	for total := rule.EncounterDiceCount; total <= rule.EncounterDiceCount*rule.EncounterDieSides; total++ {
+		options = append(options, total*rule.EncounterMultiplier)
+	}
+	return options
+}
+
 var travelTerrains = map[string]travelTerrainRule{
-	"arctic":     {MaximumPace: "fast", EncounterDice: "6d6 x 10 feet", EncounterAverageFeet: 210},
-	"coastal":    {MaximumPace: "normal", EncounterDice: "2d10 x 10 feet", EncounterAverageFeet: 110},
-	"desert":     {MaximumPace: "normal", EncounterDice: "6d6 x 10 feet", EncounterAverageFeet: 210},
-	"forest":     {MaximumPace: "normal", EncounterDice: "2d8 x 10 feet", EncounterAverageFeet: 90},
-	"grassland":  {MaximumPace: "fast", EncounterDice: "6d6 x 10 feet", EncounterAverageFeet: 210},
-	"hill":       {MaximumPace: "normal", EncounterDice: "2d10 x 10 feet", EncounterAverageFeet: 110},
-	"mountain":   {MaximumPace: "slow", EncounterDice: "4d10 x 10 feet", EncounterAverageFeet: 220},
-	"swamp":      {MaximumPace: "slow", EncounterDice: "2d8 x 10 feet", EncounterAverageFeet: 90},
-	"underdark":  {MaximumPace: "normal", EncounterDice: "2d6 x 10 feet", EncounterAverageFeet: 70},
-	"urban":      {MaximumPace: "normal", EncounterDice: "2d6 x 10 feet", EncounterAverageFeet: 70},
-	"waterborne": {MaximumPace: "special", EncounterDice: "6d6 x 10 feet", EncounterAverageFeet: 210},
+	"arctic":     {MaximumPace: "fast", EncounterDice: "6d6 x 10 feet", EncounterDiceCount: 6, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 210},
+	"coastal":    {MaximumPace: "normal", EncounterDice: "2d10 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 10, EncounterMultiplier: 10, EncounterAverageFeet: 110},
+	"desert":     {MaximumPace: "normal", EncounterDice: "6d6 x 10 feet", EncounterDiceCount: 6, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 210},
+	"forest":     {MaximumPace: "normal", EncounterDice: "2d8 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 8, EncounterMultiplier: 10, EncounterAverageFeet: 90},
+	"grassland":  {MaximumPace: "fast", EncounterDice: "6d6 x 10 feet", EncounterDiceCount: 6, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 210},
+	"hill":       {MaximumPace: "normal", EncounterDice: "2d10 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 10, EncounterMultiplier: 10, EncounterAverageFeet: 110},
+	"mountain":   {MaximumPace: "slow", EncounterDice: "4d10 x 10 feet", EncounterDiceCount: 4, EncounterDieSides: 10, EncounterMultiplier: 10, EncounterAverageFeet: 220},
+	"swamp":      {MaximumPace: "slow", EncounterDice: "2d8 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 8, EncounterMultiplier: 10, EncounterAverageFeet: 90},
+	"underdark":  {MaximumPace: "normal", EncounterDice: "2d6 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 70},
+	"urban":      {MaximumPace: "normal", EncounterDice: "2d6 x 10 feet", EncounterDiceCount: 2, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 70},
+	"waterborne": {MaximumPace: "special", EncounterDice: "6d6 x 10 feet", EncounterDiceCount: 6, EncounterDieSides: 6, EncounterMultiplier: 10, EncounterAverageFeet: 210},
 }
 
 var travelTemperatures = map[string]bool{"normal": true, "colder": true, "warmer": true}

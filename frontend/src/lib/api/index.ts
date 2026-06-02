@@ -155,10 +155,11 @@ export const api = {
       wind: false,
       precipitation: false,
     },
+    rollEncounterDistance = false,
   ) =>
     request<{ calculation: TravelCalculation }>(`/api/campaigns/${campaignId}/travel/calculate`, {
       method: "POST",
-      body: JSON.stringify(travelPayload(payload, rollWeather)),
+      body: JSON.stringify(travelPayload(payload, rollWeather, rollEncounterDistance)),
     }),
 
   createEncounter: (
@@ -442,7 +443,11 @@ export const api = {
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };
 
-function travelPayload(payload: TravelFormState, rollWeather: TravelWeatherRollRequest) {
+function travelPayload(
+  payload: TravelFormState,
+  rollWeather: TravelWeatherRollRequest,
+  rollEncounterDistance: boolean,
+) {
   return {
     origin: payload.origin,
     destination: payload.destination,
@@ -451,6 +456,8 @@ function travelPayload(payload: TravelFormState, rollWeather: TravelWeatherRollR
     terrain: payload.terrain,
     pace: payload.pace,
     goodRoads: payload.goodRoads,
+    encounterDistanceFeet: payload.encounterDistanceFeet,
+    rollEncounterDistance,
     weather: payload.weather,
     rollWeather,
   };

@@ -33,7 +33,7 @@ Inputs:
 - Origin, with an explicit `Saved` location select or `Custom` free-text mode.
 - Destination, with an explicit `Saved` location select or `Custom` free-text mode.
 - Distance.
-- Unit: miles, kilometers, hexes.
+- Unit: miles, kilometers, hexes (`1 hex = 5 miles`).
 - Terrain: Arctic, Coastal, Desert, Forest, Grassland, Hill, Mountain, Swamp, Underdark, Urban, Waterborne.
 - Pace.
 - Good roads, which raises the terrain maximum pace by one stage.
@@ -43,14 +43,15 @@ Outputs:
 
 - Travel time updates whenever distance, unit, terrain, pace, or road quality changes.
 - Effective pace shows when terrain caps the requested pace.
-- Encounter distance summary shows the terrain dice, average feet, and possible encounter-distance windows.
-- Assumptions show conversion, terrain maximum pace, effective pace, and encounter-window math.
+- Encounter distance summary shows the terrain dice, rolled feet, and possible encounter count.
+- Assumptions show conversion, terrain maximum pace, effective pace, and encounter-count math.
 - Weather summary combines temperature, wind, and precipitation.
 
 ## Behavior
 
 - The calculator requires a positive distance before calculating.
 - Origin and destination are labels only in v1; the DM can use saved locations or type one-off places.
+- Encounter distance rolls automatically the first time the route becomes valid, can be rerolled, and can be manually selected from legal terrain results.
 - Rolling one weather component preserves the other manual weather values.
 - No journey records are persisted.
 

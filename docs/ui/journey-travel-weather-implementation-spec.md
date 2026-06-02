@@ -21,18 +21,25 @@ Authenticated campaign APIs:
 - `DELETE /api/campaigns/{campaignID}/locations/{locationID}`
 - `POST /api/campaigns/{campaignID}/travel/calculate`
 
-Calculation is stateless. It accepts origin, destination, distance, unit, terrain, pace, `goodRoads`, structured weather, and component-level `rollWeather` flags.
+Calculation is stateless. It accepts origin, destination, distance, unit, terrain, pace, `goodRoads`, structured weather, component-level `rollWeather` flags, `encounterDistanceFeet`, and `rollEncounterDistance`.
 
 ## Travel Math
 
 - Miles are used internally.
 - Kilometers convert with `0.621371`.
-- Hexes default to `6` miles.
+- Hexes default to `5` miles.
 - Pace: slow 18 miles/day, normal 24 miles/day, fast 30 miles/day.
 - Terrain uses the SRD 5.2 Travel Terrain table maximum pace and encounter distance.
 - Good roads raise the terrain maximum pace by one stage, capped at fast.
 - The requested pace is capped to the adjusted terrain maximum pace.
-- Output hours, days, display label, effective pace, terrain maximum pace, encounter distance summary, assumptions, and weather.
+- Output hours, days, display label, effective pace, terrain maximum pace, rolled encounter distance summary, assumptions, and weather.
+
+## Encounter Distance
+
+- Terrain encounter distance uses the SRD 5.2 Travel Terrain dice.
+- The first valid calculation rolls encounter distance automatically.
+- The DM can reroll encounter distance or manually select a legal terrain result.
+- Encounter count is `floor(route feet / rolled encounter distance feet)`.
 
 ## Weather
 
@@ -52,7 +59,7 @@ Calculation is stateless. It accepts origin, destination, distance, unit, terrai
 
 ## Tests
 
-- Backend travel math for miles, kilometers, hexes, terrain max pace, good roads, and encounter windows.
+- Backend travel math for miles, kilometers, 5-mile hexes, terrain max pace, good roads, and rolled encounter counts.
 - Backend validation for invalid distance/options.
 - Backend component weather rolls and manual weather preservation.
 - Frontend renders saved locations.

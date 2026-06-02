@@ -49,15 +49,15 @@ func TestTravelCalculationGoodRoadsRaiseMaximumPace(t *testing.T) {
 func TestTravelCalculationConvertsUnitsAndEncounterWindows(t *testing.T) {
 	req := travelRequest{
 		Distance: 1, DistanceUnit: "hexes", Terrain: "forest",
-		Pace: "normal", Weather: clearWeather(),
+		Pace: "normal", EncounterDistanceFeet: intPointer(90), Weather: clearWeather(),
 	}
 	req.normalize()
 	calculation, err := calculateTravelRequest(req)
 	if err != nil {
 		t.Fatalf("expected valid calculation: %v", err)
 	}
-	if math.Abs(calculation.DurationHours-6) > 0.02 {
-		t.Fatalf("expected 6 hours, got %.2f", calculation.DurationHours)
+	if math.Abs(calculation.DurationHours-5) > 0.02 {
+		t.Fatalf("expected 5 hours, got %.2f", calculation.DurationHours)
 	}
 	if calculation.EncounterDistance.DiceExpression != "2d8 x 10 feet" {
 		t.Fatalf("expected forest encounter dice, got %+v", calculation.EncounterDistance)
@@ -65,8 +65,29 @@ func TestTravelCalculationConvertsUnitsAndEncounterWindows(t *testing.T) {
 	if calculation.EncounterDistance.AverageFeet != 90 {
 		t.Fatalf("expected 90 average feet, got %.2f", calculation.EncounterDistance.AverageFeet)
 	}
-	if calculation.EncounterDistance.Windows != 352 {
-		t.Fatalf("expected 352 windows, got %d", calculation.EncounterDistance.Windows)
+	if calculation.EncounterDistance.EncounterCount != 293 || calculation.EncounterDistance.Windows != 293 {
+		t.Fatalf("expected 293 encounters, got %+v", calculation.EncounterDistance)
+	}
+}
+
+func TestTravelCalculationRollsLegalEncounterDistance(t *testing.T) {
+	req := travelRequest{
+		Distance: 12, DistanceUnit: "miles", Terrain: "underdark",
+		Pace: "normal", RollEncounterDistance: true, Weather: clearWeather(),
+	}
+	req.normalize()
+	calculation, err := calculateTravelRequest(req)
+	if err != nil {
+		t.Fatalf("expected valid calculation: %v", err)
+	}
+	if calculation.EncounterDistance.RolledFeet < 20 || calculation.EncounterDistance.RolledFeet > 120 || calculation.EncounterDistance.RolledFeet%10 != 0 {
+		t.Fatalf("expected legal 2d6 x 10 roll, got %+v", calculation.EncounterDistance)
+	}
+	if len(calculation.EncounterDistance.Rolls) != 2 {
+		t.Fatalf("expected two d6 rolls, got %+v", calculation.EncounterDistance.Rolls)
+	}
+	if calculation.EncounterDistance.EncounterCount != int(math.Floor(12*5280/float64(calculation.EncounterDistance.RolledFeet))) {
+		t.Fatalf("expected count from rolled feet, got %+v", calculation.EncounterDistance)
 	}
 }
 
@@ -102,6 +123,7 @@ func TestTravelRequestValidationRejectsInvalidPayloads(t *testing.T) {
 		{name: "bad unit", mutate: func(req *travelRequest) { req.DistanceUnit = "yards" }, message: "distanceUnit"},
 		{name: "bad pace", mutate: func(req *travelRequest) { req.Pace = "sprint" }, message: "pace"},
 		{name: "bad terrain", mutate: func(req *travelRequest) { req.Terrain = "moon" }, message: "terrain"},
+		{name: "bad encounter distance", mutate: func(req *travelRequest) { req.EncounterDistanceFeet = intPointer(95) }, message: "encounterDistanceFeet"},
 		{name: "bad temperature", mutate: func(req *travelRequest) { req.Weather.Temperature = "boiling" }, message: "temperature"},
 		{name: "bad wind", mutate: func(req *travelRequest) { req.Weather.Wind = "sideways" }, message: "wind"},
 		{name: "bad precipitation", mutate: func(req *travelRequest) { req.Weather.Precipitation = "hail" }, message: "precipitation"},
