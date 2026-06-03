@@ -1,10 +1,10 @@
-import { ClipboardList, Swords, UsersRound } from "lucide-react";
+import { ClipboardList, Route, Swords, UsersRound } from "lucide-react";
 import { DashboardCard } from "../../components/ui";
 import type { CampaignDetail } from "../../types";
 
 export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
   return (
-    <div className="grid gap-4 xl:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       <DashboardCard
         icon={UsersRound}
         title="Player Characters"
@@ -22,6 +22,12 @@ export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
         title="Campaign NPCs"
         value={detail.npcs.length}
         copy="Friendly NPCs, rivals, and recurring monsters linked to this campaign."
+      />
+      <DashboardCard
+        icon={Route}
+        title="Travel"
+        value={detail.locationCount}
+        copy="Saved campaign locations plus a pop-up travel time and weather calculator."
       />
     </div>
   );

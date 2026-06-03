@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Travel Calculator Mockups</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f4ef;
+        --panel: #fffdfa;
+        --border: #d8d0c3;
+        --muted: #6f685f;
+        --ink: #191713;
+        --accent: #2f624f;
+        --danger: #9f3327;
+        --sky: #e8f3f8;
+        --green: #e9f4ec;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 28px;
+        margin: 0 auto;
+        max-width: 1160px;
+        padding: 32px 20px 56px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      .eyebrow {
+        color: #8b342b;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .cards {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .card,
+      .panel,
+      .modal {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .card {
+        min-height: 148px;
+        padding: 22px;
+      }
+
+      .card strong {
+        display: block;
+        font-size: 34px;
+        text-align: right;
+      }
+
+      .panel {
+        padding: 20px;
+      }
+
+      .panel-head {
+        align-items: center;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .btn {
+        align-items: center;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: inline-flex;
+        font-weight: 700;
+        gap: 8px;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 12px;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .segmented {
+        background: #f1eee8;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+      }
+
+      .segmented button {
+        border-radius: 4px;
+        font-weight: 700;
+        padding: 8px 12px;
+      }
+
+      .segmented .active {
+        background: var(--accent);
+        color: white;
+      }
+
+      .location {
+        align-items: start;
+        background: #fbfaf7;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: flex;
+        justify-content: space-between;
+        padding: 14px;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .overlay {
+        background: rgb(25 23 19 / 0.48);
+        border-radius: 12px;
+        padding: 22px;
+      }
+
+      .modal {
+        margin: 0 auto;
+        max-width: 980px;
+        padding: 24px;
+      }
+
+      .modal-layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.9fr);
+      }
+
+      .form-grid {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      label {
+        color: var(--muted);
+        display: grid;
+        font-size: 13px;
+        font-weight: 700;
+        gap: 8px;
+      }
+
+      input,
+      select,
+      textarea {
+        background: #f7f5f0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--ink);
+        font: inherit;
+        min-height: 42px;
+        padding: 10px 12px;
+      }
+
+      textarea {
+        min-height: 92px;
+      }
+
+      .summary {
+        border-radius: 8px;
+        padding: 16px;
+      }
+
+      .summary.green {
+        background: var(--green);
+        border: 1px solid #b9d9c1;
+      }
+
+      .summary.sky {
+        background: var(--sky);
+        border: 1px solid #b8d7e5;
+      }
+
+      .time {
+        color: var(--accent);
+        font-size: 34px;
+        font-weight: 900;
+      }
+
+      .chip {
+        background: #d9e7d8;
+        border-radius: 5px;
+        color: #31513c;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 8px;
+      }
+
+      @media (max-width: 820px) {
+        .cards,
+        .modal-layout,
+        .form-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="grid">
+        <p class="eyebrow">Campaign tool</p>
+        <h1>Travel Calculator And Weather</h1>
+        <p class="muted">
+          A top-bar calculator popup beside the dice roller, with saved campaign locations, live
+          travel time, and curated weather.
+        </p>
+      </section>
+
+      <section class="grid cards">
+        <article class="card">
+          <strong>4</strong>
+          <h3>Player Characters</h3>
+        </article>
+        <article class="card">
+          <strong>3</strong>
+          <h3>Encounters</h3>
+        </article>
+        <article class="card">
+          <strong>8</strong>
+          <h3>Campaign NPCs</h3>
+        </article>
+        <article class="card">
+          <strong>5</strong>
+          <h3>Travel</h3>
+          <p class="muted">Saved places plus a pop-up calculator.</p>
+        </article>
+      </section>
+
+      <section class="panel grid">
+        <div class="panel-head">
+          <h2>Travel</h2>
+        </div>
+        <div class="grid">
+          <label>
+            New location
+            <input value="Ironford" />
+          </label>
+          <label>
+            Notes
+            <textarea>Bridge town and market road.</textarea>
+          </label>
+          <button class="btn primary">＋ Add location</button>
+        </div>
+        <article class="location">
+          <div>
+            <h3>Waterdeep</h3>
+            <p class="muted">Harbor gate and north road marker.</p>
+          </div>
+          <div><button class="btn">Edit</button> <button class="btn">Delete</button></div>
+        </article>
+        <article class="location">
+          <div>
+            <h3>Ironford</h3>
+            <p class="muted">Bridge town and market road.</p>
+          </div>
+          <div><button class="btn">Edit</button> <button class="btn">Delete</button></div>
+        </article>
+      </section>
+
+      <section class="overlay">
+        <div class="modal grid">
+          <h2>Travel calculator</h2>
+          <div class="modal-layout">
+            <div class="form-grid">
+              <div class="segmented" style="grid-column: 1 / -1">
+                <button class="active">Route</button>
+                <button>Direct distance</button>
+              </div>
+              <label
+                >Origin<select>
+                  <option>Waterdeep</option>
+                </select></label
+              >
+              <label>Destination<input value="Ironford" /></label>
+              <label>Distance<input value="63" /></label>
+              <label
+                >Unit<select>
+                  <option>Miles</option>
+                </select></label
+              >
+              <label
+                >Terrain<select>
+                  <option>Forest</option>
+                </select></label
+              >
+              <label
+                >Pace<select>
+                  <option>Normal</option>
+                </select></label
+              >
+              <label><input type="checkbox" /> Good roads</label>
+            </div>
+            <aside class="grid">
+              <section class="summary green">
+                <p class="eyebrow">Travel time</p>
+                <div class="time">2.6 days</div>
+                <p class="muted">62.4 hours at Normal pace.</p>
+                <p><span class="chip">Terrain max: Normal</span></p>
+              </section>
+              <section class="summary">
+                <p class="eyebrow">Encounter distance</p>
+                <h3>Awareness distance: 90 ft</h3>
+                <p class="muted">
+                  Use this as the starting distance when the party and other creatures become aware
+                  of each other.
+                </p>
+              </section>
+              <section class="summary sky">
+                <p class="eyebrow">Weather</p>
+                <h3>20°F colder, Light wind, Heavy rain or heavy snow</h3>
+                <p class="muted">Temperature, wind, and precipitation use lucide icon labels.</p>
+              </section>
+              <label
+                >Thermometer icon Temperature<select>
+                  <option>Colder</option>
+                </select></label
+              >
+              <label
+                >Wind icon Wind<select>
+                  <option>Light</option>
+                </select></label
+              >
+              <label
+                >CloudRain icon Precipitation<select>
+                  <option>Heavy rain or heavy snow</option>
+                </select></label
+              >
+              <button class="btn">↻ Roll all weather</button>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

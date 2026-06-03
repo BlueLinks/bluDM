@@ -59,6 +59,7 @@ export type CampaignDetail = {
   npcs: Creature[];
   playerCount: number;
   encounterCount: number;
+  locationCount: number;
 };
 
 export type Encounter = {

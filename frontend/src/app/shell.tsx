@@ -14,7 +14,7 @@ import {
   Swords,
   UsersRound,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
 import { RollLogProvider } from "../components/RollLogProvider";
@@ -31,6 +31,16 @@ const navItems = [
   { to: "/rules", label: "Rules", icon: ScrollText },
   { to: "/import", label: "Import", icon: Import },
 ];
+
+const TopBarActionsContext = createContext<(actions: React.ReactNode) => void>(() => undefined);
+
+export function useTopBarActions(actions: React.ReactNode) {
+  const setActions = useContext(TopBarActionsContext);
+  useEffect(() => {
+    setActions(actions);
+    return () => setActions(null);
+  }, [actions, setActions]);
+}
 
 export function useThemeMode() {
   const [theme, setTheme] = useState<"system" | "light" | "dark">(() => {
@@ -86,6 +96,7 @@ export function WorkspaceShell({
   onSetPassword: (currentPassword: string, newPassword: string) => Promise<AccountInfo>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [topBarActions, setTopBarActions] = useState<React.ReactNode>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("bludm-sidebar") === "collapsed",
   );
@@ -111,111 +122,118 @@ export function WorkspaceShell({
 
   return (
     <RollLogProvider>
-      <main
-        className={[
-          "fixed inset-0 overflow-hidden bg-background text-foreground",
-          `ui-density-${uiDensity}`,
-        ].join(" ")}
-      >
-        <div className="flex h-full">
-          <aside
-            className={[
-              "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
-              sidebarCollapsed ? "w-16" : "w-48",
-            ].join(" ")}
-          >
-            <Sidebar
-              collapsed={sidebarCollapsed}
-              onNavigate={() => setMobileOpen(false)}
-              onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
-            />
-          </aside>
-          {mobileOpen && (
-            <div
-              className="fixed inset-0 z-40 bg-black/45 lg:hidden"
-              onClick={() => setMobileOpen(false)}
+      <TopBarActionsContext.Provider value={setTopBarActions}>
+        <main
+          className={[
+            "fixed inset-0 overflow-hidden bg-background text-foreground",
+            `ui-density-${uiDensity}`,
+          ].join(" ")}
+        >
+          <div className="flex h-full">
+            <aside
+              className={[
+                "hidden h-full shrink-0 self-start overflow-hidden border-r border-border bg-card transition-all lg:sticky lg:top-0 lg:block",
+                sidebarCollapsed ? "w-16" : "w-48",
+              ].join(" ")}
             >
-              <aside
-                className="h-full w-72 border-r border-border bg-card"
-                onClick={(event) => event.stopPropagation()}
+              <Sidebar
+                collapsed={sidebarCollapsed}
+                onNavigate={() => setMobileOpen(false)}
+                onToggleCollapsed={() => setSidebarCollapsed((current) => !current)}
+              />
+            </aside>
+            {mobileOpen && (
+              <div
+                className="fixed inset-0 z-40 bg-black/45 lg:hidden"
+                onClick={() => setMobileOpen(false)}
               >
-                <Sidebar onNavigate={() => setMobileOpen(false)} />
-              </aside>
-            </div>
-          )}
-          <section className="flex h-full min-w-0 flex-1 flex-col">
-            <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
-              <button
-                className="inline-flex rounded-md border border-border p-2 lg:hidden"
-                type="button"
-                onClick={() => setMobileOpen(true)}
-              >
-                <Menu className="h-5 w-5" />
-              </button>
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  icon={ArrowLeft}
-                  disabled={!parent}
-                  onClick={() => {
-                    if (parent) void navigate(parent);
-                  }}
+                <aside
+                  className="h-full w-72 border-r border-border bg-card"
+                  onClick={(event) => event.stopPropagation()}
                 >
-                  Back
-                </Button>
-                <div className="hidden min-w-0 sm:block">
-                  <div className="text-xs font-bold uppercase tracking-wide text-accent">bluDM</div>
-                  <nav
-                    className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
-                    aria-label="Current path"
+                  <Sidebar onNavigate={() => setMobileOpen(false)} />
+                </aside>
+              </div>
+            )}
+            <section className="flex h-full min-w-0 flex-1 flex-col">
+              <header className="z-30 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-background/95 px-4 backdrop-blur lg:px-6">
+                <button
+                  className="inline-flex rounded-md border border-border p-2 lg:hidden"
+                  type="button"
+                  onClick={() => setMobileOpen(true)}
+                >
+                  <Menu className="h-5 w-5" />
+                </button>
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    icon={ArrowLeft}
+                    disabled={!parent}
+                    onClick={() => {
+                      if (parent) void navigate(parent);
+                    }}
                   >
-                    {crumbs.length === 0 ? (
-                      <span>Encounter Tracker</span>
-                    ) : (
-                      crumbs.map((crumb, index) => (
-                        <React.Fragment key={`${crumb.label}-${index}`}>
-                          {index > 0 && <span className="text-muted-foreground">/</span>}
-                          {crumb.to && index < crumbs.length - 1 ? (
-                            <Link
-                              className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
-                              to={crumb.to}
-                            >
-                              {crumb.label}
-                            </Link>
-                          ) : (
-                            <span className="max-w-48 truncate text-foreground">{crumb.label}</span>
-                          )}
-                        </React.Fragment>
-                      ))
-                    )}
-                  </nav>
+                    Back
+                  </Button>
+                  <div className="hidden min-w-0 sm:block">
+                    <div className="text-xs font-bold uppercase tracking-wide text-accent">
+                      bluDM
+                    </div>
+                    <nav
+                      className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
+                      aria-label="Current path"
+                    >
+                      {crumbs.length === 0 ? (
+                        <span>Encounter Tracker</span>
+                      ) : (
+                        crumbs.map((crumb, index) => (
+                          <React.Fragment key={`${crumb.label}-${index}`}>
+                            {index > 0 && <span className="text-muted-foreground">/</span>}
+                            {crumb.to && index < crumbs.length - 1 ? (
+                              <Link
+                                className="max-w-36 truncate text-muted-foreground hover:text-primary hover:underline"
+                                to={crumb.to}
+                              >
+                                {crumb.label}
+                              </Link>
+                            ) : (
+                              <span className="max-w-48 truncate text-foreground">
+                                {crumb.label}
+                              </span>
+                            )}
+                          </React.Fragment>
+                        ))
+                      )}
+                    </nav>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  {topBarActions}
+                  <DiceRoller />
+                  <ThemeMenu
+                    resolvedTheme={resolvedTheme}
+                    theme={theme}
+                    onThemeChange={onThemeChange}
+                  />
+                  <AccountMenu
+                    density={uiDensity}
+                    user={user}
+                    onLoadAccount={onLoadAccount}
+                    onLogout={onLogout}
+                    onDensityChange={setUiDensity}
+                    onSetPassword={onSetPassword}
+                  />
+                </div>
+              </header>
+              <div className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}>
+                {children}
               </div>
-              <div className="flex items-center gap-2">
-                <DiceRoller />
-                <ThemeMenu
-                  resolvedTheme={resolvedTheme}
-                  theme={theme}
-                  onThemeChange={onThemeChange}
-                />
-                <AccountMenu
-                  density={uiDensity}
-                  user={user}
-                  onLoadAccount={onLoadAccount}
-                  onLogout={onLogout}
-                  onDensityChange={setUiDensity}
-                  onSetPassword={onSetPassword}
-                />
-              </div>
-            </header>
-            <div className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}>
-              {children}
-            </div>
-          </section>
-        </div>
-      </main>
+            </section>
+          </div>
+        </main>
+      </TopBarActionsContext.Provider>
     </RollLogProvider>
   );
 }

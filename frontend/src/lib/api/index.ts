@@ -23,8 +23,15 @@ import type {
   StandardSource,
   User,
 } from "../../types";
+import type {
+  CampaignLocation,
+  TravelCalculation,
+  TravelFormState,
+  TravelWeatherRollRequest,
+} from "../../features/campaigns/travelTypes";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
+import { journeyApi } from "./journeys";
 import {
   actionPayload,
   creaturePayload,
@@ -36,6 +43,7 @@ import { request } from "./request";
 export const api = {
   ...actionTemplateApi,
   ...encounterRunApi,
+  ...journeyApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
     request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
@@ -119,6 +127,41 @@ export const api = {
     request<{ restoredPlayers: number }>(`/api/campaigns/${id}/long-rest/undo`, {
       method: "POST",
       body: JSON.stringify({ players }),
+    }),
+  campaignLocations: (campaignId: string) =>
+    request<{ locations: CampaignLocation[] }>(`/api/campaigns/${campaignId}/locations`),
+  createCampaignLocation: (campaignId: string, payload: { name: string; notes: string }) =>
+    request<{ location: CampaignLocation }>(`/api/campaigns/${campaignId}/locations`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateCampaignLocation: (
+    campaignId: string,
+    locationId: string,
+    payload: { name: string; notes: string },
+  ) =>
+    request<{ location: CampaignLocation }>(
+      `/api/campaigns/${campaignId}/locations/${locationId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      },
+    ),
+  deleteCampaignLocation: (campaignId: string, locationId: string) =>
+    request<void>(`/api/campaigns/${campaignId}/locations/${locationId}`, { method: "DELETE" }),
+  calculateTravel: (
+    campaignId: string,
+    payload: TravelFormState,
+    rollWeather: TravelWeatherRollRequest = {
+      temperature: false,
+      wind: false,
+      precipitation: false,
+    },
+    rollEncounterDistance = false,
+  ) =>
+    request<{ calculation: TravelCalculation }>(`/api/campaigns/${campaignId}/travel/calculate`, {
+      method: "POST",
+      body: JSON.stringify(travelPayload(payload, rollWeather, rollEncounterDistance)),
     }),
 
   createEncounter: (
@@ -401,3 +444,23 @@ export const api = {
   seedTestData: () =>
     request<{ campaignId: string; message: string }>("/api/dev/seed-test-data", { method: "POST" }),
 };
+
+function travelPayload(
+  payload: TravelFormState,
+  rollWeather: TravelWeatherRollRequest,
+  rollEncounterDistance: boolean,
+) {
+  return {
+    origin: payload.origin,
+    destination: payload.destination,
+    distance: Number(payload.distance) || 0,
+    distanceUnit: payload.distanceUnit,
+    terrain: payload.terrain,
+    pace: payload.pace,
+    goodRoads: payload.goodRoads,
+    encounterDistanceFeet: payload.encounterDistanceFeet,
+    rollEncounterDistance,
+    weather: payload.weather,
+    rollWeather,
+  };
+}
