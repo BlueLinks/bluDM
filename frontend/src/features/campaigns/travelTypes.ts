@@ -20,6 +20,26 @@ export type CampaignLocation = {
   updatedAt: string;
 };
 
+export type RouteInputMode = "route" | "distance";
+
+export type CampaignJourney = {
+  id: string;
+  campaignId: string;
+  name: string;
+  origin: string;
+  destination: string;
+  distance: number;
+  distanceUnit: string;
+  terrain: string;
+  pace: string;
+  goodRoads: boolean;
+  encounterDistanceFeet: number | null;
+  weather: TravelWeather;
+  routeInputMode: RouteInputMode;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type TravelCalculation = {
   durationHours: number;
   durationDays: number;
@@ -38,6 +58,7 @@ export type TravelCalculation = {
 };
 
 export type TravelFormState = {
+  routeInputMode: RouteInputMode;
   origin: string;
   destination: string;
   distance: string;

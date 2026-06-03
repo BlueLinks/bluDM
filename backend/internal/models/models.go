@@ -50,6 +50,24 @@ type CampaignLocation struct {
 	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
+type CampaignJourney struct {
+	ID                    string        `json:"id"`
+	CampaignID            string        `json:"campaignId"`
+	Name                  string        `json:"name"`
+	Origin                string        `json:"origin"`
+	Destination           string        `json:"destination"`
+	Distance              float64       `json:"distance"`
+	DistanceUnit          string        `json:"distanceUnit"`
+	Terrain               string        `json:"terrain"`
+	Pace                  string        `json:"pace"`
+	GoodRoads             bool          `json:"goodRoads"`
+	EncounterDistanceFeet *int          `json:"encounterDistanceFeet"`
+	Weather               TravelWeather `json:"weather"`
+	RouteInputMode        string        `json:"routeInputMode"`
+	CreatedAt             time.Time     `json:"createdAt"`
+	UpdatedAt             time.Time     `json:"updatedAt"`
+}
+
 type Encounter struct {
 	ID             string               `json:"id"`
 	CampaignID     string               `json:"campaignId"`

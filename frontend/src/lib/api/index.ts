@@ -31,6 +31,7 @@ import type {
 } from "../../features/campaigns/travelTypes";
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
+import { journeyApi } from "./journeys";
 import {
   actionPayload,
   creaturePayload,
@@ -42,6 +43,7 @@ import { request } from "./request";
 export const api = {
   ...actionTemplateApi,
   ...encounterRunApi,
+  ...journeyApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
     request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),

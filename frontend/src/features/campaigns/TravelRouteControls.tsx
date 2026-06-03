@@ -1,7 +1,6 @@
 import { Input, Select } from "../../components/ui";
 import { distanceUnitOptions, labelFor } from "./travelOptions";
-
-export type RouteInputMode = "route" | "distance";
+import type { RouteInputMode } from "./travelTypes";
 
 export function RouteModeToggle({
   onChange,

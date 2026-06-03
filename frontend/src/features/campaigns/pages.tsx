@@ -21,7 +21,6 @@ import {
   Badge,
   Button,
   Callout,
-  ConfirmDialog,
   EmptyMini,
   EmptyState,
   Field,
@@ -42,10 +41,11 @@ import type { Campaign, CampaignDetail, Creature, Encounter, Player } from "../.
 import { CampaignNpcDialog, CampaignPartyDialog } from "./CampaignDialogs";
 import { CampaignForm } from "./CampaignForm";
 import { CampaignOverviewCards } from "./CampaignOverviewCards";
+import { CampaignRemovalDialogs } from "./CampaignRemovalDialogs";
 import { CampaignSourceSettings } from "./CampaignSourceSettings";
 import { CampaignTravelTool } from "./CampaignTravelTool";
 import { TravelPanel } from "./TravelPanel";
-import type { CampaignLocation } from "./travelTypes";
+import type { CampaignJourney, CampaignLocation } from "./travelTypes";
 const encounterStatusLabel = (status: string) =>
   encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 export function CampaignsPage() {
@@ -135,6 +135,8 @@ export function CampaignDetailPage() {
   const navigate = useNavigate();
   const [detail, setDetail] = useState<CampaignDetail | null>(null);
   const [locations, setLocations] = useState<CampaignLocation[]>([]);
+  const [journeys, setJourneys] = useState<CampaignJourney[]>([]);
+  const [editingJourney, setEditingJourney] = useState<CampaignJourney | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [partyOpen, setPartyOpen] = useState(false);
@@ -156,12 +158,14 @@ export function CampaignDetailPage() {
     setLoading(true);
     setError("");
     try {
-      const [campaignDetail, locationPayload] = await Promise.all([
+      const [campaignDetail, locationPayload, journeyPayload] = await Promise.all([
         api.campaign(campaignID),
         api.campaignLocations(campaignID),
+        api.campaignJourneys(campaignID),
       ]);
       setDetail({ ...campaignDetail, locationCount: locationPayload.locations.length });
       setLocations(locationPayload.locations);
+      setJourneys(journeyPayload.journeys);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load campaign");
     } finally {
@@ -302,7 +306,13 @@ export function CampaignDetailPage() {
   return (
     <Page>
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <CampaignTravelTool campaignId={detail.campaign.id} locations={locations} />
+      <CampaignTravelTool
+        campaignId={detail.campaign.id}
+        editingJourney={editingJourney}
+        locations={locations}
+        onEditComplete={() => setEditingJourney(null)}
+        onJourneySaved={loadCampaign}
+      />
       <BackButton to="/campaigns">Back to campaigns</BackButton>
       <Breadcrumbs
         items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name }]}
@@ -326,7 +336,9 @@ export function CampaignDetailPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <TravelPanel
           campaignId={detail.campaign.id}
+          journeys={journeys}
           locations={locations}
+          onEditJourney={setEditingJourney}
           onChanged={loadCampaign}
         />
         <SectionPanel title="Party" icon={UsersRound}>
@@ -577,35 +589,17 @@ export function CampaignDetailPage() {
           <EmptyMini copy="Combat summaries, XP awards, and loot reminders will appear here." />
         </SectionPanel>
       </div>
-      <ConfirmDialog
-        open={Boolean(removePlayer)}
-        title="Remove player from campaign?"
-        confirmLabel="Remove player"
-        onCancel={() => setRemovePlayer(null)}
-        onConfirm={() => void confirmRemovePlayer()}
-      >
-        This will remove {removePlayer?.characterName} from this campaign.
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={Boolean(removeNpc)}
-        title="Unlink NPC from campaign?"
-        confirmLabel="Unlink NPC"
-        onCancel={() => setRemoveNpc(null)}
-        onConfirm={() => void confirmRemoveNpc()}
-      >
-        This removes {removeNpc?.name} from this campaign list, but keeps the reusable creature in
-        the NPC library.
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={Boolean(removeEncounter)}
-        title="Remove encounter?"
-        confirmLabel="Remove encounter"
-        onCancel={() => setRemoveEncounter(null)}
-        onConfirm={() => void confirmRemoveEncounter()}
-      >
-        This removes {removeEncounter?.name} and its prepared combatants. Creature and player
-        library records are not affected.
-      </ConfirmDialog>
+      <CampaignRemovalDialogs
+        encounter={removeEncounter}
+        npc={removeNpc}
+        player={removePlayer}
+        onCancelEncounter={() => setRemoveEncounter(null)}
+        onCancelNpc={() => setRemoveNpc(null)}
+        onCancelPlayer={() => setRemovePlayer(null)}
+        onConfirmEncounter={() => void confirmRemoveEncounter()}
+        onConfirmNpc={() => void confirmRemoveNpc()}
+        onConfirmPlayer={() => void confirmRemovePlayer()}
+      />
     </Page>
   );
 }

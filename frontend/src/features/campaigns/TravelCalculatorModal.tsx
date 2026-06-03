@@ -1,19 +1,14 @@
-import { CloudRain, Thermometer, RefreshCw, Wind as WindIcon } from "lucide-react";
-import type { ElementType } from "react";
 import { useEffect, useState } from "react";
-import { Button, Callout, Checkbox, Field, Input, Modal, Select } from "../../components/ui";
+import { Callout, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
+import { blankTravelForm } from "./travelOptions";
 import {
-  blankTravelForm,
-  distanceUnitOptions,
-  paceOptions,
-  precipitationOptions,
-  temperatureDeltaOptions,
-  temperatureOptions,
-  terrainOptions,
-  windOptions,
-} from "./travelOptions";
+  JourneySaveRow,
+  TravelInputControls,
+  type TravelRollTarget,
+} from "./TravelCalculatorControls";
 import type {
+  CampaignJourney,
   CampaignLocation,
   TravelCalculation,
   TravelFormState,
@@ -21,32 +16,31 @@ import type {
   TravelWeatherRollRequest,
 } from "./travelTypes";
 import { TravelCalculatorResults } from "./TravelCalculatorResults";
-import {
-  ComputedRouteDistance,
-  RouteModeToggle,
-  RoutePointField,
-  type RouteInputMode,
-} from "./TravelRouteControls";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
-type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";
 
 export function TravelCalculatorModal({
   campaignId,
+  editingJourney,
   locations,
+  onJourneySaved,
   open,
+  onEditComplete,
   onOpenChange,
 }: {
   campaignId: string;
+  editingJourney?: CampaignJourney | null;
   locations: CampaignLocation[];
+  onJourneySaved: () => Promise<void>;
   open: boolean;
+  onEditComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
   const [form, setForm] = useState<TravelFormState>(blankTravelForm);
   const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
-  const [routeInputMode, setRouteInputMode] = useState<RouteInputMode>("route");
   const [originMode, setOriginMode] = useState<"saved" | "custom">("saved");
   const [destinationMode, setDestinationMode] = useState<"saved" | "custom">("saved");
+  const [journeyName, setJourneyName] = useState("");
   const [rollAnimationKey, setRollAnimationKey] = useState(0);
   const [rollingTarget, setRollingTarget] = useState<TravelRollTarget | null>(null);
   const [error, setError] = useState("");
@@ -72,6 +66,13 @@ export function TravelCalculatorModal({
     form.pace,
     form.goodRoads,
   ]);
+
+  useEffect(() => {
+    if (!open || !editingJourney) return;
+    setForm(journeyToForm(editingJourney));
+    setJourneyName(editingJourney.name);
+    setCalculation(null);
+  }, [editingJourney, open]);
 
   function setField<K extends keyof TravelFormState>(field: K, value: TravelFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -122,6 +123,24 @@ export function TravelCalculatorModal({
     setForm((current) => ({ ...current, terrain: value, encounterDistanceFeet: null }));
   }
 
+  async function saveJourney() {
+    if (!canCalculate) return;
+    setError("");
+    try {
+      if (editingJourney) {
+        await api.updateCampaignJourney(campaignId, editingJourney.id, form, journeyName);
+      } else {
+        await api.createCampaignJourney(campaignId, form, journeyName);
+      }
+      setJourneyName("");
+      await onJourneySaved();
+      onEditComplete?.();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save journey");
+    }
+  }
+
   function setEncounterDistance(value: string) {
     const nextForm = { ...form, encounterDistanceFeet: Number(value) };
     setForm(nextForm);
@@ -144,107 +163,27 @@ export function TravelCalculatorModal({
       <div className="grid gap-5">
         {error && <Callout tone="danger">{error}</Callout>}
         <div className="grid gap-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-            <div className="grid content-start gap-4 rounded-lg border border-border bg-background p-3 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <RouteModeToggle value={routeInputMode} onChange={setRouteInputMode} />
-              </div>
-              {routeInputMode === "route" && (
-                <>
-                  <RoutePointField
-                    label="Origin"
-                    mode={originMode}
-                    options={locationOptions}
-                    value={form.origin}
-                    onModeChange={setOriginMode}
-                    onValueChange={(value) => setField("origin", value)}
-                  />
-                  <RoutePointField
-                    label="Destination"
-                    mode={destinationMode}
-                    options={locationOptions}
-                    value={form.destination}
-                    onModeChange={setDestinationMode}
-                    onValueChange={(value) => setField("destination", value)}
-                  />
-                  <ComputedRouteDistance
-                    distance={form.distance}
-                    distanceUnit={form.distanceUnit}
-                  />
-                </>
-              )}
-              {routeInputMode === "distance" && (
-                <>
-                  <Field label="Distance">
-                    <Input
-                      min="0"
-                      step="0.1"
-                      type="number"
-                      value={form.distance}
-                      placeholder="24"
-                      onChange={(event) => setField("distance", event.target.value)}
-                    />
-                  </Field>
-                  <Field label="Unit">
-                    <Select
-                      value={form.distanceUnit}
-                      placeholder="Unit"
-                      options={distanceUnitOptions}
-                      onValueChange={(value) => setField("distanceUnit", value)}
-                    />
-                  </Field>
-                </>
-              )}
-              <Field label="Terrain">
-                <Select
-                  value={form.terrain}
-                  placeholder="Terrain"
-                  options={terrainOptions}
-                  onValueChange={setTerrain}
-                />
-              </Field>
-              <Field label="Pace">
-                <Select
-                  value={form.pace}
-                  placeholder="Pace"
-                  options={paceOptions}
-                  onValueChange={(value) => setField("pace", value)}
-                />
-              </Field>
-              <div className="md:col-span-2">
-                <Checkbox
-                  label="Good roads"
-                  checked={form.goodRoads}
-                  onChange={(checked) => setField("goodRoads", checked)}
-                />
-              </div>
-            </div>
-            <div className="grid content-start gap-3 rounded-lg border border-border bg-background p-3 md:grid-cols-3 lg:grid-cols-1">
-              <WeatherControls
-                weather={form.weather}
-                canRoll={canCalculate}
-                rollingTarget={rollingTarget}
-                onWeatherChange={setWeather}
-                onRoll={(target, rollWeather) => void rollWithAnimation(target, rollWeather)}
-              />
-              <Button
-                type="button"
-                icon={RefreshCw}
-                variant="secondary"
-                className={rollButtonClass(rollingTarget === "weather")}
-                disabled={!canCalculate}
-                onClick={() =>
-                  void rollWithAnimation("weather", {
-                    temperature: true,
-                    wind: true,
-                    precipitation: true,
-                  })
-                }
-              >
-                Roll all weather
-              </Button>
-            </div>
-          </div>
+          <TravelInputControls
+            canCalculate={canCalculate}
+            destinationMode={destinationMode}
+            form={form}
+            locationOptions={locationOptions}
+            originMode={originMode}
+            rollingTarget={rollingTarget}
+            onDestinationModeChange={setDestinationMode}
+            onFieldChange={setField}
+            onOriginModeChange={setOriginMode}
+            onRoll={rollWithAnimation}
+            onTerrainChange={setTerrain}
+            onWeatherChange={setWeather}
+          />
+          <JourneySaveRow
+            canCalculate={canCalculate}
+            editing={Boolean(editingJourney)}
+            name={journeyName}
+            onNameChange={setJourneyName}
+            onSave={() => void saveJourney()}
+          />
           <TravelCalculatorResults
             animationKey={rollAnimationKey}
             calculation={calculation}
@@ -264,137 +203,17 @@ export function TravelCalculatorModal({
   );
 }
 
-function WeatherControls({
-  canRoll,
-  onRoll,
-  onWeatherChange,
-  rollingTarget,
-  weather,
-}: {
-  canRoll: boolean;
-  onRoll: (target: TravelRollTarget, rollWeather: TravelWeatherRollRequest) => void;
-  onWeatherChange: <K extends keyof TravelWeather>(field: K, value: TravelWeather[K]) => void;
-  rollingTarget: TravelRollTarget | null;
-  weather: TravelWeather;
-}) {
-  return (
-    <>
-      <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
-        <Field label={<WeatherLabel icon={Thermometer} label="Temperature" />}>
-          <Select
-            value={weather.temperature}
-            placeholder="Temperature"
-            options={temperatureOptions}
-            onValueChange={(value) => {
-              onWeatherChange("temperature", value as TravelWeather["temperature"]);
-              onWeatherChange("temperatureDeltaF", value === "normal" ? null : 10);
-            }}
-          />
-        </Field>
-        {weather.temperature !== "normal" && (
-          <Field label="Temperature shift">
-            <Select
-              value={String(weather.temperatureDeltaF ?? 10)}
-              placeholder="Degrees"
-              options={temperatureDeltaOptions}
-              onValueChange={(value) => onWeatherChange("temperatureDeltaF", Number(value))}
-            />
-          </Field>
-        )}
-        <Button
-          type="button"
-          icon={RefreshCw}
-          variant="secondary"
-          className={rollButtonClass(rollingTarget === "temperature")}
-          disabled={!canRoll}
-          onClick={() =>
-            onRoll("temperature", { temperature: true, wind: false, precipitation: false })
-          }
-        >
-          Roll temperature
-        </Button>
-      </div>
-      <WeatherSelectRow
-        icon={WindIcon}
-        label="Wind"
-        buttonLabel="Roll wind"
-        canRoll={canRoll}
-        rolling={rollingTarget === "wind"}
-        options={windOptions}
-        value={weather.wind}
-        onChange={(value) => onWeatherChange("wind", value as TravelWeather["wind"])}
-        onRoll={() => onRoll("wind", { temperature: false, wind: true, precipitation: false })}
-      />
-      <WeatherSelectRow
-        icon={CloudRain}
-        label="Precipitation"
-        buttonLabel="Roll precipitation"
-        canRoll={canRoll}
-        rolling={rollingTarget === "precipitation"}
-        options={precipitationOptions}
-        value={weather.precipitation}
-        onChange={(value) =>
-          onWeatherChange("precipitation", value as TravelWeather["precipitation"])
-        }
-        onRoll={() =>
-          onRoll("precipitation", { temperature: false, wind: false, precipitation: true })
-        }
-      />
-    </>
-  );
-}
-
-function WeatherSelectRow({
-  buttonLabel,
-  canRoll,
-  icon: Icon,
-  label,
-  onChange,
-  onRoll,
-  options,
-  rolling,
-  value,
-}: {
-  buttonLabel: string;
-  canRoll: boolean;
-  icon: ElementType;
-  label: string;
-  onChange: (value: string) => void;
-  onRoll: () => void;
-  options: Array<{ value: string; label: string }>;
-  rolling: boolean;
-  value: string;
-}) {
-  return (
-    <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
-      <Field label={<WeatherLabel icon={Icon} label={label} />}>
-        <Select value={value} placeholder={label} options={options} onValueChange={onChange} />
-      </Field>
-      <Button
-        type="button"
-        icon={RefreshCw}
-        variant="secondary"
-        className={rollButtonClass(rolling)}
-        disabled={!canRoll}
-        onClick={onRoll}
-      >
-        {buttonLabel}
-      </Button>
-    </div>
-  );
-}
-
-function WeatherLabel({ icon: Icon, label }: { icon: ElementType; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <Icon className="h-4 w-4" />
-      {label}
-    </span>
-  );
-}
-
-function rollButtonClass(rolling: boolean) {
-  return rolling
-    ? "travel-roll-button -translate-y-px shadow-[0_0_0_3px_hsl(var(--primary)/14%)] [&>svg]:rotate-[360deg] [&>svg]:scale-110 [&>svg]:transition-transform [&>svg]:duration-500"
-    : "travel-roll-button";
+function journeyToForm(journey: CampaignJourney): TravelFormState {
+  return {
+    routeInputMode: journey.routeInputMode,
+    origin: journey.origin,
+    destination: journey.destination,
+    distance: String(journey.distance),
+    distanceUnit: journey.distanceUnit,
+    terrain: journey.terrain,
+    pace: journey.pace,
+    goodRoads: journey.goodRoads,
+    encounterDistanceFeet: journey.encounterDistanceFeet,
+    weather: journey.weather,
+  };
 }

@@ -4,17 +4,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceShell } from "../../app/shell";
 import { api } from "../../lib/api";
 import type { CampaignDetail } from "../../types";
-import type { CampaignLocation, TravelCalculation } from "./travelTypes";
+import type { CampaignJourney, CampaignLocation, TravelCalculation } from "./travelTypes";
 import { CampaignDetailPage } from "./pages";
 
 vi.mock("../../lib/api", () => ({
   api: {
     campaign: vi.fn(),
+    campaignJourneys: vi.fn(),
     campaignLocations: vi.fn(),
     calculateTravel: vi.fn(),
+    cloneCampaignJourney: vi.fn(),
     createCampaignLocation: vi.fn(),
+    createCampaignJourney: vi.fn(),
     createEncounter: vi.fn(),
     creatures: vi.fn(),
+    deleteCampaignJourney: vi.fn(),
     deleteCampaignLocation: vi.fn(),
     deleteEncounter: vi.fn(),
     deletePlayer: vi.fn(),
@@ -26,6 +30,7 @@ vi.mock("../../lib/api", () => ({
     undoLongRestCampaign: vi.fn(),
     unlinkCampaignNpc: vi.fn(),
     updateCampaign: vi.fn(),
+    updateCampaignJourney: vi.fn(),
     updateCampaignLocation: vi.fn(),
   },
 }));
@@ -44,6 +49,7 @@ describe("CampaignDetailPage travel", () => {
     });
     Element.prototype.scrollIntoView = vi.fn();
     vi.mocked(api.campaign).mockResolvedValue(campaignDetail());
+    vi.mocked(api.campaignJourneys).mockResolvedValue({ journeys: [journey()] });
     vi.mocked(api.campaignLocations).mockResolvedValue({ locations: [location()] });
     vi.mocked(api.standardSources).mockResolvedValue({
       sources: [
@@ -67,14 +73,25 @@ describe("CampaignDetailPage travel", () => {
       location: location({ notes: "Updated road notes" }),
     });
     vi.mocked(api.deleteCampaignLocation).mockResolvedValue(undefined);
+    vi.mocked(api.createCampaignJourney).mockResolvedValue({
+      journey: journey({ id: "journey-2" }),
+    });
+    vi.mocked(api.updateCampaignJourney).mockResolvedValue({ journey: journey() });
+    vi.mocked(api.cloneCampaignJourney).mockResolvedValue({
+      journey: journey({ id: "journey-2", name: "Copy of Waterdeep to Ironford" }),
+    });
+    vi.mocked(api.deleteCampaignJourney).mockResolvedValue(undefined);
   });
 
-  it("renders travel count and saved campaign locations", async () => {
+  it("renders travel count, saved campaign locations, and journey log", async () => {
     renderCampaign();
 
     expect(await screen.findByText("Waterdeep")).toBeTruthy();
     expect(screen.getAllByText("Travel").length).toBeGreaterThan(0);
     expect(screen.getByText("Harbor gate and north road marker.")).toBeTruthy();
+    expect(screen.getByText("Waterdeep to Ironford")).toBeTruthy();
+    expect(screen.getByText("Waterdeep to Ironford · 63 Miles")).toBeTruthy();
+    expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
   });
 
   it("creates and edits campaign locations", async () => {
@@ -162,6 +179,67 @@ describe("CampaignDetailPage travel", () => {
       distance: "63",
       goodRoads: false,
     });
+  });
+
+  it("saves a journey from calculator inputs", async () => {
+    vi.mocked(api.campaignJourneys)
+      .mockResolvedValueOnce({ journeys: [] })
+      .mockResolvedValueOnce({ journeys: [journey({ id: "journey-2", name: "63 Miles" })] });
+    renderCampaign();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "63" } });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Save journey" }));
+
+    await waitFor(() =>
+      expect(api.createCampaignJourney).toHaveBeenCalledWith(
+        "campaign-1",
+        expect.objectContaining({
+          distance: "63",
+          routeInputMode: "distance",
+        }),
+        "",
+      ),
+    );
+    await waitFor(() => expect(api.campaignJourneys).toHaveBeenCalledTimes(2));
+  });
+
+  it("edits, duplicates, and deletes saved journeys", async () => {
+    renderCampaign();
+
+    const journeyCard = (await screen.findByText("Waterdeep to Ironford")).closest("article");
+    if (!journeyCard) throw new Error("journey card not found");
+    fireEvent.click(within(journeyCard).getByRole("button", { name: "Edit" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByDisplayValue("Waterdeep to Ironford")).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText("Journey name"), {
+      target: { value: "Road session prep" },
+    });
+    fireEvent.click(await within(dialog).findByRole("button", { name: "Update journey" }));
+
+    await waitFor(() =>
+      expect(api.updateCampaignJourney).toHaveBeenCalledWith(
+        "campaign-1",
+        "journey-1",
+        expect.objectContaining({ origin: "Waterdeep", destination: "Ironford" }),
+        "Road session prep",
+      ),
+    );
+
+    const refreshedCard = (await screen.findByText("Waterdeep to Ironford")).closest("article");
+    if (!refreshedCard) throw new Error("journey card not found after edit");
+    fireEvent.click(within(refreshedCard).getByRole("button", { name: "Duplicate" }));
+    await waitFor(() =>
+      expect(api.cloneCampaignJourney).toHaveBeenCalledWith("campaign-1", "journey-1"),
+    );
+
+    fireEvent.click(within(refreshedCard).getByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete journey" }));
+    await waitFor(() =>
+      expect(api.deleteCampaignJourney).toHaveBeenCalledWith("campaign-1", "journey-1"),
+    );
   });
 
   it("recalculates when good roads changes effective pace", async () => {
@@ -366,6 +444,32 @@ function location(overrides: Partial<CampaignLocation> = {}): CampaignLocation {
     notes: "Harbor gate and north road marker.",
     createdAt: "2026-06-01T00:00:00Z",
     updatedAt: "2026-06-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function journey(overrides: Partial<CampaignJourney> = {}): CampaignJourney {
+  return {
+    id: "journey-1",
+    campaignId: "campaign-1",
+    name: "Waterdeep to Ironford",
+    origin: "Waterdeep",
+    destination: "Ironford",
+    distance: 63,
+    distanceUnit: "miles",
+    terrain: "grassland",
+    pace: "normal",
+    goodRoads: false,
+    encounterDistanceFeet: 210,
+    weather: {
+      temperature: "normal",
+      temperatureDeltaF: null,
+      wind: "light",
+      precipitation: "none",
+    },
+    routeInputMode: "route",
+    createdAt: "2026-06-02T10:30:00Z",
+    updatedAt: "2026-06-02T10:30:00Z",
     ...overrides,
   };
 }

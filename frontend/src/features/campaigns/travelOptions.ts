@@ -76,6 +76,7 @@ export const blankWeather: TravelWeather = {
 };
 
 export const blankTravelForm: TravelFormState = {
+  routeInputMode: "route",
   origin: "",
   destination: "",
   distance: "",

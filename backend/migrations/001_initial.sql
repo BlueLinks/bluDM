@@ -236,6 +236,26 @@ create table campaign_locations (
 
 create index campaign_locations_campaign_id_idx on campaign_locations(campaign_id, name);
 
+create table campaign_journeys (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid not null references campaigns(id) on delete cascade,
+    name text not null,
+    origin text not null default '',
+    destination text not null default '',
+    distance double precision not null,
+    distance_unit text not null,
+    terrain text not null,
+    pace text not null,
+    good_roads boolean not null default false,
+    encounter_distance_feet integer,
+    weather jsonb not null default '{}'::jsonb,
+    route_input_mode text not null default 'route',
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+create index campaign_journeys_campaign_id_idx on campaign_journeys(campaign_id, created_at desc);
+
 create table encounters (
     id uuid primary key default gen_random_uuid(),
     campaign_id uuid not null references campaigns(id) on delete cascade,

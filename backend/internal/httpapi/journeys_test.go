@@ -175,6 +175,76 @@ func TestTravelWeatherRollsPreserveManualComponents(t *testing.T) {
 	}
 }
 
+func TestJourneyRequestDefaultNames(t *testing.T) {
+	tests := []struct {
+		name     string
+		req      journeyRequest
+		expected string
+	}{
+		{
+			name: "explicit",
+			req: journeyRequest{
+				Name: "Road to the keep", Distance: 12, DistanceUnit: "miles",
+				Terrain: "grassland", Pace: "normal", Weather: clearWeather(),
+			},
+			expected: "Road to the keep",
+		},
+		{
+			name: "route",
+			req: journeyRequest{
+				Origin: "Waterdeep", Destination: "Ironford", Distance: 12, DistanceUnit: "miles",
+				Terrain: "grassland", Pace: "normal", Weather: clearWeather(),
+			},
+			expected: "Waterdeep to Ironford",
+		},
+		{
+			name: "distance",
+			req: journeyRequest{
+				Distance: 5, DistanceUnit: "hexes", Terrain: "grassland",
+				Pace: "normal", Weather: clearWeather(), RouteInputMode: "distance",
+			},
+			expected: "5 Hexes",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.req.normalize()
+			if test.req.Name != test.expected {
+				t.Fatalf("expected %q, got %q", test.expected, test.req.Name)
+			}
+		})
+	}
+}
+
+func TestJourneyRequestValidationRejectsInvalidPayloads(t *testing.T) {
+	valid := journeyRequest{
+		Distance: 12, DistanceUnit: "miles", Terrain: "grassland",
+		Pace: "normal", Weather: clearWeather(), RouteInputMode: "route",
+	}
+	tests := []struct {
+		name    string
+		mutate  func(*journeyRequest)
+		message string
+	}{
+		{name: "bad route mode", mutate: func(req *journeyRequest) { req.RouteInputMode = "portal" }, message: "routeInputMode"},
+		{name: "bad distance", mutate: func(req *journeyRequest) { req.Distance = 0 }, message: "distance"},
+		{name: "bad unit", mutate: func(req *journeyRequest) { req.DistanceUnit = "yards" }, message: "distanceUnit"},
+		{name: "bad encounter distance", mutate: func(req *journeyRequest) { req.EncounterDistanceFeet = intPointer(95) }, message: "encounterDistanceFeet"},
+		{name: "bad weather", mutate: func(req *journeyRequest) { req.Weather.Wind = "sideways" }, message: "wind"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := valid
+			test.mutate(&req)
+			req.normalize()
+			err := validateJourneyRequest(req)
+			if err == nil || !strings.Contains(err.Error(), test.message) {
+				t.Fatalf("expected error containing %q, got %v", test.message, err)
+			}
+		})
+	}
+}
+
 func clearWeather() models.TravelWeather {
 	return models.TravelWeather{Temperature: "normal", Wind: "none", Precipitation: "none"}
 }
