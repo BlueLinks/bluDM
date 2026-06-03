@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 )
@@ -52,8 +51,6 @@ type travelEncounterDistance struct {
 	AverageFeet    float64 `json:"averageFeet"`
 	RolledFeet     int     `json:"rolledFeet"`
 	Rolls          []int   `json:"rolls"`
-	EncounterCount int     `json:"encounterCount"`
-	Windows        int     `json:"windows"`
 }
 
 func (s *Server) listCampaignLocations(w http.ResponseWriter, r *http.Request) {
@@ -199,14 +196,11 @@ func calculateTravelRequest(req travelRequest) (travelCalculation, error) {
 	durationHours := durationDays * 24
 	weather := applyTravelWeatherRolls(req.Weather, req.RollWeather)
 	rolledFeet, rolls := req.encounterDistance(terrain)
-	encounterCount := int(math.Floor(convertedMiles * 5280 / float64(rolledFeet)))
 	encounterDistance := travelEncounterDistance{
 		DiceExpression: terrain.EncounterDice,
 		AverageFeet:    roundTo(terrain.EncounterAverageFeet, 2),
 		RolledFeet:     rolledFeet,
 		Rolls:          rolls,
-		EncounterCount: encounterCount,
-		Windows:        encounterCount,
 	}
 	return travelCalculation{
 		DurationHours:        roundTo(durationHours, 2),
@@ -222,7 +216,7 @@ func calculateTravelRequest(req travelRequest) (travelCalculation, error) {
 			fmt.Sprintf("Good roads maximum pace is %s.", travelOptionLabel(goodRoadsMaximumPace)),
 			fmt.Sprintf("Requested %s pace resolves to %s pace.", travelOptionLabel(req.Pace), travelOptionLabel(effectivePace)),
 			fmt.Sprintf("Effective travel pace is %s miles per day.", formatTravelNumber(effectiveMilesPerDay)),
-			fmt.Sprintf("%s rolled %d feet for %d possible encounters.", terrain.EncounterDice, encounterDistance.RolledFeet, encounterDistance.EncounterCount),
+			fmt.Sprintf("%s rolled %d feet as the distance where creatures may become aware of each other.", terrain.EncounterDice, encounterDistance.RolledFeet),
 		},
 		Weather: weather,
 	}, nil

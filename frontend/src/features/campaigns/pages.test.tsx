@@ -123,6 +123,12 @@ describe("CampaignDetailPage travel", () => {
     expect(within(dialog).queryByText("Climate / season")).toBeNull();
     expect(within(dialog).queryByText("Route condition")).toBeNull();
     expect(within(dialog).queryByRole("button", { name: "Random weather" })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: "Route" })).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
+    expect(within(dialog).queryByText("Origin")).toBeNull();
+    expect(within(dialog).queryByText("Destination")).toBeNull();
+    expect(within(dialog).getByLabelText("Distance")).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Route" }));
     const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
     fireEvent.click(customButtons[0]);
     fireEvent.click(customButtons[1]);
@@ -134,7 +140,7 @@ describe("CampaignDetailPage travel", () => {
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
     expect(within(dialog).queryByRole("tab")).toBeNull();
-    expect(within(dialog).getByText("Encounter intervals")).toBeTruthy();
+    expect(within(dialog).getAllByText("Encounter distance").length).toBeGreaterThan(0);
     expect(within(dialog).getByText("Weather")).toBeTruthy();
     await waitFor(() =>
       expect(api.calculateTravel).toHaveBeenCalledWith(
@@ -222,10 +228,13 @@ describe("CampaignDetailPage travel", () => {
     const dialog = screen.getByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
 
-    expect(await within(dialog).findByText("1,584 possible encounters")).toBeTruthy();
+    expect(await within(dialog).findByText("Awareness distance: 210 ft")).toBeTruthy();
     expect(
-      within(dialog).getByText("One possible encounter every 210 feet from 6d6 x 10 feet."),
+      within(dialog).getByText(
+        "Use this as the starting distance when the party and other creatures become aware of each other.",
+      ),
     ).toBeTruthy();
+    expect(within(dialog).queryByText(/possible encounters/i)).toBeNull();
     expect(within(dialog).queryByText("Rolls:")).toBeNull();
   });
 
@@ -366,8 +375,6 @@ function calculation(): TravelCalculation {
       averageFeet: 210,
       rolledFeet: 210,
       rolls: [3, 4, 5, 2, 4, 3],
-      encounterCount: 1584,
-      windows: 1584,
     },
     weather: {
       temperature: "normal",

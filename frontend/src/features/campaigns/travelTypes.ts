@@ -32,8 +32,6 @@ export type TravelCalculation = {
     averageFeet: number;
     rolledFeet: number;
     rolls?: number[] | null;
-    encounterCount: number;
-    windows: number;
   };
   weather: TravelWeather;
   assumptions: string[];

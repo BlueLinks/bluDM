@@ -39,7 +39,8 @@ Calculation is stateless. It accepts origin, destination, distance, unit, terrai
 - Terrain encounter distance uses the SRD 5.2 Travel Terrain dice.
 - The first valid calculation rolls encounter distance automatically.
 - The DM can reroll encounter distance or manually select a legal terrain result.
-- Encounter count is `floor(route feet / rolled encounter distance feet)`.
+- The rolled distance is the awareness/start distance where the party and other creatures may become aware of each other.
+- Random encounter frequency or encounter generation is out of scope for this modal.
 
 ## Weather
 
@@ -55,11 +56,11 @@ Calculation is stateless. It accepts origin, destination, distance, unit, terrai
 - Add `CampaignLocation`, `TravelWeather`, `TravelCalculation`, and `TravelFormState`.
 - Add API helpers for campaign locations and travel calculation.
 - Replace saved journey UI with a `TravelPanel` and `TravelCalculatorModal`.
-- The calculator modal uses the existing modal pattern, practical form controls, explicit saved/custom origin and destination inputs, live calculated result, encounter distance summary, assumptions, and structured weather controls.
+- The calculator modal uses the existing modal pattern, a `Route` / `Direct distance` segmented control, explicit saved/custom origin and destination inputs in route mode, live calculated result, encounter distance summary, assumptions, and icon-labeled structured weather controls.
 
 ## Tests
 
-- Backend travel math for miles, kilometers, 5-mile hexes, terrain max pace, good roads, and rolled encounter counts.
+- Backend travel math for miles, kilometers, 5-mile hexes, terrain max pace, good roads, and rolled encounter awareness distances.
 - Backend validation for invalid distance/options.
 - Backend component weather rolls and manual weather preservation.
 - Frontend renders saved locations.

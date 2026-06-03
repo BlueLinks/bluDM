@@ -30,27 +30,28 @@ The modal should be a transient tool. Closing it does not save a journey.
 
 Inputs:
 
-- Origin, with an explicit `Saved` location select or `Custom` free-text mode.
-- Destination, with an explicit `Saved` location select or `Custom` free-text mode.
+- Route mode, with `Route` and `Direct distance` options.
+- In `Route` mode, Origin and Destination each have an explicit `Saved` location select or `Custom` free-text mode.
+- In `Direct distance` mode, Origin and Destination are hidden and only distance is emphasized.
 - Distance.
 - Unit: miles, kilometers, hexes (`1 hex = 5 miles`).
 - Terrain: Arctic, Coastal, Desert, Forest, Grassland, Hill, Mountain, Swamp, Underdark, Urban, Waterborne.
 - Pace.
 - Good roads, which raises the terrain maximum pace by one stage.
-- Weather temperature, wind, and precipitation, each set manually or rolled independently.
+- Weather temperature, wind, and precipitation, each set manually or rolled independently with icon-labeled controls.
 
 Outputs:
 
 - Travel time updates whenever distance, unit, terrain, pace, or road quality changes.
 - Effective pace shows when terrain caps the requested pace.
-- Encounter distance summary shows the terrain dice, rolled feet, and possible encounter count.
-- Assumptions show conversion, terrain maximum pace, effective pace, and encounter-count math.
+- Encounter distance summary shows the terrain dice, rolled awareness distance, and roll details.
+- Assumptions show conversion, terrain maximum pace, effective pace, and that encounter distance is the range where creatures may become aware of each other.
 - Weather summary combines temperature, wind, and precipitation.
 
 ## Behavior
 
 - The calculator requires a positive distance before calculating.
-- Origin and destination are labels only in v1; the DM can use saved locations or type one-off places.
+- Origin and destination are labels only in v1; the DM can use saved locations, type one-off places, or switch to direct distance.
 - Encounter distance rolls automatically the first time the route becomes valid, can be rerolled, and can be manually selected from legal terrain results.
 - Rolling one weather component preserves the other manual weather values.
 - No journey records are persisted.

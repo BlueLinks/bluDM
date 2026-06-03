@@ -116,6 +116,26 @@
         color: white;
       }
 
+      .segmented {
+        background: #f1eee8;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+      }
+
+      .segmented button {
+        border-radius: 4px;
+        font-weight: 700;
+        padding: 8px 12px;
+      }
+
+      .segmented .active {
+        background: var(--accent);
+        color: white;
+      }
+
       .location {
         align-items: start;
         background: #fbfaf7;
@@ -285,6 +305,10 @@
           <h2>Travel calculator</h2>
           <div class="modal-layout">
             <div class="form-grid">
+              <div class="segmented" style="grid-column: 1 / -1">
+                <button class="active">Route</button>
+                <button>Direct distance</button>
+              </div>
               <label
                 >Origin<select>
                   <option>Waterdeep</option>
@@ -318,26 +342,29 @@
               </section>
               <section class="summary">
                 <p class="eyebrow">Encounter distance</p>
-                <h3>352 possible encounters</h3>
-                <p class="muted">2d8 x 10 feet rolled 90 feet.</p>
+                <h3>Awareness distance: 90 ft</h3>
+                <p class="muted">
+                  Use this as the starting distance when the party and other creatures become aware
+                  of each other.
+                </p>
               </section>
               <section class="summary sky">
                 <p class="eyebrow">Weather</p>
                 <h3>20°F colder, Light wind, Heavy rain or heavy snow</h3>
-                <p class="muted">Set manually, or roll each weather component.</p>
+                <p class="muted">Temperature, wind, and precipitation use lucide icon labels.</p>
               </section>
               <label
-                >Temperature<select>
+                >Thermometer icon Temperature<select>
                   <option>Colder</option>
                 </select></label
               >
               <label
-                >Wind<select>
+                >Wind icon Wind<select>
                   <option>Light</option>
                 </select></label
               >
               <label
-                >Precipitation<select>
+                >CloudRain icon Precipitation<select>
                   <option>Heavy rain or heavy snow</option>
                 </select></label
               >

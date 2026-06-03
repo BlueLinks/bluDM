@@ -1,4 +1,13 @@
-import { CalendarDays, CloudSun, RefreshCw, Route } from "lucide-react";
+import {
+  CalendarDays,
+  CloudRain,
+  CloudSun,
+  RefreshCw,
+  Route,
+  Thermometer,
+  Wind,
+} from "lucide-react";
+import type { ElementType } from "react";
 import { Badge, Button, Field, Select } from "../../components/ui";
 import {
   encounterDistanceOptionsForTerrain,
@@ -104,21 +113,22 @@ function EncounterSummary({
       <div>
         <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-700 dark:text-amber-200">
           <Route className="h-4 w-4" />
-          Encounter intervals
+          Encounter distance
         </div>
         <div className="action-roll-value mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
           {calculation
-            ? `${calculation.encounterDistance.encounterCount.toLocaleString()} possible encounters`
+            ? `Awareness distance: ${calculation.encounterDistance.rolledFeet.toLocaleString()} ft`
             : "Choose a route"}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
           {calculation
-            ? `One possible encounter every ${calculation.encounterDistance.rolledFeet.toLocaleString()} feet from ${calculation.encounterDistance.diceExpression}.`
+            ? "Use this as the starting distance when the party and other creatures become aware of each other."
             : "The terrain sets how far apart creatures might notice each other."}
         </p>
         {calculation ? (
           <p className="mt-2 text-sm text-muted-foreground">
-            Count uses route distance in feet divided by the rolled interval.
+            {calculation.encounterDistance.diceExpression} rolled{" "}
+            {calculation.encounterDistance.rolledFeet.toLocaleString()} feet.
           </p>
         ) : null}
         {calculation?.encounterDistance.rolls?.length ? (
@@ -163,7 +173,43 @@ function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
         Weather
       </div>
       <h4 className="action-roll-value mt-2 font-semibold">{weatherSummary(weather)}</h4>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">{weatherRollSummary(weather)}</p>
+      <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+        <WeatherSummaryRow
+          icon={Thermometer}
+          label="Temperature"
+          value={temperatureLabel(weather)}
+        />
+        <WeatherSummaryRow
+          icon={Wind}
+          label="Wind"
+          value={`${labelFor(windOptions, weather.wind)} wind`}
+        />
+        <WeatherSummaryRow
+          icon={CloudRain}
+          label="Precipitation"
+          value={labelFor(precipitationOptions, weather.precipitation)}
+        />
+      </div>
+      <p className="mt-3 text-sm leading-6 text-muted-foreground">{weatherRollSummary(weather)}</p>
+    </div>
+  );
+}
+
+function WeatherSummaryRow({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: ElementType;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-2">
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sky-700 dark:text-sky-200" />
+      <span>
+        <span className="font-semibold text-foreground">{label}:</span> {value}
+      </span>
     </div>
   );
 }

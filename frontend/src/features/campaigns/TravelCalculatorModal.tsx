@@ -1,4 +1,5 @@
-import { RefreshCw } from "lucide-react";
+import { CloudRain, Thermometer, RefreshCw, Wind as WindIcon } from "lucide-react";
+import type { ElementType } from "react";
 import { useEffect, useState } from "react";
 import { Button, Callout, Checkbox, Field, Input, Modal, Select } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -23,6 +24,7 @@ import { TravelCalculatorResults } from "./TravelCalculatorResults";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
 type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";
+type RouteInputMode = "route" | "distance";
 
 export function TravelCalculatorModal({
   campaignId,
@@ -37,6 +39,7 @@ export function TravelCalculatorModal({
 }) {
   const [form, setForm] = useState<TravelFormState>(blankTravelForm);
   const [calculation, setCalculation] = useState<TravelCalculation | null>(null);
+  const [routeInputMode, setRouteInputMode] = useState<RouteInputMode>("route");
   const [originMode, setOriginMode] = useState<"saved" | "custom">("saved");
   const [destinationMode, setDestinationMode] = useState<"saved" | "custom">("saved");
   const [rollAnimationKey, setRollAnimationKey] = useState(0);
@@ -138,22 +141,29 @@ export function TravelCalculatorModal({
         <div className="grid gap-4">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
             <div className="grid content-start gap-4 rounded-lg border border-border bg-background p-3 md:grid-cols-2">
-              <RoutePointField
-                label="Origin"
-                mode={originMode}
-                options={locationOptions}
-                value={form.origin}
-                onModeChange={setOriginMode}
-                onValueChange={(value) => setField("origin", value)}
-              />
-              <RoutePointField
-                label="Destination"
-                mode={destinationMode}
-                options={locationOptions}
-                value={form.destination}
-                onModeChange={setDestinationMode}
-                onValueChange={(value) => setField("destination", value)}
-              />
+              <div className="md:col-span-2">
+                <RouteModeToggle value={routeInputMode} onChange={setRouteInputMode} />
+              </div>
+              {routeInputMode === "route" && (
+                <>
+                  <RoutePointField
+                    label="Origin"
+                    mode={originMode}
+                    options={locationOptions}
+                    value={form.origin}
+                    onModeChange={setOriginMode}
+                    onValueChange={(value) => setField("origin", value)}
+                  />
+                  <RoutePointField
+                    label="Destination"
+                    mode={destinationMode}
+                    options={locationOptions}
+                    value={form.destination}
+                    onModeChange={setDestinationMode}
+                    onValueChange={(value) => setField("destination", value)}
+                  />
+                </>
+              )}
               <Field label="Distance">
                 <Input
                   min="0"
@@ -241,6 +251,37 @@ export function TravelCalculatorModal({
   );
 }
 
+function RouteModeToggle({
+  onChange,
+  value,
+}: {
+  onChange: (value: RouteInputMode) => void;
+  value: RouteInputMode;
+}) {
+  return (
+    <div className="inline-flex w-full overflow-hidden rounded-md border border-border bg-muted/40 p-1 text-sm font-semibold sm:w-auto">
+      {[
+        { value: "route", label: "Route" },
+        { value: "distance", label: "Direct distance" },
+      ].map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={[
+            "flex-1 rounded px-3 py-1.5 transition sm:flex-none",
+            value === option.value
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-background hover:text-foreground",
+          ].join(" ")}
+          onClick={() => onChange(option.value as RouteInputMode)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function RoutePointField({
   label,
   mode,
@@ -316,7 +357,7 @@ function WeatherControls({
   return (
     <>
       <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
-        <Field label="Temperature">
+        <Field label={<WeatherLabel icon={Thermometer} label="Temperature" />}>
           <Select
             value={weather.temperature}
             placeholder="Temperature"
@@ -351,6 +392,7 @@ function WeatherControls({
         </Button>
       </div>
       <WeatherSelectRow
+        icon={WindIcon}
         label="Wind"
         buttonLabel="Roll wind"
         canRoll={canRoll}
@@ -361,6 +403,7 @@ function WeatherControls({
         onRoll={() => onRoll("wind", { temperature: false, wind: true, precipitation: false })}
       />
       <WeatherSelectRow
+        icon={CloudRain}
         label="Precipitation"
         buttonLabel="Roll precipitation"
         canRoll={canRoll}
@@ -381,6 +424,7 @@ function WeatherControls({
 function WeatherSelectRow({
   buttonLabel,
   canRoll,
+  icon: Icon,
   label,
   onChange,
   onRoll,
@@ -390,6 +434,7 @@ function WeatherSelectRow({
 }: {
   buttonLabel: string;
   canRoll: boolean;
+  icon: ElementType;
   label: string;
   onChange: (value: string) => void;
   onRoll: () => void;
@@ -399,7 +444,7 @@ function WeatherSelectRow({
 }) {
   return (
     <div className="grid gap-2 rounded-lg border border-border bg-background p-3">
-      <Field label={label}>
+      <Field label={<WeatherLabel icon={Icon} label={label} />}>
         <Select value={value} placeholder={label} options={options} onValueChange={onChange} />
       </Field>
       <Button
@@ -413,6 +458,15 @@ function WeatherSelectRow({
         {buttonLabel}
       </Button>
     </div>
+  );
+}
+
+function WeatherLabel({ icon: Icon, label }: { icon: ElementType; label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Icon className="h-4 w-4" />
+      {label}
+    </span>
   );
 }
 

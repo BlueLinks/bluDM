@@ -46,7 +46,7 @@ func TestTravelCalculationGoodRoadsRaiseMaximumPace(t *testing.T) {
 	}
 }
 
-func TestTravelCalculationConvertsUnitsAndEncounterWindows(t *testing.T) {
+func TestTravelCalculationConvertsUnitsAndEncounterDistance(t *testing.T) {
 	req := travelRequest{
 		Distance: 1, DistanceUnit: "hexes", Terrain: "forest",
 		Pace: "normal", EncounterDistanceFeet: intPointer(90), Weather: clearWeather(),
@@ -65,8 +65,11 @@ func TestTravelCalculationConvertsUnitsAndEncounterWindows(t *testing.T) {
 	if calculation.EncounterDistance.AverageFeet != 90 {
 		t.Fatalf("expected 90 average feet, got %.2f", calculation.EncounterDistance.AverageFeet)
 	}
-	if calculation.EncounterDistance.EncounterCount != 293 || calculation.EncounterDistance.Windows != 293 {
-		t.Fatalf("expected 293 encounters, got %+v", calculation.EncounterDistance)
+	if calculation.EncounterDistance.RolledFeet != 90 {
+		t.Fatalf("expected manual awareness distance, got %+v", calculation.EncounterDistance)
+	}
+	if !strings.Contains(strings.Join(calculation.Assumptions, " "), "creatures may become aware") {
+		t.Fatalf("expected awareness distance assumption, got %+v", calculation.Assumptions)
 	}
 }
 
@@ -85,9 +88,6 @@ func TestTravelCalculationRollsLegalEncounterDistance(t *testing.T) {
 	}
 	if len(calculation.EncounterDistance.Rolls) != 2 {
 		t.Fatalf("expected two d6 rolls, got %+v", calculation.EncounterDistance.Rolls)
-	}
-	if calculation.EncounterDistance.EncounterCount != int(math.Floor(12*5280/float64(calculation.EncounterDistance.RolledFeet))) {
-		t.Fatalf("expected count from rolled feet, got %+v", calculation.EncounterDistance)
 	}
 }
 
