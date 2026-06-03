@@ -128,7 +128,10 @@ describe("CampaignDetailPage travel", () => {
     expect(within(dialog).queryByText("Origin")).toBeNull();
     expect(within(dialog).queryByText("Destination")).toBeNull();
     expect(within(dialog).getByLabelText("Distance")).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "63" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Route" }));
+    expect(within(dialog).getByText("Computed distance")).toBeTruthy();
+    expect(within(dialog).queryByLabelText("Distance")).toBeNull();
     const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
     fireEvent.click(customButtons[0]);
     fireEvent.click(customButtons[1]);
@@ -136,7 +139,6 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.change(within(dialog).getByLabelText("Destination"), {
       target: { value: "Ironford" },
     });
-    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "63" } });
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
     expect(within(dialog).queryByRole("tab")).toBeNull();
@@ -170,6 +172,7 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "60" } });
     expect(await within(dialog).findByText("210 ft")).toBeTruthy();
     fireEvent.click(within(dialog).getByLabelText("Good roads"));
@@ -189,6 +192,7 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
     await waitFor(() =>
       expect(api.calculateTravel).toHaveBeenCalledWith(
@@ -226,6 +230,7 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
 
     expect(await within(dialog).findByText("Awareness distance: 210 ft")).toBeTruthy();
@@ -243,6 +248,9 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
+    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Route" }));
     const customButtons = within(dialog).getAllByRole("button", { name: "Custom" });
     fireEvent.click(customButtons[0]);
     fireEvent.click(customButtons[1]);
@@ -250,7 +258,6 @@ describe("CampaignDetailPage travel", () => {
     fireEvent.change(within(dialog).getByLabelText("Destination"), {
       target: { value: "Ironford" },
     });
-    fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll wind" }));
 
     await waitFor(() =>
@@ -277,6 +284,7 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
     fireEvent.change(within(dialog).getByLabelText("Distance"), { target: { value: "12" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll all weather" }));
 

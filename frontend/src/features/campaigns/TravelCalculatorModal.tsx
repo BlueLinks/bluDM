@@ -21,10 +21,15 @@ import type {
   TravelWeatherRollRequest,
 } from "./travelTypes";
 import { TravelCalculatorResults } from "./TravelCalculatorResults";
+import {
+  ComputedRouteDistance,
+  RouteModeToggle,
+  RoutePointField,
+  type RouteInputMode,
+} from "./TravelRouteControls";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
 type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";
-type RouteInputMode = "route" | "distance";
 
 export function TravelCalculatorModal({
   campaignId,
@@ -162,26 +167,34 @@ export function TravelCalculatorModal({
                     onModeChange={setDestinationMode}
                     onValueChange={(value) => setField("destination", value)}
                   />
+                  <ComputedRouteDistance
+                    distance={form.distance}
+                    distanceUnit={form.distanceUnit}
+                  />
                 </>
               )}
-              <Field label="Distance">
-                <Input
-                  min="0"
-                  step="0.1"
-                  type="number"
-                  value={form.distance}
-                  placeholder="24"
-                  onChange={(event) => setField("distance", event.target.value)}
-                />
-              </Field>
-              <Field label="Unit">
-                <Select
-                  value={form.distanceUnit}
-                  placeholder="Unit"
-                  options={distanceUnitOptions}
-                  onValueChange={(value) => setField("distanceUnit", value)}
-                />
-              </Field>
+              {routeInputMode === "distance" && (
+                <>
+                  <Field label="Distance">
+                    <Input
+                      min="0"
+                      step="0.1"
+                      type="number"
+                      value={form.distance}
+                      placeholder="24"
+                      onChange={(event) => setField("distance", event.target.value)}
+                    />
+                  </Field>
+                  <Field label="Unit">
+                    <Select
+                      value={form.distanceUnit}
+                      placeholder="Unit"
+                      options={distanceUnitOptions}
+                      onValueChange={(value) => setField("distanceUnit", value)}
+                    />
+                  </Field>
+                </>
+              )}
               <Field label="Terrain">
                 <Select
                   value={form.terrain}
@@ -248,96 +261,6 @@ export function TravelCalculatorModal({
         </div>
       </div>
     </Modal>
-  );
-}
-
-function RouteModeToggle({
-  onChange,
-  value,
-}: {
-  onChange: (value: RouteInputMode) => void;
-  value: RouteInputMode;
-}) {
-  return (
-    <div className="inline-flex w-full overflow-hidden rounded-md border border-border bg-muted/40 p-1 text-sm font-semibold sm:w-auto">
-      {[
-        { value: "route", label: "Route" },
-        { value: "distance", label: "Direct distance" },
-      ].map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          className={[
-            "flex-1 rounded px-3 py-1.5 transition sm:flex-none",
-            value === option.value
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-background hover:text-foreground",
-          ].join(" ")}
-          onClick={() => onChange(option.value as RouteInputMode)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function RoutePointField({
-  label,
-  mode,
-  onModeChange,
-  onValueChange,
-  options,
-  value,
-}: {
-  label: string;
-  mode: "saved" | "custom";
-  onModeChange: (mode: "saved" | "custom") => void;
-  onValueChange: (value: string) => void;
-  options: Array<{ value: string; label: string }>;
-  value: string;
-}) {
-  return (
-    <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-muted-foreground">{label}</span>
-        <div className="inline-flex overflow-hidden rounded-md border border-border bg-background text-xs font-semibold">
-          <button
-            className={
-              mode === "saved" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
-            }
-            type="button"
-            onClick={() => onModeChange("saved")}
-          >
-            Saved
-          </button>
-          <button
-            className={
-              mode === "custom" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
-            }
-            type="button"
-            onClick={() => onModeChange("custom")}
-          >
-            Custom
-          </button>
-        </div>
-      </div>
-      {mode === "saved" ? (
-        <Select
-          value={value}
-          placeholder={options.length ? "Select location" : "No saved locations"}
-          options={options}
-          onValueChange={onValueChange}
-        />
-      ) : (
-        <Input
-          aria-label={label}
-          value={value}
-          placeholder="Type a place"
-          onChange={(event) => onValueChange(event.target.value)}
-        />
-      )}
-    </div>
   );
 }
 
