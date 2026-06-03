@@ -3,10 +3,10 @@ package httpapi
 import (
 	"bludm/backend/internal/models"
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 )
 
@@ -142,11 +142,14 @@ func clampTravelPace(requested string, maximum string) string {
 }
 
 func rollDie(sides int) int {
-	var data [8]byte
-	if _, err := rand.Read(data[:]); err != nil {
+	if sides < 1 {
 		return 1
 	}
-	return int(binary.LittleEndian.Uint64(data[:])%uint64(sides)) + 1
+	roll, err := rand.Int(rand.Reader, big.NewInt(int64(sides)))
+	if err != nil {
+		return 1
+	}
+	return int(roll.Int64()) + 1
 }
 
 func formatTravelNumber(value float64) string {
