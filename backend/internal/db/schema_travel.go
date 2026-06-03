@@ -37,6 +37,33 @@ create table if not exists campaign_journeys (
 );
 create index if not exists campaign_journeys_campaign_id_idx on campaign_journeys(campaign_id, created_at desc);
 
+create table if not exists roll_tables (
+    id uuid primary key default gen_random_uuid(),
+    campaign_id uuid references campaigns(id) on delete cascade,
+    source text not null default 'campaign',
+    name text not null,
+    description text not null default '',
+    category text not null default 'custom',
+    tags text[] not null default '{}',
+    die_expression text not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+create index if not exists roll_tables_campaign_id_idx on roll_tables(campaign_id, updated_at desc);
+create index if not exists roll_tables_source_idx on roll_tables(source, category, name);
+
+create table if not exists roll_table_rows (
+    id uuid primary key default gen_random_uuid(),
+    table_id uuid not null references roll_tables(id) on delete cascade,
+    min_roll integer not null,
+    max_roll integer not null,
+    label text not null,
+    result_text text not null,
+    notes text not null default '',
+    sort_order integer not null default 0
+);
+create index if not exists roll_table_rows_table_id_idx on roll_table_rows(table_id, min_roll, max_roll);
+
 alter table campaign_journeys add column if not exists good_roads boolean not null default false;
 alter table campaign_journeys add column if not exists encounter_distance_feet integer;
 alter table campaign_journeys add column if not exists route_input_mode text not null default 'route';

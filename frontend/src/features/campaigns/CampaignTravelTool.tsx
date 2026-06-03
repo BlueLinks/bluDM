@@ -2,6 +2,7 @@ import { Route } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useTopBarActions } from "../../app/shell";
 import { Button } from "../../components/ui";
+import { CampaignRollTableTool } from "./CampaignRollTableTool";
 import { TravelCalculatorModal } from "./TravelCalculatorModal";
 import type { CampaignJourney, CampaignLocation } from "./travelTypes";
 
@@ -21,19 +22,22 @@ export function CampaignTravelTool({
   const [open, setOpen] = useState(false);
   const action = useMemo(
     () => (
-      <Button
-        type="button"
-        icon={Route}
-        variant="secondary"
-        onClick={() => {
-          onEditComplete();
-          setOpen(true);
-        }}
-      >
-        Travel
-      </Button>
+      <>
+        <CampaignRollTableTool campaignId={campaignId} />
+        <Button
+          type="button"
+          icon={Route}
+          variant="secondary"
+          onClick={() => {
+            onEditComplete();
+            setOpen(true);
+          }}
+        >
+          Travel
+        </Button>
+      </>
     ),
-    [onEditComplete],
+    [campaignId, onEditComplete],
   );
   useTopBarActions(action);
 
