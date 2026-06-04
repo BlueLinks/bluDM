@@ -1,4 +1,14 @@
-import { Copy, Dice5, Pencil, Plus, Search, Sparkles, TableProperties, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Dice5,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  TableProperties,
+  Tag,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Badge,
@@ -315,6 +325,7 @@ function TableList({
           {table.description && (
             <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{table.description}</p>
           )}
+          {table.tags.length > 0 && <TagChipList className="mt-2" tags={table.tags} />}
         </button>
       ))}
     </div>
@@ -348,6 +359,7 @@ function SelectedTableCard({
           {table.description && (
             <p className="mt-2 text-sm text-muted-foreground">{table.description}</p>
           )}
+          {table.tags.length > 0 && <TagChipList className="mt-3" tags={table.tags} />}
         </div>
         <div className="flex flex-wrap gap-2">
           <Button type="button" icon={Dice5} onClick={onRoll}>
@@ -410,6 +422,25 @@ function SelectedTableCard({
         </div>
       </div>
     </section>
+  );
+}
+
+function TagChipList({ className = "", tags }: { className?: string; tags: string[] }) {
+  const normalizedTags = normalizeRollTableTags(tags);
+  if (normalizedTags.length === 0) return null;
+
+  return (
+    <div className={`flex flex-wrap gap-1.5 ${className}`}>
+      {normalizedTags.map((tag) => (
+        <span
+          className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+          key={tag}
+        >
+          <Tag className="h-3 w-3" />
+          {tag}
+        </span>
+      ))}
+    </div>
   );
 }
 

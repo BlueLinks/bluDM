@@ -51,6 +51,8 @@ describe("CampaignRollTableTool", () => {
     const dialog = await screen.findByRole("dialog");
     expect((await within(dialog).findAllByText("Tavern Rumors")).length).toBeGreaterThan(0);
     expect(within(dialog).getAllByText("Dungeon Clues").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("rumor").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("clue").length).toBeGreaterThan(0);
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll table" }));
 
     await waitFor(() =>
@@ -86,7 +88,7 @@ describe("CampaignRollTableTool", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "clue" }));
     fireEvent.change(within(dialog).getByLabelText("New tag"), { target: { value: "NPC, Rumor" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Add tag" }));
-    fireEvent.click(within(dialog).getByRole("button", { name: "npc" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove tag npc" }));
     for (let index = 1; index <= 6; index += 1) {
       fireEvent.change(within(dialog).getByLabelText(`Row ${index} result`), {
         target: { value: `Result ${index}.` },

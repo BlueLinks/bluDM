@@ -1,4 +1,4 @@
-import { Plus, Rows3, X } from "lucide-react";
+import { Plus, Rows3, Tag, X } from "lucide-react";
 import { useState } from "react";
 import { Button, Callout, Field, Input, Select, Textarea } from "../../components/ui";
 import type { RollTableCategory, RollTableFormState, RollTableRow } from "./rollTableTypes";
@@ -65,7 +65,15 @@ export function RollTableEditor({
             }
           />
         </Field>
-        <Field label="Tags" className="md:col-span-2">
+        <Field
+          label={
+            <span className="inline-flex items-center gap-1">
+              <Tag className="h-4 w-4" />
+              Tags
+            </span>
+          }
+          className="md:col-span-2"
+        >
           <RollTableTagPicker
             selectedTags={selectedTags}
             suggestions={tagSuggestions}
@@ -130,10 +138,13 @@ function RollTableTagPicker({
             className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
             key={tag}
             type="button"
+            aria-label={`Remove tag ${tag}`}
+            title={`Remove ${tag}`}
             onClick={() => onChange(selectedTags.filter((item) => item !== tag))}
           >
+            <Tag className="h-3 w-3" />
             {tag}
-            <X className="h-3 w-3" />
+            <X className="h-3 w-3" aria-hidden="true" />
           </button>
         ))}
       </div>
@@ -165,11 +176,12 @@ function RollTableTagPicker({
         <div className="flex flex-wrap gap-2">
           {normalizedSuggestions.map((tag) => (
             <button
-              className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-foreground"
+              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-foreground"
               key={tag}
               type="button"
               onClick={() => addTags([tag])}
             >
+              <Tag className="h-3 w-3" />
               {tag}
             </button>
           ))}
