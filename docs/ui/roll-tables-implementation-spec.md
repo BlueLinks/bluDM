@@ -134,7 +134,7 @@ Suggested component split:
 - `TableRollerModal`: search, table list, selected table preview, roll result, recent roll log.
 - `RollTableManager`: list/manage surface.
 - `RollTableEditorModal` or `RollTableEditorPage`: create/edit table form.
-- `RollTableRowEditor`: row range/label/result controls.
+- `RollTableRowEditor`: one-face roll/label/result controls.
 - `RollTableResultCard`: animated result surface.
 
 Reuse:
@@ -150,7 +150,7 @@ Backend:
 - CRUD requires campaign ownership.
 - Provided tables are readable but not editable/deletable.
 - Clone provided and campaign tables creates editable campaign records.
-- Validation rejects invalid die expressions, empty rows, overlapping ranges, gaps, out-of-bounds ranges, and blank labels/results.
+- Validation rejects invalid die expressions, empty rows, invalid row coverage, and blank labels/results.
 - Rolling returns a value inside the die bounds and the matching row.
 - Deleting a campaign cascades campaign roll tables and rows.
 

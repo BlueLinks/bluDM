@@ -89,13 +89,11 @@ The management list should show:
 The table editor should show:
 
 - Details section: name, description, category, tags, die expression.
-- Outcome rows in a dense but scannable table/editor.
-- Validation messages for missing labels/results, invalid ranges, overlapping ranges, gaps, out-of-bounds ranges, and duplicate values.
+- Tags as removable chips with suggestions from loaded provided and campaign tables, plus a typed add-new-tag control.
+- Outcome rows in a dense but scannable table/editor with one row per die face.
+- Validation messages for missing labels/results and invalid row coverage.
 - Quick actions:
-  - Generate one row per face.
-  - Fill gaps.
-  - Sort rows by range.
-  - Add row.
+  - Reset rows for the selected die.
 
 Delete uses the existing confirmation dialog pattern.
 

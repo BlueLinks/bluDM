@@ -1,3 +1,4 @@
+import { normalizeRollTableTags } from "../../features/campaigns/rollTableOptions";
 import type {
   RollTable,
   RollTableFormState,
@@ -10,10 +11,7 @@ function rollTablePayload(payload: RollTableFormState) {
     name: payload.name,
     description: payload.description,
     category: payload.category,
-    tags: payload.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
+    tags: normalizeRollTableTags(payload.tags),
     dieExpression: payload.dieExpression,
     rows: payload.rows.map((row) => ({
       minRoll: Number(row.minRoll) || 0,

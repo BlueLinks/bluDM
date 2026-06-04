@@ -32,7 +32,11 @@ describe("CampaignRollTableTool", () => {
       table: campaignRollTable({ id: "roll-table-3", name: "Copy of Tavern Rumors" }),
     });
     vi.mocked(api.createCampaignRollTable).mockResolvedValue({
-      table: campaignRollTable({ id: "roll-table-4", name: "Dungeon Clues" }),
+      table: campaignRollTable({
+        id: "roll-table-4",
+        name: "Dungeon Clues",
+        tags: ["clue", "npc"],
+      }),
     });
     vi.mocked(api.updateCampaignRollTable).mockResolvedValue({
       table: campaignRollTable({ name: "Edited Clues" }),
@@ -72,17 +76,40 @@ describe("CampaignRollTableTool", () => {
     );
 
     fireEvent.click(within(dialog).getByRole("button", { name: "New table" }));
+    expect(within(dialog).queryByRole("button", { name: "Fill gaps" })).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Sort rows" })).toBeNull();
+    expect(within(dialog).queryByLabelText("Row 1 min")).toBeNull();
+    expect(within(dialog).queryByLabelText("Row 1 max")).toBeNull();
+    expect(within(dialog).queryByRole("button", { name: "Remove row 1" })).toBeNull();
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Dungeon Clues" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "rumor" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "clue" }));
+    fireEvent.change(within(dialog).getByLabelText("New tag"), { target: { value: "NPC, Rumor" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add tag" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "npc" }));
     for (let index = 1; index <= 6; index += 1) {
       fireEvent.change(within(dialog).getByLabelText(`Row ${index} result`), {
         target: { value: `Result ${index}.` },
       });
     }
+    const dieSelect = within(dialog).getByRole("combobox", { name: "Die expression" });
+    fireEvent.click(dieSelect);
+    fireEvent.click(await screen.findByRole("option", { name: "1d4" }));
+    expect(within(dialog).queryByLabelText("Row 5 result")).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Save table" }));
     await waitFor(() =>
       expect(api.createCampaignRollTable).toHaveBeenCalledWith(
         "campaign-1",
-        expect.objectContaining({ name: "Dungeon Clues" }),
+        expect.objectContaining({
+          name: "Dungeon Clues",
+          tags: "rumor, clue",
+          rows: [
+            expect.objectContaining({ minRoll: 1, maxRoll: 1, resultText: "Result 1." }),
+            expect.objectContaining({ minRoll: 2, maxRoll: 2, resultText: "Result 2." }),
+            expect.objectContaining({ minRoll: 3, maxRoll: 3, resultText: "Result 3." }),
+            expect.objectContaining({ minRoll: 4, maxRoll: 4, resultText: "Result 4." }),
+          ],
+        }),
       ),
     );
 

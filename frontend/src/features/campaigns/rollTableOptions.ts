@@ -40,6 +40,34 @@ export function oneRowPerFace(dieExpression: string): RollTableRow[] {
   }));
 }
 
+export function resizeRowsForDie(rows: RollTableRow[], dieExpression: string): RollTableRow[] {
+  const size = dieSize(dieExpression);
+  if (!size) return rows;
+  return Array.from({ length: size }, (_, index) => {
+    const current = rows[index];
+    return {
+      minRoll: index + 1,
+      maxRoll: index + 1,
+      label: current?.label ?? `Result ${index + 1}`,
+      resultText: current?.resultText ?? "",
+      notes: current?.notes ?? "",
+    };
+  });
+}
+
+export function normalizeRollTableTags(tags: string | string[]) {
+  const values = Array.isArray(tags) ? tags : tags.split(",");
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+  for (const tag of values) {
+    const next = tag.trim().toLowerCase();
+    if (!next || seen.has(next)) continue;
+    seen.add(next);
+    normalized.push(next);
+  }
+  return normalized;
+}
+
 export function dieSize(dieExpression: string) {
   const match = /^1d(4|6|8|10|12|20|100)$/.exec(dieExpression);
   return match ? Number(match[1]) : 0;
@@ -61,15 +89,9 @@ export function formFromRollTable(table: {
     name: table.name,
     description: table.description,
     category: table.category,
-    tags: table.tags.join(", "),
+    tags: normalizeRollTableTags(table.tags).join(", "),
     dieExpression: table.dieExpression,
-    rows: table.rows.map((row) => ({
-      minRoll: row.minRoll,
-      maxRoll: row.maxRoll,
-      label: row.label,
-      resultText: row.resultText,
-      notes: row.notes,
-    })),
+    rows: resizeRowsForDie(table.rows, table.dieExpression),
   };
 }
 
@@ -81,31 +103,32 @@ export function validateRollTableForm(form: RollTableFormState) {
   if (form.rows.length === 0) errors.push("Add at least one row.");
   const rows = [...form.rows].sort((a, b) => a.minRoll - b.minRoll || a.maxRoll - b.maxRoll);
   let expectedMin = 1;
+  let stoppedEarly = false;
   for (const row of rows) {
     if (row.minRoll < 1 || row.maxRoll > size || row.minRoll > row.maxRoll) {
       errors.push("Rows must stay inside the die range.");
+      stoppedEarly = true;
       break;
     }
     if (row.minRoll !== expectedMin) {
       errors.push("Rows must cover every die face without gaps or overlaps.");
+      stoppedEarly = true;
       break;
     }
     if (!row.label.trim()) {
       errors.push("Every row needs a label.");
+      stoppedEarly = true;
       break;
     }
     if (!row.resultText.trim()) {
       errors.push("Every row needs result text.");
+      stoppedEarly = true;
       break;
     }
     expectedMin = row.maxRoll + 1;
   }
-  if (size && rows.length > 0 && expectedMin !== size + 1) {
+  if (!stoppedEarly && size && rows.length > 0 && expectedMin !== size + 1) {
     errors.push("Rows must cover the whole die.");
   }
   return Array.from(new Set(errors));
-}
-
-export function sortRollTableRows(rows: RollTableRow[]) {
-  return [...rows].sort((a, b) => a.minRoll - b.minRoll || a.maxRoll - b.maxRoll);
 }

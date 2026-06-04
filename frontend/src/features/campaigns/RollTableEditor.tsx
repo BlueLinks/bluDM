@@ -1,23 +1,27 @@
-import { Plus, Rows3, SortAsc, Wand2, X } from "lucide-react";
+import { Plus, Rows3, X } from "lucide-react";
+import { useState } from "react";
 import { Button, Callout, Field, Input, Select, Textarea } from "../../components/ui";
 import type { RollTableCategory, RollTableFormState, RollTableRow } from "./rollTableTypes";
 import {
-  dieSize,
+  normalizeRollTableTags,
   oneRowPerFace,
+  resizeRowsForDie,
   rollTableCategoryOptions,
   rollTableDieOptions,
-  sortRollTableRows,
   validateRollTableForm,
 } from "./rollTableOptions";
 
 export function RollTableEditor({
   form,
+  tagSuggestions = [],
   onChange,
 }: {
   form: RollTableFormState;
+  tagSuggestions?: string[];
   onChange: (form: RollTableFormState) => void;
 }) {
   const validation = validateRollTableForm(form);
+  const selectedTags = normalizeRollTableTags(form.tags);
 
   return (
     <div className="grid gap-4">
@@ -52,14 +56,20 @@ export function RollTableEditor({
             placeholder="Die"
             value={form.dieExpression}
             options={rollTableDieOptions}
-            onValueChange={(dieExpression) => onChange({ ...form, dieExpression })}
+            onValueChange={(dieExpression) =>
+              onChange({
+                ...form,
+                dieExpression,
+                rows: resizeRowsForDie(form.rows, dieExpression),
+              })
+            }
           />
         </Field>
-        <Field label="Tags">
-          <Input
-            placeholder="travel, rumor"
-            value={form.tags}
-            onChange={(event) => onChange({ ...form, tags: event.target.value })}
+        <Field label="Tags" className="md:col-span-2">
+          <RollTableTagPicker
+            selectedTags={selectedTags}
+            suggestions={tagSuggestions}
+            onChange={(tags) => onChange({ ...form, tags: tags.join(", ") })}
           />
         </Field>
         <Field label="Description" className="md:col-span-2">
@@ -79,38 +89,92 @@ export function RollTableEditor({
           icon={Rows3}
           onClick={() => onChange({ ...form, rows: oneRowPerFace(form.dieExpression) })}
         >
-          One row per face
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          icon={Wand2}
-          onClick={() => onChange({ ...form, rows: fillGaps(form.rows, form.dieExpression) })}
-        >
-          Fill gaps
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          icon={SortAsc}
-          onClick={() => onChange({ ...form, rows: sortRollTableRows(form.rows) })}
-        >
-          Sort rows
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          icon={Plus}
-          onClick={() => onChange({ ...form, rows: [...form.rows, nextBlankRow(form.rows)] })}
-        >
-          Add row
+          Reset rows
         </Button>
       </div>
 
       <RollTableRowsEditor rows={form.rows} onChange={(rows) => onChange({ ...form, rows })} />
+    </div>
+  );
+}
+
+function RollTableTagPicker({
+  selectedTags,
+  suggestions,
+  onChange,
+}: {
+  selectedTags: string[];
+  suggestions: string[];
+  onChange: (tags: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const normalizedSuggestions = normalizeRollTableTags(suggestions).filter(
+    (tag) => !selectedTags.includes(tag),
+  );
+  const draftTags = normalizeRollTableTags(draft);
+  const canAddDraft = draftTags.some((tag) => !selectedTags.includes(tag));
+
+  function addTags(tags: string[]) {
+    onChange(normalizeRollTableTags([...selectedTags, ...tags]));
+    setDraft("");
+  }
+
+  return (
+    <div className="grid gap-2 rounded-md border border-border bg-background p-2">
+      <div className="flex min-h-9 flex-wrap gap-2">
+        {selectedTags.length === 0 && (
+          <span className="px-1 py-1 text-sm text-muted-foreground">No tags selected.</span>
+        )}
+        {selectedTags.map((tag) => (
+          <button
+            className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+            key={tag}
+            type="button"
+            onClick={() => onChange(selectedTags.filter((item) => item !== tag))}
+          >
+            {tag}
+            <X className="h-3 w-3" />
+          </button>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <Input
+          aria-label="New tag"
+          className="min-h-9"
+          placeholder="Add a tag"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || !canAddDraft) return;
+            event.preventDefault();
+            addTags(draftTags);
+          }}
+        />
+        <Button
+          type="button"
+          icon={Plus}
+          size="sm"
+          variant="secondary"
+          disabled={!canAddDraft}
+          onClick={() => addTags(draftTags)}
+        >
+          Add tag
+        </Button>
+      </div>
+      {normalizedSuggestions.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {normalizedSuggestions.map((tag) => (
+            <button
+              className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground hover:border-primary hover:text-foreground"
+              key={tag}
+              type="button"
+              onClick={() => addTags([tag])}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -128,36 +192,21 @@ function RollTableRowsEditor({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border">
-      <div className="grid min-w-[760px] grid-cols-[70px_70px_150px_1fr_170px_48px] gap-2 bg-muted px-3 py-2 text-xs font-bold uppercase text-muted-foreground">
-        <span>Min</span>
-        <span>Max</span>
+      <div className="grid min-w-[640px] grid-cols-[70px_150px_1fr_170px] gap-2 bg-muted px-3 py-2 text-xs font-bold uppercase text-muted-foreground">
+        <span>Roll</span>
         <span>Label</span>
         <span>Result</span>
         <span>Notes</span>
-        <span />
       </div>
       <div className="divide-y divide-border">
         {rows.map((row, index) => (
           <div
-            className="grid min-w-[760px] grid-cols-[70px_70px_150px_1fr_170px_48px] items-start gap-2 px-3 py-2"
+            className="grid min-w-[640px] grid-cols-[70px_150px_1fr_170px] items-start gap-2 px-3 py-2"
             key={`${index}-${row.minRoll}-${row.maxRoll}`}
           >
-            <Input
-              aria-label={`Row ${index + 1} min`}
-              className="text-center"
-              min={1}
-              type="number"
-              value={row.minRoll}
-              onChange={(event) => setRow(index, { minRoll: Number(event.target.value) || 0 })}
-            />
-            <Input
-              aria-label={`Row ${index + 1} max`}
-              className="text-center"
-              min={1}
-              type="number"
-              value={row.maxRoll}
-              onChange={(event) => setRow(index, { maxRoll: Number(event.target.value) || 0 })}
-            />
+            <span className="grid min-h-10 place-items-center rounded-md border border-border bg-card text-sm font-semibold">
+              {index + 1}
+            </span>
             <Input
               aria-label={`Row ${index + 1} label`}
               value={row.label}
@@ -173,52 +222,9 @@ function RollTableRowsEditor({
               value={row.notes}
               onChange={(event) => setRow(index, { notes: event.target.value })}
             />
-            <Button
-              type="button"
-              aria-label={`Remove row ${index + 1}`}
-              icon={X}
-              size="sm"
-              variant="ghost"
-              onClick={() => onChange(rows.filter((_, rowIndex) => rowIndex !== index))}
-            />
           </div>
         ))}
       </div>
     </div>
   );
-}
-
-function nextBlankRow(rows: RollTableRow[]) {
-  const max = rows.reduce((current, row) => Math.max(current, row.maxRoll), 0) + 1;
-  return { minRoll: max, maxRoll: max, label: `Result ${max}`, resultText: "", notes: "" };
-}
-
-function fillGaps(rows: RollTableRow[], dieExpression: string) {
-  const size = dieSize(dieExpression);
-  const sorted = sortRollTableRows(rows).filter((row) => row.minRoll <= row.maxRoll);
-  const filled: RollTableRow[] = [];
-  let cursor = 1;
-  for (const row of sorted) {
-    if (row.minRoll > cursor) {
-      filled.push({
-        minRoll: cursor,
-        maxRoll: row.minRoll - 1,
-        label: `Result ${cursor}`,
-        resultText: "",
-        notes: "",
-      });
-    }
-    filled.push(row);
-    cursor = Math.max(cursor, row.maxRoll + 1);
-  }
-  if (size && cursor <= size) {
-    filled.push({
-      minRoll: cursor,
-      maxRoll: size,
-      label: `Result ${cursor}`,
-      resultText: "",
-      notes: "",
-    });
-  }
-  return filled;
 }

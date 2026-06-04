@@ -16,6 +16,7 @@ import { RollTableEditor } from "./RollTableEditor";
 import {
   blankRollTableForm,
   formFromRollTable,
+  normalizeRollTableTags,
   rollTableCategoryLabel,
   rollTableCategoryOptions,
   validateRollTableForm,
@@ -69,6 +70,10 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
   }, [category, search, tables]);
   const selected =
     filteredTables.find((table) => table.id === selectedId) ?? filteredTables[0] ?? null;
+  const tagSuggestions = useMemo(
+    () => normalizeRollTableTags(tables.flatMap((table) => table.tags)),
+    [tables],
+  );
 
   async function rollSelected() {
     if (!selected) return;
@@ -143,6 +148,7 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
           {editor ? (
             <RollTableEditorPane
               editor={editor}
+              tagSuggestions={tagSuggestions}
               onChange={setEditor}
               onCancel={() => setEditor(null)}
               onSave={() => void saveEditor()}
@@ -229,11 +235,13 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
 
 function RollTableEditorPane({
   editor,
+  tagSuggestions,
   onCancel,
   onChange,
   onSave,
 }: {
   editor: EditorState;
+  tagSuggestions: string[];
   onCancel: () => void;
   onChange: (editor: EditorState) => void;
   onSave: () => void;
@@ -247,7 +255,7 @@ function RollTableEditorPane({
             {editor.mode === "edit" ? "Edit roll table" : "Create roll table"}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Build inclusive roll ranges for one supported die expression.
+            Build one outcome for each face of the selected die.
           </p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +267,11 @@ function RollTableEditorPane({
           </Button>
         </div>
       </div>
-      <RollTableEditor form={editor.form} onChange={(form) => onChange({ ...editor, form })} />
+      <RollTableEditor
+        form={editor.form}
+        tagSuggestions={tagSuggestions}
+        onChange={(form) => onChange({ ...editor, form })}
+      />
     </div>
   );
 }

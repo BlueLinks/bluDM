@@ -638,22 +638,24 @@
             </label>
             <label class="field">
               Tags
-              <input value="waterdeep, harbor, tavern" />
+              <div class="chips">
+                <span class="chip">waterdeep ×</span>
+                <span class="chip">harbor ×</span>
+                <span class="chip">tavern ×</span>
+              </div>
+              <input placeholder="Add a tag" />
             </label>
             <div class="topbar-actions">
-              <button class="btn">Generate faces</button>
-              <button class="btn">Fill gaps</button>
-              <button class="btn">Sort rows</button>
+              <button class="btn">Reset rows</button>
             </div>
           </aside>
 
           <section class="surface grid">
-            <div class="warning">Ranges must cover 1-20 without gaps or overlaps.</div>
+            <div class="warning">Each die face needs a label and result.</div>
             <div class="row-list">
               <article class="row-card">
                 <div class="row-grid">
-                  <label class="field">Min<input value="1" /></label>
-                  <label class="field">Max<input value="5" /></label>
+                  <label class="field">Roll<input value="1" readonly /></label>
                   <label class="field">Label<input value="Missing cargo" /></label>
                   <label class="field"
                     >Result<input value="A crate marked with a noble seal vanished before sunrise."
@@ -662,8 +664,7 @@
               </article>
               <article class="row-card">
                 <div class="row-grid">
-                  <label class="field">Min<input value="6" /></label>
-                  <label class="field">Max<input value="10" /></label>
+                  <label class="field">Roll<input value="2" readonly /></label>
                   <label class="field">Label<input value="Odd lights" /></label>
                   <label class="field"
                     >Result<input
@@ -673,8 +674,7 @@
               </article>
               <article class="row-card">
                 <div class="row-grid">
-                  <label class="field">Min<input value="11" /></label>
-                  <label class="field">Max<input value="15" /></label>
+                  <label class="field">Roll<input value="3" readonly /></label>
                   <label class="field">Label<input value="Merchant trouble" /></label>
                   <label class="field"
                     >Result<input value="A caravan master is paying for discreet guards tonight."
@@ -682,7 +682,6 @@
                 </div>
               </article>
             </div>
-            <button class="btn">＋ Add row</button>
           </section>
         </div>
       </section>
