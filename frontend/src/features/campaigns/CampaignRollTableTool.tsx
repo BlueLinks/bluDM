@@ -80,10 +80,15 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
   }, [category, search, tables]);
   const selected =
     filteredTables.find((table) => table.id === selectedId) ?? filteredTables[0] ?? null;
-  const tagSuggestions = useMemo(
-    () => normalizeRollTableTags(tables.flatMap((table) => table.tags)),
-    [tables],
-  );
+  const tagSuggestions = useMemo(() => {
+    const loadedTags = tables.flatMap((table) =>
+      editor?.mode === "edit" && editor.tableId === table.id ? [] : table.tags,
+    );
+    return normalizeRollTableTags([
+      ...loadedTags,
+      ...(editor ? normalizeRollTableTags(editor.form.tags) : []),
+    ]);
+  }, [editor, tables]);
 
   async function rollSelected() {
     if (!selected) return;

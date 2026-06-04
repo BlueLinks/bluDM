@@ -119,12 +119,14 @@ describe("CampaignRollTableTool", () => {
     await clickRollTableListItem(dialog, "Dungeon Clues");
     fireEvent.click(within(dialog).getByRole("button", { name: "Edit" }));
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Edited Clues" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove tag clue" }));
+    expect(within(dialog).queryByRole("button", { name: "clue" })).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Save table" }));
     await waitFor(() =>
       expect(api.updateCampaignRollTable).toHaveBeenCalledWith(
         "campaign-1",
         "roll-table-2",
-        expect.objectContaining({ name: "Edited Clues" }),
+        expect.objectContaining({ name: "Edited Clues", tags: "" }),
       ),
     );
 

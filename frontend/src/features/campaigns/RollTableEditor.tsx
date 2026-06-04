@@ -134,18 +134,22 @@ function RollTableTagPicker({
           <span className="px-1 py-1 text-sm text-muted-foreground">No tags selected.</span>
         )}
         {selectedTags.map((tag) => (
-          <button
-            className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+          <span
+            className="inline-flex items-center gap-1 rounded-md bg-muted py-1 pl-2 pr-1 text-xs font-medium text-muted-foreground"
             key={tag}
-            type="button"
-            aria-label={`Remove tag ${tag}`}
-            title={`Remove ${tag}`}
-            onClick={() => onChange(selectedTags.filter((item) => item !== tag))}
           >
             <Tag className="h-3 w-3" />
             {tag}
-            <X className="h-3 w-3" aria-hidden="true" />
-          </button>
+            <button
+              className="grid h-5 w-5 place-items-center rounded text-muted-foreground hover:bg-destructive hover:text-destructive-foreground"
+              type="button"
+              aria-label={`Remove tag ${tag}`}
+              title={`Remove ${tag}`}
+              onClick={() => onChange(selectedTags.filter((item) => item !== tag))}
+            >
+              <X className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </span>
         ))}
       </div>
       <div className="flex gap-2">
