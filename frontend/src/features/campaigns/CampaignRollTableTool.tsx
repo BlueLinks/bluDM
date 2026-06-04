@@ -110,6 +110,8 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
         editor.mode === "edit" && editor.tableId
           ? await api.updateCampaignRollTable(campaignId, editor.tableId, editor.form)
           : await api.createCampaignRollTable(campaignId, editor.form);
+      setSearch("");
+      setCategory("");
       setEditor(null);
       await loadTables(payload.table.id);
     } catch (err) {

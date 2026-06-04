@@ -114,6 +114,9 @@ describe("CampaignRollTableTool", () => {
         }),
       ),
     );
+    await waitFor(() => expect(within(dialog).queryByText("Create roll table")).toBeNull());
+    expect(within(dialog).getByRole("button", { name: "New table" })).toBeTruthy();
+    expect(within(dialog).getByLabelText("Search")).toMatchObject({ value: "" });
 
     fireEvent.change(within(dialog).getByLabelText("Search"), { target: { value: "" } });
     await clickRollTableListItem(dialog, "Dungeon Clues");
@@ -129,6 +132,8 @@ describe("CampaignRollTableTool", () => {
         expect.objectContaining({ name: "Edited Clues", tags: "" }),
       ),
     );
+    await waitFor(() => expect(within(dialog).queryByText("Edit roll table")).toBeNull());
+    expect(within(dialog).getByRole("button", { name: "New table" })).toBeTruthy();
 
     await clickRollTableListItem(dialog, "Dungeon Clues");
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
