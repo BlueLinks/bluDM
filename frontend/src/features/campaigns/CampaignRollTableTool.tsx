@@ -41,6 +41,7 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
   const [selectedId, setSelectedId] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<RollTableRollResult | null>(null);
@@ -66,18 +67,30 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
     }
   }
 
+  const availableTags = useMemo(
+    () => normalizeRollTableTags(tables.flatMap((table) => table.tags)),
+    [tables],
+  );
+
+  useEffect(() => {
+    setSelectedTags((current) => current.filter((tag) => availableTags.includes(tag)));
+  }, [availableTags]);
+
   const filteredTables = useMemo(() => {
     const term = search.trim().toLowerCase();
     return tables.filter((table) => {
       const categoryMatch = category === "" || table.category === category;
       if (!categoryMatch) return false;
+      const tableTags = normalizeRollTableTags(table.tags);
+      const tagMatch = selectedTags.every((tag) => tableTags.includes(tag));
+      if (!tagMatch) return false;
       if (!term) return true;
       return [table.name, table.description, table.category, ...table.tags]
         .join(" ")
         .toLowerCase()
         .includes(term);
     });
-  }, [category, search, tables]);
+  }, [category, search, selectedTags, tables]);
   const selected =
     filteredTables.find((table) => table.id === selectedId) ?? filteredTables[0] ?? null;
   const tagSuggestions = useMemo(() => {
@@ -112,6 +125,7 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
           : await api.createCampaignRollTable(campaignId, editor.form);
       setSearch("");
       setCategory("");
+      setSelectedTags([]);
       setEditor(null);
       await loadTables(payload.table.id);
     } catch (err) {
@@ -201,6 +215,18 @@ export function CampaignRollTableTool({ campaignId }: { campaignId: string }) {
                   </Button>
                 </div>
               </div>
+              <TagFilterBar
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                onClear={() => setSelectedTags([])}
+                onToggle={(tag) =>
+                  setSelectedTags((current) =>
+                    current.includes(tag)
+                      ? current.filter((selectedTag) => selectedTag !== tag)
+                      : [...current, tag],
+                  )
+                }
+              />
 
               <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
                 <TableList
@@ -335,6 +361,54 @@ function TableList({
           {table.tags.length > 0 && <TagChipList className="mt-2" tags={table.tags} />}
         </button>
       ))}
+    </div>
+  );
+}
+
+function TagFilterBar({
+  availableTags,
+  selectedTags,
+  onClear,
+  onToggle,
+}: {
+  availableTags: string[];
+  selectedTags: string[];
+  onClear: () => void;
+  onToggle: (tag: string) => void;
+}) {
+  if (availableTags.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1 text-xs font-bold uppercase text-muted-foreground">
+        <Tag className="h-3.5 w-3.5" />
+        Tags
+      </span>
+      {availableTags.map((tag) => {
+        const selected = selectedTags.includes(tag);
+        return (
+          <button
+            className={[
+              "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition",
+              selected
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-muted text-muted-foreground hover:border-primary hover:text-foreground",
+            ].join(" ")}
+            key={tag}
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onToggle(tag)}
+          >
+            <Tag className="h-3 w-3" />
+            {tag}
+          </button>
+        );
+      })}
+      {selectedTags.length > 0 && (
+        <Button type="button" size="sm" variant="ghost" onClick={onClear}>
+          Clear tags
+        </Button>
+      )}
     </div>
   );
 }

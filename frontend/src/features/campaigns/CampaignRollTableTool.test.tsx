@@ -25,7 +25,16 @@ describe("CampaignRollTableTool", () => {
     vi.clearAllMocks();
     Element.prototype.scrollIntoView = vi.fn();
     vi.mocked(api.campaignRollTables).mockResolvedValue({
-      tables: [providedRollTable(), campaignRollTable()],
+      tables: [
+        providedRollTable(),
+        campaignRollTable(),
+        campaignRollTable({
+          id: "roll-table-5",
+          name: "Tavern Secrets",
+          category: "rumor",
+          tags: ["rumor", "clue"],
+        }),
+      ],
     });
     vi.mocked(api.rollCampaignRollTable).mockResolvedValue({ roll: rollTableResult() });
     vi.mocked(api.cloneCampaignRollTable).mockResolvedValue({
@@ -51,6 +60,7 @@ describe("CampaignRollTableTool", () => {
     const dialog = await screen.findByRole("dialog");
     expect((await within(dialog).findAllByText("Tavern Rumors")).length).toBeGreaterThan(0);
     expect(within(dialog).getAllByText("Dungeon Clues").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("Tavern Secrets").length).toBeGreaterThan(0);
     expect(within(dialog).getAllByText("rumor").length).toBeGreaterThan(0);
     expect(within(dialog).getAllByText("clue").length).toBeGreaterThan(0);
     fireEvent.click(within(dialog).getByRole("button", { name: "Roll table" }));
@@ -61,6 +71,32 @@ describe("CampaignRollTableTool", () => {
     expect(await within(dialog).findByText("Missing shipment")).toBeTruthy();
     expect(within(dialog).getByText("A merchant lost cargo despite hiring guards.")).toBeTruthy();
     expect(within(dialog).getByText("Recent table rolls")).toBeTruthy();
+  });
+
+  it("filters roll tables by selected tags", async () => {
+    render(<CampaignRollTableTool campaignId="campaign-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tables" }));
+    const dialog = await screen.findByRole("dialog");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "clue" }));
+    expect(within(dialog).queryByText("Tavern Rumors")).toBeNull();
+    expect(within(dialog).getAllByText("Dungeon Clues").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("Tavern Secrets").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "rumor" }));
+    expect(within(dialog).queryByText("Dungeon Clues")).toBeNull();
+    expect(within(dialog).queryByText("Tavern Rumors")).toBeNull();
+    expect(within(dialog).getAllByText("Tavern Secrets").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "clue" }));
+    expect(within(dialog).getAllByText("Tavern Rumors").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("Tavern Secrets").length).toBeGreaterThan(0);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Clear tags" }));
+    expect(within(dialog).getAllByText("Tavern Rumors").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("Dungeon Clues").length).toBeGreaterThan(0);
+    expect(within(dialog).getAllByText("Tavern Secrets").length).toBeGreaterThan(0);
   });
 
   it("filters, creates, clones, edits, and deletes campaign tables", async () => {
@@ -76,6 +112,8 @@ describe("CampaignRollTableTool", () => {
     await waitFor(() =>
       expect(api.cloneCampaignRollTable).toHaveBeenCalledWith("campaign-1", "roll-table-2"),
     );
+    fireEvent.click(within(dialog).getByRole("button", { name: "clue" }));
+    expect(within(dialog).getByRole("button", { name: "Clear tags" })).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "New table" }));
     expect(within(dialog).queryByRole("button", { name: "Fill gaps" })).toBeNull();
@@ -117,19 +155,20 @@ describe("CampaignRollTableTool", () => {
     await waitFor(() => expect(within(dialog).queryByText("Create roll table")).toBeNull());
     expect(within(dialog).getByRole("button", { name: "New table" })).toBeTruthy();
     expect(within(dialog).getByLabelText("Search")).toMatchObject({ value: "" });
+    expect(within(dialog).queryByRole("button", { name: "Clear tags" })).toBeNull();
 
     fireEvent.change(within(dialog).getByLabelText("Search"), { target: { value: "" } });
     await clickRollTableListItem(dialog, "Dungeon Clues");
     fireEvent.click(within(dialog).getByRole("button", { name: "Edit" }));
     fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "Edited Clues" } });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Remove tag clue" }));
-    expect(within(dialog).queryByRole("button", { name: "clue" })).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Remove tag dungeon" }));
+    expect(within(dialog).queryByRole("button", { name: "dungeon" })).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Save table" }));
     await waitFor(() =>
       expect(api.updateCampaignRollTable).toHaveBeenCalledWith(
         "campaign-1",
         "roll-table-2",
-        expect.objectContaining({ name: "Edited Clues", tags: "" }),
+        expect.objectContaining({ name: "Edited Clues", tags: "clue" }),
       ),
     );
     await waitFor(() => expect(within(dialog).queryByText("Edit roll table")).toBeNull());
@@ -176,7 +215,7 @@ function campaignRollTable(overrides: Partial<RollTable> = {}): RollTable {
     name: "Dungeon Clues",
     description: "Clues for room dressing.",
     category: "custom",
-    tags: ["clue"],
+    tags: ["clue", "dungeon"],
     dieExpression: "1d4",
     rows: rollRows(4),
     createdAt: "2026-06-02T10:30:00Z",
