@@ -26,6 +26,7 @@ export function Sheet({
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
           forceMount
+          aria-describedby={undefined}
           className="sheet-content fixed right-0 top-0 z-50 h-full w-full max-w-xl overflow-y-auto border-l border-border bg-card p-6 shadow-xl"
         >
           <div className="mb-6 flex items-center justify-between gap-4">
@@ -63,6 +64,7 @@ export function Modal({
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
           forceMount
+          aria-describedby={undefined}
           className={[
             "modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl",
             className,
@@ -104,6 +106,7 @@ export function ConfirmDialog({
         <Dialog.Overlay forceMount className="dialog-overlay fixed inset-0 z-50 bg-black/45" />
         <Dialog.Content
           forceMount
+          aria-describedby={undefined}
           className="modal-content fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border bg-card p-6 shadow-xl"
         >
           <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
