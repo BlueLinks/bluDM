@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reusable Roll Tables Mockups</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f6f3;
+        --panel: #fffefa;
+        --ink: #171816;
+        --muted: #62665f;
+        --border: #d5d8cf;
+        --accent: #2f6d68;
+        --accent-2: #705c2e;
+        --red: #9a3b36;
+        --blue: #e6f1f5;
+        --green: #e8f3ec;
+        --gold: #f3ead2;
+        --violet: #eee9f7;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 28px;
+        margin: 0 auto;
+        max-width: 1220px;
+        padding: 32px 20px 64px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(30px, 4vw, 48px);
+        line-height: 1.05;
+      }
+
+      h2 {
+        font-size: 24px;
+      }
+
+      h3 {
+        font-size: 16px;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .eyebrow {
+        color: var(--red);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .topbar,
+      .panel,
+      .modal,
+      .surface,
+      .result,
+      .row-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .topbar {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        padding: 12px;
+      }
+
+      .topbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .btn {
+        align-items: center;
+        background: #f8f7f2;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--ink);
+        display: inline-flex;
+        font-weight: 750;
+        gap: 8px;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 12px;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .btn.danger {
+        color: var(--red);
+      }
+
+      .panel {
+        padding: 20px;
+      }
+
+      .panel-head {
+        align-items: start;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+      }
+
+      .overlay {
+        background: rgb(20 22 18 / 0.48);
+        border-radius: 12px;
+        padding: 22px;
+      }
+
+      .modal {
+        margin: 0 auto;
+        max-width: 1040px;
+        padding: 24px;
+      }
+
+      .roller-layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(240px, 0.85fr) minmax(0, 1.45fr) minmax(240px, 0.8fr);
+      }
+
+      .manager-layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(260px, 0.85fr) minmax(0, 1.5fr);
+      }
+
+      .editor-layout {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(260px, 0.8fr) minmax(0, 1.4fr);
+      }
+
+      .surface {
+        padding: 16px;
+      }
+
+      .field {
+        color: var(--muted);
+        display: grid;
+        font-size: 13px;
+        font-weight: 700;
+        gap: 7px;
+      }
+
+      input,
+      select,
+      textarea {
+        background: #f7f7f1;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--ink);
+        min-height: 40px;
+        padding: 9px 11px;
+      }
+
+      textarea {
+        min-height: 86px;
+        resize: vertical;
+      }
+
+      .table-list,
+      .log-list,
+      .row-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .table-item {
+        align-items: start;
+        background: #fbfaf6;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        display: grid;
+        gap: 6px;
+        padding: 12px;
+      }
+
+      .table-item.active {
+        border-color: var(--accent);
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .chip {
+        background: #eef0e8;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: #4d534a;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 800;
+        padding: 4px 8px;
+      }
+
+      .chip.provided {
+        background: var(--violet);
+        color: #554577;
+      }
+
+      .chip.campaign {
+        background: var(--green);
+        color: #315941;
+      }
+
+      .chip.gold {
+        background: var(--gold);
+        color: #685224;
+      }
+
+      .result {
+        background: linear-gradient(180deg, var(--green), #fffefa);
+        padding: 20px;
+        text-align: center;
+      }
+
+      .result .roll {
+        color: var(--accent);
+        font-size: 64px;
+        font-weight: 950;
+        line-height: 1;
+      }
+
+      .result.animate {
+        animation: roll-pop 480ms ease-out;
+      }
+
+      @keyframes roll-pop {
+        0% {
+          opacity: 0.35;
+          transform: translateY(6px) scale(0.96);
+        }
+
+        65% {
+          transform: translateY(-2px) scale(1.02);
+        }
+
+        100% {
+          opacity: 1;
+          transform: translateY(0) scale(1);
+        }
+      }
+
+      .outcome-row {
+        align-items: start;
+        border-bottom: 1px solid var(--border);
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 76px minmax(120px, 0.7fr) minmax(0, 1.5fr);
+        padding: 10px 0;
+      }
+
+      .outcome-row:last-child {
+        border-bottom: 0;
+      }
+
+      .range {
+        background: var(--blue);
+        border: 1px solid #bad4df;
+        border-radius: 6px;
+        color: #315765;
+        font-weight: 900;
+        padding: 6px 8px;
+        text-align: center;
+      }
+
+      .log-entry {
+        align-items: center;
+        background: #fbfaf6;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        padding: 10px;
+      }
+
+      .log-entry strong {
+        color: var(--accent);
+        font-size: 24px;
+      }
+
+      .table-card {
+        align-items: start;
+        border-bottom: 1px solid var(--border);
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 14px 0;
+      }
+
+      .table-card:first-child {
+        padding-top: 0;
+      }
+
+      .table-card:last-child {
+        border-bottom: 0;
+        padding-bottom: 0;
+      }
+
+      .row-card {
+        padding: 12px;
+      }
+
+      .row-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 80px 80px minmax(120px, 0.8fr) minmax(0, 1.4fr);
+      }
+
+      .warning {
+        background: #fff4e1;
+        border: 1px solid #dfc98d;
+        border-radius: 7px;
+        color: #6b5621;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 10px 12px;
+      }
+
+      @media (max-width: 960px) {
+        .roller-layout,
+        .manager-layout,
+        .editor-layout,
+        .row-grid,
+        .outcome-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="grid">
+        <p class="eyebrow">Roleplay tools</p>
+        <h1>Reusable Roll Tables And Global Table Roller</h1>
+        <p class="muted">
+          Campaign tables for tavern rumors, NPC traits, weather, travel events, treasure quirks,
+          and other DM prompts, available from the same top bar family as Travel and Dice.
+        </p>
+      </section>
+
+      <section class="topbar">
+        <strong>bluDM</strong>
+        <div class="topbar-actions">
+          <button class="btn">↗ Travel</button>
+          <button class="btn primary">▦ Tables</button>
+          <button class="btn">⚂ Dice</button>
+          <button class="btn">Theme</button>
+          <button class="btn">Account</button>
+        </div>
+      </section>
+
+      <section class="overlay">
+        <div class="modal grid">
+          <div class="panel-head">
+            <div>
+              <h2>Table roller</h2>
+              <p class="muted">Search a saved table, roll it, and keep moving.</p>
+            </div>
+            <button class="btn">Manage tables</button>
+          </div>
+
+          <div class="roller-layout">
+            <aside class="surface grid">
+              <label class="field">
+                Search tables
+                <input value="rumor" />
+              </label>
+              <label class="field">
+                Category
+                <select>
+                  <option>All categories</option>
+                  <option>Rumors</option>
+                  <option>NPC traits</option>
+                  <option>Weather</option>
+                </select>
+              </label>
+              <div class="table-list">
+                <article class="table-item active">
+                  <div class="chips">
+                    <span class="chip campaign">Campaign</span>
+                    <span class="chip">1d20</span>
+                  </div>
+                  <h3>Dock Ward Rumors</h3>
+                  <p class="muted">Smugglers, guild whispers, and tavern talk.</p>
+                </article>
+                <article class="table-item">
+                  <div class="chips">
+                    <span class="chip provided">Provided</span>
+                    <span class="chip">1d12</span>
+                  </div>
+                  <h3>NPC Mannerisms</h3>
+                  <p class="muted">Quick body-language prompts.</p>
+                </article>
+              </div>
+            </aside>
+
+            <section class="surface grid">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Selected table</p>
+                  <h2>Dock Ward Rumors</h2>
+                </div>
+                <div class="chips">
+                  <span class="chip campaign">Campaign</span>
+                  <span class="chip gold">Rumors</span>
+                  <span class="chip">1d20</span>
+                </div>
+              </div>
+              <p class="muted">
+                Short prompts for when the party asks what people are saying around the harbor.
+              </p>
+              <div class="grid">
+                <div class="outcome-row">
+                  <span class="range">1-5</span>
+                  <strong>Missing cargo</strong>
+                  <p class="muted">A crate marked with a noble seal vanished before sunrise.</p>
+                </div>
+                <div class="outcome-row">
+                  <span class="range">6-10</span>
+                  <strong>Odd lights</strong>
+                  <p class="muted">Blue lanterns were seen under the old pier during low tide.</p>
+                </div>
+                <div class="outcome-row">
+                  <span class="range">11-15</span>
+                  <strong>Merchant trouble</strong>
+                  <p class="muted">A caravan master is paying for discreet guards tonight.</p>
+                </div>
+                <div class="outcome-row">
+                  <span class="range">16-20</span>
+                  <strong>False priest</strong>
+                  <p class="muted">Someone in borrowed vestments is buying silence with silver.</p>
+                </div>
+              </div>
+              <button class="btn primary">⚂ Roll table</button>
+            </section>
+
+            <aside class="grid">
+              <section class="result animate">
+                <p class="eyebrow">Rolled 1d20</p>
+                <div class="roll">13</div>
+                <h2>Merchant trouble</h2>
+                <p class="muted">A caravan master is paying for discreet guards tonight.</p>
+                <p class="muted">Matched range 11-15 · just now</p>
+              </section>
+              <section class="surface grid">
+                <h3>Recent table rolls</h3>
+                <div class="log-list">
+                  <div class="log-entry">
+                    <div>
+                      <strong>13</strong>
+                      <span>Dock Ward Rumors</span>
+                      <p class="muted">Merchant trouble</p>
+                    </div>
+                    <span class="muted">Now</span>
+                  </div>
+                  <div class="log-entry">
+                    <div>
+                      <strong>7</strong>
+                      <span>NPC Mannerisms</span>
+                      <p class="muted">Keeps checking the door</p>
+                    </div>
+                    <span class="muted">4m</span>
+                  </div>
+                </div>
+              </section>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel grid">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Management view</p>
+            <h2>Roll tables</h2>
+            <p class="muted">Browse provided tables and campaign-created tables in one place.</p>
+          </div>
+          <button class="btn primary">＋ New table</button>
+        </div>
+
+        <div class="manager-layout">
+          <aside class="surface grid">
+            <label class="field">
+              Search
+              <input placeholder="Search name, tags, or result text" />
+            </label>
+            <label class="field">
+              Source
+              <select>
+                <option>All sources</option>
+                <option>Campaign</option>
+                <option>Provided</option>
+              </select>
+            </label>
+            <label class="field">
+              Category
+              <select>
+                <option>All categories</option>
+                <option>Travel</option>
+                <option>Rumors</option>
+                <option>NPC</option>
+                <option>Treasure</option>
+              </select>
+            </label>
+          </aside>
+
+          <section class="surface">
+            <article class="table-card">
+              <div>
+                <div class="chips">
+                  <span class="chip campaign">Campaign</span>
+                  <span class="chip gold">Rumors</span>
+                  <span class="chip">4 rows</span>
+                </div>
+                <h3>Dock Ward Rumors</h3>
+                <p class="muted">1d20 · Updated today at 12:16</p>
+              </div>
+              <div class="topbar-actions">
+                <button class="btn">Roll</button>
+                <button class="btn">Edit</button>
+                <button class="btn">Duplicate</button>
+                <button class="btn danger">Delete</button>
+              </div>
+            </article>
+            <article class="table-card">
+              <div>
+                <div class="chips">
+                  <span class="chip provided">Provided</span>
+                  <span class="chip">NPC</span>
+                  <span class="chip">12 rows</span>
+                </div>
+                <h3>NPC Mannerisms</h3>
+                <p class="muted">1d12 · bluDM-authored starter table</p>
+              </div>
+              <div class="topbar-actions">
+                <button class="btn">Roll</button>
+                <button class="btn">Preview</button>
+                <button class="btn">Clone</button>
+              </div>
+            </article>
+          </section>
+        </div>
+      </section>
+
+      <section class="panel grid">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Editor</p>
+            <h2>Edit roll table</h2>
+            <p class="muted">Keep range editing dense, clear, and validation-forward.</p>
+          </div>
+          <div class="topbar-actions">
+            <button class="btn">Preview roll</button>
+            <button class="btn primary">Save table</button>
+          </div>
+        </div>
+
+        <div class="editor-layout">
+          <aside class="surface grid">
+            <label class="field">
+              Name
+              <input value="Dock Ward Rumors" />
+            </label>
+            <label class="field">
+              Description
+              <textarea>Short prompts for harbor taverns, guildhalls, and back alleys.</textarea>
+            </label>
+            <label class="field">
+              Category
+              <select>
+                <option>Rumors</option>
+              </select>
+            </label>
+            <label class="field">
+              Die expression
+              <select>
+                <option>1d20</option>
+                <option>1d12</option>
+                <option>1d100</option>
+              </select>
+            </label>
+            <label class="field">
+              Tags
+              <div class="chips">
+                <span class="chip">waterdeep ×</span>
+                <span class="chip">harbor ×</span>
+                <span class="chip">tavern ×</span>
+              </div>
+              <input placeholder="Add a tag" />
+            </label>
+            <div class="topbar-actions">
+              <button class="btn">Reset rows</button>
+            </div>
+          </aside>
+
+          <section class="surface grid">
+            <div class="warning">Each die face needs a label and result.</div>
+            <div class="row-list">
+              <article class="row-card">
+                <div class="row-grid">
+                  <label class="field">Roll<input value="1" readonly /></label>
+                  <label class="field">Label<input value="Missing cargo" /></label>
+                  <label class="field"
+                    >Result<input value="A crate marked with a noble seal vanished before sunrise."
+                  /></label>
+                </div>
+              </article>
+              <article class="row-card">
+                <div class="row-grid">
+                  <label class="field">Roll<input value="2" readonly /></label>
+                  <label class="field">Label<input value="Odd lights" /></label>
+                  <label class="field"
+                    >Result<input
+                      value="Blue lanterns were seen under the old pier during low tide."
+                  /></label>
+                </div>
+              </article>
+              <article class="row-card">
+                <div class="row-grid">
+                  <label class="field">Roll<input value="3" readonly /></label>
+                  <label class="field">Label<input value="Merchant trouble" /></label>
+                  <label class="field"
+                    >Result<input value="A caravan master is paying for discreet guards tonight."
+                  /></label>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

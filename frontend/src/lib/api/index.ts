@@ -32,6 +32,7 @@ import type {
 import { actionTemplateApi } from "./actionTemplates";
 import { encounterRunApi } from "./encounterRuns";
 import { journeyApi } from "./journeys";
+import { rollTableApi } from "./rollTables";
 import {
   actionPayload,
   creaturePayload,
@@ -44,6 +45,7 @@ export const api = {
   ...actionTemplateApi,
   ...encounterRunApi,
   ...journeyApi,
+  ...rollTableApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
     request<{ providers: AuthProvider[]; localAuthEnabled: boolean }>("/api/auth/providers"),
