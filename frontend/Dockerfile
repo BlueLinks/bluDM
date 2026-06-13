@@ -9,7 +9,7 @@ ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
-FROM nginx:1.29-alpine
+FROM nginx:1.31-alpine
 
 RUN apk upgrade --no-cache libcrypto3 libssl3 libxml2 nghttp2-libs
 
