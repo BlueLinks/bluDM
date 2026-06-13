@@ -1,53 +1,33 @@
-import {
-  Castle,
-  ChevronRight,
-  ClipboardList,
-  Copy,
-  FlaskConical,
-  HeartPulse,
-  Pencil,
-  Play,
-  Plus,
-  ScrollText,
-  Swords,
-  Trash2,
-  UsersRound,
-} from "lucide-react";
+import { Castle, ChevronRight, Plus, ScrollText } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { PlayerCard } from "../../components/PlayerCard";
 import {
-  Badge,
   Button,
   Callout,
   EmptyMini,
   EmptyState,
-  Field,
-  FloatingInput,
   Modal,
   MutedPanel,
   Page,
   PageHeader,
   SectionPanel,
-  Select,
-  Textarea,
   ToastViewport,
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import { encounterStatusOptions } from "../../lib/domain/options";
 import type { Campaign, CampaignDetail, Creature, Encounter, Player } from "../../types";
-import { CampaignNpcDialog, CampaignPartyDialog } from "./CampaignDialogs";
+import { CampaignEncountersSection } from "./CampaignEncountersSection";
 import { CampaignForm } from "./CampaignForm";
+import { CampaignNpcSection } from "./CampaignNpcSection";
 import { CampaignOverviewCards } from "./CampaignOverviewCards";
+import { CampaignPartySection } from "./CampaignPartySection";
 import { CampaignRemovalDialogs } from "./CampaignRemovalDialogs";
 import { CampaignSourceSettings } from "./CampaignSourceSettings";
 import { CampaignTravelTool } from "./CampaignTravelTool";
 import { TravelPanel } from "./TravelPanel";
 import type { CampaignJourney, CampaignLocation } from "./travelTypes";
-const encounterStatusLabel = (status: string) =>
-  encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
+
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -341,250 +321,43 @@ export function CampaignDetailPage() {
           onEditJourney={setEditingJourney}
           onChanged={loadCampaign}
         />
-        <SectionPanel title="Party" icon={UsersRound}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
-            <div>
-              <h4 className="font-semibold">Party tools</h4>
-              <p className="text-sm text-muted-foreground">
-                Manage campaign characters and rest state.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Modal
-                open={partyOpen}
-                onOpenChange={setPartyOpen}
-                title="Edit party"
-                trigger={
-                  <Button icon={UsersRound} variant="secondary">
-                    Edit party
-                  </Button>
-                }
-              >
-                <CampaignPartyDialog
-                  campaignID={detail.campaign.id}
-                  players={detail.players}
-                  onAddPlayer={() => {
-                    setPartyOpen(false);
-                    void navigate("/players/new");
-                  }}
-                  onRemovePlayer={setRemovePlayer}
-                />
-              </Modal>
-              <Button icon={HeartPulse} onClick={() => void longRest()}>
-                Long rest party
-              </Button>
-            </div>
-          </div>
-          {detail.players.length === 0 ? (
-            <EmptyMini copy="No player characters yet. Use the Players section to add structured character sheets." />
-          ) : (
-            <div className="grid gap-3">
-              {detail.players.map((player) => (
-                <PlayerCard key={player.id} player={player} showCampaign={false} />
-              ))}
-            </div>
-          )}
-        </SectionPanel>
-        <SectionPanel title="Encounters" icon={ClipboardList}>
-          {detail.encounters.length === 0 ? (
-            <EmptyMini copy="No encounters yet. Create one here, then open the full builder to add players, allies, and enemies." />
-          ) : (
-            <div className="grid gap-3">
-              {detail.encounters.map((encounter) => (
-                <div
-                  className="rounded-md border border-border bg-background p-3"
-                  key={encounter.id}
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-semibold">{encounter.name}</div>
-                      {encounter.description && (
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {encounter.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge>{encounterStatusLabel(encounter.status)}</Badge>
-                        {encounter.location && <Badge>{encounter.location}</Badge>}
-                        {encounter.roomNumber && <Badge>Room {encounter.roomNumber}</Badge>}
-                        <Badge>{encounter.combatantCount} combatants</Badge>
-                        <Badge>{encounter.enemyCount} enemies</Badge>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        icon={Play}
-                        size="sm"
-                        onClick={() => void startEncounter(encounter, false)}
-                      >
-                        Run
-                      </Button>
-                      <Button
-                        type="button"
-                        icon={FlaskConical}
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => void startEncounter(encounter, true)}
-                      >
-                        Test
-                      </Button>
-                      <Link to={`/campaigns/${detail.campaign.id}/encounters/${encounter.id}/edit`}>
-                        <Button type="button" icon={Pencil} size="sm" variant="secondary">
-                          Edit
-                        </Button>
-                      </Link>
-                      <Button
-                        type="button"
-                        icon={Copy}
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => void cloneEncounter(encounter)}
-                      >
-                        Clone
-                      </Button>
-                      <Button
-                        type="button"
-                        icon={Trash2}
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setRemoveEncounter(encounter)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Modal
-              open={encounterOpen}
-              onOpenChange={setEncounterOpen}
-              title="Add encounter"
-              trigger={
-                <Button type="button" icon={Plus} variant="success">
-                  Add encounter
-                </Button>
-              }
-            >
-              <form className="grid gap-4" onSubmit={(event) => void createEncounter(event)}>
-                <FloatingInput
-                  label="Encounter name"
-                  value={encounterName}
-                  onChange={setEncounterName}
-                  required
-                />
-                <div className="grid gap-3 md:grid-cols-3">
-                  <Field label="Status">
-                    <Select
-                      value={encounterStatus}
-                      placeholder="Status"
-                      options={encounterStatusOptions}
-                      onValueChange={setEncounterStatus}
-                    />
-                  </Field>
-                  <FloatingInput
-                    label="Location"
-                    value={encounterLocation}
-                    onChange={setEncounterLocation}
-                  />
-                  <FloatingInput
-                    label="Room number"
-                    value={encounterRoomNumber}
-                    onChange={setEncounterRoomNumber}
-                  />
-                </div>
-                <Field label="Description">
-                  <Textarea
-                    rows={4}
-                    value={encounterDescription}
-                    onChange={(event) => setEncounterDescription(event.target.value)}
-                    placeholder="Optional notes, setup, terrain, or goals"
-                  />
-                </Field>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setEncounterOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" icon={Plus} variant="success">
-                    Create encounter
-                  </Button>
-                </div>
-              </form>
-            </Modal>
-            <Button type="button" variant="secondary" disabled>
-              Import encounter
-            </Button>
-          </div>
-        </SectionPanel>
-        <SectionPanel title="NPCs" icon={Swords}>
-          {detail.npcs.length === 0 ? (
-            <EmptyMini copy="No campaign NPCs linked yet. NPC disposition can be changed later per encounter." />
-          ) : (
-            <div className="grid gap-3">
-              {detail.npcs.map((creature) => (
-                <div
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background p-3"
-                  key={creature.id}
-                >
-                  <div>
-                    <div className="font-semibold">{creature.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      AC {creature.armorClass} · HP {creature.hitPoints} · CR{" "}
-                      {creature.challengeRating || "-"}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Link to={`/npcs/${creature.id}/edit`}>
-                      <Button type="button" icon={Pencil} size="sm" variant="secondary">
-                        Edit
-                      </Button>
-                    </Link>
-                    <Button
-                      type="button"
-                      icon={Trash2}
-                      size="sm"
-                      variant="danger"
-                      onClick={() => setRemoveNpc(creature)}
-                    >
-                      Unlink
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Modal
-              open={npcOpen}
-              onOpenChange={setNpcOpen}
-              title="Add campaign NPC"
-              trigger={
-                <Button
-                  type="button"
-                  icon={Plus}
-                  variant="success"
-                  onClick={() => void openNpcDialog()}
-                >
-                  Add NPC link
-                </Button>
-              }
-            >
-              <CampaignNpcDialog
-                creatures={allCreatures}
-                linkedCreatureIds={detail.npcs.map((creature) => creature.id)}
-                onLink={(creature) => void linkNpc(creature)}
-              />
-            </Modal>
-            <Link to="/npcs">
-              <Button type="button" variant="secondary">
-                Open creature library
-              </Button>
-            </Link>
-          </div>
-        </SectionPanel>
+        <CampaignPartySection
+          campaignID={detail.campaign.id}
+          open={partyOpen}
+          players={detail.players}
+          onLongRest={() => void longRest()}
+          onOpenChange={setPartyOpen}
+          onRemovePlayer={setRemovePlayer}
+        />
+        <CampaignEncountersSection
+          campaignID={detail.campaign.id}
+          description={encounterDescription}
+          encounterOpen={encounterOpen}
+          encounters={detail.encounters}
+          location={encounterLocation}
+          name={encounterName}
+          roomNumber={encounterRoomNumber}
+          status={encounterStatus}
+          onClone={(encounter) => void cloneEncounter(encounter)}
+          onCreate={(event) => void createEncounter(event)}
+          onDescriptionChange={setEncounterDescription}
+          onLocationChange={setEncounterLocation}
+          onNameChange={setEncounterName}
+          onOpenChange={setEncounterOpen}
+          onRemove={setRemoveEncounter}
+          onRoomNumberChange={setEncounterRoomNumber}
+          onStart={(encounter, test) => void startEncounter(encounter, test)}
+          onStatusChange={setEncounterStatus}
+        />
+        <CampaignNpcSection
+          allCreatures={allCreatures}
+          linkedNpcs={detail.npcs}
+          open={npcOpen}
+          onLink={(creature) => void linkNpc(creature)}
+          onOpenDialog={() => void openNpcDialog()}
+          onOpenChange={setNpcOpen}
+          onRemove={setRemoveNpc}
+        />
         <SectionPanel title="Recent Notes" icon={ScrollText}>
           <EmptyMini copy="Combat summaries, XP awards, and loot reminders will appear here." />
         </SectionPanel>
