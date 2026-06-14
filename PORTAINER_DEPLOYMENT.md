@@ -116,11 +116,13 @@ npm run dev
 
 GitHub Actions runs on pull requests and pushes to `main`:
 
-- frontend lint, tests, build, and file-size checks
+- frontend lint, Prettier format check, tests, build, and file-size checks
 - backend tests, `go vet`, `govulncheck`, and `gosec`
 - compose validation
 - Docker builds
 - smoke test for `/health` and `/api/health`
 - free security scans with Gitleaks, Trivy, and Semgrep
+
+Local `make verify` covers the fast baseline. Use `make verify-security`, `make verify-docker`, or `make verify-full` for heavier local checks. Hosted CI remains the source of truth for Trivy filesystem/image scans, Gitleaks, Semgrep, and Portainer notification.
 
 Merging to `main` is the deployment signal for Portainer.

@@ -39,7 +39,23 @@ These rules apply to the whole repository unless a more specific `AGENTS.md` is 
 
 ## Testing And Verification
 
-Before pushing code, run the checks relevant to the change. For normal feature/backend/frontend work, use:
+Before pushing normal code changes, run the fast local baseline:
+
+```sh
+make verify
+```
+
+This covers frontend lint, Prettier check, file-size rules, frontend/backend tests, backend vet, the frontend build, and `docker compose config`.
+
+For security-sensitive backend work, Docker/deployment changes, or a fuller local CI mirror, use:
+
+```sh
+make verify-security
+make verify-docker
+make verify-full
+```
+
+For troubleshooting, the baseline expands to:
 
 ```sh
 cd frontend && npm run lint
@@ -55,10 +71,12 @@ docker compose config
 
 Run `node scripts/check-file-size.mjs` from the repository root before pushing; do not substitute the frontend-only size script because it will miss backend ratchet failures.
 
-For security-sensitive backend changes, also run:
+The security target uses the same Go toolchain version as CI and expands to:
 
 ```sh
-cd backend && gosec -exclude=G404 ./...
+cd frontend && npm audit --audit-level=high
+cd backend && GOTOOLCHAIN=go1.25.11 go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+cd backend && GOTOOLCHAIN=go1.25.11 go run github.com/securego/gosec/v2/cmd/gosec@latest -exclude=G404 ./...
 ```
 
 If a check cannot be run locally, say so in the PR and explain why.
