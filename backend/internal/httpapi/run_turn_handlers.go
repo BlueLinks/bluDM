@@ -299,24 +299,10 @@ func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 	rawDamage := 0
 	adjustedDamage := 0
 	for _, part := range action.Rolls {
-		rolled := rollDice(part.DiceCount, part.DieSize)
-		criticalRolled := 0
-		if critical {
-			criticalRolled = rollDice(part.DiceCount, part.DieSize)
-		}
-		total := rolled + part.FixedValue
-		if critical {
-			total += criticalRolled + part.FixedValue
-		}
-		if total < 0 {
-			total = 0
-		}
-		part.RolledValue = rolled
-		part.CriticalRolledValue = criticalRolled
-		part.Total = total
+		part = actionRollTotal(part, critical, rollDice)
 		rolls = append(rolls, part)
-		rawDamage += total
-		adjustedDamage += applyDamageDefense(total, part.DamageType, s.defensesForRunCombatant(r.Context(), runID, target))
+		rawDamage += part.Total
+		adjustedDamage += applyDamageDefense(part.Total, part.DamageType, s.defensesForRunCombatant(r.Context(), runID, target))
 	}
 	targetAC := s.effectiveArmorClassForRun(r.Context(), runID, target)
 	if !usesAttackRoll || targetAC <= 0 {
@@ -352,6 +338,25 @@ func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "action_executed", req.ActorID, req.TargetID, result)
 	writeJSON(w, http.StatusOK, map[string]any{"result": result})
+}
+
+func actionRollTotal(part models.ActionRollPart, critical bool, roller func(int, int) int) models.ActionRollPart {
+	rolled := roller(part.DiceCount, part.DieSize)
+	criticalRolled := 0
+	if critical {
+		criticalRolled = roller(part.DiceCount, part.DieSize)
+	}
+	total := rolled + part.FixedValue
+	if critical {
+		total += criticalRolled + part.FixedValue
+	}
+	if total < 0 {
+		total = 0
+	}
+	part.RolledValue = rolled
+	part.CriticalRolledValue = criticalRolled
+	part.Total = total
+	return part
 }
 
 func (s *Server) resolveActionDamageCommand(w http.ResponseWriter, r *http.Request) {
