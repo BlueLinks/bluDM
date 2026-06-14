@@ -1,4 +1,4 @@
-import { ClipboardList, FlaskConical, Plus, Swords, UsersRound } from "lucide-react";
+import { FlaskConical } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
@@ -6,20 +6,14 @@ import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import {
   Button,
   Callout,
-  Field,
-  FloatingInput,
   MutedPanel,
   Page,
   PageHeader,
-  SectionPanel,
-  Select,
-  Textarea,
   ToastViewport,
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
-import { encounterStatusOptions } from "../../lib/domain/options";
 import type {
   CampaignDetail,
   Creature,
@@ -28,7 +22,8 @@ import type {
   EncounterCombatant,
   Player,
 } from "../../types";
-import { CombatantEditSheet, CombatantList } from "./editorComponents";
+import { CombatantEditSheet } from "./editorComponents";
+import { EncounterDetailsSection, EncounterRosterSections } from "./EncounterEditorSections";
 import { EncounterCreatureAddPanel } from "./EncounterCreatureAddPanel";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
 import {
@@ -37,7 +32,6 @@ import {
   draftFromPlayer,
   encounterDirty,
   encounterMetaChanged,
-  playerClassLevel,
 } from "./domain";
 
 export function EncounterEditPage() {
@@ -330,43 +324,7 @@ export function EncounterEditPage() {
           }
         />
         {error && <Callout tone="danger">{error}</Callout>}
-        <SectionPanel title="Encounter Details" icon={ClipboardList}>
-          <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
-            <FloatingInput
-              label="Name"
-              value={encounterMeta.name}
-              onChange={(name) => setEncounterMeta((current) => ({ ...current, name }))}
-              required
-            />
-            <FloatingInput
-              label="Location"
-              value={encounterMeta.location}
-              onChange={(location) => setEncounterMeta((current) => ({ ...current, location }))}
-            />
-            <FloatingInput
-              label="Room"
-              value={encounterMeta.roomNumber}
-              onChange={(roomNumber) => setEncounterMeta((current) => ({ ...current, roomNumber }))}
-            />
-            <Field label="Status">
-              <Select
-                value={encounterMeta.status}
-                placeholder="Status"
-                options={encounterStatusOptions}
-                onValueChange={(status) => setEncounterMeta((current) => ({ ...current, status }))}
-              />
-            </Field>
-          </div>
-          <Field className="mt-3" label="Description">
-            <Textarea
-              rows={3}
-              value={encounterMeta.description}
-              onChange={(event) =>
-                setEncounterMeta((current) => ({ ...current, description: event.target.value }))
-              }
-            />
-          </Field>
-        </SectionPanel>
+        <EncounterDetailsSection meta={encounterMeta} onChange={setEncounterMeta} />
         <EncounterDifficultyPanel difficulty={difficulty} />
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
           <EncounterCreatureAddPanel
@@ -384,80 +342,16 @@ export function EncounterEditPage() {
             showUserCreatures={showUserCreatures}
             onAddCreature={addCreature}
           />
-          <div className="grid gap-4">
-            <SectionPanel title="Players And Friendlies" icon={UsersRound}>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm text-muted-foreground">
-                  Add or remove player characters here. Full player editing stays in the Players
-                  section.
-                </p>
-                <Button
-                  type="button"
-                  icon={Plus}
-                  size="sm"
-                  variant="success"
-                  disabled={availablePlayers.length === 0}
-                  onClick={() => void addAllPlayers()}
-                >
-                  Add all players
-                </Button>
-              </div>
-              {availablePlayers.length > 0 && (
-                <div className="mb-4 grid gap-2">
-                  {availablePlayers.map((player) => (
-                    <div
-                      className="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
-                      key={player.id}
-                    >
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-medium">{player.characterName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {playerClassLevel(player)}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        icon={Plus}
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => void addPlayer(player)}
-                      >
-                        Add
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                Players
-              </h4>
-              <CombatantList
-                combatants={playerCombatants}
-                empty="No players added yet."
-                sideTone="player"
-                onRemove={removeCombatant}
-              />
-              <h4 className="mb-2 mt-5 text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                Friendlies
-              </h4>
-              <CombatantList
-                combatants={friendlyCombatants}
-                empty="No friendly NPCs or monsters yet."
-                sideTone="friendly"
-                onEdit={setEditing}
-                onRemove={removeCombatant}
-              />
-            </SectionPanel>
-            <SectionPanel title="Enemies" icon={Swords}>
-              <CombatantList
-                combatants={enemyCombatants}
-                empty="No enemies yet."
-                sideTone="enemy"
-                onEdit={setEditing}
-                onRemove={removeCombatant}
-              />
-            </SectionPanel>
-          </div>
+          <EncounterRosterSections
+            availablePlayers={availablePlayers}
+            enemyCombatants={enemyCombatants}
+            friendlyCombatants={friendlyCombatants}
+            playerCombatants={playerCombatants}
+            onAddAllPlayers={() => void addAllPlayers()}
+            onAddPlayer={(player) => void addPlayer(player)}
+            onEdit={setEditing}
+            onRemove={removeCombatant}
+          />
         </div>
         <CombatantEditSheet
           combatant={editing}

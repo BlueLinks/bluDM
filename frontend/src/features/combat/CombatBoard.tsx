@@ -3,7 +3,8 @@ import React from "react";
 import { Button, Callout, MutedPanel, SectionPanel } from "../../components/ui";
 import type { EncounterRunCombatant, EncounterRunEffect } from "../../types";
 import { CombatSheet } from "./CombatSheet";
-import { DamageMeters, TargetRow, TopOfRoundMarker } from "./combatWidgets";
+import { DamageMeters, TopOfRoundMarker } from "./combatWidgets";
+import { TargetRow } from "./TargetRow";
 
 type DeathSaveAction = "success" | "failure" | "undo-success" | "undo-failure" | "stabilize";
 
