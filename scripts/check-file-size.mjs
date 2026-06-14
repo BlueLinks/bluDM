@@ -12,7 +12,6 @@ const defaults = [
 // to today's size so future work must shrink or split them instead of growing them.
 const overrides = new Map([
   ["frontend/src/features/campaigns/pages.tsx", 612],
-  ["frontend/src/features/combat/combatWidgets.tsx", 630],
   ["frontend/src/features/combat/trackerPage.tsx", 730],
   ["frontend/src/features/creatures/CreatureForm.tsx", 760],
 ]);
