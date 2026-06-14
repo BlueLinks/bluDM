@@ -15,6 +15,40 @@ type RunStore struct {
 	db *gorm.DB
 }
 
+type RunCombatantInput struct {
+	SourceCombatantID string
+	SourceType        string
+	PlayerID          string
+	CreatureID        string
+	Side              string
+	DisplayName       string
+	ColorLabel        string
+	AvatarURL         string
+	ArmorClass        int
+	MaxHitPoints      int
+	CurrentHitPoints  int
+	Initiative        int
+	InitiativeSet     bool
+	Snapshot          map[string]any
+}
+
+type RunCombatantUpdate struct {
+	DisplayName              string
+	ColorLabel               string
+	AvatarURL                string
+	Initiative               int
+	InitiativeSet            bool
+	ArmorClassBonus          int
+	TemporaryHitPoints       int
+	MaxHitPointsModifier     int
+	ArmorClassOverride       int
+	MaxHitPointsOverride     int
+	CurrentHitPointsOverride int
+	CurrentHitPoints         int
+	Conditions               []string
+	Defeated                 bool
+}
+
 func (s RunStore) ByID(ctx context.Context, ownerUserID, runID string) (models.EncounterRun, error) {
 	entity, err := runEntityForOwner(ctx, s.db, ownerUserID, runID)
 	if err != nil {
@@ -77,6 +111,127 @@ func (s RunStore) CombatantOwnedByID(ctx context.Context, ownerUserID, combatant
 		return models.EncounterRunCombatant{}, err
 	}
 	return encounterRunCombatantFromEntity(entity), nil
+}
+
+func (s RunStore) AddCombatants(ctx context.Context, runID string, inputs []RunCombatantInput) ([]models.EncounterRunCombatant, error) {
+	created := []models.EncounterRunCombatant{}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var nextOrder int
+		if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+			Where("encounter_run_id = ?", strings.TrimSpace(runID)).
+			Select("coalesce(max(sort_order) + 1, 0)").
+			Scan(&nextOrder).Error; err != nil {
+			return err
+		}
+		for index, input := range inputs {
+			entity := runCombatantEntityFromInput(runID, nextOrder+index, input)
+			if err := tx.Create(&entity).Error; err != nil {
+				return err
+			}
+			created = append(created, encounterRunCombatantFromEntity(entity))
+		}
+		return nil
+	})
+	return created, err
+}
+
+func (s RunStore) SetInitiatives(ctx context.Context, values map[string]int) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for combatantID, initiative := range values {
+			if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+				Where("id = ?", strings.TrimSpace(combatantID)).
+				Updates(map[string]any{"initiative": initiative, "initiative_set": true}).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s RunStore) SetInitiative(ctx context.Context, runID, combatantID string, initiative int) error {
+	result := s.db.WithContext(ctx).Model(&dbmodels.EncounterRunCombatantEntity{}).
+		Where("encounter_run_id = ? and id = ?", strings.TrimSpace(runID), strings.TrimSpace(combatantID)).
+		Updates(map[string]any{"initiative": initiative, "initiative_set": true})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s RunStore) ReorderInitiative(ctx context.Context, runID string, combatantIDs []string) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		for index, id := range combatantIDs {
+			if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+				Where("encounter_run_id = ? and id = ?", strings.TrimSpace(runID), strings.TrimSpace(id)).
+				Update("sort_order", index).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+func (s RunStore) Begin(ctx context.Context, runID string) error {
+	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunEntity{}).
+		Where("id = ?", strings.TrimSpace(runID)).
+		Updates(map[string]any{"status": "active", "current_round": 1, "current_turn_index": 0}).Error
+}
+
+func (s RunStore) SetTurnPosition(ctx context.Context, runID string, round, turnIndex int) error {
+	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunEntity{}).
+		Where("id = ?", strings.TrimSpace(runID)).
+		Updates(map[string]any{"current_round": round, "current_turn_index": turnIndex}).Error
+}
+
+func (s RunStore) UpdateCombatant(ctx context.Context, combatantID string, input RunCombatantUpdate) (string, error) {
+	conditions, err := jsonBytes(input.Conditions)
+	if err != nil {
+		return "", err
+	}
+	result := s.db.WithContext(ctx).Model(&dbmodels.EncounterRunCombatantEntity{}).
+		Where("id = ?", strings.TrimSpace(combatantID)).
+		Updates(map[string]any{
+			"display_name":                input.DisplayName,
+			"color_label":                 input.ColorLabel,
+			"avatar_url":                  input.AvatarURL,
+			"initiative":                  input.Initiative,
+			"initiative_set":              input.InitiativeSet,
+			"armor_class_bonus":           input.ArmorClassBonus,
+			"temporary_hit_points":        input.TemporaryHitPoints,
+			"max_hit_points_modifier":     input.MaxHitPointsModifier,
+			"armor_class_override":        input.ArmorClassOverride,
+			"max_hit_points_override":     input.MaxHitPointsOverride,
+			"current_hit_points_override": input.CurrentHitPointsOverride,
+			"current_hit_points":          input.CurrentHitPoints,
+			"conditions":                  conditions,
+			"defeated":                    input.Defeated,
+		})
+	if result.Error != nil {
+		return "", result.Error
+	}
+	if result.RowsAffected == 0 {
+		return "", ErrNotFound
+	}
+	var entity dbmodels.EncounterRunCombatantEntity
+	if err := s.db.WithContext(ctx).Where("id = ?", strings.TrimSpace(combatantID)).First(&entity).Error; err != nil {
+		return "", err
+	}
+	return entity.EncounterRunID, nil
+}
+
+func (s RunStore) MarkLogEventNotUndoable(ctx context.Context, eventID string) error {
+	return s.db.WithContext(ctx).
+		Exec("update combat_log_events set payload = jsonb_set(payload, '{undoable}', 'false'::jsonb) where id = ?", strings.TrimSpace(eventID)).
+		Error
+}
+
+func (s RunStore) SetEffectActive(ctx context.Context, effectID string, active bool) error {
+	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunActiveEffectEntity{}).
+		Where("id = ?", strings.TrimSpace(effectID)).
+		Update("active", active).Error
 }
 
 func (s RunStore) CombatLogEventsForRun(ctx context.Context, runID string, limit int) ([]models.CombatLogEvent, error) {

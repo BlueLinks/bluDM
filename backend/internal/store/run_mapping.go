@@ -2,10 +2,37 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
+	"strings"
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
 )
+
+func runCombatantEntityFromInput(runID string, sortOrder int, input RunCombatantInput) dbmodels.EncounterRunCombatantEntity {
+	var initiative *int
+	if input.InitiativeSet {
+		initiative = &input.Initiative
+	}
+	return dbmodels.EncounterRunCombatantEntity{
+		EncounterRunID:    strings.TrimSpace(runID),
+		SourceCombatantID: stringPointer(input.SourceCombatantID),
+		SourceType:        input.SourceType,
+		PlayerID:          stringPointer(input.PlayerID),
+		CreatureID:        stringPointer(input.CreatureID),
+		Side:              input.Side,
+		DisplayName:       input.DisplayName,
+		ColorLabel:        input.ColorLabel,
+		AvatarURL:         input.AvatarURL,
+		ArmorClass:        input.ArmorClass,
+		MaxHitPoints:      input.MaxHitPoints,
+		CurrentHitPoints:  input.CurrentHitPoints,
+		Initiative:        initiative,
+		InitiativeSet:     input.InitiativeSet,
+		SortOrder:         sortOrder,
+		Snapshot:          jsonMap(input.Snapshot),
+	}
+}
 
 func encounterRunFromEntity(entity dbmodels.EncounterRunEntity) models.EncounterRun {
 	return models.EncounterRun{
@@ -124,4 +151,15 @@ func encounterRunAlertFromEntity(entity dbmodels.EncounterRunAlertEntity) models
 		Resolved:       entity.Resolved,
 		CreatedAt:      entity.CreatedAt,
 	}
+}
+
+func jsonBytes(value any) (dbmodels.JSONBytes, error) {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	if !json.Valid(bytes) {
+		return nil, errors.New("invalid JSON")
+	}
+	return dbmodels.JSONBytes(bytes), nil
 }
