@@ -11,25 +11,17 @@ const defaults = [
 // Legacy ratchet: these files are known debt. The limit is intentionally close
 // to today's size so future work must shrink or split them instead of growing them.
 const overrides = new Map([
-  ["frontend/src/components/DiceRoller.tsx", 259],
   ["frontend/src/features/campaigns/pages.tsx", 612],
-  ["frontend/src/features/combat/actionResult.tsx", 657],
-  ["frontend/src/features/combat/combatWidgets.tsx", 677],
-  ["frontend/src/features/combat/trackerPage.tsx", 763],
-  ["frontend/src/features/creatures/CreatureForm.tsx", 1028],
-  ["frontend/src/main.tsx", 181],
+  ["frontend/src/features/combat/combatWidgets.tsx", 630],
+  ["frontend/src/features/combat/trackerPage.tsx", 730],
+  ["frontend/src/features/creatures/CreatureForm.tsx", 760],
 ]);
 
 const jsxBlockMax = 130;
 const jsxBlockOverrides = new Map([
-  ["frontend/src/components/DiceRoller.tsx", 133],
-  ["frontend/src/features/campaigns/pages.tsx", 316],
-  ["frontend/src/features/combat/actionResult.tsx", 157],
-  ["frontend/src/features/combat/trackerPage.tsx", 202],
-  ["frontend/src/features/creatures/CreatureForm.tsx", 184],
-  ["frontend/src/features/creatures/actionEditors.tsx", 138],
-  ["frontend/src/features/creatures/pages.tsx", 163],
-  ["frontend/src/features/encounters/editorPage.tsx", 204],
+  ["frontend/src/features/campaigns/pages.tsx", 310],
+  ["frontend/src/features/combat/trackerPage.tsx", 190],
+  ["frontend/src/features/encounters/editorPage.tsx", 190],
 ]);
 
 const ignoredDirs = new Set([".git", "dist", "node_modules"]);
