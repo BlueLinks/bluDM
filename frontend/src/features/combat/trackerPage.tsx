@@ -1,27 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import {
-  Button,
-  Checkbox,
-  ConfirmDialog,
-  Field,
-  Input,
-  Modal,
-  MutedPanel,
-  Sheet,
-  ToastViewport,
-  useToasts,
-} from "../../components/ui";
+import { MutedPanel, useToasts } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { RollTableResolutionPayload } from "../../lib/api/encounterRuns";
 import { isDownEnemy, rotateCombatantsFromActive } from "../../lib/domain/combat";
 import { createId } from "../../lib/domain/ids";
-import {
-  combatantColors,
-  conditionImmunities,
-  defaultCombatantColor,
-} from "../../lib/domain/options";
 import type {
   CreatureAction,
   CreatureSpellcastingProfile,
@@ -30,20 +14,12 @@ import type {
   EncounterRunCombatant,
   RollMode,
 } from "../../types";
-import { ActionResult } from "./actionResult";
 import { ActiveSpellAreas } from "./ActiveSpellAreas";
-import { AddRunTargetDialog } from "./AddRunTargetDialog";
+import { CombatActiveTurnPanel } from "./CombatActiveTurnPanel";
 import { CombatBoard } from "./CombatBoard";
+import { CombatTrackerOverlays } from "./CombatTrackerOverlays";
 import { ConcentrationAlerts } from "./ConcentrationAlerts";
-import {
-  ActiveTurnHeader,
-  CombatControls,
-  CombatStatusBar,
-  DeathSaveControls,
-  RollFlash,
-} from "./combatWidgets";
-import { ManualSpellSlotDialog } from "./ManualSpellSlotDialog";
-import { SpellCastDialog } from "./SpellCastDialog";
+import { CombatStatusBar } from "./combatWidgets";
 
 export function CombatTrackerPage() {
   const { runID } = useParams();
@@ -368,33 +344,25 @@ export function CombatTrackerPage() {
           onMove={(area) => void moveSpellArea(area.id)}
         />
         <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
-          <ActiveTurnHeader combatant={active} selected={selected}>
-            {active.currentHitPoints <= 0 && active.sourceType !== "player" ? (
-              <MutedPanel>Entity is dead</MutedPanel>
-            ) : activeNeedsDeathSaves ? (
-              <DeathSaveControls
-                combatant={active}
-                onDeathSave={(action) => void updateDeathSaveFor(active, action)}
-              />
-            ) : (
-              <CombatControls
-                actions={actions}
-                damageType={damageType}
-                disabled={!selected}
-                hpAmount={hpAmount}
-                onAction={execute}
-                onAmountChange={setHpAmount}
-                onDamageTypeChange={setDamageType}
-                onManual={applyManual}
-                onOpenManualSlots={() => setManualSlotsOpen(true)}
-                onOpenSpells={() => setSpellDialogOpen(true)}
-                spellSlotsTracked={Boolean(
-                  run.spellSlots?.some((slot) => slot.combatantId === active.id),
-                )}
-                spells={spellcasting?.spells ?? []}
-              />
+          <CombatActiveTurnPanel
+            actions={actions}
+            active={active}
+            activeNeedsDeathSaves={activeNeedsDeathSaves}
+            damageType={damageType}
+            hpAmount={hpAmount}
+            selected={selected}
+            spellSlotsTracked={Boolean(
+              run.spellSlots?.some((slot) => slot.combatantId === active.id),
             )}
-          </ActiveTurnHeader>
+            spells={spellcasting?.spells ?? []}
+            onAction={execute}
+            onAmountChange={setHpAmount}
+            onDamageTypeChange={setDamageType}
+            onDeathSave={(action) => void updateDeathSaveFor(active, action)}
+            onManual={applyManual}
+            onOpenManualSlots={() => setManualSlotsOpen(true)}
+            onOpenSpells={() => setSpellDialogOpen(true)}
+          />
         </div>
 
         <CombatBoard
@@ -417,285 +385,52 @@ export function CombatTrackerPage() {
           onSelect={setSelectedID}
         />
       </div>
-      <RunCombatantEditSheet
-        combatant={editing}
-        onClose={() => setEditing(null)}
-        onSave={(combatant) =>
-          refreshFrom(api.updateRunCombatant(combatant)).then(() => setEditing(null))
-        }
-      />
-      <AddRunTargetDialog
-        open={addingTarget}
-        runID={run.id}
-        onClose={() => setAddingTarget(false)}
-        onAdded={(nextRun) => {
-          setRun(nextRun);
+      <CombatTrackerOverlays
+        active={active}
+        addingTarget={addingTarget}
+        editing={editing}
+        leaveWarningOpen={leaveWarningOpen}
+        manualSlotsOpen={manualSlotsOpen}
+        pendingAction={pendingAction}
+        pendingNavigation={pendingNavigation}
+        rollFlash={rollFlash}
+        run={run}
+        selected={selected}
+        selectedID={selectedID}
+        spellDialogOpen={spellDialogOpen}
+        spellcasting={spellcasting}
+        toasts={toast.toasts}
+        victoryOpen={victoryOpen}
+        onAddedTarget={() => {
           setAddingTarget(false);
           toast.push("Target added to the fight.");
         }}
-      />
-      <SpellCastDialog
-        actor={active}
-        combatants={combatants}
-        open={spellDialogOpen}
-        selectedID={selectedID}
-        slots={run.spellSlots ?? []}
-        spells={spellcasting?.spells ?? []}
-        onCast={(payload) =>
-          void castSpell({
-            spellId: payload.spell.spellId,
-            librarySource: payload.spell.librarySource,
-            targetIds: payload.targetIds,
-            castLevel: payload.castLevel,
-            rollMode: payload.rollMode,
-          })
-        }
-        onOpenChange={setSpellDialogOpen}
-      />
-      <ManualSpellSlotDialog
-        actor={active}
-        open={manualSlotsOpen}
-        slots={run.spellSlots ?? []}
-        onOpenChange={setManualSlotsOpen}
-        onUpdate={(spellLevel, mode) => void manualSpellSlot(spellLevel, mode)}
-      />
-      <Modal
-        open={Boolean(pendingAction)}
-        onOpenChange={(open) => !open && setPendingAction(null)}
-        title="Resolve action"
-        trigger={<span />}
-      >
-        {pendingAction && selected && (
-          <ActionResult
-            result={pendingAction}
-            target={selected}
-            onCancel={() => setPendingAction(null)}
-            onResolve={(override, damage) => void resolve(override, damage)}
-          />
-        )}
-      </Modal>
-      <ConfirmDialog
-        open={victoryOpen}
-        title="Enemies defeated"
-        confirmLabel="End encounter"
-        onCancel={() => setVictoryOpen(false)}
-        onConfirm={goToSummary}
-      >
-        All enemies are at 0 HP or marked defeated. Move to XP and loot assignment?
-      </ConfirmDialog>
-      <ConfirmDialog
-        open={leaveWarningOpen}
-        title="Encounter still running"
-        confirmLabel="Leave without finishing"
-        onCancel={() => {
-          setLeaveWarningOpen(false);
-          setPendingNavigation("");
-        }}
-        onConfirm={() => {
-          const next = pendingNavigation || "/campaigns";
+        onApplyNavigation={(next) => {
           setNavigationBypass(true);
-          setLeaveWarningOpen(false);
-          setPendingNavigation("");
           window.setTimeout(() => {
             void navigate(next);
           }, 0);
         }}
-      >
-        This encounter has not been finished. Save the encounter from the summary screen to award XP
-        and mark it completed, or cancel leaving to continue combat.
-        <div className="mt-4 flex justify-end">
-          <Button type="button" variant="success" onClick={goToSummary}>
-            Save encounter
-          </Button>
-        </div>
-      </ConfirmDialog>
-      <RollFlash flash={rollFlash} onDone={() => setRollFlash(null)} />
-      <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
+        onCastSpell={(payload) => void castSpell(payload)}
+        onCloseAddingTarget={() => setAddingTarget(false)}
+        onCloseEditing={() => setEditing(null)}
+        onDismissToast={toast.dismiss}
+        onManualSpellSlot={(spellLevel, mode) => void manualSpellSlot(spellLevel, mode)}
+        onResolveAction={(override, damage) => void resolve(override, damage)}
+        onRollFlashDone={() => setRollFlash(null)}
+        onSaveEditing={(combatant) =>
+          refreshFrom(api.updateRunCombatant(combatant)).then(() => setEditing(null))
+        }
+        onSaveSummary={goToSummary}
+        onSetLeaveWarningOpen={setLeaveWarningOpen}
+        onSetManualSlotsOpen={setManualSlotsOpen}
+        onSetPendingAction={setPendingAction}
+        onSetPendingNavigation={setPendingNavigation}
+        onSetRun={setRun}
+        onSetSpellDialogOpen={setSpellDialogOpen}
+        onSetVictoryOpen={setVictoryOpen}
+      />
     </div>
-  );
-}
-
-function RunCombatantEditSheet({
-  combatant,
-  onClose,
-  onSave,
-}: {
-  combatant: EncounterRunCombatant | null;
-  onClose: () => void;
-  onSave: (combatant: EncounterRunCombatant) => void;
-}) {
-  const [draft, setDraft] = useState<EncounterRunCombatant | null>(combatant);
-  useEffect(() => setDraft(combatant), [combatant]);
-  if (!draft) {
-    return (
-      <Sheet title="Edit combatant" open={false} onOpenChange={onClose} trigger={<span />}>
-        {" "}
-      </Sheet>
-    );
-  }
-  function updateNumber(key: keyof EncounterRunCombatant, value: string) {
-    setDraft((current) => (current ? { ...current, [key]: Number(value) || 0 } : current));
-  }
-  return (
-    <Sheet
-      title={`Edit ${draft.displayName}`}
-      open={Boolean(combatant)}
-      onOpenChange={(open) => !open && onClose()}
-      trigger={<span />}
-    >
-      <div className="grid gap-4">
-        <div className="grid gap-3">
-          <Field label="Nickname / display name">
-            <Input
-              value={draft.displayName}
-              onChange={(event) => setDraft({ ...draft, displayName: event.target.value })}
-            />
-          </Field>
-          <Field label="Avatar URL">
-            <Input
-              value={draft.avatarUrl}
-              onChange={(event) => setDraft({ ...draft, avatarUrl: event.target.value })}
-            />
-          </Field>
-          <Field label="Frame colour">
-            <div className="flex flex-wrap gap-2">
-              {combatantColors.map((color) => (
-                <button
-                  aria-label={color.label}
-                  className={[
-                    "h-9 rounded-md border-2 px-2 text-xs font-medium transition hover:scale-105",
-                    color.value === defaultCombatantColor
-                      ? "w-auto bg-muted text-muted-foreground"
-                      : "w-9",
-                    draft.colorLabel === color.value
-                      ? "border-foreground ring-2 ring-primary/30"
-                      : "border-border",
-                  ].join(" ")}
-                  key={color.value}
-                  style={
-                    color.value === defaultCombatantColor
-                      ? undefined
-                      : { backgroundColor: color.value }
-                  }
-                  type="button"
-                  onClick={() => setDraft({ ...draft, colorLabel: color.value })}
-                >
-                  {color.value === defaultCombatantColor ? "Default" : ""}
-                </button>
-              ))}
-              <Input
-                className="h-9 w-12 p-1"
-                type="color"
-                value={
-                  draft.colorLabel && /^#[0-9a-fA-F]{6}$/.test(draft.colorLabel)
-                    ? draft.colorLabel
-                    : "#64748b"
-                }
-                onChange={(event) => setDraft({ ...draft, colorLabel: event.target.value })}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                onClick={() => setDraft({ ...draft, colorLabel: "" })}
-              >
-                Clear colour
-              </Button>
-            </div>
-          </Field>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Initiative">
-            <Input
-              type="number"
-              value={draft.initiative}
-              onChange={(event) =>
-                setDraft({
-                  ...draft,
-                  initiative: Number(event.target.value) || 0,
-                  initiativeSet: true,
-                })
-              }
-            />
-          </Field>
-          <Field label="AC Bonus">
-            <Input
-              type="number"
-              value={draft.armorClassBonus}
-              onChange={(event) => updateNumber("armorClassBonus", event.target.value)}
-            />
-          </Field>
-          <Field label="Temp HP">
-            <Input
-              type="number"
-              value={draft.temporaryHitPoints}
-              onChange={(event) => updateNumber("temporaryHitPoints", event.target.value)}
-            />
-          </Field>
-          <Field label="Max HP Mod">
-            <Input
-              type="number"
-              value={draft.maxHitPointsModifier}
-              onChange={(event) => updateNumber("maxHitPointsModifier", event.target.value)}
-            />
-          </Field>
-          <Field label="AC Override">
-            <Input
-              type="number"
-              value={draft.armorClassOverride}
-              onChange={(event) => updateNumber("armorClassOverride", event.target.value)}
-            />
-          </Field>
-          <Field label="Max HP Override">
-            <Input
-              type="number"
-              value={draft.maxHitPointsOverride}
-              onChange={(event) => updateNumber("maxHitPointsOverride", event.target.value)}
-            />
-          </Field>
-          <Field label="Current HP Override">
-            <Input
-              type="number"
-              value={draft.currentHitPointsOverride}
-              onChange={(event) => updateNumber("currentHitPointsOverride", event.target.value)}
-            />
-          </Field>
-          <Field label="Current HP">
-            <Input
-              type="number"
-              value={draft.currentHitPoints}
-              onChange={(event) => updateNumber("currentHitPoints", event.target.value)}
-            />
-          </Field>
-        </div>
-        <div className="grid gap-2">
-          <span className="text-sm font-semibold text-muted-foreground">Conditions</span>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {conditionImmunities.map((condition) => (
-              <Checkbox
-                key={condition}
-                label={condition}
-                checked={draft.conditions.includes(condition)}
-                onChange={(checked) =>
-                  setDraft({
-                    ...draft,
-                    conditions: checked
-                      ? [...draft.conditions, condition]
-                      : draft.conditions.filter((item) => item !== condition),
-                  })
-                }
-              />
-            ))}
-          </div>
-        </div>
-        <Checkbox
-          label="Defeated / dead"
-          checked={draft.defeated}
-          onChange={(checked) => setDraft({ ...draft, defeated: checked })}
-        />
-        <Button onClick={() => onSave(draft)}>Save combatant</Button>
-      </div>
-    </Sheet>
   );
 }
 
