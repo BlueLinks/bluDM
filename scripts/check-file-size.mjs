@@ -10,13 +10,10 @@ const defaults = [
 
 // Legacy ratchet: these files are known debt. The limit is intentionally close
 // to today's size so future work must shrink or split them instead of growing them.
-const overrides = new Map([
-  ["frontend/src/features/combat/trackerPage.tsx", 730],
-]);
+const overrides = new Map([]);
 
 const jsxBlockMax = 130;
 const jsxBlockOverrides = new Map([
-  ["frontend/src/features/combat/trackerPage.tsx", 190],
   ["frontend/src/features/encounters/editorPage.tsx", 190],
 ]);
 
