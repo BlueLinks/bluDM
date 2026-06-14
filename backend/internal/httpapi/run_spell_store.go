@@ -87,81 +87,15 @@ func mapFromAny(value any) map[string]any {
 }
 
 func (s *Server) runSpellSlots(ctx context.Context, runID string) ([]models.EncounterRunSpellSlot, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, encounter_run_id, combatant_id, spell_level, max_slots, remaining_slots
-		from encounter_run_spell_slots
-		where encounter_run_id = $1
-		order by spell_level asc
-	`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	slots := []models.EncounterRunSpellSlot{}
-	for rows.Next() {
-		var slot models.EncounterRunSpellSlot
-		if err := rows.Scan(&slot.ID, &slot.EncounterRunID, &slot.CombatantID, &slot.SpellLevel, &slot.MaxSlots, &slot.RemainingSlots); err != nil {
-			return nil, err
-		}
-		slots = append(slots, slot)
-	}
-	return slots, rows.Err()
+	return s.stores.Runs.SpellSlots(ctx, runID)
 }
 
 func (s *Server) runActiveEffects(ctx context.Context, runID string) ([]models.EncounterRunEffect, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, encounter_run_id, caster_id, target_id, coalesce(spell_id::text, ''),
-			library_source, spell_name, cast_level, concentration, timing, effect_kind,
-			condition_name, amount, payload, active, created_at
-		from encounter_run_active_effects
-		where encounter_run_id = $1 and active = true
-		order by created_at asc
-	`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	effects := []models.EncounterRunEffect{}
-	for rows.Next() {
-		var effect models.EncounterRunEffect
-		var payloadBytes []byte
-		if err := rows.Scan(&effect.ID, &effect.EncounterRunID, &effect.CasterID, &effect.TargetID,
-			&effect.SpellID, &effect.LibrarySource, &effect.SpellName, &effect.CastLevel,
-			&effect.Concentration, &effect.Timing, &effect.EffectKind, &effect.ConditionName,
-			&effect.Amount, &payloadBytes, &effect.Active, &effect.CreatedAt); err != nil {
-			return nil, err
-		}
-		effect.Payload, _ = unmarshalJSONMap(payloadBytes)
-		effects = append(effects, effect)
-	}
-	return effects, rows.Err()
+	return s.stores.Runs.ActiveEffects(ctx, runID)
 }
 
 func (s *Server) runAlerts(ctx context.Context, runID string) ([]models.EncounterRunAlert, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, encounter_run_id, alert_type, coalesce(actor_id::text, ''),
-			coalesce(target_id::text, ''), title, message, dc, payload, resolved, created_at
-		from encounter_run_alerts
-		where encounter_run_id = $1 and resolved = false
-		order by created_at asc
-	`, runID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	alerts := []models.EncounterRunAlert{}
-	for rows.Next() {
-		var alert models.EncounterRunAlert
-		var payloadBytes []byte
-		if err := rows.Scan(&alert.ID, &alert.EncounterRunID, &alert.AlertType, &alert.ActorID,
-			&alert.TargetID, &alert.Title, &alert.Message, &alert.DC, &payloadBytes,
-			&alert.Resolved, &alert.CreatedAt); err != nil {
-			return nil, err
-		}
-		alert.Payload, _ = unmarshalJSONMap(payloadBytes)
-		alerts = append(alerts, alert)
-	}
-	return alerts, rows.Err()
+	return s.stores.Runs.Alerts(ctx, runID)
 }
 
 func marshalEffectPayload(payload map[string]any) []byte {
