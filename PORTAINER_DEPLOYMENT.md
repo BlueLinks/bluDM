@@ -92,9 +92,10 @@ Backups are written to `./backups/postgres` on the server. Copy these somewhere 
 Restore test:
 
 ```sh
-createdb bludm_restore
-pg_restore -d bludm_restore backups/postgres/bludm-YYYYMMDD-HHMMSS.dump
+make verify-recovery
 ```
+
+The recovery target starts an isolated Compose project, applies schema readiness checks, writes app-owned sentinel data, creates the same custom-format Postgres dump used by the backup service, destroys the database volume, restores into a fresh volume, reruns schema readiness checks, and confirms the sentinel user and campaign survived. To inspect a production backup manually, copy it to a safe workstation and restore it into a temporary database with `pg_restore`; do not test restores against your live database.
 
 ## Local Development
 
@@ -120,9 +121,10 @@ GitHub Actions runs on pull requests and pushes to `main`:
 - backend tests, `go vet`, `govulncheck`, and `gosec`
 - compose validation
 - Docker builds
-- smoke test for `/health` and `/api/health`
+- Docker smoke test with Playwright coverage for core app journeys
+- Postgres backup and restore recovery drill
 - free security scans with Gitleaks, Trivy, and Semgrep
 
-Local `make verify` covers the fast baseline. Use `make verify-security`, `make verify-docker`, or `make verify-full` for heavier local checks. Hosted CI remains the source of truth for Trivy filesystem/image scans, Gitleaks, Semgrep, and Portainer notification.
+Local `make verify` covers the fast baseline. Use `make verify-security`, `make verify-docker`, `make verify-recovery`, or `make verify-full` for heavier local checks. Hosted CI runs the Docker smoke and recovery drill on PRs; Trivy filesystem/image scans, Gitleaks, Semgrep, and Portainer notification remain hosted-only gates.
 
 Merging to `main` is the deployment signal for Portainer.

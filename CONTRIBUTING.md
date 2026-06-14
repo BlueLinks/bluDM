@@ -112,6 +112,7 @@ Use the heavier targets when touching security-sensitive code, Docker/deployment
 ```sh
 make verify-security
 make verify-docker
+make verify-recovery
 make verify-full
 ```
 

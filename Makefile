@@ -1,7 +1,7 @@
 GO_VERSION ?= 1.25.11
 GO_TOOLCHAIN ?= go$(GO_VERSION)
 
-.PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend test-e2e verify verify-security verify-docker verify-full
+.PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend test-e2e verify verify-security verify-docker verify-recovery verify-full
 
 lint: lint-frontend lint-backend format-check check-size
 
@@ -52,4 +52,9 @@ verify-docker:
 	trap - EXIT; \
 	docker compose down -v
 
-verify-full: verify verify-security verify-docker
+verify-recovery:
+	docker compose config
+	docker compose build migrate
+	scripts/verify-postgres-recovery.sh
+
+verify-full: verify verify-security verify-docker verify-recovery
