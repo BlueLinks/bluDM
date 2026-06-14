@@ -157,7 +157,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 			redirectWithSettingsError(w, r, "provider_link_failed")
 			return
 		}
-		http.Redirect(w, r, saved.ReturnTo, http.StatusFound)
+		redirectToSanitizedReturnTo(w, r, saved.ReturnTo)
 		return
 	}
 	user, err := s.findOrCreateOAuthUser(r.Context(), providerName, identity.Subject, identity.Email, identity.EmailVerified)
@@ -173,7 +173,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "could not start session")
 		return
 	}
-	http.Redirect(w, r, saved.ReturnTo, http.StatusFound)
+	redirectToSanitizedReturnTo(w, r, saved.ReturnTo)
 }
 
 func redirectWithAuthError(w http.ResponseWriter, r *http.Request, code string) {
@@ -183,6 +183,12 @@ func redirectWithAuthError(w http.ResponseWriter, r *http.Request, code string) 
 
 func redirectWithSettingsError(w http.ResponseWriter, r *http.Request, code string) {
 	target := "/settings?accountError=" + url.QueryEscape(code)
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func redirectToSanitizedReturnTo(w http.ResponseWriter, r *http.Request, returnTo string) {
+	target := sanitizeReturnTo(returnTo)
+	// nosemgrep: go.lang.security.injection.open-redirect.open-redirect -- OAuth returnTo is restricted to local absolute paths by sanitizeReturnTo immediately before redirecting.
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
