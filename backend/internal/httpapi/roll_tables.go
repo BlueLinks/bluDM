@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
 	"crypto/rand"
 	"errors"
@@ -11,8 +12,6 @@ import (
 	"sort"
 	"strings"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type rollTableRequest struct {
@@ -76,7 +75,7 @@ func (s *Server) createCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	table, err := s.insertRollTable(r.Context(), campaignID, req)
+	table, err := s.stores.RollTables.Create(r.Context(), campaignID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create roll table")
 		return
@@ -100,7 +99,7 @@ func (s *Server) updateCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	table, err := s.updateRollTableRecord(r.Context(), campaignID, tableID, req)
+	table, err := s.stores.RollTables.Update(r.Context(), campaignID, tableID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "roll table not found")
 		return
@@ -115,14 +114,11 @@ func (s *Server) deleteCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	tag, err := s.db.Exec(r.Context(), `
-		delete from roll_tables where id = $1 and campaign_id = $2 and source = 'campaign'
-	`, tableID, campaignID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not delete roll table")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.RollTables.Delete(r.Context(), campaignID, tableID); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete roll table")
+			return
+		}
 		writeError(w, http.StatusNotFound, "roll table not found")
 		return
 	}
@@ -143,7 +139,7 @@ func (s *Server) cloneCampaignRollTable(w http.ResponseWriter, r *http.Request) 
 	}
 	req := requestFromRollTable(sourceTable)
 	req.Name = "Copy of " + sourceTable.Name
-	table, err := s.insertRollTable(r.Context(), campaignID, req)
+	table, err := s.stores.RollTables.Create(r.Context(), campaignID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not clone roll table")
 		return
@@ -228,191 +224,35 @@ func validateRollTableRequest(req rollTableRequest) error {
 }
 
 func (s *Server) rollTablesForCampaign(ctx context.Context, campaignID string) ([]models.RollTable, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, campaign_id, source, name, description, category, tags, die_expression, created_at, updated_at
-		from roll_tables
-		where campaign_id = $1 and source = 'campaign'
-		order by updated_at desc, name asc
-	`, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	tables := []models.RollTable{}
-	for rows.Next() {
-		table, err := scanRollTable(rows)
-		if err != nil {
-			return nil, err
-		}
-		tables = append(tables, table)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return s.attachRollTableRows(ctx, tables)
+	return s.stores.RollTables.ListForCampaign(ctx, campaignID)
 }
 
 func (s *Server) rollTableByID(ctx context.Context, campaignID string, tableID string) (models.RollTable, error) {
 	if table, ok := providedRollTableByID(tableID); ok {
 		return table, nil
 	}
-	row := s.db.QueryRow(ctx, `
-		select id, campaign_id, source, name, description, category, tags, die_expression, created_at, updated_at
-		from roll_tables
-		where id = $1 and campaign_id = $2 and source = 'campaign'
-	`, tableID, campaignID)
-	table, err := scanRollTable(row)
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	tables, err := s.attachRollTableRows(ctx, []models.RollTable{table})
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	if len(tables) == 0 {
-		return models.RollTable{}, pgx.ErrNoRows
-	}
-	return tables[0], nil
+	return s.stores.RollTables.ByID(ctx, campaignID, tableID)
 }
 
-func (s *Server) insertRollTable(ctx context.Context, campaignID string, req rollTableRequest) (models.RollTable, error) {
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return models.RollTable{}, err
+func rollTableInputFromRequest(req rollTableRequest) store.RollTableInput {
+	rows := make([]store.RollTableRowInput, 0, len(req.Rows))
+	for _, row := range req.Rows {
+		rows = append(rows, store.RollTableRowInput{
+			MinRoll:    row.MinRoll,
+			MaxRoll:    row.MaxRoll,
+			Label:      row.Label,
+			ResultText: row.ResultText,
+			Notes:      row.Notes,
+		})
 	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-	row := tx.QueryRow(ctx, `
-		insert into roll_tables (campaign_id, source, name, description, category, tags, die_expression)
-		values ($1, 'campaign', $2, $3, $4, $5, $6)
-		returning id, campaign_id, source, name, description, category, tags, die_expression, created_at, updated_at
-	`, campaignID, req.Name, req.Description, req.Category, req.Tags, req.DieExpression)
-	table, err := scanRollTable(row)
-	if err != nil {
-		return models.RollTable{}, err
+	return store.RollTableInput{
+		Name:          req.Name,
+		Description:   req.Description,
+		Category:      req.Category,
+		Tags:          req.Tags,
+		DieExpression: req.DieExpression,
+		Rows:          rows,
 	}
-	if err := replaceRollTableRows(ctx, tx, table.ID, req.Rows); err != nil {
-		return models.RollTable{}, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return models.RollTable{}, err
-	}
-	tables, err := s.attachRollTableRows(ctx, []models.RollTable{table})
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	return tables[0], nil
-}
-
-func (s *Server) updateRollTableRecord(ctx context.Context, campaignID string, tableID string, req rollTableRequest) (models.RollTable, error) {
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	defer tx.Rollback(ctx) //nolint:errcheck
-	row := tx.QueryRow(ctx, `
-		update roll_tables
-		set name = $3, description = $4, category = $5, tags = $6, die_expression = $7, updated_at = now()
-		where id = $1 and campaign_id = $2 and source = 'campaign'
-		returning id, campaign_id, source, name, description, category, tags, die_expression, created_at, updated_at
-	`, tableID, campaignID, req.Name, req.Description, req.Category, req.Tags, req.DieExpression)
-	table, err := scanRollTable(row)
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	if _, err := tx.Exec(ctx, `delete from roll_table_rows where table_id = $1`, tableID); err != nil {
-		return models.RollTable{}, err
-	}
-	if err := replaceRollTableRows(ctx, tx, table.ID, req.Rows); err != nil {
-		return models.RollTable{}, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return models.RollTable{}, err
-	}
-	tables, err := s.attachRollTableRows(ctx, []models.RollTable{table})
-	if err != nil {
-		return models.RollTable{}, err
-	}
-	return tables[0], nil
-}
-
-func replaceRollTableRows(ctx context.Context, tx pgx.Tx, tableID string, rows []rollTableRowRequest) error {
-	for index, row := range rows {
-		if _, err := tx.Exec(ctx, `
-			insert into roll_table_rows (table_id, min_roll, max_roll, label, result_text, notes, sort_order)
-			values ($1, $2, $3, $4, $5, $6, $7)
-		`, tableID, row.MinRoll, row.MaxRoll, row.Label, row.ResultText, row.Notes, index); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *Server) attachRollTableRows(ctx context.Context, tables []models.RollTable) ([]models.RollTable, error) {
-	result := make([]models.RollTable, 0, len(tables))
-	for _, table := range tables {
-		if table.Source == "provided" {
-			result = append(result, table)
-			continue
-		}
-		rows, err := s.db.Query(ctx, `
-			select id, table_id, min_roll, max_roll, label, result_text, notes, sort_order
-			from roll_table_rows
-			where table_id = $1
-			order by min_roll asc, max_roll asc
-		`, table.ID)
-		if err != nil {
-			return nil, err
-		}
-		tableRows := []models.RollTableRow{}
-		for rows.Next() {
-			row, err := scanRollTableRow(rows)
-			if err != nil {
-				rows.Close()
-				return nil, err
-			}
-			tableRows = append(tableRows, row)
-		}
-		if err := rows.Err(); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		rows.Close()
-		table.Rows = tableRows
-		result = append(result, table)
-	}
-	return result, nil
-}
-
-func scanRollTable(row scanner) (models.RollTable, error) {
-	var table models.RollTable
-	err := row.Scan(
-		&table.ID,
-		&table.CampaignID,
-		&table.Source,
-		&table.Name,
-		&table.Description,
-		&table.Category,
-		&table.Tags,
-		&table.DieExpression,
-		&table.CreatedAt,
-		&table.UpdatedAt,
-	)
-	return table, err
-}
-
-func scanRollTableRow(row scanner) (models.RollTableRow, error) {
-	var tableRow models.RollTableRow
-	err := row.Scan(
-		&tableRow.ID,
-		&tableRow.TableID,
-		&tableRow.MinRoll,
-		&tableRow.MaxRoll,
-		&tableRow.Label,
-		&tableRow.ResultText,
-		&tableRow.Notes,
-		&tableRow.SortOrder,
-	)
-	return tableRow, err
 }
 
 func rollOnTable(table models.RollTable) (models.RollTableRollResult, error) {
