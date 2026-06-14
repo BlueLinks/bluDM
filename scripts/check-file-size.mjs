@@ -8,12 +8,7 @@ const defaults = [
   { pattern: /^backend\/.*\.go$/, max: 500 },
 ];
 
-// Legacy ratchet: these files are known debt. The limit is intentionally close
-// to today's size so future work must shrink or split them instead of growing them.
-const overrides = new Map([]);
-
 const jsxBlockMax = 130;
-const jsxBlockOverrides = new Map([]);
 
 const ignoredDirs = new Set([".git", "dist", "node_modules"]);
 
@@ -37,7 +32,6 @@ function relative(file) {
 }
 
 function maxLinesFor(file) {
-  if (overrides.has(file)) return overrides.get(file);
   return defaults.find((rule) => rule.pattern.test(file))?.max;
 }
 
@@ -65,15 +59,16 @@ if (failures.length > 0) {
 console.log("File size limits passed.");
 
 function oversizedJSXBlocks(file, lines) {
-  const max = jsxBlockOverrides.get(file) ?? jsxBlockMax;
   const failures = [];
   for (let index = 0; index < lines.length; index += 1) {
     if (lines[index].trim() !== "return (") continue;
     const end = findReturnBlockEnd(lines, index);
     if (!end) continue;
     const length = end - index + 1;
-    if (length > max) {
-      failures.push(`${file}:${index + 1}: JSX return block has ${length} lines, exceeds ${max}`);
+    if (length > jsxBlockMax) {
+      failures.push(
+        `${file}:${index + 1}: JSX return block has ${length} lines, exceeds ${jsxBlockMax}`,
+      );
     }
   }
   return failures;
