@@ -24,6 +24,7 @@ type Stores struct {
 	Spellcasts SpellcastingStore
 	Encounters EncounterStore
 	Runs       RunStore
+	Demo       DemoStore
 }
 
 func New(db *gorm.DB) *Stores {
@@ -42,6 +43,7 @@ func New(db *gorm.DB) *Stores {
 	stores.Spellcasts = SpellcastingStore{db: db}
 	stores.Encounters = EncounterStore{db: db}
 	stores.Runs = RunStore{db: db}
+	stores.Demo = DemoStore{db: db}
 	return stores
 }
 
