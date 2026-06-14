@@ -75,7 +75,7 @@ func (s *Server) createCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	table, err := s.stores.RollTables.Create(r.Context(), campaignID, rollTableInputFromRequest(req))
+	table, err := s.stores.RollTables.Create(r.Context(), currentUserIDMust(r.Context()), campaignID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create roll table")
 		return
@@ -99,7 +99,7 @@ func (s *Server) updateCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	table, err := s.stores.RollTables.Update(r.Context(), campaignID, tableID, rollTableInputFromRequest(req))
+	table, err := s.stores.RollTables.Update(r.Context(), currentUserIDMust(r.Context()), campaignID, tableID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusNotFound, "roll table not found")
 		return
@@ -114,7 +114,7 @@ func (s *Server) deleteCampaignRollTable(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	if err := s.stores.RollTables.Delete(r.Context(), campaignID, tableID); err != nil {
+	if err := s.stores.RollTables.Delete(r.Context(), currentUserIDMust(r.Context()), campaignID, tableID); err != nil {
 		if !store.IsNotFound(err) {
 			writeError(w, http.StatusInternalServerError, "could not delete roll table")
 			return
@@ -139,7 +139,7 @@ func (s *Server) cloneCampaignRollTable(w http.ResponseWriter, r *http.Request) 
 	}
 	req := requestFromRollTable(sourceTable)
 	req.Name = "Copy of " + sourceTable.Name
-	table, err := s.stores.RollTables.Create(r.Context(), campaignID, rollTableInputFromRequest(req))
+	table, err := s.stores.RollTables.Create(r.Context(), currentUserIDMust(r.Context()), campaignID, rollTableInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not clone roll table")
 		return
@@ -224,14 +224,14 @@ func validateRollTableRequest(req rollTableRequest) error {
 }
 
 func (s *Server) rollTablesForCampaign(ctx context.Context, campaignID string) ([]models.RollTable, error) {
-	return s.stores.RollTables.ListForCampaign(ctx, campaignID)
+	return s.stores.RollTables.ListForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
 func (s *Server) rollTableByID(ctx context.Context, campaignID string, tableID string) (models.RollTable, error) {
 	if table, ok := providedRollTableByID(tableID); ok {
 		return table, nil
 	}
-	return s.stores.RollTables.ByID(ctx, campaignID, tableID)
+	return s.stores.RollTables.ByID(ctx, currentUserIDMust(ctx), campaignID, tableID)
 }
 
 func rollTableInputFromRequest(req rollTableRequest) store.RollTableInput {

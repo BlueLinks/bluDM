@@ -35,7 +35,10 @@ type JourneyInput struct {
 	RouteInputMode        string
 }
 
-func (s TravelStore) LocationsForCampaign(ctx context.Context, campaignID string) ([]models.CampaignLocation, error) {
+func (s TravelStore) LocationsForCampaign(ctx context.Context, ownerUserID, campaignID string) ([]models.CampaignLocation, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return nil, err
+	}
 	var entities []dbmodels.CampaignLocationEntity
 	if err := s.db.WithContext(ctx).
 		Where("campaign_id = ?", strings.TrimSpace(campaignID)).
@@ -50,7 +53,10 @@ func (s TravelStore) LocationsForCampaign(ctx context.Context, campaignID string
 	return locations, nil
 }
 
-func (s TravelStore) CreateLocation(ctx context.Context, campaignID string, input LocationInput) (models.CampaignLocation, error) {
+func (s TravelStore) CreateLocation(ctx context.Context, ownerUserID, campaignID string, input LocationInput) (models.CampaignLocation, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.CampaignLocation{}, err
+	}
 	entity := dbmodels.CampaignLocationEntity{
 		CampaignID: strings.TrimSpace(campaignID),
 		Name:       input.Name,
@@ -62,7 +68,10 @@ func (s TravelStore) CreateLocation(ctx context.Context, campaignID string, inpu
 	return locationFromEntity(entity), nil
 }
 
-func (s TravelStore) UpdateLocation(ctx context.Context, campaignID, locationID string, input LocationInput) (models.CampaignLocation, error) {
+func (s TravelStore) UpdateLocation(ctx context.Context, ownerUserID, campaignID, locationID string, input LocationInput) (models.CampaignLocation, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.CampaignLocation{}, err
+	}
 	var entity dbmodels.CampaignLocationEntity
 	err := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ?", strings.TrimSpace(locationID), strings.TrimSpace(campaignID)).
@@ -81,7 +90,10 @@ func (s TravelStore) UpdateLocation(ctx context.Context, campaignID, locationID 
 	return locationFromEntity(entity), nil
 }
 
-func (s TravelStore) DeleteLocation(ctx context.Context, campaignID, locationID string) error {
+func (s TravelStore) DeleteLocation(ctx context.Context, ownerUserID, campaignID, locationID string) error {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return err
+	}
 	result := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ?", strings.TrimSpace(locationID), strings.TrimSpace(campaignID)).
 		Delete(&dbmodels.CampaignLocationEntity{})
@@ -94,7 +106,10 @@ func (s TravelStore) DeleteLocation(ctx context.Context, campaignID, locationID 
 	return nil
 }
 
-func (s TravelStore) JourneysForCampaign(ctx context.Context, campaignID string) ([]models.CampaignJourney, error) {
+func (s TravelStore) JourneysForCampaign(ctx context.Context, ownerUserID, campaignID string) ([]models.CampaignJourney, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return nil, err
+	}
 	var entities []dbmodels.CampaignJourneyEntity
 	if err := s.db.WithContext(ctx).
 		Where("campaign_id = ?", strings.TrimSpace(campaignID)).
@@ -113,7 +128,10 @@ func (s TravelStore) JourneysForCampaign(ctx context.Context, campaignID string)
 	return journeys, nil
 }
 
-func (s TravelStore) CreateJourney(ctx context.Context, campaignID string, input JourneyInput) (models.CampaignJourney, error) {
+func (s TravelStore) CreateJourney(ctx context.Context, ownerUserID, campaignID string, input JourneyInput) (models.CampaignJourney, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.CampaignJourney{}, err
+	}
 	entity, err := journeyEntityFromInput(campaignID, input)
 	if err != nil {
 		return models.CampaignJourney{}, err
@@ -124,7 +142,10 @@ func (s TravelStore) CreateJourney(ctx context.Context, campaignID string, input
 	return journeyFromEntity(entity)
 }
 
-func (s TravelStore) UpdateJourney(ctx context.Context, campaignID, journeyID string, input JourneyInput) (models.CampaignJourney, error) {
+func (s TravelStore) UpdateJourney(ctx context.Context, ownerUserID, campaignID, journeyID string, input JourneyInput) (models.CampaignJourney, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.CampaignJourney{}, err
+	}
 	var entity dbmodels.CampaignJourneyEntity
 	err := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ?", strings.TrimSpace(journeyID), strings.TrimSpace(campaignID)).
@@ -147,7 +168,10 @@ func (s TravelStore) UpdateJourney(ctx context.Context, campaignID, journeyID st
 	return journeyFromEntity(updated)
 }
 
-func (s TravelStore) DeleteJourney(ctx context.Context, campaignID, journeyID string) error {
+func (s TravelStore) DeleteJourney(ctx context.Context, ownerUserID, campaignID, journeyID string) error {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return err
+	}
 	result := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ?", strings.TrimSpace(journeyID), strings.TrimSpace(campaignID)).
 		Delete(&dbmodels.CampaignJourneyEntity{})
@@ -160,7 +184,10 @@ func (s TravelStore) DeleteJourney(ctx context.Context, campaignID, journeyID st
 	return nil
 }
 
-func (s TravelStore) CloneJourney(ctx context.Context, campaignID, journeyID string) (models.CampaignJourney, error) {
+func (s TravelStore) CloneJourney(ctx context.Context, ownerUserID, campaignID, journeyID string) (models.CampaignJourney, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.CampaignJourney{}, err
+	}
 	var source dbmodels.CampaignJourneyEntity
 	err := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ?", strings.TrimSpace(journeyID), strings.TrimSpace(campaignID)).

@@ -93,3 +93,17 @@ func campaignFromEntity(campaign dbmodels.CampaignEntity) models.Campaign {
 		UpdatedAt:              campaign.UpdatedAt,
 	}
 }
+
+func ensureCampaignOwnedTx(ctx context.Context, tx *gorm.DB, ownerUserID, campaignID string) error {
+	var count int64
+	if err := tx.WithContext(ctx).
+		Model(&dbmodels.CampaignEntity{}).
+		Where("id = ? and owner_user_id = ? and archived_at is null", strings.TrimSpace(campaignID), ownerUserID).
+		Count(&count).Error; err != nil {
+		return err
+	}
+	if count == 0 {
+		return ErrNotFound
+	}
+	return nil
+}

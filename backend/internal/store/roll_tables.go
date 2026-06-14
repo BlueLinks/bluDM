@@ -33,7 +33,10 @@ type RollTableRowInput struct {
 	Notes      string
 }
 
-func (s RollTableStore) ListForCampaign(ctx context.Context, campaignID string) ([]models.RollTable, error) {
+func (s RollTableStore) ListForCampaign(ctx context.Context, ownerUserID, campaignID string) ([]models.RollTable, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return nil, err
+	}
 	var entities []dbmodels.RollTableEntity
 	if err := s.db.WithContext(ctx).
 		Where("campaign_id = ? and source = 'campaign'", strings.TrimSpace(campaignID)).
@@ -44,7 +47,10 @@ func (s RollTableStore) ListForCampaign(ctx context.Context, campaignID string) 
 	return s.attachRows(ctx, rollTablesFromEntities(entities))
 }
 
-func (s RollTableStore) ByID(ctx context.Context, campaignID, tableID string) (models.RollTable, error) {
+func (s RollTableStore) ByID(ctx context.Context, ownerUserID, campaignID, tableID string) (models.RollTable, error) {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return models.RollTable{}, err
+	}
 	var entity dbmodels.RollTableEntity
 	err := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ? and source = 'campaign'", strings.TrimSpace(tableID), strings.TrimSpace(campaignID)).
@@ -65,9 +71,12 @@ func (s RollTableStore) ByID(ctx context.Context, campaignID, tableID string) (m
 	return tables[0], nil
 }
 
-func (s RollTableStore) Create(ctx context.Context, campaignID string, input RollTableInput) (models.RollTable, error) {
+func (s RollTableStore) Create(ctx context.Context, ownerUserID, campaignID string, input RollTableInput) (models.RollTable, error) {
 	var table models.RollTable
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := ensureCampaignOwnedTx(ctx, tx, ownerUserID, campaignID); err != nil {
+			return err
+		}
 		entity := rollTableEntityFromInput(campaignID, input)
 		if err := tx.Create(&entity).Error; err != nil {
 			return err
@@ -88,9 +97,12 @@ func (s RollTableStore) Create(ctx context.Context, campaignID string, input Rol
 	return tables[0], nil
 }
 
-func (s RollTableStore) Update(ctx context.Context, campaignID, tableID string, input RollTableInput) (models.RollTable, error) {
+func (s RollTableStore) Update(ctx context.Context, ownerUserID, campaignID, tableID string, input RollTableInput) (models.RollTable, error) {
 	var table models.RollTable
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := ensureCampaignOwnedTx(ctx, tx, ownerUserID, campaignID); err != nil {
+			return err
+		}
 		var entity dbmodels.RollTableEntity
 		err := tx.Where("id = ? and campaign_id = ? and source = 'campaign'", strings.TrimSpace(tableID), strings.TrimSpace(campaignID)).
 			First(&entity).Error
@@ -127,7 +139,10 @@ func (s RollTableStore) Update(ctx context.Context, campaignID, tableID string, 
 	return tables[0], nil
 }
 
-func (s RollTableStore) Delete(ctx context.Context, campaignID, tableID string) error {
+func (s RollTableStore) Delete(ctx context.Context, ownerUserID, campaignID, tableID string) error {
+	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
+		return err
+	}
 	result := s.db.WithContext(ctx).
 		Where("id = ? and campaign_id = ? and source = 'campaign'", strings.TrimSpace(tableID), strings.TrimSpace(campaignID)).
 		Delete(&dbmodels.RollTableEntity{})

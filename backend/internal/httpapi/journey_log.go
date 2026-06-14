@@ -92,7 +92,7 @@ func (s *Server) deleteCampaignJourney(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	if err := s.stores.Travel.DeleteJourney(r.Context(), campaignID, journeyID); err != nil {
+	if err := s.stores.Travel.DeleteJourney(r.Context(), currentUserIDMust(r.Context()), campaignID, journeyID); err != nil {
 		if !store.IsNotFound(err) {
 			writeError(w, http.StatusInternalServerError, "could not delete campaign journey")
 			return
@@ -167,19 +167,19 @@ func defaultJourneyName(req journeyRequest) string {
 }
 
 func (s *Server) journeysForCampaign(ctx context.Context, campaignID string) ([]models.CampaignJourney, error) {
-	return s.stores.Travel.JourneysForCampaign(ctx, campaignID)
+	return s.stores.Travel.JourneysForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
 func (s *Server) insertCampaignJourney(ctx context.Context, campaignID string, req journeyRequest) (models.CampaignJourney, error) {
-	return s.stores.Travel.CreateJourney(ctx, campaignID, journeyInputFromRequest(req))
+	return s.stores.Travel.CreateJourney(ctx, currentUserIDMust(ctx), campaignID, journeyInputFromRequest(req))
 }
 
 func (s *Server) updateCampaignJourneyRecord(ctx context.Context, campaignID string, journeyID string, req journeyRequest) (models.CampaignJourney, error) {
-	return s.stores.Travel.UpdateJourney(ctx, campaignID, journeyID, journeyInputFromRequest(req))
+	return s.stores.Travel.UpdateJourney(ctx, currentUserIDMust(ctx), campaignID, journeyID, journeyInputFromRequest(req))
 }
 
 func (s *Server) cloneCampaignJourneyRecord(ctx context.Context, campaignID string, journeyID string) (models.CampaignJourney, error) {
-	return s.stores.Travel.CloneJourney(ctx, campaignID, journeyID)
+	return s.stores.Travel.CloneJourney(ctx, currentUserIDMust(ctx), campaignID, journeyID)
 }
 
 func journeyInputFromRequest(req journeyRequest) store.JourneyInput {

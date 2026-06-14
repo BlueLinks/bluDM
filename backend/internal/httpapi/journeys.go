@@ -122,7 +122,7 @@ func (s *Server) deleteCampaignLocation(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	if err := s.stores.Travel.DeleteLocation(r.Context(), campaignID, locationID); err != nil {
+	if err := s.stores.Travel.DeleteLocation(r.Context(), currentUserIDMust(r.Context()), campaignID, locationID); err != nil {
 		if !store.IsNotFound(err) {
 			writeError(w, http.StatusInternalServerError, "could not delete campaign location")
 			return
@@ -265,13 +265,13 @@ func normalizeTravelWeather(weather models.TravelWeather) models.TravelWeather {
 }
 
 func (s *Server) locationsForCampaign(ctx context.Context, campaignID string) ([]models.CampaignLocation, error) {
-	return s.stores.Travel.LocationsForCampaign(ctx, campaignID)
+	return s.stores.Travel.LocationsForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
 func (s *Server) insertCampaignLocation(ctx context.Context, campaignID string, req locationRequest) (models.CampaignLocation, error) {
-	return s.stores.Travel.CreateLocation(ctx, campaignID, store.LocationInput{Name: req.Name, Notes: req.Notes})
+	return s.stores.Travel.CreateLocation(ctx, currentUserIDMust(ctx), campaignID, store.LocationInput{Name: req.Name, Notes: req.Notes})
 }
 
 func (s *Server) updateCampaignLocationRecord(ctx context.Context, campaignID string, locationID string, req locationRequest) (models.CampaignLocation, error) {
-	return s.stores.Travel.UpdateLocation(ctx, campaignID, locationID, store.LocationInput{Name: req.Name, Notes: req.Notes})
+	return s.stores.Travel.UpdateLocation(ctx, currentUserIDMust(ctx), campaignID, locationID, store.LocationInput{Name: req.Name, Notes: req.Notes})
 }
