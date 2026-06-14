@@ -230,94 +230,10 @@ func (s *Server) startEncounter(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "encounter not found")
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
+	run, err := s.stores.Runs.StartEncounter(r.Context(), user.ID, encounterID, req.Test)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not start encounter")
 		return
-	}
-	defer tx.Rollback(r.Context())
-	var run models.EncounterRun
-	var summaryBytes []byte
-	err = tx.QueryRow(r.Context(), `
-		insert into encounter_runs (encounter_id, is_test, status)
-		values ($1, $2, $3)
-		returning id, encounter_id, status, is_test, current_round, current_turn_index, started_at, ended_at, summary
-	`, encounterID, req.Test, "setup").Scan(&run.ID, &run.EncounterID, &run.Status, &run.IsTest, &run.CurrentRound, &run.CurrentTurnIndex, &run.StartedAt, &run.EndedAt, &summaryBytes)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not start encounter")
-		return
-	}
-	run.Summary, _ = unmarshalJSONMap(summaryBytes)
-	rows, err := tx.Query(r.Context(), `
-		select id, source_type, coalesce(player_id::text, ''), coalesce(creature_id::text, ''),
-			side, display_name, color_label, avatar_url, armor_class, max_hit_points,
-			current_hit_points, sort_order, snapshot
-		from encounter_combatants where encounter_id = $1 order by sort_order asc
-	`, encounterID)
-	if err != nil {
-		s.log.Error("start encounter snapshot query failed", "error", err, "encounterID", encounterID)
-		writeError(w, http.StatusInternalServerError, "could not snapshot combatants")
-		return
-	}
-	type snapshotSource struct {
-		sourceID, sourceType, playerID, creatureID, side, name, color, avatar string
-		ac, maxHP, currentHP, sortOrder                                       int
-		snapshot                                                              []byte
-	}
-	sources := []snapshotSource{}
-	for rows.Next() {
-		var source snapshotSource
-		if err := rows.Scan(&source.sourceID, &source.sourceType, &source.playerID, &source.creatureID, &source.side, &source.name, &source.color, &source.avatar, &source.ac, &source.maxHP, &source.currentHP, &source.sortOrder, &source.snapshot); err != nil {
-			s.log.Error("start encounter snapshot scan failed", "error", err, "encounterID", encounterID)
-			writeError(w, http.StatusInternalServerError, "could not snapshot combatants")
-			return
-		}
-		sources = append(sources, source)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		s.log.Error("start encounter snapshot rows failed", "error", err, "encounterID", encounterID)
-		writeError(w, http.StatusInternalServerError, "could not snapshot combatants")
-		return
-	}
-	rows.Close()
-	for _, source := range sources {
-		avatarURL := source.avatar
-		if strings.TrimSpace(avatarURL) == "" {
-			if source.sourceType == "player" && source.playerID != "" {
-				if player, err := s.playerByID(r.Context(), source.playerID); err == nil {
-					avatarURL = assetOrExternalURL(player.AvatarAssetID, player.AvatarURL)
-				}
-			} else if source.creatureID != "" {
-				if creature, err := s.creatureByID(r.Context(), source.creatureID); err == nil {
-					avatarURL = assetOrExternalURL(creature.ImageAssetID, creature.AvatarURL)
-				}
-			}
-		}
-		if _, err := tx.Exec(r.Context(), `
-			insert into encounter_run_combatants (
-				encounter_run_id, source_combatant_id, source_type, player_id, creature_id, side, display_name, color_label, avatar_url,
-				armor_class, max_hit_points, current_hit_points, sort_order, snapshot
-			)
-			values ($1, $2, $3, nullif($4, '')::uuid, nullif($5, '')::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		`, run.ID, source.sourceID, source.sourceType, source.playerID, source.creatureID, source.side, source.name, source.color, avatarURL, source.ac, source.maxHP, source.currentHP, source.sortOrder, source.snapshot); err != nil {
-			s.log.Error("start encounter snapshot insert failed", "error", err, "runID", run.ID, "sourceID", source.sourceID, "sourceType", source.sourceType, "playerID", source.playerID, "creatureID", source.creatureID)
-			writeError(w, http.StatusInternalServerError, "could not snapshot combatants")
-			return
-		}
-	}
-	if err := s.snapshotRunSpellSlots(r.Context(), tx, run.ID); err != nil {
-		s.log.Error("start encounter spell slot snapshot failed", "error", err, "runID", run.ID)
-		writeError(w, http.StatusInternalServerError, "could not snapshot spell slots")
-		return
-	}
-	if err := tx.Commit(r.Context()); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not start encounter")
-		return
-	}
-	fullRun, err := s.encounterRunByID(r.Context(), run.ID)
-	if err == nil {
-		run = fullRun
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"run": run})
 }

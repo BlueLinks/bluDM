@@ -1,9 +1,7 @@
 package httpapi
 
 import (
-	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 )
 
@@ -57,11 +55,7 @@ func (s *Server) deathSaveCommand(w http.ResponseWriter, r *http.Request) {
 	if combatant.DeathSaveSuccesses >= 3 {
 		combatant.Stable = true
 	}
-	if _, err := s.db.Exec(r.Context(), `
-		update encounter_run_combatants
-		set death_save_successes = $2, death_save_failures = $3, stable = $4
-		where id = $1
-	`, combatant.ID, combatant.DeathSaveSuccesses, combatant.DeathSaveFailures, combatant.Stable); err != nil {
+	if err := s.stores.Runs.UpdateDeathSave(r.Context(), combatant); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not update death save")
 		return
 	}
@@ -92,8 +86,7 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 	case "turn_changed":
 		restoreTimedEffects(r.Context(), s, event.Payload["timedEffects"])
 		if before, ok := event.Payload["before"].(map[string]any); ok {
-			_, _ = s.db.Exec(r.Context(), `update encounter_runs set current_round = $2, current_turn_index = $3 where id = $1`,
-				runID, intFromAny(before["round"]), intFromAny(before["turnIndex"]))
+			_ = s.stores.Runs.SetTurnPosition(r.Context(), runID, intFromAny(before["round"]), intFromAny(before["turnIndex"]))
 		}
 	case "death_save_updated":
 		if before, ok := event.Payload["before"].(map[string]any); ok {
@@ -103,7 +96,7 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "latest event cannot be undone")
 		return
 	}
-	_, _ = s.db.Exec(r.Context(), `update combat_log_events set payload = jsonb_set(payload, '{undoable}', 'false'::jsonb) where id = $1`, event.ID)
+	_ = s.stores.Runs.MarkLogEventNotUndoable(r.Context(), event.ID)
 	_ = s.appendCombatLogEvent(r.Context(), runID, "undo", "", "", map[string]any{"undoneEventId": event.ID, "undoneSequence": event.Sequence})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
@@ -126,53 +119,7 @@ func (s *Server) endEncounterRun(w http.ResponseWriter, r *http.Request) {
 		"lootAssignments": req.LootAssignments,
 		"meters":          run.Combatants,
 	}
-	summaryBytes, _ := json.Marshal(summary)
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not end encounter")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	if _, err := tx.Exec(r.Context(), `update encounter_runs set status = 'ended', ended_at = now(), summary = $2 where id = $1`, runID, summaryBytes); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not end encounter")
-		return
-	}
-	if !run.IsTest {
-		if _, err := tx.Exec(r.Context(), `update encounters set status = 'completed' where id = $1`, run.EncounterID); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not end encounter")
-			return
-		}
-		remainingSlotsByCombatant := map[string]map[string]int{}
-		for _, slot := range run.SpellSlots {
-			if remainingSlotsByCombatant[slot.CombatantID] == nil {
-				remainingSlotsByCombatant[slot.CombatantID] = map[string]int{}
-			}
-			remainingSlotsByCombatant[slot.CombatantID][strconv.Itoa(slot.SpellLevel)] = slot.RemainingSlots
-		}
-		for _, combatant := range run.Combatants {
-			if combatant.SourceType == "player" && combatant.PlayerID != "" {
-				remainingSlots := remainingSlotsByCombatant[combatant.ID]
-				if remainingSlots == nil {
-					remainingSlots = map[string]int{}
-				}
-				remainingBytes, _ := json.Marshal(remainingSlots)
-				_, _ = tx.Exec(r.Context(), `
-					update players
-					set current_hit_points = $2,
-						temporary_hit_points = $3,
-						experience_points = experience_points + $4,
-						character_sheet = jsonb_set(
-							coalesce(character_sheet, '{}'::jsonb),
-							'{spellSlotsRemaining}',
-							$5::jsonb,
-							true
-						)
-					where id = $1
-				`, combatant.PlayerID, combatant.CurrentHitPoints, combatant.TemporaryHitPoints, req.XPAwards[combatant.PlayerID], remainingBytes)
-			}
-		}
-	}
-	if err := tx.Commit(r.Context()); err != nil {
+	if err := s.stores.Runs.EndRun(r.Context(), run, summary, req.XPAwards); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not end encounter")
 		return
 	}
