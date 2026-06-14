@@ -155,7 +155,7 @@ func (s *Server) resolveConcentrationCommand(w http.ResponseWriter, r *http.Requ
 	if action == "break" || action == "fail" {
 		_ = s.breakConcentration(r.Context(), runID, alert.ActorID, "concentration failed")
 	}
-	if _, err := s.db.Exec(r.Context(), `update encounter_run_alerts set resolved = true where id = $1`, alert.ID); err != nil {
+	if err := s.stores.Runs.ResolveAlert(r.Context(), alert.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not resolve alert")
 		return
 	}
@@ -197,29 +197,19 @@ func (s *Server) manualSpellSlotCommand(w http.ResponseWriter, r *http.Request) 
 }
 
 func (s *Server) consumeRunSpellSlot(ctx context.Context, runID, combatantID string, level int) error {
-	tag, err := s.db.Exec(ctx, `
-		update encounter_run_spell_slots
-		set remaining_slots = remaining_slots - 1
-		where encounter_run_id = $1 and combatant_id = $2 and spell_level = $3 and remaining_slots > 0
-	`, runID, combatantID, level)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Runs.ConsumeSpellSlot(ctx, runID, combatantID, level); err != nil {
 		return errors.New("no spell slot available at that level")
 	}
 	return nil
 }
 
 func (s *Server) updateRunSpellSlot(ctx context.Context, runID, combatantID string, level int, mode string) (int, int, error) {
-	var before, maxSlots int
-	if err := s.db.QueryRow(ctx, `
-		select remaining_slots, max_slots
-		from encounter_run_spell_slots
-		where encounter_run_id = $1 and combatant_id = $2 and spell_level = $3
-	`, runID, combatantID, level).Scan(&before, &maxSlots); err != nil {
+	slot, err := s.stores.Runs.SpellSlot(ctx, runID, combatantID, level)
+	if err != nil {
 		return 0, 0, errors.New("no spell slots are tracked at that level")
 	}
+	before := slot.RemainingSlots
+	maxSlots := slot.MaxSlots
 	after := before
 	switch mode {
 	case "consume":
@@ -235,11 +225,7 @@ func (s *Server) updateRunSpellSlot(ctx context.Context, runID, combatantID stri
 	default:
 		return before, before, errors.New("spell slot mode must be consume or restore")
 	}
-	if _, err := s.db.Exec(ctx, `
-		update encounter_run_spell_slots
-		set remaining_slots = $4
-		where encounter_run_id = $1 and combatant_id = $2 and spell_level = $3
-	`, runID, combatantID, level, after); err != nil {
+	if err := s.stores.Runs.UpdateSpellSlot(ctx, runID, combatantID, level, after); err != nil {
 		return before, before, err
 	}
 	return before, after, nil

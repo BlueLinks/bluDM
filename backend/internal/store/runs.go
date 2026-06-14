@@ -234,6 +234,62 @@ func (s RunStore) SetEffectActive(ctx context.Context, effectID string, active b
 		Update("active", active).Error
 }
 
+func (s RunStore) SaveHPChangeAndLog(ctx context.Context, runID, eventType, actorID, targetID string, target models.EncounterRunCombatant, actor models.EncounterRunCombatant, payload map[string]any) error {
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+			Where("id = ?", target.ID).
+			Updates(map[string]any{
+				"current_hit_points":   target.CurrentHitPoints,
+				"temporary_hit_points": target.TemporaryHitPoints,
+				"defeated":             target.Defeated,
+				"damage_taken":         target.DamageTaken,
+				"healing_received":     target.HealingReceived,
+				"death_save_successes": target.DeathSaveSuccesses,
+				"death_save_failures":  target.DeathSaveFailures,
+				"stable":               target.Stable,
+			}).Error; err != nil {
+			return err
+		}
+		if actor.ID != "" {
+			if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+				Where("id = ?", actor.ID).
+				Updates(map[string]any{
+					"damage_dealt": actor.DamageDealt,
+					"healing_done": actor.HealingDone,
+					"kills":        actor.Kills,
+				}).Error; err != nil {
+				return err
+			}
+		}
+		entity := dbmodels.CombatLogEventEntity{
+			EncounterRunID: strings.TrimSpace(runID),
+			EventType:      eventType,
+			ActorID:        stringPointer(strings.TrimSpace(actorID)),
+			TargetID:       stringPointer(strings.TrimSpace(targetID)),
+			Payload:        jsonMap(payload),
+		}
+		return tx.Create(&entity).Error
+	})
+}
+
+func (s RunStore) RestoreCombatantState(ctx context.Context, payload map[string]any) error {
+	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunCombatantEntity{}).
+		Where("id = ?", strings.TrimSpace(stringFromAny(payload["id"]))).
+		Updates(map[string]any{
+			"current_hit_points":   intFromAny(payload["currentHitPoints"]),
+			"temporary_hit_points": intFromAny(payload["temporaryHitPoints"]),
+			"defeated":             boolFromAny(payload["defeated"]),
+			"damage_dealt":         intFromAny(payload["damageDealt"]),
+			"damage_taken":         intFromAny(payload["damageTaken"]),
+			"healing_done":         intFromAny(payload["healingDone"]),
+			"healing_received":     intFromAny(payload["healingReceived"]),
+			"kills":                intFromAny(payload["kills"]),
+			"death_save_successes": intFromAny(payload["deathSaveSuccesses"]),
+			"death_save_failures":  intFromAny(payload["deathSaveFailures"]),
+			"stable":               boolFromAny(payload["stable"]),
+		}).Error
+}
+
 func (s RunStore) CombatLogEventsForRun(ctx context.Context, runID string, limit int) ([]models.CombatLogEvent, error) {
 	var entities []dbmodels.CombatLogEventEntity
 	if err := s.db.WithContext(ctx).

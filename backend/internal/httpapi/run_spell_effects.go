@@ -2,8 +2,8 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -66,7 +66,7 @@ func (s *Server) applyTemporaryHP(ctx context.Context, runID, actorID, targetID 
 		return err
 	}
 	before := target.TemporaryHitPoints
-	if _, err := s.db.Exec(ctx, `update encounter_run_combatants set temporary_hit_points = $2 where id = $1`, targetID, amount); err != nil {
+	if err := s.stores.Runs.SetTemporaryHP(ctx, targetID, amount); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_temp_hp", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount, "before": before, "mode": "replace"})
@@ -76,11 +76,7 @@ func (s *Server) applyMaxHPModifier(ctx context.Context, runID, actorID, targetI
 	if amount < 0 && s.hasActiveDeathProtection(ctx, runID, targetID, "hp_max_cannot_be_reduced") {
 		return s.appendCombatLogEvent(ctx, runID, "spell_max_hp_reduction_blocked", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
 	}
-	if _, err := s.db.Exec(ctx, `
-		update encounter_run_combatants
-		set max_hit_points_modifier = max_hit_points_modifier + $2
-		where id = $1
-	`, targetID, amount); err != nil {
+	if err := s.stores.Runs.AddMaxHPModifier(ctx, targetID, amount); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_max_hp", actorID, targetID, map[string]any{"spellName": spellName, "amount": amount})
@@ -106,12 +102,7 @@ func (s *Server) applyRevive(ctx context.Context, runID, actorID, targetID strin
 	target.DeathSaveSuccesses = 0
 	target.DeathSaveFailures = 0
 	target.Stable = false
-	if _, err := s.db.Exec(ctx, `
-		update encounter_run_combatants
-		set current_hit_points = $2, defeated = false, death_save_successes = 0,
-			death_save_failures = 0, stable = false
-		where id = $1
-	`, targetID, target.CurrentHitPoints); err != nil {
+	if err := s.stores.Runs.ReviveCombatant(ctx, target); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_revive", actorID, targetID, map[string]any{
@@ -134,8 +125,7 @@ func (s *Server) applyRunCondition(ctx context.Context, runID, actorID, targetID
 	if !containsFold(target.Conditions, conditionName) {
 		target.Conditions = append(target.Conditions, conditionName)
 	}
-	conditions, _ := json.Marshal(target.Conditions)
-	if _, err := s.db.Exec(ctx, `update encounter_run_combatants set conditions = $2 where id = $1`, targetID, conditions); err != nil {
+	if err := s.stores.Runs.SetConditions(ctx, targetID, target.Conditions); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_condition", actorID, targetID, map[string]any{"spellName": spellName, "conditionName": conditionName, "effectKind": effectKind})
@@ -156,8 +146,7 @@ func (s *Server) removeRunCondition(ctx context.Context, runID, actorID, targetI
 			next = append(next, condition)
 		}
 	}
-	conditions, _ := json.Marshal(next)
-	if _, err := s.db.Exec(ctx, `update encounter_run_combatants set conditions = $2 where id = $1`, targetID, conditions); err != nil {
+	if err := s.stores.Runs.SetConditions(ctx, targetID, next); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "spell_condition_removed", actorID, targetID, map[string]any{"spellName": spellName, "conditionName": conditionName, "effectKind": effectKind})
@@ -168,27 +157,37 @@ func (s *Server) createActiveSpellEffect(ctx context.Context, runID, casterID, t
 	for key, value := range roll.EffectConfig {
 		payloadMap[key] = value
 	}
-	payload := marshalEffectPayload(payloadMap)
-	_, err := s.db.Exec(ctx, `
-		insert into encounter_run_active_effects (
-			encounter_run_id, caster_id, target_id, spell_id, library_source, spell_name,
-			cast_level, concentration, timing, effect_kind, condition_name, amount, payload
-		)
-		values ($1, $2, $3, nullif($4, '')::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13)
-	`, runID, casterID, targetID, spell.ID, spell.LibrarySource, spell.Name, castLevel, spell.Concentration,
-		roll.Timing, roll.RollKind, roll.ConditionName, amount, payload)
-	return err
+	return s.stores.Runs.CreateActiveEffect(ctx, store.ActiveEffectInput{
+		RunID:         runID,
+		CasterID:      casterID,
+		TargetID:      targetID,
+		SpellID:       spell.ID,
+		LibrarySource: spell.LibrarySource,
+		SpellName:     spell.Name,
+		CastLevel:     castLevel,
+		Concentration: spell.Concentration,
+		Timing:        roll.Timing,
+		EffectKind:    roll.RollKind,
+		ConditionName: roll.ConditionName,
+		Amount:        amount,
+		Payload:       payloadMap,
+	})
 }
 
 func (s *Server) createConcentrationMarker(ctx context.Context, runID, casterID, targetID string, spell models.Spell, castLevel int) error {
-	_, err := s.db.Exec(ctx, `
-		insert into encounter_run_active_effects (
-			encounter_run_id, caster_id, target_id, spell_id, library_source, spell_name,
-			cast_level, concentration, timing, effect_kind, payload
-		)
-		values ($1, $2, $3, nullif($4, '')::uuid, $5, $6, $7, true, 'concentration', 'concentration', '{}'::jsonb)
-	`, runID, casterID, targetID, spell.ID, spell.LibrarySource, spell.Name, castLevel)
-	return err
+	return s.stores.Runs.CreateActiveEffect(ctx, store.ActiveEffectInput{
+		RunID:         runID,
+		CasterID:      casterID,
+		TargetID:      targetID,
+		SpellID:       spell.ID,
+		LibrarySource: spell.LibrarySource,
+		SpellName:     spell.Name,
+		CastLevel:     castLevel,
+		Concentration: true,
+		Timing:        "concentration",
+		EffectKind:    "concentration",
+		Payload:       map[string]any{},
+	})
 }
 
 func (s *Server) applyStartTurnEffects(ctx context.Context, runID, targetID string) []map[string]any {
@@ -207,7 +206,7 @@ func (s *Server) applyTurnEffects(ctx context.Context, runID, targetID string, p
 	applied := []map[string]any{}
 	for _, effect := range effects {
 		if effect.CasterID == targetID && shouldExpireCasterEffect(effect.Timing, phase) {
-			if _, err := s.db.Exec(ctx, `update encounter_run_active_effects set active = false where id = $1`, effect.ID); err == nil {
+			if err := s.stores.Runs.SetEffectActive(ctx, effect.ID, false); err == nil {
 				applied = append(applied, map[string]any{
 					"effectId":  effect.ID,
 					"spellName": effect.SpellName,
@@ -232,7 +231,7 @@ func (s *Server) applyTurnEffects(ctx context.Context, runID, targetID string, p
 			applied = append(applied, change)
 		}
 		if strings.HasSuffix(effect.Timing, "_once") {
-			_, _ = s.db.Exec(ctx, `update encounter_run_active_effects set active = false where id = $1`, effect.ID)
+			_ = s.stores.Runs.SetEffectActive(ctx, effect.ID, false)
 		}
 	}
 	return applied
@@ -283,11 +282,7 @@ func (s *Server) applyTimedSpellEffect(ctx context.Context, runID string, effect
 }
 
 func (s *Server) breakConcentration(ctx context.Context, runID, casterID string, reason string) error {
-	if _, err := s.db.Exec(ctx, `
-		update encounter_run_active_effects
-		set active = false
-		where encounter_run_id = $1 and caster_id = $2 and concentration = true and active = true
-	`, runID, casterID); err != nil {
+	if err := s.stores.Runs.BreakConcentration(ctx, runID, casterID); err != nil {
 		return err
 	}
 	return s.appendCombatLogEvent(ctx, runID, "concentration_broken", casterID, "", map[string]any{"reason": reason})
@@ -298,12 +293,7 @@ func (s *Server) createConcentrationAlert(ctx context.Context, runID, casterID s
 	if err != nil {
 		return
 	}
-	var unresolved int
-	_ = s.db.QueryRow(ctx, `
-		select count(*)
-		from encounter_run_alerts
-		where encounter_run_id = $1 and actor_id = $2 and alert_type = 'concentration_check' and resolved = false
-	`, runID, casterID).Scan(&unresolved)
+	unresolved, _ := s.stores.Runs.UnresolvedConcentrationAlertCount(ctx, runID, casterID)
 	if unresolved > 0 {
 		return
 	}
@@ -312,13 +302,8 @@ func (s *Server) createConcentrationAlert(ctx context.Context, runID, casterID s
 			continue
 		}
 		dc := max(10, damage/2)
-		_, _ = s.db.Exec(ctx, `
-			insert into encounter_run_alerts (
-				encounter_run_id, alert_type, actor_id, title, message, dc, payload
-			)
-			values ($1, 'concentration_check', $2, 'Concentration check', $3, $4, $5)
-		`, runID, casterID, "Damage may break concentration on "+effect.SpellName+".", dc,
-			marshalEffectPayload(map[string]any{"spellName": effect.SpellName, "damage": damage}))
+		_ = s.stores.Runs.CreateAlert(ctx, runID, "concentration_check", casterID, "", "Concentration check",
+			"Damage may break concentration on "+effect.SpellName+".", dc, map[string]any{"spellName": effect.SpellName, "damage": damage})
 		return
 	}
 }
@@ -339,7 +324,7 @@ func (s *Server) alertByID(ctx context.Context, runID, alertID string) (models.E
 func (s *Server) spellcastingModifier(ctx context.Context, actor models.EncounterRunCombatant) int {
 	ability := ""
 	if actor.CreatureID != "" {
-		_ = s.db.QueryRow(ctx, `select spellcasting_ability from creature_spellcasting_profiles where creature_id = $1`, actor.CreatureID).Scan(&ability)
+		ability, _ = s.stores.Runs.SpellcastingAbility(ctx, actor.CreatureID)
 	}
 	if ability == "" {
 		ability = stringFromAny(sourceMap(actor.Snapshot)["spellcastingAbility"])
