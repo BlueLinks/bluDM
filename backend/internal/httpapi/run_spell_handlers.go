@@ -246,42 +246,8 @@ func (s *Server) updateRunSpellSlot(ctx context.Context, runID, combatantID stri
 }
 
 func (s *Server) spellForCast(ctx context.Context, spellID string, librarySource string) (models.Spell, error) {
-	if librarySource == "standard" {
-		row := s.db.QueryRow(ctx, `
-			select id, name, level, school, casting_time, spell_range, components, duration,
-				ritual, concentration, description, higher_level, source_note, source_key, source_label, mechanics, created_at, updated_at
-			from standard_spells
-			where id = $1
-		`, spellID)
-		spell, err := scanStandardSpell(row)
-		if err != nil {
-			return models.Spell{}, err
-		}
-		spells, err := s.attachSpellChildren(ctx, []models.Spell{spell})
-		if err != nil {
-			return models.Spell{}, err
-		}
-		return spells[0], nil
-	}
 	userID, _ := currentUserID(ctx)
-	row := s.db.QueryRow(ctx, `
-		select id, name, level, school, casting_time, cast_type, spell_range, range_type,
-			range_feet, components, material_components, classes, duration, duration_type,
-			duration_value, duration_scale, aoe_type, aoe_size, ritual, concentration,
-			scaling_type, description, higher_level, source_note, source_material,
-			mechanics, created_at, updated_at
-		from spells
-		where id = $1 and owner_user_id = $2
-	`, spellID, userID)
-	spell, err := scanSpell(row)
-	if err != nil {
-		return models.Spell{}, err
-	}
-	spells, err := s.attachSpellChildren(ctx, []models.Spell{spell})
-	if err != nil {
-		return models.Spell{}, err
-	}
-	return spells[0], nil
+	return s.stores.Spells.ByID(ctx, userID, spellID, librarySource)
 }
 
 func isSpellAreaObjectRoll(roll models.SpellActionRollPart) bool {
