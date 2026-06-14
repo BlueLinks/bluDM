@@ -13,9 +13,7 @@ const defaults = [
 const overrides = new Map([]);
 
 const jsxBlockMax = 130;
-const jsxBlockOverrides = new Map([
-  ["frontend/src/features/encounters/editorPage.tsx", 190],
-]);
+const jsxBlockOverrides = new Map([]);
 
 const ignoredDirs = new Set([".git", "dist", "node_modules"]);
 
