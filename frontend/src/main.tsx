@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
+import "./tailwind.css";
 import "./styles.scss";
 import { AuthLanding } from "./app/AuthLanding";
 import { AppRoutes } from "./app/routes";
