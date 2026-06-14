@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
 	"errors"
 	"fmt"
@@ -121,14 +122,11 @@ func (s *Server) deleteCampaignLocation(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	tag, err := s.db.Exec(r.Context(), `
-		delete from campaign_locations where id = $1 and campaign_id = $2
-	`, locationID, campaignID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not delete campaign location")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Travel.DeleteLocation(r.Context(), currentUserIDMust(r.Context()), campaignID, locationID); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete campaign location")
+			return
+		}
 		writeError(w, http.StatusNotFound, "location not found")
 		return
 	}
@@ -267,55 +265,13 @@ func normalizeTravelWeather(weather models.TravelWeather) models.TravelWeather {
 }
 
 func (s *Server) locationsForCampaign(ctx context.Context, campaignID string) ([]models.CampaignLocation, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, campaign_id, name, notes, created_at, updated_at
-		from campaign_locations
-		where campaign_id = $1
-		order by name asc
-	`, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	locations := []models.CampaignLocation{}
-	for rows.Next() {
-		location, err := scanCampaignLocation(rows)
-		if err != nil {
-			return nil, err
-		}
-		locations = append(locations, location)
-	}
-	return locations, rows.Err()
+	return s.stores.Travel.LocationsForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
 func (s *Server) insertCampaignLocation(ctx context.Context, campaignID string, req locationRequest) (models.CampaignLocation, error) {
-	row := s.db.QueryRow(ctx, `
-		insert into campaign_locations (campaign_id, name, notes)
-		values ($1, $2, $3)
-		returning id, campaign_id, name, notes, created_at, updated_at
-	`, campaignID, req.Name, req.Notes)
-	return scanCampaignLocation(row)
+	return s.stores.Travel.CreateLocation(ctx, currentUserIDMust(ctx), campaignID, store.LocationInput{Name: req.Name, Notes: req.Notes})
 }
 
 func (s *Server) updateCampaignLocationRecord(ctx context.Context, campaignID string, locationID string, req locationRequest) (models.CampaignLocation, error) {
-	row := s.db.QueryRow(ctx, `
-		update campaign_locations
-		set name = $3, notes = $4, updated_at = now()
-		where id = $1 and campaign_id = $2
-		returning id, campaign_id, name, notes, created_at, updated_at
-	`, locationID, campaignID, req.Name, req.Notes)
-	return scanCampaignLocation(row)
-}
-
-func scanCampaignLocation(row scanner) (models.CampaignLocation, error) {
-	var location models.CampaignLocation
-	err := row.Scan(
-		&location.ID,
-		&location.CampaignID,
-		&location.Name,
-		&location.Notes,
-		&location.CreatedAt,
-		&location.UpdatedAt,
-	)
-	return location, err
+	return s.stores.Travel.UpdateLocation(ctx, currentUserIDMust(ctx), campaignID, locationID, store.LocationInput{Name: req.Name, Notes: req.Notes})
 }

@@ -2,8 +2,8 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
-	"encoding/json"
 	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- Initiative rolls are gameplay randomness, not security-sensitive tokens or secrets.
 	mrand "math/rand/v2"
 	"net/http"
@@ -44,20 +44,18 @@ func (s *Server) rollInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rolled := []map[string]any{}
+	initiatives := map[string]int{}
 	for _, combatant := range combatants {
 		if !sideSet[combatant.Side] {
 			continue
 		}
 		initiative := mrand.IntN(20) + 1 + initiativeBonus(combatant)
-		if _, err := s.db.Exec(r.Context(), `
-			update encounter_run_combatants
-			set initiative = $2, initiative_set = true
-			where id = $1
-		`, combatant.ID, initiative); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not roll initiative")
-			return
-		}
+		initiatives[combatant.ID] = initiative
 		rolled = append(rolled, map[string]any{"combatantId": combatant.ID, "initiative": initiative})
+	}
+	if err := s.stores.Runs.SetInitiatives(r.Context(), initiatives); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not roll initiative")
+		return
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "initiative_rolled", "", "", map[string]any{"rolled": rolled})
 	run, _ := s.encounterRunByID(r.Context(), runID)
@@ -74,17 +72,11 @@ func (s *Server) setInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	tag, err := s.db.Exec(r.Context(), `
-		update encounter_run_combatants
-		set initiative = $3, initiative_set = true
-		where id = $2 and encounter_run_id = $1
-	`, runID, strings.TrimSpace(req.CombatantID), req.Initiative)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not set initiative")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Runs.SetInitiative(r.Context(), runID, strings.TrimSpace(req.CombatantID), req.Initiative); store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "combatant not found")
+		return
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not set initiative")
 		return
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "initiative_set", "", req.CombatantID, map[string]any{"initiative": req.Initiative})
@@ -102,21 +94,7 @@ func (s *Server) reorderInitiativeCommand(w http.ResponseWriter, r *http.Request
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not reorder initiative")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	for index, id := range req.CombatantIDs {
-		if _, err := tx.Exec(r.Context(), `
-			update encounter_run_combatants set sort_order = $3 where encounter_run_id = $1 and id = $2
-		`, runID, strings.TrimSpace(id), index); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not reorder initiative")
-			return
-		}
-	}
-	if err := tx.Commit(r.Context()); err != nil {
+	if err := s.stores.Runs.ReorderInitiative(r.Context(), runID, req.CombatantIDs); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not reorder initiative")
 		return
 	}
@@ -131,9 +109,7 @@ func (s *Server) beginEncounterRunCommand(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusNotFound, "encounter run not found")
 		return
 	}
-	if _, err := s.db.Exec(r.Context(), `
-		update encounter_runs set status = 'active', current_round = 1, current_turn_index = 0 where id = $1
-	`, runID); err != nil {
+	if err := s.stores.Runs.Begin(r.Context(), runID); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not begin combat")
 		return
 	}
@@ -202,9 +178,7 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 	if direction > 0 && run.CurrentTurnIndex >= 0 && run.CurrentTurnIndex < len(run.Combatants) {
 		timedEffects = append(timedEffects, s.applyEndTurnEffects(r.Context(), runID, run.Combatants[run.CurrentTurnIndex].ID)...)
 	}
-	if _, err := s.db.Exec(r.Context(), `
-		update encounter_runs set current_round = $2, current_turn_index = $3 where id = $1
-	`, runID, nextRound, nextIndex); err != nil {
+	if err := s.stores.Runs.SetTurnPosition(r.Context(), runID, nextRound, nextIndex); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not move turn")
 		return
 	}
@@ -231,7 +205,7 @@ func (s *Server) restoreCurrentTurnTimedEffects(ctx context.Context, runID strin
 			continue
 		}
 		restoreTimedEffects(ctx, s, event.Payload["timedEffects"])
-		_, _ = s.db.Exec(ctx, `update combat_log_events set payload = jsonb_set(payload, '{undoable}', 'false'::jsonb) where id = $1`, event.ID)
+		_ = s.stores.Runs.MarkLogEventNotUndoable(ctx, event.ID)
 		return
 	}
 }
@@ -252,7 +226,7 @@ func restoreTimedEffects(ctx context.Context, s *Server, value any) {
 		}
 		effectID := strings.TrimSpace(stringFromAny(effect["effectId"]))
 		if effectID != "" {
-			_, _ = s.db.Exec(ctx, `update encounter_run_active_effects set active = true where id = $1`, effectID)
+			_ = s.stores.Runs.SetEffectActive(ctx, effectID, true)
 		}
 	}
 }
@@ -309,7 +283,8 @@ func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "target not found")
 		return
 	}
-	action, err := s.creatureActionByID(r.Context(), req.ActionID)
+	userID, _ := currentUserID(r.Context())
+	action, err := s.stores.Actions.CreatureActionByID(r.Context(), userID, req.ActionID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "action not found")
 		return
@@ -432,31 +407,32 @@ func (s *Server) updateEncounterRunCombatant(w http.ResponseWriter, r *http.Requ
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	conditions, err := json.Marshal(req.Conditions)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "conditions must be an array")
-		return
-	}
 	displayName := strings.TrimSpace(req.DisplayName)
 	if displayName == "" {
 		displayName = combatant.DisplayName
 	}
-	row := s.db.QueryRow(r.Context(), `
-		update encounter_run_combatants
-		set display_name = $2, color_label = $3, avatar_url = $4,
-			initiative = $5, initiative_set = $6, armor_class_bonus = $7, temporary_hit_points = $8,
-			max_hit_points_modifier = $9, armor_class_override = $10, max_hit_points_override = $11,
-			current_hit_points_override = $12, current_hit_points = $13,
-			conditions = $14, defeated = $15
-		where id = $1
-		returning encounter_run_id
-	`, combatantID, displayName, strings.TrimSpace(req.ColorLabel), strings.TrimSpace(req.AvatarURL),
-		req.Initiative, req.InitiativeSet, req.ArmorClassBonus, req.TemporaryHitPoints,
-		req.MaxHitPointsModifier, req.ArmorClassOverride, req.MaxHitPointsOverride, req.CurrentHitPointsOverride,
-		req.CurrentHitPoints, conditions, req.Defeated)
-	var runID string
-	if err := row.Scan(&runID); err != nil {
+	runID, err := s.stores.Runs.UpdateCombatant(r.Context(), combatantID, store.RunCombatantUpdate{
+		DisplayName:              displayName,
+		ColorLabel:               strings.TrimSpace(req.ColorLabel),
+		AvatarURL:                strings.TrimSpace(req.AvatarURL),
+		Initiative:               req.Initiative,
+		InitiativeSet:            req.InitiativeSet,
+		ArmorClassBonus:          req.ArmorClassBonus,
+		TemporaryHitPoints:       req.TemporaryHitPoints,
+		MaxHitPointsModifier:     req.MaxHitPointsModifier,
+		ArmorClassOverride:       req.ArmorClassOverride,
+		MaxHitPointsOverride:     req.MaxHitPointsOverride,
+		CurrentHitPointsOverride: req.CurrentHitPointsOverride,
+		CurrentHitPoints:         req.CurrentHitPoints,
+		Conditions:               req.Conditions,
+		Defeated:                 req.Defeated,
+	})
+	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "combatant not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "conditions must be an array")
 		return
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "combatant_edited", "", combatantID, map[string]any{

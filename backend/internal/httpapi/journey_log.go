@@ -2,9 +2,8 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
-	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -93,14 +92,11 @@ func (s *Server) deleteCampaignJourney(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
-	tag, err := s.db.Exec(r.Context(), `
-		delete from campaign_journeys where id = $1 and campaign_id = $2
-	`, journeyID, campaignID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not delete campaign journey")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Travel.DeleteJourney(r.Context(), currentUserIDMust(r.Context()), campaignID, journeyID); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete campaign journey")
+			return
+		}
 		writeError(w, http.StatusNotFound, "journey not found")
 		return
 	}
@@ -171,110 +167,33 @@ func defaultJourneyName(req journeyRequest) string {
 }
 
 func (s *Server) journeysForCampaign(ctx context.Context, campaignID string) ([]models.CampaignJourney, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-		       good_roads, encounter_distance_feet, weather, route_input_mode, created_at, updated_at
-		from campaign_journeys
-		where campaign_id = $1
-		order by created_at desc
-	`, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	journeys := []models.CampaignJourney{}
-	for rows.Next() {
-		journey, err := scanCampaignJourney(rows)
-		if err != nil {
-			return nil, err
-		}
-		journeys = append(journeys, journey)
-	}
-	return journeys, rows.Err()
+	return s.stores.Travel.JourneysForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
 func (s *Server) insertCampaignJourney(ctx context.Context, campaignID string, req journeyRequest) (models.CampaignJourney, error) {
-	weatherJSON, err := json.Marshal(req.Weather)
-	if err != nil {
-		return models.CampaignJourney{}, err
-	}
-	row := s.db.QueryRow(ctx, `
-		insert into campaign_journeys (
-			campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-			good_roads, encounter_distance_feet, weather, route_input_mode
-		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-		returning id, campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-		          good_roads, encounter_distance_feet, weather, route_input_mode, created_at, updated_at
-	`, campaignID, req.Name, req.Origin, req.Destination, req.Distance, req.DistanceUnit,
-		req.Terrain, req.Pace, req.GoodRoads, req.EncounterDistanceFeet, weatherJSON, req.RouteInputMode)
-	return scanCampaignJourney(row)
+	return s.stores.Travel.CreateJourney(ctx, currentUserIDMust(ctx), campaignID, journeyInputFromRequest(req))
 }
 
 func (s *Server) updateCampaignJourneyRecord(ctx context.Context, campaignID string, journeyID string, req journeyRequest) (models.CampaignJourney, error) {
-	weatherJSON, err := json.Marshal(req.Weather)
-	if err != nil {
-		return models.CampaignJourney{}, err
-	}
-	row := s.db.QueryRow(ctx, `
-		update campaign_journeys
-		set name = $3, origin = $4, destination = $5, distance = $6, distance_unit = $7,
-		    terrain = $8, pace = $9, good_roads = $10, encounter_distance_feet = $11,
-		    weather = $12, route_input_mode = $13, updated_at = now()
-		where id = $1 and campaign_id = $2
-		returning id, campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-		          good_roads, encounter_distance_feet, weather, route_input_mode, created_at, updated_at
-	`, journeyID, campaignID, req.Name, req.Origin, req.Destination, req.Distance, req.DistanceUnit,
-		req.Terrain, req.Pace, req.GoodRoads, req.EncounterDistanceFeet, weatherJSON, req.RouteInputMode)
-	return scanCampaignJourney(row)
+	return s.stores.Travel.UpdateJourney(ctx, currentUserIDMust(ctx), campaignID, journeyID, journeyInputFromRequest(req))
 }
 
 func (s *Server) cloneCampaignJourneyRecord(ctx context.Context, campaignID string, journeyID string) (models.CampaignJourney, error) {
-	row := s.db.QueryRow(ctx, `
-		insert into campaign_journeys (
-			campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-			good_roads, encounter_distance_feet, weather, route_input_mode
-		)
-		select campaign_id, 'Copy of ' || name, origin, destination, distance, distance_unit, terrain, pace,
-		       good_roads, encounter_distance_feet, weather, route_input_mode
-		from campaign_journeys
-		where id = $1 and campaign_id = $2
-		returning id, campaign_id, name, origin, destination, distance, distance_unit, terrain, pace,
-		          good_roads, encounter_distance_feet, weather, route_input_mode, created_at, updated_at
-	`, journeyID, campaignID)
-	return scanCampaignJourney(row)
+	return s.stores.Travel.CloneJourney(ctx, currentUserIDMust(ctx), campaignID, journeyID)
 }
 
-func scanCampaignJourney(row scanner) (models.CampaignJourney, error) {
-	var journey models.CampaignJourney
-	var weatherJSON []byte
-	var encounterDistanceFeet sql.NullInt64
-	err := row.Scan(
-		&journey.ID,
-		&journey.CampaignID,
-		&journey.Name,
-		&journey.Origin,
-		&journey.Destination,
-		&journey.Distance,
-		&journey.DistanceUnit,
-		&journey.Terrain,
-		&journey.Pace,
-		&journey.GoodRoads,
-		&encounterDistanceFeet,
-		&weatherJSON,
-		&journey.RouteInputMode,
-		&journey.CreatedAt,
-		&journey.UpdatedAt,
-	)
-	if err != nil {
-		return journey, err
+func journeyInputFromRequest(req journeyRequest) store.JourneyInput {
+	return store.JourneyInput{
+		Name:                  req.Name,
+		Origin:                req.Origin,
+		Destination:           req.Destination,
+		Distance:              req.Distance,
+		DistanceUnit:          req.DistanceUnit,
+		Terrain:               req.Terrain,
+		Pace:                  req.Pace,
+		GoodRoads:             req.GoodRoads,
+		EncounterDistanceFeet: req.EncounterDistanceFeet,
+		Weather:               req.Weather,
+		RouteInputMode:        req.RouteInputMode,
 	}
-	if encounterDistanceFeet.Valid {
-		value := int(encounterDistanceFeet.Int64)
-		journey.EncounterDistanceFeet = &value
-	}
-	if err := json.Unmarshal(weatherJSON, &journey.Weather); err != nil {
-		return journey, err
-	}
-	return journey, nil
 }

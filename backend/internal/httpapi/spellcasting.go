@@ -1,14 +1,9 @@
 package httpapi
 
 import (
-	"bludm/backend/internal/models"
-	"context"
-	"errors"
+	"bludm/backend/internal/store"
 	"net/http"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 )
 
 func (s *Server) getCreatureSpellcasting(w http.ResponseWriter, r *http.Request) {
@@ -17,7 +12,8 @@ func (s *Server) getCreatureSpellcasting(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusNotFound, "creature not found")
 		return
 	}
-	profile, err := s.creatureSpellcastingProfile(r.Context(), creatureID)
+	user, _ := s.currentUser(r)
+	profile, err := s.stores.Spellcasts.Profile(r.Context(), user.ID, creatureID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load spellcasting")
 		return
@@ -36,160 +32,15 @@ func (s *Server) upsertCreatureSpellcasting(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	req.normalize()
-	slots, err := marshalJSONMap(req.Slots)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "slots must be a JSON object")
+	user, _ := s.currentUser(r)
+	profile, err := s.stores.Spellcasts.UpsertProfile(r.Context(), user.ID, creatureID, spellcastingInputFromRequest(req))
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "spell not found")
 		return
 	}
-
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save spellcasting")
-		return
-	}
-	defer tx.Rollback(r.Context())
-
-	_, err = tx.Exec(r.Context(), `
-		insert into creature_spellcasting_profiles (
-			creature_id, spellcasting_ability, innate_spellcasting_ability, caster_level,
-			spell_save_dc, spell_attack_bonus, slots
-		)
-		values ($1, $2, $3, $4, $5, $6, $7)
-		on conflict (creature_id) do update
-		set spellcasting_ability = excluded.spellcasting_ability,
-			innate_spellcasting_ability = excluded.innate_spellcasting_ability,
-			caster_level = excluded.caster_level,
-			spell_save_dc = excluded.spell_save_dc,
-			spell_attack_bonus = excluded.spell_attack_bonus,
-			slots = excluded.slots
-	`, creatureID, req.SpellcastingAbility, req.InnateSpellcastingAbility, req.CasterLevel,
-		req.SpellSaveDC, req.SpellAttackBonus, slots)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not save spellcasting")
-		return
-	}
-	if _, err := tx.Exec(r.Context(), `delete from creature_spells where creature_id = $1`, creatureID); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save creature spells")
-		return
-	}
-	for index, spell := range req.Spells {
-		if spell.SpellID == "" {
-			continue
-		}
-		tag, err := s.insertCreatureSpell(r.Context(), tx, creatureID, spell, index)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "could not save creature spells")
-			return
-		}
-		if tag.RowsAffected() == 0 {
-			writeError(w, http.StatusNotFound, "spell not found")
-			return
-		}
-	}
-	if err := tx.Commit(r.Context()); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not save spellcasting")
-		return
-	}
-	profile, err := s.creatureSpellcastingProfile(r.Context(), creatureID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load spellcasting")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"spellcasting": profile})
-}
-
-type spellTx interface {
-	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
-}
-
-func (s *Server) insertCreatureSpell(ctx context.Context, tx spellTx, creatureID string, spell creatureSpellRequest, index int) (pgconn.CommandTag, error) {
-	if spell.LibrarySource == "standard" {
-		return tx.Exec(ctx, `
-			insert into creature_spells (
-				creature_id, standard_spell_id, library_source, spell_level, prepared, innate, sort_order
-			)
-			select $1, standard_spells.id, 'standard', $3, $4, $5, $6
-			from standard_spells
-			where standard_spells.id = $2
-		`, creatureID, spell.SpellID, spell.SpellLevel, spell.Prepared, spell.Innate, index)
-	}
-	return tx.Exec(ctx, `
-		insert into creature_spells (
-			creature_id, spell_id, library_source, spell_level, prepared, innate, sort_order
-		)
-		select $1, spells.id, 'user', $3, $4, $5, $6
-		from spells
-		where spells.id = $2 and spells.owner_user_id = $7
-	`, creatureID, spell.SpellID, spell.SpellLevel, spell.Prepared, spell.Innate, index, currentUserIDMust(ctx))
-}
-
-func (s *Server) creatureSpellcastingProfile(ctx context.Context, creatureID string) (models.CreatureSpellcastingProfile, error) {
-	var profile models.CreatureSpellcastingProfile
-	var slotsBytes []byte
-	err := s.db.QueryRow(ctx, `
-		select creature_id, spellcasting_ability, innate_spellcasting_ability, caster_level,
-			spell_save_dc, spell_attack_bonus, slots, created_at, updated_at
-		from creature_spellcasting_profiles
-		where creature_id = $1
-	`, creatureID).Scan(&profile.CreatureID, &profile.SpellcastingAbility, &profile.InnateSpellcastingAbility,
-		&profile.CasterLevel, &profile.SpellSaveDC, &profile.SpellAttackBonus, &slotsBytes,
-		&profile.CreatedAt, &profile.UpdatedAt)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			profile.CreatureID = creatureID
-			profile.Slots = map[string]any{}
-			profile.Spells = []models.CreatureSpell{}
-			return profile, nil
-		}
-		return models.CreatureSpellcastingProfile{}, err
-	}
-	profile.Slots, err = unmarshalJSONMap(slotsBytes)
-	if err != nil {
-		return models.CreatureSpellcastingProfile{}, err
-	}
-	profile.Spells, err = s.creatureSpells(ctx, creatureID)
-	return profile, err
-}
-
-func (s *Server) creatureSpells(ctx context.Context, creatureID string) ([]models.CreatureSpell, error) {
-	rows, err := s.db.Query(ctx, `
-		select creature_spells.id, creature_spells.creature_id,
-			coalesce(creature_spells.spell_id::text, creature_spells.standard_spell_id::text, ''),
-			coalesce(spells.name, standard_spells.name, ''),
-			creature_spells.library_source,
-			coalesce(standard_spells.source_key, ''),
-			coalesce(standard_spells.source_label, ''),
-			creature_spells.spell_level, creature_spells.prepared,
-			creature_spells.innate, creature_spells.sort_order
-		from creature_spells
-		left join spells on spells.id = creature_spells.spell_id
-		left join standard_spells on standard_spells.id = creature_spells.standard_spell_id
-		where creature_spells.creature_id = $1
-		order by creature_spells.spell_level asc, creature_spells.sort_order asc
-	`, creatureID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	spells := []models.CreatureSpell{}
-	for rows.Next() {
-		var spell models.CreatureSpell
-		if err := rows.Scan(
-			&spell.ID,
-			&spell.CreatureID,
-			&spell.SpellID,
-			&spell.SpellName,
-			&spell.LibrarySource,
-			&spell.SourceKey,
-			&spell.SourceLabel,
-			&spell.SpellLevel,
-			&spell.Prepared,
-			&spell.Innate,
-			&spell.SortOrder,
-		); err != nil {
-			return nil, err
-		}
-		spells = append(spells, spell)
-	}
-	return spells, rows.Err()
 }

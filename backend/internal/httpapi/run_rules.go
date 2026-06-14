@@ -98,30 +98,6 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 			actor.HealingDone += amount
 		}
 	}
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback(ctx)
-	if _, err := tx.Exec(ctx, `
-		update encounter_run_combatants
-		set current_hit_points = $2, temporary_hit_points = $3, defeated = $4,
-			damage_taken = $5, healing_received = $6, death_save_successes = $7,
-			death_save_failures = $8, stable = $9
-		where id = $1
-	`, target.ID, target.CurrentHitPoints, target.TemporaryHitPoints, target.Defeated, target.DamageTaken,
-		target.HealingReceived, target.DeathSaveSuccesses, target.DeathSaveFailures, target.Stable); err != nil {
-		return err
-	}
-	if actor.ID != "" {
-		if _, err := tx.Exec(ctx, `
-			update encounter_run_combatants
-			set damage_dealt = $2, healing_done = $3, kills = $4
-			where id = $1
-		`, actor.ID, actor.DamageDealt, actor.HealingDone, actor.Kills); err != nil {
-			return err
-		}
-	}
 	payload := map[string]any{
 		"undoable":     true,
 		"mode":         mode,
@@ -134,14 +110,7 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 		payload["actorBefore"] = actorBefore
 		payload["actorAfter"] = combatantUndoPayload(actor)
 	}
-	payloadBytes, _ := json.Marshal(payload)
-	if _, err := tx.Exec(ctx, `
-		insert into combat_log_events (encounter_run_id, event_type, actor_id, target_id, payload)
-		values ($1, $2, nullif($3, '')::uuid, nullif($4, '')::uuid, $5)
-	`, runID, eventType, strings.TrimSpace(actorID), strings.TrimSpace(targetID), payloadBytes); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
+	if err := s.stores.Runs.SaveHPChangeAndLog(ctx, runID, eventType, actorID, targetID, target, actor, payload); err != nil {
 		return err
 	}
 	if mode == "damage" && amount > 0 {
@@ -151,18 +120,7 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 }
 
 func (s *Server) restoreCombatantState(ctx context.Context, payload map[string]any) error {
-	_, err := s.db.Exec(ctx, `
-		update encounter_run_combatants
-		set current_hit_points = $2, temporary_hit_points = $3, defeated = $4,
-			damage_dealt = $5, damage_taken = $6, healing_done = $7, healing_received = $8,
-			kills = $9, death_save_successes = $10, death_save_failures = $11, stable = $12
-		where id = $1
-	`, strings.TrimSpace(stringFromAny(payload["id"])), intFromAny(payload["currentHitPoints"]),
-		intFromAny(payload["temporaryHitPoints"]), boolFromAny(payload["defeated"]),
-		intFromAny(payload["damageDealt"]), intFromAny(payload["damageTaken"]),
-		intFromAny(payload["healingDone"]), intFromAny(payload["healingReceived"]), intFromAny(payload["kills"]),
-		intFromAny(payload["deathSaveSuccesses"]), intFromAny(payload["deathSaveFailures"]), boolFromAny(payload["stable"]))
-	return err
+	return s.stores.Runs.RestoreCombatantState(ctx, payload)
 }
 
 func combatantUndoPayload(combatant models.EncounterRunCombatant) map[string]any {

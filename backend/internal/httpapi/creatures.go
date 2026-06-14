@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
 	"errors"
 	"net/http"
@@ -15,61 +16,10 @@ func (s *Server) listCreatures(w http.ResponseWriter, r *http.Request) {
 	includeStandard := queryBool(r, "includeStandard", false)
 	sources := querySources(r)
 
-	creatures := []models.Creature{}
-	if includeUser {
-		rows, err := s.db.Query(r.Context(), `
-			select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-				hit_dice, challenge_rating, xp, coalesce(image_asset_id::text, ''), avatar_url, stat_block, created_at, updated_at
-			from creatures
-			where owner_user_id = $2 and ($1 = '' or name ilike '%' || $1 || '%' or creature_type ilike '%' || $1 || '%')
-			order by updated_at desc
-			limit 100
-		`, q, user.ID)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "could not list creatures")
-			return
-		}
-		defer rows.Close()
-		for rows.Next() {
-			creature, err := scanCreature(rows)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "could not read creatures")
-				return
-			}
-			creatures = append(creatures, creature)
-		}
-		if rows.Err() != nil {
-			writeError(w, http.StatusInternalServerError, "could not read creatures")
-			return
-		}
-	}
-	if includeStandard {
-		rows, err := s.db.Query(r.Context(), `
-			select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-				hit_dice, challenge_rating, xp, avatar_url, source_key, source_label, stat_block, created_at, updated_at
-			from standard_creatures
-			where ($1 = '' or name ilike '%' || $1 || '%' or creature_type ilike '%' || $1 || '%')
-				and (cardinality($2::text[]) = 0 or source_key = any($2::text[]))
-			order by name asc
-			limit 500
-		`, q, sources)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "could not list standard creatures")
-			return
-		}
-		defer rows.Close()
-		for rows.Next() {
-			creature, err := scanStandardCreature(rows)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "could not read standard creatures")
-				return
-			}
-			creatures = append(creatures, creature)
-		}
-		if rows.Err() != nil {
-			writeError(w, http.StatusInternalServerError, "could not read standard creatures")
-			return
-		}
+	creatures, err := s.stores.Creatures.List(r.Context(), user.ID, q, includeUser, includeStandard, sources)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not list creatures")
+		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"creatures": creatures})
@@ -99,24 +49,7 @@ func (s *Server) createCreature(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	statBlock, err := marshalJSONMap(req.StatBlock)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, "statBlock must be a JSON object")
-		return
-	}
-
-	row := s.db.QueryRow(r.Context(), `
-		insert into creatures (
-			owner_user_id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, image_asset_id, avatar_url, stat_block
-		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, nullif($12, '')::uuid, $13, $14)
-		returning id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, coalesce(image_asset_id::text, ''), avatar_url, stat_block, created_at, updated_at
-	`, user.ID, req.Name, req.Description, req.Size, req.CreatureType, req.Alignment, req.ArmorClass, req.HitPoints,
-		req.HitDice, req.ChallengeRating, req.XP, req.ImageAssetID, req.AvatarURL, statBlock)
-
-	creature, err := scanCreature(row)
+	creature, err := s.stores.Creatures.Create(r.Context(), user.ID, creatureInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create creature")
 		return
@@ -154,23 +87,12 @@ func (s *Server) updateCreature(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "image asset not found")
 		return
 	}
-	statBlock, err := marshalJSONMap(req.StatBlock)
+	creature, err := s.stores.Creatures.Update(r.Context(), currentUserIDMust(r.Context()), creatureID, creatureInputFromRequest(req))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "statBlock must be a JSON object")
-		return
-	}
-	row := s.db.QueryRow(r.Context(), `
-		update creatures
-		set name = $2, description = $3, size = $4, creature_type = $5, alignment = $6,
-			armor_class = $7, hit_points = $8, hit_dice = $9, challenge_rating = $10,
-			xp = $11, image_asset_id = nullif($12, '')::uuid, avatar_url = $13, stat_block = $14
-		where id = $1
-		returning id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, coalesce(image_asset_id::text, ''), avatar_url, stat_block, created_at, updated_at
-	`, creatureID, req.Name, req.Description, req.Size, req.CreatureType, req.Alignment,
-		req.ArmorClass, req.HitPoints, req.HitDice, req.ChallengeRating, req.XP, req.ImageAssetID, req.AvatarURL, statBlock)
-	creature, err := scanCreature(row)
-	if err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "creature not found")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not update creature")
 		return
 	}
@@ -180,12 +102,11 @@ func (s *Server) updateCreature(w http.ResponseWriter, r *http.Request) {
 func (s *Server) deleteCreature(w http.ResponseWriter, r *http.Request) {
 	creatureID := strings.TrimSpace(r.PathValue("creatureID"))
 	user, _ := s.currentUser(r)
-	tag, err := s.db.Exec(r.Context(), `delete from creatures where id = $1 and owner_user_id = $2`, creatureID, user.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not delete creature")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Creatures.Delete(r.Context(), user.ID, creatureID); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete creature")
+			return
+		}
 		writeError(w, http.StatusNotFound, "creature not found")
 		return
 	}
@@ -211,8 +132,7 @@ func (s *Server) creatureExists(ctx context.Context, creatureID string) (bool, e
 	if !ok {
 		return false, errors.New("authentication required")
 	}
-	var exists bool
-	err := s.db.QueryRow(ctx, `select exists(select 1 from creatures where id = $1 and owner_user_id = $2)`, creatureID, userID).Scan(&exists)
+	exists, err := s.stores.Creatures.Exists(ctx, userID, creatureID)
 	if err != nil {
 		return false, err
 	}
@@ -227,21 +147,27 @@ func (s *Server) creatureByID(ctx context.Context, creatureID string) (models.Cr
 	if !ok {
 		return models.Creature{}, errors.New("authentication required")
 	}
-	row := s.db.QueryRow(ctx, `
-		select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, coalesce(image_asset_id::text, ''), avatar_url, stat_block, created_at, updated_at
-		from creatures
-		where id = $1 and owner_user_id = $2
-	`, creatureID, userID)
-	return scanCreature(row)
+	return s.stores.Creatures.ByID(ctx, userID, creatureID)
 }
 
 func (s *Server) standardCreatureByID(ctx context.Context, creatureID string) (models.Creature, error) {
-	row := s.db.QueryRow(ctx, `
-		select id, name, description, size, creature_type, alignment, armor_class, hit_points,
-			hit_dice, challenge_rating, xp, avatar_url, source_key, source_label, stat_block, created_at, updated_at
-		from standard_creatures
-		where id = $1
-	`, strings.TrimSpace(creatureID))
-	return scanStandardCreature(row)
+	return s.stores.Creatures.StandardByID(ctx, creatureID)
+}
+
+func creatureInputFromRequest(req creatureRequest) store.CreatureInput {
+	return store.CreatureInput{
+		Name:            req.Name,
+		Description:     req.Description,
+		Size:            req.Size,
+		CreatureType:    req.CreatureType,
+		Alignment:       req.Alignment,
+		ArmorClass:      req.ArmorClass,
+		HitPoints:       req.HitPoints,
+		HitDice:         req.HitDice,
+		ChallengeRating: req.ChallengeRating,
+		XP:              req.XP,
+		ImageAssetID:    req.ImageAssetID,
+		AvatarURL:       req.AvatarURL,
+		StatBlock:       req.StatBlock,
+	}
 }

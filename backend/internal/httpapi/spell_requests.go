@@ -1,6 +1,8 @@
 package httpapi
 
 import (
+	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"errors"
 	"strings"
 )
@@ -170,4 +172,119 @@ func (req *spellActionRollRequest) normalize() {
 	if req.Timing == "" {
 		req.Timing = "immediate"
 	}
+}
+
+func spellInputFromRequest(req spellRequest) store.SpellInput {
+	return store.SpellInput{
+		Name:              req.Name,
+		Level:             req.Level,
+		School:            req.School,
+		CastingTime:       req.CastingTime,
+		CastType:          req.CastType,
+		Range:             req.Range,
+		RangeType:         req.RangeType,
+		RangeFeet:         req.RangeFeet,
+		Components:        req.Components,
+		Material:          req.Material,
+		Classes:           req.Classes,
+		Duration:          req.Duration,
+		DurationType:      req.DurationType,
+		DurationValue:     req.DurationValue,
+		DurationScale:     req.DurationScale,
+		AOEType:           req.AOEType,
+		AOESize:           req.AOESize,
+		Ritual:            req.Ritual,
+		Concentration:     req.Concentration,
+		ScalingType:       req.ScalingType,
+		Description:       req.Description,
+		HigherLevel:       req.HigherLevel,
+		SourceNote:        req.SourceNote,
+		SourceMaterial:    req.SourceMaterial,
+		Mechanics:         req.Mechanics,
+		ProjectileScaling: spellProjectileScalingFromRequest(req.ProjectileScaling),
+		Actions:           spellActionsFromRequest(req.Actions),
+	}
+}
+
+func spellProjectileScalingFromRequest(req *spellProjectileScalingRequest) *models.SpellProjectileScaling {
+	if req == nil {
+		return nil
+	}
+	return &models.SpellProjectileScaling{
+		BaseProjectiles:       req.BaseProjectiles,
+		ScalingType:           req.ScalingType,
+		ScaleFromLevel:        req.ScaleFromLevel,
+		AdditionalProjectiles: req.AdditionalProjectiles,
+		StepSize:              req.StepSize,
+		Description:           req.Description,
+		CantripScaling:        req.CantripScaling,
+	}
+}
+
+func spellActionsFromRequest(reqs []spellActionRequest) []models.SpellAction {
+	actions := make([]models.SpellAction, 0, len(reqs))
+	for index, req := range reqs {
+		actions = append(actions, models.SpellAction{
+			Name:                  req.Name,
+			SortOrder:             index,
+			ActionType:            req.ActionType,
+			SaveAbility:           req.SaveAbility,
+			SuccessfulSaveEffect:  req.SuccessfulSaveEffect,
+			AttackModifier:        req.AttackModifier,
+			HitSpecialEvent:       req.HitSpecialEvent,
+			WeaponSource:          req.WeaponSource,
+			AttackAbilityOverride: req.AttackAbilityOverride,
+			DamageAbilityOverride: req.DamageAbilityOverride,
+			DamageTypeChoice:      req.DamageTypeChoice,
+			DamageTypeOptions:     req.DamageTypeOptions,
+			Rolls:                 spellActionRollsFromRequest(req.Rolls),
+		})
+	}
+	return actions
+}
+
+func spellActionRollsFromRequest(reqs []spellActionRollRequest) []models.SpellActionRollPart {
+	rolls := make([]models.SpellActionRollPart, 0, len(reqs))
+	for index, req := range reqs {
+		rolls = append(rolls, models.SpellActionRollPart{
+			SortOrder:              index,
+			RollKind:               req.RollKind,
+			DamageType:             req.DamageType,
+			Magical:                req.Magical,
+			DiceCount:              req.DiceCount,
+			DieSize:                req.DieSize,
+			FixedValue:             req.FixedValue,
+			AddPrimaryStatModifier: req.AddPrimaryStatModifier,
+			ConditionName:          req.ConditionName,
+			EffectConfig:           req.EffectConfig,
+			Timing:                 req.Timing,
+			ScalingType:            req.ScalingType,
+			ScalingFromLevel:       req.ScalingFromLevel,
+			ScalingDiceCount:       req.ScalingDiceCount,
+			ScalingDieSize:         req.ScalingDieSize,
+			ScalingFixedValue:      req.ScalingFixedValue,
+			ScalingStepSize:        req.ScalingStepSize,
+			CantripScaling:         req.CantripScaling,
+		})
+	}
+	return rolls
+}
+
+func standardSpellClasses(mechanics map[string]any) []string {
+	rawClasses, ok := mechanics["classes"].([]any)
+	if !ok {
+		return []string{}
+	}
+	classes := make([]string, 0, len(rawClasses))
+	for _, rawClass := range rawClasses {
+		className, ok := rawClass.(string)
+		if !ok {
+			continue
+		}
+		className = strings.TrimSpace(className)
+		if className != "" {
+			classes = append(classes, className)
+		}
+	}
+	return classes
 }

@@ -1,6 +1,10 @@
 package httpapi
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestSanitizeReturnTo(t *testing.T) {
 	tests := []struct {
@@ -20,6 +24,20 @@ func TestSanitizeReturnTo(t *testing.T) {
 				t.Fatalf("sanitizeReturnTo(%q) = %q, want %q", test.input, got, test.want)
 			}
 		})
+	}
+}
+
+func TestRedirectToSanitizedReturnTo(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/google/callback", nil)
+	rec := httptest.NewRecorder()
+
+	redirectToSanitizedReturnTo(rec, req, "https://evil.example/campaigns")
+
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected redirect status, got %d", rec.Code)
+	}
+	if location := rec.Header().Get("Location"); location != "/" {
+		t.Fatalf("expected unsafe returnTo to redirect to root, got %q", location)
 	}
 }
 

@@ -22,7 +22,7 @@ func (s *Server) moveSpellAreaCommand(w http.ResponseWriter, r *http.Request) {
 	payload["lastMovedNote"] = strings.TrimSpace(req.Note)
 	payload["lastMovedAtRound"] = currentAreaTurnKeyFromRun(r.Context(), s, runID)
 	payload["moveCount"] = intFromAny(payload["moveCount"]) + 1
-	if _, err := s.db.Exec(r.Context(), `update encounter_run_active_effects set payload = $2 where id = $1`, area.ID, marshalEffectPayload(payload)); err != nil {
+	if err := s.stores.Runs.UpdateEffectPayload(r.Context(), area.ID, payload); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not move spell area")
 		return
 	}
@@ -122,7 +122,7 @@ func (s *Server) applySpellAreaCommand(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	payload["appliedTargets"] = appliedTargets
-	if _, err := s.db.Exec(r.Context(), `update encounter_run_active_effects set payload = $2 where id = $1`, area.ID, marshalEffectPayload(payload)); err != nil {
+	if err := s.stores.Runs.UpdateEffectPayload(r.Context(), area.ID, payload); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not update spell area")
 		return
 	}
@@ -146,12 +146,7 @@ func (s *Server) endSpellAreaCommand(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	if _, err := s.db.Exec(r.Context(), `
-		update encounter_run_active_effects
-		set active = false
-		where encounter_run_id = $1 and active = true and caster_id = $2
-			and spell_name = $3 and (id = $4 or effect_kind in ('area_trigger', 'battlefield_object', 'concentration'))
-	`, runID, area.CasterID, area.SpellName, area.ID); err != nil {
+	if err := s.stores.Runs.EndSpellArea(r.Context(), runID, area.CasterID, area.SpellName, area.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not end spell area")
 		return
 	}
@@ -232,8 +227,7 @@ func boolishFromAny(value any) bool {
 
 func (s *Server) spellSaveDC(ctx context.Context, actor models.EncounterRunCombatant) int {
 	if actor.CreatureID != "" {
-		var dc int
-		_ = s.db.QueryRow(ctx, `select spell_save_dc from creature_spellcasting_profiles where creature_id = $1`, actor.CreatureID).Scan(&dc)
+		dc, _ := s.stores.Runs.SpellSaveDC(ctx, actor.CreatureID)
 		if dc > 0 {
 			return dc
 		}

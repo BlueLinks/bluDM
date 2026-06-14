@@ -1,7 +1,6 @@
 package httpapi
 
 import (
-	"bludm/backend/internal/models"
 	"context"
 	crand "crypto/rand"
 	"crypto/sha256"
@@ -12,7 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
+
 	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -178,7 +179,7 @@ func (s *Server) deleteAccount(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "current password is required to delete this account")
 		return
 	}
-	if _, err := s.db.Exec(r.Context(), `delete from users where id = $1`, user.ID); err != nil {
+	if err := s.stores.Auth.DeleteUser(r.Context(), user.ID); err != nil {
 		writeError(w, http.StatusInternalServerError, "could not delete account")
 		return
 	}
@@ -229,92 +230,31 @@ func (s *Server) currentUser(r *http.Request) (models.User, bool) {
 }
 
 func (s *Server) hasUser(ctx context.Context) (bool, error) {
-	var exists bool
-	err := s.db.QueryRow(ctx, `select exists(select 1 from users)`).Scan(&exists)
-	return exists, err
+	return s.stores.Auth.HasUser(ctx)
 }
 
 func (s *Server) createUser(ctx context.Context, email, passwordHash string) (models.User, error) {
-	return scanUser(s.db.QueryRow(ctx, `
-		insert into users (email, password_hash)
-		values ($1, $2)
-		returning id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
-	`, email, passwordHash))
+	return s.stores.Auth.CreateUser(ctx, email, passwordHash)
 }
 
 func (s *Server) findOrCreateOAuthUser(ctx context.Context, provider, subject, email string, emailVerified bool) (models.User, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
-	user, err := scanUser(s.db.QueryRow(ctx, `
-		select users.id, users.email, coalesce(users.password_hash, ''), coalesce(users.avatar_asset_id::text, ''), users.avatar_url, users.created_at
-		from auth_identities
-		join users on users.id = auth_identities.user_id
-		where auth_identities.provider = $1 and auth_identities.provider_subject = $2
-	`, provider, subject))
-	if err == nil {
-		_, _ = s.db.Exec(ctx, `
-			update auth_identities
-			set email = $3, email_verified = $4, last_login_at = now()
-			where provider = $1 and provider_subject = $2
-		`, provider, subject, email, emailVerified)
-		return user, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
-		return models.User{}, err
-	}
-	if existing, err := s.userByEmail(ctx, email); err == nil && existing.ID != "" {
+	user, err := s.stores.Auth.FindOrCreateOAuthUser(ctx, provider, subject, email, emailVerified)
+	if errors.Is(err, store.ErrOAuthEmailAlreadyRegistered) {
 		return models.User{}, errOAuthEmailAlreadyRegistered
-	} else if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return models.User{}, err
 	}
-
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return models.User{}, err
+	if errors.Is(err, store.ErrOAuthIdentityAlreadyLinked) {
+		return models.User{}, errOAuthIdentityAlreadyLinked
 	}
-	defer tx.Rollback(ctx)
-	user, err = scanUser(tx.QueryRow(ctx, `
-		insert into users (email, password_hash)
-		values ($1, null)
-		returning id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
-	`, email))
-	if err != nil {
-		if isUniqueViolation(err) {
-			return models.User{}, errOAuthEmailAlreadyRegistered
-		}
-		return models.User{}, err
-	}
-	_, err = tx.Exec(ctx, `
-		insert into auth_identities (user_id, provider, provider_subject, email, email_verified, last_login_at)
-		values ($1, $2, $3, $4, $5, now())
-	`, user.ID, provider, subject, email, emailVerified)
-	if err != nil {
-		if isUniqueViolation(err) {
-			return models.User{}, errOAuthIdentityAlreadyLinked
-		}
-		return models.User{}, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return models.User{}, err
-	}
-	return user, nil
+	return user, err
 }
 
 func (s *Server) userByEmail(ctx context.Context, email string) (models.User, error) {
-	return scanUser(s.db.QueryRow(ctx, `
-		select id, email, coalesce(password_hash, ''), coalesce(avatar_asset_id::text, ''), avatar_url, created_at
-		from users
-		where email = $1
-	`, email))
+	return s.stores.Auth.UserByEmail(ctx, email)
 }
 
 func (s *Server) userBySessionToken(ctx context.Context, token string) (models.User, error) {
 	tokenHash := hashToken(token)
-	return scanUser(s.db.QueryRow(ctx, `
-		select users.id, users.email, coalesce(users.password_hash, ''), coalesce(users.avatar_asset_id::text, ''), users.avatar_url, users.created_at
-		from sessions
-		join users on users.id = sessions.user_id
-		where sessions.token_hash = $1 and sessions.expires_at > now()
-	`, tokenHash))
+	return s.stores.Auth.UserBySessionToken(ctx, tokenHash)
 }
 
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID string) error {
@@ -323,11 +263,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID str
 		return err
 	}
 	expiresAt := time.Now().Add(s.cfg.SessionLifetime)
-	_, err = s.db.Exec(r.Context(), `
-		insert into sessions (user_id, token_hash, expires_at)
-		values ($1, $2, $3)
-	`, userID, hashToken(token), expiresAt)
-	if err != nil {
+	if err := s.stores.Auth.StartSession(r.Context(), userID, hashToken(token), expiresAt); err != nil {
 		return err
 	}
 
@@ -345,8 +281,7 @@ func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID str
 }
 
 func (s *Server) deleteSession(ctx context.Context, token string) error {
-	_, err := s.db.Exec(ctx, `delete from sessions where token_hash = $1`, hashToken(token))
-	return err
+	return s.stores.Auth.DeleteSession(ctx, hashToken(token))
 }
 
 func (s *Server) clearSessionCookie(w http.ResponseWriter) {

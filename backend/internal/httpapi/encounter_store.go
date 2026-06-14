@@ -2,75 +2,17 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 )
 
-func (s *Server) encounterByID(ctx context.Context, encounterID string) (models.Encounter, error) {
-	userID, ok := currentUserID(ctx)
-	if !ok {
-		return models.Encounter{}, errors.New("authentication required")
-	}
-	row := s.db.QueryRow(ctx, `
-		select encounters.id, encounters.campaign_id, encounters.name, encounters.description,
-			encounters.status, encounters.location, encounters.room_number, encounters.loot_notes,
-			count(encounter_combatants.id)::int,
-			count(encounter_combatants.id) filter (where encounter_combatants.side = 'enemy')::int,
-			encounters.created_at, encounters.updated_at
-		from encounters
-		join campaigns on campaigns.id = encounters.campaign_id
-		left join encounter_combatants on encounter_combatants.encounter_id = encounters.id
-		where encounters.id = $1 and campaigns.owner_user_id = $2
-		group by encounters.id
-	`, encounterID, userID)
-	return scanEncounter(row)
-}
-
-func (s *Server) combatantsForEncounter(ctx context.Context, encounterID string) ([]models.EncounterCombatant, error) {
-	rows, err := s.db.Query(ctx, `
-		select id, encounter_id, source_type, coalesce(player_id::text, ''), coalesce(creature_id::text, ''),
-			side, display_name, color_label, avatar_url, armor_class, max_hit_points, current_hit_points,
-			rolled_hp, sort_order, snapshot, created_at, updated_at
-		from encounter_combatants
-		where encounter_id = $1
-		order by sort_order asc, created_at asc
-	`, encounterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	combatants := []models.EncounterCombatant{}
-	for rows.Next() {
-		combatant, err := scanEncounterCombatant(rows)
-		if err != nil {
-			return nil, err
-		}
-		combatants = append(combatants, combatant)
-	}
-	return combatants, rows.Err()
-}
-
-func (s *Server) encounterCombatantOwned(ctx context.Context, combatantID string) bool {
-	userID, ok := currentUserID(ctx)
-	if !ok {
-		return false
-	}
-	var exists bool
-	err := s.db.QueryRow(ctx, `
-		select exists(
-			select 1
-			from encounter_combatants
-			join encounters on encounters.id = encounter_combatants.encounter_id
-			join campaigns on campaigns.id = encounters.campaign_id
-			where encounter_combatants.id = $1 and campaigns.owner_user_id = $2
-		)
-	`, combatantID, userID).Scan(&exists)
-	return err == nil && exists
-}
-
 func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID string, side string, req addCombatantRequest) (models.EncounterCombatant, error) {
+	userID, ok := currentUserID(ctx)
+	if !ok {
+		return models.EncounterCombatant{}, errors.New("authentication required")
+	}
 	sourceType := strings.TrimSpace(req.SourceType)
 	var playerID, creatureID, displayName, avatarURL string
 	ac, maxHP, currentHP := req.ArmorClass, req.MaxHitPoints, req.CurrentHitPoints
@@ -117,25 +59,20 @@ func (s *Server) createCombatantFromRequest(ctx context.Context, encounterID str
 	if currentHP == 0 {
 		currentHP = maxHP
 	}
-	snapshotBytes, err := json.Marshal(snapshot)
-	if err != nil {
-		return models.EncounterCombatant{}, err
-	}
-	var nextOrder int
-	if err := s.db.QueryRow(ctx, `select coalesce(max(sort_order) + 1, 0) from encounter_combatants where encounter_id = $1`, encounterID).Scan(&nextOrder); err != nil {
-		return models.EncounterCombatant{}, err
-	}
-	row := s.db.QueryRow(ctx, `
-		insert into encounter_combatants (
-			encounter_id, source_type, player_id, creature_id, side, display_name, color_label,
-			avatar_url, armor_class, max_hit_points, current_hit_points, rolled_hp, sort_order, snapshot
-		)
-		values ($1, $2, nullif($3, '')::uuid, nullif($4, '')::uuid, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		returning id, encounter_id, source_type, coalesce(player_id::text, ''), coalesce(creature_id::text, ''),
-			side, display_name, color_label, avatar_url, armor_class, max_hit_points, current_hit_points,
-			rolled_hp, sort_order, snapshot, created_at, updated_at
-	`, encounterID, sourceType, playerID, creatureID, side, displayName, strings.TrimSpace(req.ColorLabel), avatarURL, ac, maxHP, currentHP, req.RolledHP, nextOrder, snapshotBytes)
-	return scanEncounterCombatant(row)
+	return s.stores.Encounters.AddCombatant(ctx, userID, encounterID, store.EncounterCombatantInput{
+		SourceType:       sourceType,
+		PlayerID:         playerID,
+		CreatureID:       creatureID,
+		Side:             side,
+		DisplayName:      displayName,
+		ColorLabel:       strings.TrimSpace(req.ColorLabel),
+		AvatarURL:        avatarURL,
+		ArmorClass:       ac,
+		MaxHitPoints:     maxHP,
+		CurrentHitPoints: currentHP,
+		RolledHP:         req.RolledHP,
+		Snapshot:         snapshot,
+	})
 }
 
 func (s *Server) creatureFromCombatantRequest(ctx context.Context, req addCombatantRequest) (models.Creature, bool, error) {
