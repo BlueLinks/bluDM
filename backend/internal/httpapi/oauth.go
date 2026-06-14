@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
+
+	"bludm/backend/internal/store"
 
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
@@ -73,15 +76,21 @@ func (s *Server) startOAuthFlow(w http.ResponseWriter, r *http.Request, provider
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
-	if _, err := s.db.Exec(r.Context(), `delete from oauth_states where expires_at < now()`); err != nil {
+	if err := s.stores.Auth.CleanupExpiredOAuthStates(r.Context()); err != nil {
 		s.log.Error("oauth state cleanup failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
 	}
-	if _, err := s.db.Exec(r.Context(), `
-		insert into oauth_states (state_hash, provider, nonce, pkce_verifier, purpose, user_id, return_to, expires_at)
-		values ($1, $2, $3, $4, $5, nullif($6, '')::uuid, $7, now() + interval '10 minutes')
-	`, hashToken(state), providerName, nonce, verifier, purpose, userID, returnTo); err != nil {
+	if err := s.stores.Auth.CreateOAuthState(r.Context(), store.OAuthStateInput{
+		StateHash:    hashToken(state),
+		Provider:     providerName,
+		Nonce:        nonce,
+		PKCEVerifier: verifier,
+		Purpose:      purpose,
+		UserID:       userID,
+		ReturnTo:     returnTo,
+		ExpiresAt:    time.Now().Add(10 * time.Minute),
+	}); err != nil {
 		s.log.Error("oauth state insert failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusInternalServerError, "could not start sign-in")
 		return
@@ -111,19 +120,7 @@ func (s *Server) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid callback")
 		return
 	}
-	var saved struct {
-		Provider string
-		Nonce    string
-		Verifier string
-		ReturnTo string
-		Purpose  string
-		UserID   string
-	}
-	err := s.db.QueryRow(r.Context(), `
-		delete from oauth_states
-		where state_hash = $1 and expires_at > now()
-		returning provider, nonce, pkce_verifier, return_to, purpose, coalesce(user_id::text, '')
-	`, hashToken(state)).Scan(&saved.Provider, &saved.Nonce, &saved.Verifier, &saved.ReturnTo, &saved.Purpose, &saved.UserID)
+	saved, err := s.stores.Auth.ConsumeOAuthState(r.Context(), hashToken(state))
 	if err != nil || saved.Provider != providerName {
 		s.log.Warn("oauth callback state lookup failed", "provider", providerName, "error", err)
 		writeError(w, http.StatusBadRequest, "sign-in session expired")
