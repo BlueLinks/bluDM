@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/jackc/pgx/v5"
 )
 
 type itemRequest struct {
@@ -82,36 +80,16 @@ func (s *Server) listItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if includeStandard {
-		rows, err := s.db.Query(r.Context(), `
-			select standard_library_entries.id, standard_library_entries.source_key, standard_sources.label,
-				standard_library_entries.name, standard_library_entries.summary,
-				standard_library_entries.description, standard_library_entries.data,
-				standard_library_entries.created_at, standard_library_entries.updated_at
-			from standard_library_entries
-			join standard_sources on standard_sources.source_key = standard_library_entries.source_key
-			where standard_library_entries.category = 'equipment'
-				and (cardinality($1::text[]) = 0 or standard_library_entries.source_key = any($1::text[]))
-			order by standard_library_entries.name asc
-			limit 1000
-		`, sources)
+		entries, err := s.stores.Library.EquipmentEntries(r.Context(), sources)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list standard items")
 			return
 		}
-		defer rows.Close()
-		for rows.Next() {
-			item, err := scanStandardItem(rows)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "could not read standard items")
-				return
-			}
+		for _, entry := range entries {
+			item := standardItemFromLibraryEntry(entry)
 			if (category == "" || item.Category == category) && itemMatchesQuery(item, q) {
 				items = append(items, item)
 			}
-		}
-		if rows.Err() != nil {
-			writeError(w, http.StatusInternalServerError, "could not read standard items")
-			return
 		}
 	}
 
@@ -145,7 +123,7 @@ func (s *Server) getItem(w http.ResponseWriter, r *http.Request) {
 		librarySource = "user"
 	}
 	item, err := s.itemByID(r.Context(), itemID, librarySource)
-	if errors.Is(err, pgx.ErrNoRows) || store.IsNotFound(err) {
+	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -222,7 +200,7 @@ func (s *Server) cloneItem(w http.ResponseWriter, r *http.Request) {
 		req.LibrarySource = "standard"
 	}
 	source, err := s.itemByID(r.Context(), itemID, req.LibrarySource)
-	if errors.Is(err, pgx.ErrNoRows) || store.IsNotFound(err) {
+	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -272,16 +250,11 @@ func cloneItemRequest(source models.Item) itemRequest {
 
 func (s *Server) itemByID(ctx context.Context, itemID string, librarySource string) (models.Item, error) {
 	if librarySource == "standard" {
-		row := s.db.QueryRow(ctx, `
-			select standard_library_entries.id, standard_library_entries.source_key, standard_sources.label,
-				standard_library_entries.name, standard_library_entries.summary,
-				standard_library_entries.description, standard_library_entries.data,
-				standard_library_entries.created_at, standard_library_entries.updated_at
-			from standard_library_entries
-			join standard_sources on standard_sources.source_key = standard_library_entries.source_key
-			where standard_library_entries.id = $1 and standard_library_entries.category = 'equipment'
-		`, itemID)
-		return scanStandardItem(row)
+		entry, err := s.stores.Library.EquipmentEntryByID(ctx, itemID)
+		if err != nil {
+			return models.Item{}, err
+		}
+		return standardItemFromLibraryEntry(entry), nil
 	}
 	return s.stores.Items.ByID(ctx, currentUserIDMust(ctx), itemID)
 }
@@ -304,30 +277,19 @@ func itemInputFromRequest(req itemRequest) store.ItemInput {
 	}
 }
 
-func scanStandardItem(row scanner) (models.Item, error) {
-	var item models.Item
-	var summary string
-	var dataBytes []byte
-	err := row.Scan(
-		&item.ID,
-		&item.SourceKey,
-		&item.SourceLabel,
-		&item.Name,
-		&summary,
-		&item.Description,
-		&dataBytes,
-		&item.CreatedAt,
-		&item.UpdatedAt,
-	)
-	if err != nil {
-		return models.Item{}, err
+func standardItemFromLibraryEntry(entry models.StandardLibraryEntry) models.Item {
+	item := models.Item{
+		ID:            entry.ID,
+		Name:          entry.Name,
+		Description:   entry.Description,
+		LibrarySource: "standard",
+		ReadOnly:      true,
+		SourceKey:     entry.SourceKey,
+		SourceLabel:   entry.SourceLabel,
+		Data:          entry.Data,
+		CreatedAt:     entry.CreatedAt,
+		UpdatedAt:     entry.UpdatedAt,
 	}
-	item.LibrarySource = "standard"
-	item.ReadOnly = true
-	item.Data, err = unmarshalJSONMap(dataBytes)
-	if err != nil {
-		return models.Item{}, err
-	}
-	normalizeStandardItem(&item, summary)
-	return item, nil
+	normalizeStandardItem(&item, entry.Summary)
+	return item
 }

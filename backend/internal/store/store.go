@@ -16,6 +16,7 @@ type Stores struct {
 	Creatures  CreatureStore
 	Players    PlayerStore
 	Items      ItemStore
+	Library    LibraryStore
 	RollTables RollTableStore
 	Travel     TravelStore
 	Spells     SpellStore
@@ -33,6 +34,7 @@ func New(db *gorm.DB) *Stores {
 	stores.Creatures = CreatureStore{db: db}
 	stores.Players = PlayerStore{db: db}
 	stores.Items = ItemStore{db: db}
+	stores.Library = LibraryStore{db: db}
 	stores.RollTables = RollTableStore{db: db}
 	stores.Travel = TravelStore{db: db}
 	stores.Spells = SpellStore{db: db}
