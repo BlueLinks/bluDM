@@ -99,9 +99,23 @@ Keep PRs reviewable. If a change grows too large, split it by domain or behavior
 
 ## Verification
 
-Run the checks relevant to the files touched.
+Run the fast local baseline before pushing normal code changes:
 
-Frontend:
+```sh
+make verify
+```
+
+This covers frontend lint, Prettier check, file-size rules, frontend/backend tests, backend vet, frontend build, and `docker compose config`.
+
+Use the heavier targets when touching security-sensitive code, Docker/deployment behavior, or when you want to mirror more of CI:
+
+```sh
+make verify-security
+make verify-docker
+make verify-full
+```
+
+For troubleshooting, the baseline expands to:
 
 ```sh
 cd frontend && npm run lint
@@ -117,18 +131,15 @@ Backend:
 cd backend && gofmt -w <changed-go-files>
 cd backend && go test ./...
 cd backend && go vet ./...
-```
-
-Compose/deployment:
-
-```sh
 docker compose config
 ```
 
-Security-sensitive backend changes:
+The security target uses the same Go toolchain version as CI and runs:
 
 ```sh
-cd backend && gosec -exclude=G404 ./...
+cd frontend && npm audit --audit-level=high
+cd backend && GOTOOLCHAIN=go1.25.11 go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+cd backend && GOTOOLCHAIN=go1.25.11 go run github.com/securego/gosec/v2/cmd/gosec@latest -exclude=G404 ./...
 ```
 
 Run Prettier before pushing frontend, Markdown, JSON, CSS, or Sass changes:

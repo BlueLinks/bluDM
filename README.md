@@ -88,13 +88,25 @@ For a real self-hosted install, copy `.env.example` to `.env` and change at leas
 
 ## Quality Gates
 
-Run the same baseline checks locally that CI runs on pull requests:
+Run the fast local baseline before pushing normal code changes:
 
 ```sh
 make verify
 ```
 
-The GitHub Actions workflow also builds Docker images, smoke-tests `/health` and `/api/health`, and runs free security checks.
+That baseline runs frontend lint, Prettier check, file-size rules, frontend/backend tests, backend vet, the frontend build, and `docker compose config`.
+
+Heavier checks are available when you want to mirror more of CI locally:
+
+```sh
+make verify-security
+make verify-docker
+make verify-full
+```
+
+`make verify-security` runs the npm audit plus Go vulnerability and SAST checks with the same Go toolchain version used in CI. `make verify-docker` builds the Docker images and smoke-tests `/health` and `/api/health`. `make verify-full` runs the baseline, security, and Docker checks.
+
+GitHub Actions remains the source of truth for hosted-only gates such as Trivy filesystem/image scans, Gitleaks, Semgrep, and Portainer notification.
 
 ## Notes
 
