@@ -309,7 +309,8 @@ func (s *Server) executeActionCommand(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "target not found")
 		return
 	}
-	action, err := s.creatureActionByID(r.Context(), req.ActionID)
+	userID, _ := currentUserID(r.Context())
+	action, err := s.stores.Actions.CreatureActionByID(r.Context(), userID, req.ActionID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "action not found")
 		return

@@ -19,6 +19,7 @@ type Stores struct {
 	RollTables RollTableStore
 	Travel     TravelStore
 	Spells     SpellStore
+	Actions    ActionStore
 }
 
 func New(db *gorm.DB) *Stores {
@@ -32,6 +33,7 @@ func New(db *gorm.DB) *Stores {
 	stores.RollTables = RollTableStore{db: db}
 	stores.Travel = TravelStore{db: db}
 	stores.Spells = SpellStore{db: db}
+	stores.Actions = ActionStore{db: db}
 	return stores
 }
 
@@ -44,4 +46,11 @@ func stringFromPointer(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+func stringPointer(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }
