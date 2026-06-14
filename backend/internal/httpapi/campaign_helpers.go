@@ -12,20 +12,7 @@ func (s *Server) campaignByID(ctx context.Context, campaignID string) (models.Ca
 	if !ok {
 		return models.Campaign{}, errors.New("authentication required")
 	}
-	var campaign models.Campaign
-	err := s.db.QueryRow(ctx, `
-		select id, name, description, allowed_standard_sources, created_at, updated_at
-		from campaigns
-		where id = $1 and owner_user_id = $2 and archived_at is null
-	`, campaignID, userID).Scan(
-		&campaign.ID,
-		&campaign.Name,
-		&campaign.Description,
-		&campaign.AllowedStandardSources,
-		&campaign.CreatedAt,
-		&campaign.UpdatedAt,
-	)
-	return campaign, err
+	return s.stores.Campaigns.ByID(ctx, userID, campaignID)
 }
 
 func scanCampaign(row scanner, campaign *models.Campaign) error {

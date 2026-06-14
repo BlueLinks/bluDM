@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
 	"errors"
 	"fmt"
@@ -72,38 +73,12 @@ func (s *Server) listItems(w http.ResponseWriter, r *http.Request) {
 
 	items := []models.Item{}
 	if includeUser {
-		rows, err := s.db.Query(r.Context(), `
-			select id, name, category, item_type, rarity, attunement, value_amount, value_unit,
-				weight, description, properties, damage, armor_class, data, created_at, updated_at
-			from items
-			where owner_user_id = $1
-				and ($2 = '' or name ilike '%' || $2 || '%' or category ilike '%' || $2 || '%'
-					or item_type ilike '%' || $2 || '%' or description ilike '%' || $2 || '%'
-					or properties::text ilike '%' || $2 || '%'
-					or damage::text ilike '%' || $2 || '%'
-					or armor_class::text ilike '%' || $2 || '%'
-					or data::text ilike '%' || $2 || '%')
-				and ($3 = '' or category = $3)
-			order by category asc, name asc
-			limit 500
-		`, user.ID, q, category)
+		userItems, err := s.stores.Items.List(r.Context(), user.ID, q, category)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "could not list items")
 			return
 		}
-		defer rows.Close()
-		for rows.Next() {
-			item, err := scanItem(rows)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "could not read items")
-				return
-			}
-			items = append(items, item)
-		}
-		if rows.Err() != nil {
-			writeError(w, http.StatusInternalServerError, "could not read items")
-			return
-		}
+		items = append(items, userItems...)
 	}
 
 	if includeStandard {
@@ -170,7 +145,7 @@ func (s *Server) getItem(w http.ResponseWriter, r *http.Request) {
 		librarySource = "user"
 	}
 	item, err := s.itemByID(r.Context(), itemID, librarySource)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -192,7 +167,7 @@ func (s *Server) createItem(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	item, err := s.insertItem(r.Context(), userID, req)
+	item, err := s.stores.Items.Create(r.Context(), userID, itemInputFromRequest(req))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create item")
 		return
@@ -211,8 +186,8 @@ func (s *Server) updateItem(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	item, err := s.updateItemRecord(r.Context(), currentUserIDMust(r.Context()), itemID, req)
-	if errors.Is(err, pgx.ErrNoRows) {
+	item, err := s.stores.Items.Update(r.Context(), currentUserIDMust(r.Context()), itemID, itemInputFromRequest(req))
+	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -224,14 +199,11 @@ func (s *Server) updateItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteItem(w http.ResponseWriter, r *http.Request) {
-	tag, err := s.db.Exec(r.Context(), `
-		delete from items where id = $1 and owner_user_id = $2
-	`, strings.TrimSpace(r.PathValue("itemID")), currentUserIDMust(r.Context()))
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not delete item")
-		return
-	}
-	if tag.RowsAffected() == 0 {
+	if err := s.stores.Items.Delete(r.Context(), currentUserIDMust(r.Context()), strings.TrimSpace(r.PathValue("itemID"))); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete item")
+			return
+		}
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -250,7 +222,7 @@ func (s *Server) cloneItem(w http.ResponseWriter, r *http.Request) {
 		req.LibrarySource = "standard"
 	}
 	source, err := s.itemByID(r.Context(), itemID, req.LibrarySource)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if errors.Is(err, pgx.ErrNoRows) || store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "item not found")
 		return
 	}
@@ -259,7 +231,7 @@ func (s *Server) cloneItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	cloneReq := cloneItemRequest(source)
-	item, err := s.insertItem(r.Context(), currentUserIDMust(r.Context()), cloneReq)
+	item, err := s.stores.Items.Create(r.Context(), currentUserIDMust(r.Context()), itemInputFromRequest(cloneReq))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not clone item")
 		return
@@ -311,107 +283,25 @@ func (s *Server) itemByID(ctx context.Context, itemID string, librarySource stri
 		`, itemID)
 		return scanStandardItem(row)
 	}
-	row := s.db.QueryRow(ctx, `
-		select id, name, category, item_type, rarity, attunement, value_amount, value_unit,
-			weight, description, properties, damage, armor_class, data, created_at, updated_at
-		from items
-		where id = $1 and owner_user_id = $2
-	`, itemID, currentUserIDMust(ctx))
-	return scanItem(row)
+	return s.stores.Items.ByID(ctx, currentUserIDMust(ctx), itemID)
 }
 
-func (s *Server) insertItem(ctx context.Context, userID string, req itemRequest) (models.Item, error) {
-	damage, err := marshalJSONMap(req.Damage)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal damage: %w", err)
+func itemInputFromRequest(req itemRequest) store.ItemInput {
+	return store.ItemInput{
+		Name:        req.Name,
+		Category:    req.Category,
+		ItemType:    req.ItemType,
+		Rarity:      req.Rarity,
+		Attunement:  req.Attunement,
+		ValueAmount: req.ValueAmount,
+		ValueUnit:   req.ValueUnit,
+		Weight:      req.Weight,
+		Description: req.Description,
+		Properties:  req.Properties,
+		Damage:      req.Damage,
+		ArmorClass:  req.ArmorClass,
+		Data:        req.Data,
 	}
-	armorClass, err := marshalJSONMap(req.ArmorClass)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal armor class: %w", err)
-	}
-	data, err := marshalJSONMap(req.Data)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal data: %w", err)
-	}
-	row := s.db.QueryRow(ctx, `
-		insert into items (
-			owner_user_id, name, category, item_type, rarity, attunement, value_amount,
-			value_unit, weight, description, properties, damage, armor_class, data
-		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-		returning id, name, category, item_type, rarity, attunement, value_amount, value_unit,
-			weight, description, properties, damage, armor_class, data, created_at, updated_at
-	`, userID, req.Name, req.Category, req.ItemType, req.Rarity, req.Attunement, req.ValueAmount,
-		req.ValueUnit, req.Weight, req.Description, req.Properties, damage, armorClass, data)
-	return scanItem(row)
-}
-
-func (s *Server) updateItemRecord(ctx context.Context, userID string, itemID string, req itemRequest) (models.Item, error) {
-	damage, err := marshalJSONMap(req.Damage)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal damage: %w", err)
-	}
-	armorClass, err := marshalJSONMap(req.ArmorClass)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal armor class: %w", err)
-	}
-	data, err := marshalJSONMap(req.Data)
-	if err != nil {
-		return models.Item{}, fmt.Errorf("marshal data: %w", err)
-	}
-	row := s.db.QueryRow(ctx, `
-		update items
-		set name = $3, category = $4, item_type = $5, rarity = $6, attunement = $7,
-			value_amount = $8, value_unit = $9, weight = $10, description = $11,
-			properties = $12, damage = $13, armor_class = $14, data = $15, updated_at = now()
-		where id = $1 and owner_user_id = $2
-		returning id, name, category, item_type, rarity, attunement, value_amount, value_unit,
-			weight, description, properties, damage, armor_class, data, created_at, updated_at
-	`, itemID, userID, req.Name, req.Category, req.ItemType, req.Rarity, req.Attunement,
-		req.ValueAmount, req.ValueUnit, req.Weight, req.Description, req.Properties, damage, armorClass, data)
-	return scanItem(row)
-}
-
-func scanItem(row scanner) (models.Item, error) {
-	var item models.Item
-	var damageBytes []byte
-	var armorClassBytes []byte
-	var dataBytes []byte
-	err := row.Scan(
-		&item.ID,
-		&item.Name,
-		&item.Category,
-		&item.ItemType,
-		&item.Rarity,
-		&item.Attunement,
-		&item.ValueAmount,
-		&item.ValueUnit,
-		&item.Weight,
-		&item.Description,
-		&item.Properties,
-		&damageBytes,
-		&armorClassBytes,
-		&dataBytes,
-		&item.CreatedAt,
-		&item.UpdatedAt,
-	)
-	if err != nil {
-		return models.Item{}, err
-	}
-	item.LibrarySource = "user"
-	item.Damage, err = unmarshalJSONMap(damageBytes)
-	if err != nil {
-		return models.Item{}, err
-	}
-	item.ArmorClass, err = unmarshalJSONMap(armorClassBytes)
-	if err != nil {
-		return models.Item{}, err
-	}
-	item.Data, err = unmarshalJSONMap(dataBytes)
-	if err != nil {
-		return models.Item{}, err
-	}
-	return item, nil
 }
 
 func scanStandardItem(row scanner) (models.Item, error) {

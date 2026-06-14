@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 	"context"
 	"encoding/json"
 	"errors"
@@ -11,29 +12,9 @@ import (
 
 func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
 	user, _ := s.currentUser(r)
-	rows, err := s.db.Query(r.Context(), `
-		select id, name, description, allowed_standard_sources, created_at, updated_at
-		from campaigns
-		where owner_user_id = $1
-		order by updated_at desc
-	`, user.ID)
+	campaigns, err := s.stores.Campaigns.List(r.Context(), user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not list campaigns")
-		return
-	}
-	defer rows.Close()
-
-	campaigns := []models.Campaign{}
-	for rows.Next() {
-		var campaign models.Campaign
-		if err := scanCampaign(rows, &campaign); err != nil {
-			writeError(w, http.StatusInternalServerError, "could not read campaigns")
-			return
-		}
-		campaigns = append(campaigns, campaign)
-	}
-	if rows.Err() != nil {
-		writeError(w, http.StatusInternalServerError, "could not read campaigns")
 		return
 	}
 
@@ -54,19 +35,11 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var campaign models.Campaign
-	err := s.db.QueryRow(r.Context(), `
-		insert into campaigns (owner_user_id, name, description, allowed_standard_sources)
-		values ($1, $2, $3, $4)
-		returning id, name, description, allowed_standard_sources, created_at, updated_at
-	`, user.ID, req.Name, req.Description, sources).Scan(
-		&campaign.ID,
-		&campaign.Name,
-		&campaign.Description,
-		&campaign.AllowedStandardSources,
-		&campaign.CreatedAt,
-		&campaign.UpdatedAt,
-	)
+	campaign, err := s.stores.Campaigns.Create(r.Context(), user.ID, store.CampaignInput{
+		Name:                   req.Name,
+		Description:            req.Description,
+		AllowedStandardSources: sources,
+	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create campaign")
 		return
@@ -91,21 +64,16 @@ func (s *Server) updateCampaign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
-	var campaign models.Campaign
-	err := s.db.QueryRow(r.Context(), `
-		update campaigns
-		set name = $2, description = $3, allowed_standard_sources = $4, updated_at = now()
-		where id = $1
-		returning id, name, description, allowed_standard_sources, created_at, updated_at
-	`, campaignID, req.Name, req.Description, normalizeStandardSources(req.AllowedStandardSources)).Scan(
-		&campaign.ID,
-		&campaign.Name,
-		&campaign.Description,
-		&campaign.AllowedStandardSources,
-		&campaign.CreatedAt,
-		&campaign.UpdatedAt,
-	)
+	campaign, err := s.stores.Campaigns.Update(r.Context(), currentUserIDMust(r.Context()), campaignID, store.CampaignInput{
+		Name:                   req.Name,
+		Description:            req.Description,
+		AllowedStandardSources: normalizeStandardSources(req.AllowedStandardSources),
+	})
 	if err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "campaign not found")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not update campaign")
 		return
 	}

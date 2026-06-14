@@ -45,12 +45,8 @@ func (s *Server) uploadImageAsset(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "image must be PNG, JPEG, GIF, or WebP")
 		return
 	}
-	var id string
-	if err := s.db.QueryRow(r.Context(), `
-		insert into uploaded_assets (owner_user_id, filename, content_type, byte_size, data)
-		values ($1, $2, $3, $4, $5)
-		returning id
-	`, user.ID, filename, contentType, len(data), data).Scan(&id); err != nil {
+	id, err := s.stores.Assets.Create(r.Context(), user.ID, filename, contentType, len(data), data)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not store image")
 		return
 	}
@@ -135,12 +131,8 @@ func (s *Server) importImageAssetFromURL(w http.ResponseWriter, r *http.Request)
 	if !strings.Contains(filename, ".") {
 		filename += imageExtensionForContentType(contentType)
 	}
-	var id string
-	if err := s.db.QueryRow(r.Context(), `
-		insert into uploaded_assets (owner_user_id, filename, content_type, byte_size, data)
-		values ($1, $2, $3, $4, $5)
-		returning id
-	`, user.ID, filename, contentType, len(data), data).Scan(&id); err != nil {
+	id, err := s.stores.Assets.Create(r.Context(), user.ID, filename, contentType, len(data), data)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not store image")
 		return
 	}
@@ -266,18 +258,15 @@ func publicIP(ip net.IP) bool {
 func (s *Server) getAsset(w http.ResponseWriter, r *http.Request) {
 	user, _ := s.currentUser(r)
 	assetID := strings.TrimSpace(r.PathValue("assetID"))
-	var contentType string
-	var data []byte
-	if err := s.db.QueryRow(r.Context(), `
-		select content_type, data from uploaded_assets where id = $1 and owner_user_id = $2
-	`, assetID, user.ID).Scan(&contentType, &data); err != nil {
+	asset, err := s.stores.Assets.DataByID(r.Context(), user.ID, assetID)
+	if err != nil {
 		writeError(w, http.StatusNotFound, "asset not found")
 		return
 	}
-	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Type", asset.ContentType)
 	w.Header().Set("Cache-Control", "private, max-age=86400")
 	// nosemgrep: go.lang.security.audit.xss.no-direct-write-to-responsewriter.no-direct-write-to-responsewriter -- This endpoint serves stored image bytes with an image content type, not HTML.
-	_, _ = w.Write(data)
+	_, _ = w.Write(asset.Data)
 }
 
 func (s *Server) validateOwnedAsset(ctx context.Context, assetID string) error {
@@ -289,10 +278,8 @@ func (s *Server) validateOwnedAsset(ctx context.Context, assetID string) error {
 	if !ok {
 		return errors.New("authentication required")
 	}
-	var exists bool
-	if err := s.db.QueryRow(ctx, `
-		select exists(select 1 from uploaded_assets where id = $1 and owner_user_id = $2)
-	`, assetID, userID).Scan(&exists); err != nil {
+	exists, err := s.stores.Assets.Exists(ctx, userID, assetID)
+	if err != nil {
 		return err
 	}
 	if !exists {

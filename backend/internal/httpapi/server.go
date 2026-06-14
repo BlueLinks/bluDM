@@ -7,14 +7,17 @@ import (
 	"strings"
 
 	"bludm/backend/internal/config"
+	"bludm/backend/internal/store"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 )
 
 type Server struct {
-	cfg config.Config
-	db  *pgxpool.Pool
-	log *slog.Logger
+	cfg    config.Config
+	db     *pgxpool.Pool
+	stores *store.Stores
+	log    *slog.Logger
 }
 
 func (s *Server) withCSRF(next http.Handler) http.Handler {
@@ -53,8 +56,8 @@ func (s *Server) sameOrigin(r *http.Request, raw string) bool {
 	return strings.EqualFold(origin.Scheme, expected.Scheme) && strings.EqualFold(origin.Host, expected.Host)
 }
 
-func New(cfg config.Config, pool *pgxpool.Pool, logger *slog.Logger) *Server {
-	return &Server{cfg: cfg, db: pool, log: logger}
+func New(cfg config.Config, pool *pgxpool.Pool, gormDB *gorm.DB, logger *slog.Logger) *Server {
+	return &Server{cfg: cfg, db: pool, stores: store.New(gormDB), log: logger}
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {

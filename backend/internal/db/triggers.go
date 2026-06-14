@@ -3,11 +3,11 @@ package db
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 )
 
-func ensureTouchTriggers(ctx context.Context, pool *pgxpool.Pool) error {
-	_, err := pool.Exec(ctx, `
+func ensureTouchTriggers(ctx context.Context, db *gorm.DB) error {
+	return db.WithContext(ctx).Exec(`
 create or replace function touch_updated_at()
 returns trigger as $$
 begin
@@ -55,6 +55,5 @@ begin
 		create trigger encounter_combatants_touch_updated_at before update on encounter_combatants for each row execute function touch_updated_at();
 	end if;
 end $$;
-`)
-	return err
+`).Error
 }

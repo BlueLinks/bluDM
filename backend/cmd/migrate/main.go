@@ -30,7 +30,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	if err := db.EnsureSchema(ctx, pool); err != nil {
+	gormDB, err := db.ConnectGORM(databaseURL)
+	if err != nil {
+		logger.Error("gorm database connection failed", "error", err)
+		os.Exit(1)
+	}
+
+	if err := db.EnsureSchema(ctx, gormDB, pool); err != nil {
 		logger.Error("database schema migration failed", "error", err)
 		os.Exit(1)
 	}

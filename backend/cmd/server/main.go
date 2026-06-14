@@ -34,7 +34,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	if err := db.EnsureSchema(ctx, pool); err != nil {
+	gormDB, err := db.ConnectGORM(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("gorm database connection failed", "error", err)
+		os.Exit(1)
+	}
+
+	if err := db.EnsureSchema(ctx, gormDB, pool); err != nil {
 		logger.Error("database schema check failed", "error", err)
 		os.Exit(1)
 	}
@@ -44,7 +50,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	api := httpapi.New(cfg, pool, logger)
+	api := httpapi.New(cfg, pool, gormDB, logger)
 	server := &http.Server{
 		Addr:              cfg.Addr,
 		Handler:           api.Routes(),
