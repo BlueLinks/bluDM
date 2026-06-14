@@ -101,10 +101,11 @@ Heavier checks are available when you want to mirror more of CI locally:
 ```sh
 make verify-security
 make verify-docker
+make verify-recovery
 make verify-full
 ```
 
-`make verify-security` runs the npm audit plus Go vulnerability and SAST checks with the same Go toolchain version used in CI. `make verify-docker` builds the Docker images and smoke-tests `/health` and `/api/health`. `make verify-full` runs the baseline, security, and Docker checks.
+`make verify-security` runs the npm audit plus Go vulnerability and SAST checks with the same Go toolchain version used in CI. `make verify-docker` builds the Docker images and smoke-tests the composed app with Playwright. `make verify-recovery` exercises the Postgres backup and restore workflow against an isolated Compose project. `make verify-full` runs the baseline, security, Docker, and recovery checks.
 
 GitHub Actions remains the source of truth for hosted-only gates such as Trivy filesystem/image scans, Gitleaks, Semgrep, and Portainer notification.
 
