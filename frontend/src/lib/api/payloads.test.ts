@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { ActionFormState, SpellFormState } from "../../types";
 import { actionPayload, spellPayload } from "./payloads";
 
 describe("api payload builders", () => {
@@ -11,10 +10,11 @@ describe("api payload builders", () => {
       attackModifier: "4",
       description: "A quick strike.",
       hitSpecialEvent: "none",
+      id: "action-1",
       iconAssetId: "",
       iconAttribution: "",
       iconKey: "sword",
-      iconSource: "library",
+      iconSource: "game-icons",
       iconUrl: "",
       limitType: "none",
       limitedUses: "",
@@ -29,12 +29,13 @@ describe("api payload builders", () => {
           diceCount: "2",
           dieSize: "6",
           fixedValue: "-1",
+          id: "action-1",
           magical: false,
           rollKind: "damage",
         },
       ],
       sourceTemplateId: "template-1",
-    } as ActionFormState);
+    });
 
     expect(payload).toMatchObject({
       attackModifier: 4,
@@ -56,6 +57,7 @@ describe("api payload builders", () => {
           damageTypeChoice: "specific",
           damageTypeOptions: ["fire"],
           hitSpecialEvent: "none",
+          id: "spell-action-1",
           name: "Flame",
           rolls: [
             {
@@ -70,7 +72,7 @@ describe("api payload builders", () => {
               damageType: "fire",
               diceCount: "1",
               dieSize: "10",
-              effectConfig: undefined,
+              effectConfig: {},
               fixedValue: "",
               id: "roll-1",
               magical: true,
@@ -99,6 +101,7 @@ describe("api payload builders", () => {
         stepSize: "1",
       },
       castType: "Action",
+      castingTime: "",
       castingTrigger: "cast",
       classes: ["Wizard"],
       components: { material: true, somatic: true, verbal: true },
@@ -134,7 +137,7 @@ describe("api payload builders", () => {
       targetAnchor: "point",
       targetPattern: "area",
       triggerDetail: "",
-    } as SpellFormState);
+    });
 
     expect(payload.mechanics.areaScaling).toEqual({
       additionalSize: 5,

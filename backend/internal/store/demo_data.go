@@ -28,7 +28,7 @@ func (s DemoStore) SeedFixture(ctx context.Context, ownerUserID string) (string,
 			{name: "Nyx Underbough", player: "Jess", ac: 15, hp: 27, className: "Wizard", level: 4, species: "Lightfoot halfling", str: 8, dex: 14, con: 13, intScore: 18, wis: 12, cha: 11},
 		}
 		for _, player := range players {
-			if err := seedDemoPlayer(ctx, tx, campaignID, player); err != nil {
+			if err := seedDemoPlayer(ctx, tx, ownerUserID, campaignID, player); err != nil {
 				return err
 			}
 		}
@@ -106,7 +106,7 @@ type demoCreature struct {
 	actions                                                       []string
 }
 
-func seedDemoPlayer(ctx context.Context, tx *gorm.DB, campaignID string, player demoPlayer) error {
+func seedDemoPlayer(ctx context.Context, tx *gorm.DB, ownerUserID string, campaignID string, player demoPlayer) error {
 	var exists bool
 	if err := tx.WithContext(ctx).Raw(`select exists(select 1 from players where campaign_id = ? and character_name = ?)`, campaignID, player.name).Row().Scan(&exists); err != nil {
 		return err
@@ -132,9 +132,9 @@ func seedDemoPlayer(ctx context.Context, tx *gorm.DB, campaignID string, player 
 		return err
 	}
 	return tx.WithContext(ctx).Exec(`
-		insert into players (campaign_id, character_name, player_name, armor_class, max_hit_points, current_hit_points, character_sheet)
-		values (?, ?, ?, ?, ?, ?, ?)
-	`, campaignID, player.name, player.player, player.ac, player.hp, player.hp, sheetJSON).Error
+		insert into players (owner_user_id, campaign_id, character_name, player_name, armor_class, max_hit_points, current_hit_points, character_sheet)
+		values (?, ?, ?, ?, ?, ?, ?, ?)
+	`, ownerUserID, campaignID, player.name, player.player, player.ac, player.hp, player.hp, sheetJSON).Error
 }
 
 func seedDemoActionTemplate(ctx context.Context, tx *gorm.DB, ownerUserID string, action demoAction) (string, error) {
@@ -164,9 +164,9 @@ func seedDemoActionTemplate(ctx context.Context, tx *gorm.DB, ownerUserID string
 
 func seedDemoCreature(ctx context.Context, tx *gorm.DB, ownerUserID string, campaignID string, templateIDs map[string]string, creature demoCreature) (string, error) {
 	var id string
-	err := tx.WithContext(ctx).Raw(`select id from creatures where owner_user_id = ? and name = ? limit 1`, ownerUserID, creature.name).Row().Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
-		return "", err
+	lookupErr := tx.WithContext(ctx).Raw(`select id from creatures where owner_user_id = ? and name = ? limit 1`, ownerUserID, creature.name).Row().Scan(&id)
+	if lookupErr != nil && lookupErr != sql.ErrNoRows {
+		return "", lookupErr
 	}
 	statBlock := map[string]any{
 		"abilityScores": map[string]int{
@@ -178,7 +178,7 @@ func seedDemoCreature(ctx context.Context, tx *gorm.DB, ownerUserID string, camp
 	if err != nil {
 		return "", err
 	}
-	if err == sql.ErrNoRows {
+	if lookupErr == sql.ErrNoRows {
 		if err := tx.WithContext(ctx).Raw(`
 			insert into creatures (
 				owner_user_id, name, description, size, creature_type, alignment, armor_class, hit_points, hit_dice, challenge_rating, xp, stat_block
@@ -269,13 +269,24 @@ func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, crea
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
-	sortOrder := 0
+	playerIDs := []string{}
 	for rows.Next() {
 		var playerID string
 		if err := rows.Scan(&playerID); err != nil {
+			_ = rows.Close()
 			return err
 		}
+		playerIDs = append(playerIDs, playerID)
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	sortOrder := 0
+	for _, playerID := range playerIDs {
 		if err := tx.WithContext(ctx).Exec(`
 			insert into encounter_combatants (
 				encounter_id, source_type, player_id, side, display_name, armor_class, max_hit_points, current_hit_points, sort_order, snapshot
@@ -286,9 +297,6 @@ func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, crea
 			return err
 		}
 		sortOrder++
-	}
-	if err := rows.Err(); err != nil {
-		return err
 	}
 	entries := []struct {
 		name, side, color string

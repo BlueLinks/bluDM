@@ -200,6 +200,32 @@ func TestAuthSessionExpiryRegression(t *testing.T) {
 	}
 }
 
+func TestDemoFixtureSeedsOwnedPlayers(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+
+	user, err := stores.Auth.CreateUser(ctx, uniqueEmail("demo-fixture"), "hash")
+	requireNoError(t, err)
+	campaignID, err := stores.Demo.SeedFixture(ctx, user.ID)
+	requireNoError(t, err)
+
+	players, err := stores.Players.List(ctx, user.ID)
+	requireNoError(t, err)
+	if len(players) != 3 {
+		t.Fatalf("expected demo fixture to seed 3 owned players, got %d", len(players))
+	}
+	for _, player := range players {
+		if player.CampaignID != campaignID {
+			t.Fatalf("expected player %s to belong to campaign %s, got %s", player.CharacterName, campaignID, player.CampaignID)
+		}
+	}
+	creatures, err := stores.Campaigns.Creatures(ctx, user.ID, campaignID)
+	requireNoError(t, err)
+	if len(creatures) != 2 {
+		t.Fatalf("expected demo fixture to link 2 friendly NPCs, got %d", len(creatures))
+	}
+}
+
 func combatantBySource(t *testing.T, combatants []models.EncounterRunCombatant, sourceType string) models.EncounterRunCombatant {
 	t.Helper()
 	for _, combatant := range combatants {
