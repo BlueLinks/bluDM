@@ -1,0 +1,197 @@
+package store
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"net/url"
+	"os"
+	"testing"
+	"time"
+
+	dbmodels "bludm/backend/internal/db"
+	"bludm/backend/internal/models"
+
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+)
+
+func TestStoreOwnershipBoundaries(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+
+	owner, err := stores.Auth.CreateUser(ctx, uniqueEmail("owner"), "hash")
+	requireNoError(t, err)
+	other, err := stores.Auth.CreateUser(ctx, uniqueEmail("other"), "hash")
+	requireNoError(t, err)
+
+	campaign, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Owned Campaign"})
+	requireNoError(t, err)
+	assetID, err := stores.Assets.Create(ctx, owner.ID, "avatar.png", "image/png", 4, []byte("data"))
+	requireNoError(t, err)
+	creature, err := stores.Creatures.Create(ctx, owner.ID, CreatureInput{Name: "Owned Creature", ArmorClass: 12, HitPoints: 8, StatBlock: map[string]any{}})
+	requireNoError(t, err)
+	player, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
+		CampaignID:       campaign.ID,
+		CharacterName:    "Owned Hero",
+		PlayerName:       "Player",
+		ArmorClass:       14,
+		MaxHitPoints:     10,
+		CharacterSheet:   map[string]any{},
+		ExperiencePoints: 1,
+	})
+	requireNoError(t, err)
+	spell, err := stores.Spells.Create(ctx, owner.ID, SpellInput{Name: "Owned Spell", Components: map[string]any{}, Mechanics: map[string]any{}})
+	requireNoError(t, err)
+	action, err := stores.Actions.CreateTemplate(ctx, owner.ID, ActionInput{Name: "Owned Action", ActionType: "melee_weapon"})
+	requireNoError(t, err)
+	item, err := stores.Items.Create(ctx, owner.ID, ItemInput{Name: "Owned Item", Data: map[string]any{}, Damage: map[string]any{}, ArmorClass: map[string]any{}})
+	requireNoError(t, err)
+	encounter, err := stores.Campaigns.CreateEncounter(ctx, owner.ID, campaign.ID, CampaignEncounterInput{Name: "Owned Encounter"})
+	requireNoError(t, err)
+	run, err := stores.Runs.StartEncounter(ctx, owner.ID, encounter.ID, false)
+	requireNoError(t, err)
+	table, err := stores.RollTables.Create(ctx, owner.ID, campaign.ID, RollTableInput{
+		Name:          "Owned Table",
+		Category:      "custom",
+		DieExpression: "1d1",
+		Rows:          []RollTableRowInput{{MinRoll: 1, MaxRoll: 1, Label: "Only", ResultText: "Result"}},
+	})
+	requireNoError(t, err)
+	location, err := stores.Travel.CreateLocation(ctx, owner.ID, campaign.ID, LocationInput{Name: "Owned Location"})
+	requireNoError(t, err)
+	journey, err := stores.Travel.CreateJourney(ctx, owner.ID, campaign.ID, JourneyInput{
+		Name:           "Owned Journey",
+		Origin:         "A",
+		Destination:    "B",
+		Distance:       1,
+		DistanceUnit:   "miles",
+		Terrain:        "road",
+		Pace:           "normal",
+		Weather:        models.TravelWeather{},
+		RouteInputMode: "route",
+	})
+	requireNoError(t, err)
+	_, err = stores.Spellcasts.UpsertProfile(ctx, owner.ID, creature.ID, SpellcastingInput{
+		SpellcastingAbility: "int",
+		CasterLevel:         1,
+		Slots:               map[string]any{},
+		Spells:              []CreatureSpellInput{{SpellID: spell.ID, LibrarySource: "user", SpellLevel: spell.Level, Prepared: true}},
+	})
+	requireNoError(t, err)
+
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{name: "campaign", call: func() error { _, err := stores.Campaigns.ByID(ctx, other.ID, campaign.ID); return err }},
+		{name: "asset", call: func() error { _, err := stores.Assets.DataByID(ctx, other.ID, assetID); return err }},
+		{name: "creature", call: func() error { _, err := stores.Creatures.ByID(ctx, other.ID, creature.ID); return err }},
+		{name: "player", call: func() error { _, err := stores.Players.ByID(ctx, other.ID, player.ID); return err }},
+		{name: "spell", call: func() error { _, err := stores.Spells.ByID(ctx, other.ID, spell.ID, "user"); return err }},
+		{name: "spellcasting", call: func() error { _, err := stores.Spellcasts.Profile(ctx, other.ID, creature.ID); return err }},
+		{name: "action template", call: func() error { _, err := stores.Actions.TemplateByID(ctx, other.ID, action.ID); return err }},
+		{name: "item", call: func() error { _, err := stores.Items.ByID(ctx, other.ID, item.ID); return err }},
+		{name: "encounter", call: func() error { _, err := stores.Encounters.ByID(ctx, other.ID, encounter.ID); return err }},
+		{name: "run", call: func() error { _, err := stores.Runs.ByID(ctx, other.ID, run.ID); return err }},
+		{name: "roll table", call: func() error { _, err := stores.RollTables.ByID(ctx, other.ID, campaign.ID, table.ID); return err }},
+		{name: "location", call: func() error {
+			_, err := stores.Travel.UpdateLocation(ctx, other.ID, campaign.ID, location.ID, LocationInput{Name: "Nope"})
+			return err
+		}},
+		{name: "journey", call: func() error {
+			_, err := stores.Travel.UpdateJourney(ctx, other.ID, campaign.ID, journey.ID, JourneyInput{Name: "Nope"})
+			return err
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := test.call(); !errors.Is(err, ErrNotFound) {
+				t.Fatalf("expected ErrNotFound for cross-user %s access, got %v", test.name, err)
+			}
+		})
+	}
+}
+
+func newIntegrationStores(t *testing.T) *Stores {
+	t.Helper()
+	databaseURL := os.Getenv("BLUDM_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("set BLUDM_TEST_DATABASE_URL to run store integration tests")
+	}
+
+	admin, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{})
+	requireNoError(t, err)
+	schemaName := fmt.Sprintf("store_test_%d", time.Now().UnixNano())
+	requireNoError(t, admin.Exec(`create extension if not exists pgcrypto`).Error)
+	requireNoError(t, admin.Exec(`create schema `+schemaName).Error)
+	t.Cleanup(func() {
+		_ = admin.Exec(`drop schema if exists ` + schemaName + ` cascade`).Error
+	})
+
+	db, err := gorm.Open(postgres.Open(databaseURLWithSearchPath(t, databaseURL, schemaName)), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: false,
+	})
+	requireNoError(t, err)
+	requireNoError(t, db.AutoMigrate(testSchemaEntities()...))
+	return New(db)
+}
+
+func databaseURLWithSearchPath(t *testing.T, databaseURL, schemaName string) string {
+	t.Helper()
+	parsed, err := url.Parse(databaseURL)
+	requireNoError(t, err)
+	query := parsed.Query()
+	query.Set("search_path", schemaName+",public")
+	parsed.RawQuery = query.Encode()
+	return parsed.String()
+}
+
+func testSchemaEntities() []any {
+	return []any{
+		&dbmodels.UserEntity{},
+		&dbmodels.AuthIdentityEntity{},
+		&dbmodels.OAuthStateEntity{},
+		&dbmodels.SessionEntity{},
+		&dbmodels.CampaignEntity{},
+		&dbmodels.UploadedAssetEntity{},
+		&dbmodels.CreatureEntity{},
+		&dbmodels.SpellEntity{},
+		&dbmodels.SpellProjectileScalingEntity{},
+		&dbmodels.SpellActionEntity{},
+		&dbmodels.SpellActionRollPartEntity{},
+		&dbmodels.ActionTemplateEntity{},
+		&dbmodels.ActionTemplateRollPartEntity{},
+		&dbmodels.CreatureActionEntity{},
+		&dbmodels.CreatureActionRollPartEntity{},
+		&dbmodels.CreatureSpellcastingProfileEntity{},
+		&dbmodels.CreatureSpellEntity{},
+		&dbmodels.PlayerEntity{},
+		&dbmodels.CampaignCreatureEntity{},
+		&dbmodels.EncounterEntity{},
+		&dbmodels.EncounterCombatantEntity{},
+		&dbmodels.EncounterRunEntity{},
+		&dbmodels.EncounterRunCombatantEntity{},
+		&dbmodels.EncounterRunSpellSlotEntity{},
+		&dbmodels.EncounterRunActiveEffectEntity{},
+		&dbmodels.EncounterRunAlertEntity{},
+		&dbmodels.CombatLogEventEntity{},
+		&dbmodels.ItemEntity{},
+		&dbmodels.CampaignLocationEntity{},
+		&dbmodels.CampaignJourneyEntity{},
+		&dbmodels.RollTableEntity{},
+		&dbmodels.RollTableRowEntity{},
+	}
+}
+
+func uniqueEmail(prefix string) string {
+	return fmt.Sprintf("%s-%d@example.test", prefix, time.Now().UnixNano())
+}
+
+func requireNoError(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
