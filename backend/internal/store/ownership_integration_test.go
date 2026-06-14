@@ -114,6 +114,149 @@ func TestStoreOwnershipBoundaries(t *testing.T) {
 	}
 }
 
+func TestDeleteUserRemovesOwnedData(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+
+	owner, err := stores.Auth.CreateUser(ctx, uniqueEmail("delete-owner"), "hash")
+	requireNoError(t, err)
+	other, err := stores.Auth.CreateUser(ctx, uniqueEmail("delete-other"), "hash")
+	requireNoError(t, err)
+
+	campaign, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Delete Me"})
+	requireNoError(t, err)
+	_, err = stores.Campaigns.Create(ctx, other.ID, CampaignInput{Name: "Keep Me"})
+	requireNoError(t, err)
+
+	assetID, err := stores.Assets.Create(ctx, owner.ID, "avatar.png", "image/png", 4, []byte("data"))
+	requireNoError(t, err)
+	creature, err := stores.Creatures.Create(ctx, owner.ID, CreatureInput{Name: "Delete Creature", ArmorClass: 12, HitPoints: 8, StatBlock: map[string]any{}})
+	requireNoError(t, err)
+	player, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
+		CampaignID:       campaign.ID,
+		CharacterName:    "Delete Hero",
+		PlayerName:       "Player",
+		ArmorClass:       14,
+		MaxHitPoints:     10,
+		CharacterSheet:   map[string]any{},
+		ExperiencePoints: 1,
+	})
+	requireNoError(t, err)
+	spell, err := stores.Spells.Create(ctx, owner.ID, SpellInput{Name: "Delete Spell", Components: map[string]any{}, Mechanics: map[string]any{}})
+	requireNoError(t, err)
+	_, err = stores.Actions.CreateTemplate(ctx, owner.ID, ActionInput{Name: "Delete Action", ActionType: "melee_weapon"})
+	requireNoError(t, err)
+	_, err = stores.Items.Create(ctx, owner.ID, ItemInput{Name: "Delete Item", Data: map[string]any{}, Damage: map[string]any{}, ArmorClass: map[string]any{}})
+	requireNoError(t, err)
+	encounter, err := stores.Campaigns.CreateEncounter(ctx, owner.ID, campaign.ID, CampaignEncounterInput{Name: "Delete Encounter"})
+	requireNoError(t, err)
+	_, err = stores.Runs.StartEncounter(ctx, owner.ID, encounter.ID, false)
+	requireNoError(t, err)
+	_, err = stores.RollTables.Create(ctx, owner.ID, campaign.ID, RollTableInput{
+		Name:          "Delete Table",
+		Category:      "custom",
+		DieExpression: "1d1",
+		Rows:          []RollTableRowInput{{MinRoll: 1, MaxRoll: 1, Label: "Only", ResultText: "Result"}},
+	})
+	requireNoError(t, err)
+	_, err = stores.Travel.CreateLocation(ctx, owner.ID, campaign.ID, LocationInput{Name: "Delete Location"})
+	requireNoError(t, err)
+	_, err = stores.Travel.CreateJourney(ctx, owner.ID, campaign.ID, JourneyInput{
+		Name:           "Delete Journey",
+		Origin:         "A",
+		Destination:    "B",
+		Distance:       1,
+		DistanceUnit:   "miles",
+		Terrain:        "road",
+		Pace:           "normal",
+		Weather:        models.TravelWeather{},
+		RouteInputMode: "route",
+	})
+	requireNoError(t, err)
+	_, err = stores.Spellcasts.UpsertProfile(ctx, owner.ID, creature.ID, SpellcastingInput{
+		SpellcastingAbility: "int",
+		CasterLevel:         1,
+		Slots:               map[string]any{},
+		Spells:              []CreatureSpellInput{{SpellID: spell.ID, LibrarySource: "user", SpellLevel: spell.Level, Prepared: true}},
+	})
+	requireNoError(t, err)
+	requireNoError(t, stores.Auth.StartSession(ctx, owner.ID, "token-hash", time.Now().Add(time.Hour)))
+	requireNoError(t, stores.Auth.LinkOAuthIdentity(ctx, owner.ID, "discord", OAuthIdentityInput{
+		Subject:       "discord-user",
+		Email:         owner.Email,
+		EmailVerified: true,
+	}))
+	requireNoError(t, stores.Auth.CreateOAuthState(ctx, OAuthStateInput{
+		StateHash:    "state-hash",
+		Provider:     "discord",
+		Nonce:        "nonce",
+		PKCEVerifier: "verifier",
+		Purpose:      "login",
+		UserID:       owner.ID,
+		ReturnTo:     "/account",
+		ExpiresAt:    time.Now().Add(time.Hour),
+	}))
+
+	requireNoError(t, stores.Auth.DeleteUser(ctx, owner.ID))
+
+	for _, table := range []string{
+		"sessions",
+		"auth_identities",
+		"oauth_states",
+		"uploaded_assets",
+		"creatures",
+		"creature_spellcasting_profiles",
+		"creature_spells",
+		"players",
+		"spells",
+		"action_templates",
+		"items",
+		"encounters",
+		"encounter_combatants",
+		"encounter_runs",
+		"encounter_run_combatants",
+		"encounter_run_spell_slots",
+		"roll_tables",
+		"roll_table_rows",
+		"campaign_locations",
+		"campaign_journeys",
+		"campaign_creatures",
+	} {
+		requireTableCount(t, stores.db, table, 0)
+	}
+
+	requireTableCountForWhere(t, stores.db, "users", "id = ?", []any{owner.ID}, 0)
+	requireTableCountForWhere(t, stores.db, "users", "id = ?", []any{other.ID}, 1)
+	requireTableCountForWhere(t, stores.db, "campaigns", "owner_user_id = ?", []any{owner.ID}, 0)
+	requireTableCountForWhere(t, stores.db, "campaigns", "owner_user_id = ?", []any{other.ID}, 1)
+	requireTableCountForWhere(t, stores.db, "uploaded_assets", "id = ?", []any{assetID}, 0)
+	requireTableCountForWhere(t, stores.db, "players", "id = ?", []any{player.ID}, 0)
+}
+
+func TestStartEncounterSetsStartedAt(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+
+	owner, err := stores.Auth.CreateUser(ctx, uniqueEmail("run-owner"), "hash")
+	requireNoError(t, err)
+	campaign, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Run Campaign"})
+	requireNoError(t, err)
+	encounter, err := stores.Campaigns.CreateEncounter(ctx, owner.ID, campaign.ID, CampaignEncounterInput{Name: "Run Encounter"})
+	requireNoError(t, err)
+
+	run, err := stores.Runs.StartEncounter(ctx, owner.ID, encounter.ID, false)
+	requireNoError(t, err)
+	if run.StartedAt.IsZero() {
+		t.Fatal("expected encounter run started_at to be set")
+	}
+
+	var entity dbmodels.EncounterRunEntity
+	requireNoError(t, stores.db.WithContext(ctx).Where("id = ?", run.ID).First(&entity).Error)
+	if entity.StartedAt.IsZero() {
+		t.Fatal("expected persisted encounter run started_at to be set")
+	}
+}
+
 func newIntegrationStores(t *testing.T) *Stores {
 	t.Helper()
 	databaseURL := os.Getenv("BLUDM_TEST_DATABASE_URL")
@@ -193,5 +336,19 @@ func requireNoError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func requireTableCount(t *testing.T, db *gorm.DB, table string, want int64) {
+	t.Helper()
+	requireTableCountForWhere(t, db, table, "1 = 1", nil, want)
+}
+
+func requireTableCountForWhere(t *testing.T, db *gorm.DB, table, where string, args []any, want int64) {
+	t.Helper()
+	var got int64
+	requireNoError(t, db.Table(table).Where(where, args...).Count(&got).Error)
+	if got != want {
+		t.Fatalf("expected %s count %d, got %d", table, want, got)
 	}
 }

@@ -131,7 +131,233 @@ func (s AuthStore) DeleteSession(ctx context.Context, tokenHash string) error {
 }
 
 func (s AuthStore) DeleteUser(ctx context.Context, userID string) error {
-	return s.db.WithContext(ctx).Where("id = ?", userID).Delete(&dbmodels.UserEntity{}).Error
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return ErrNotFound
+	}
+
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		type deleteStep struct {
+			statement string
+			args      []any
+		}
+		steps := []deleteStep{
+			{
+				statement: `delete from sessions where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from auth_identities where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from oauth_states where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from encounter_run_spell_slots where encounter_run_id in (
+				select encounter_runs.id
+				from encounter_runs
+				join encounters on encounters.id = encounter_runs.encounter_id
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounter_run_active_effects where encounter_run_id in (
+				select encounter_runs.id
+				from encounter_runs
+				join encounters on encounters.id = encounter_runs.encounter_id
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounter_run_alerts where encounter_run_id in (
+				select encounter_runs.id
+				from encounter_runs
+				join encounters on encounters.id = encounter_runs.encounter_id
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from combat_log_events where encounter_run_id in (
+				select encounter_runs.id
+				from encounter_runs
+				join encounters on encounters.id = encounter_runs.encounter_id
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounter_run_combatants where encounter_run_id in (
+				select encounter_runs.id
+				from encounter_runs
+				join encounters on encounters.id = encounter_runs.encounter_id
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounter_runs where encounter_id in (
+				select encounters.id
+				from encounters
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounter_combatants where encounter_id in (
+				select encounters.id
+				from encounters
+				join campaigns on campaigns.id = encounters.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from encounters where campaign_id in (
+				select id from campaigns where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from roll_table_rows where table_id in (
+				select roll_tables.id
+				from roll_tables
+				join campaigns on campaigns.id = roll_tables.campaign_id
+				where campaigns.owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from roll_tables where campaign_id in (
+				select id from campaigns where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from campaign_journeys where campaign_id in (
+				select id from campaigns where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from campaign_locations where campaign_id in (
+				select id from campaigns where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from campaign_creatures where campaign_id in (
+				select id from campaigns where owner_user_id = ?
+			) or creature_id in (
+				select id from creatures where owner_user_id = ?
+			)`,
+				args: []any{userID, userID},
+			},
+			{
+				statement: `delete from players where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from creature_action_roll_parts where creature_action_id in (
+				select id from creature_actions where creature_id in (
+					select id from creatures where owner_user_id = ?
+				)
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from creature_actions where creature_id in (
+				select id from creatures where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from creature_spellcasting_profiles where creature_id in (
+				select id from creatures where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from creature_spells where creature_id in (
+				select id from creatures where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from creatures where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from spell_action_roll_parts where spell_action_id in (
+				select id from spell_actions where spell_id in (
+					select id from spells where owner_user_id = ?
+				)
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from spell_actions where spell_id in (
+				select id from spells where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from spell_projectile_scaling where spell_id in (
+				select id from spells where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from spells where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from action_template_roll_parts where action_template_id in (
+				select id from action_templates where owner_user_id = ?
+			)`,
+				args: []any{userID},
+			},
+			{
+				statement: `delete from action_templates where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from items where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from uploaded_assets where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from campaigns where owner_user_id = ?`,
+				args:      []any{userID},
+			},
+		}
+		for _, step := range steps {
+			if err := tx.Exec(step.statement, step.args...).Error; err != nil {
+				return err
+			}
+		}
+		result := tx.Where("id = ?", userID).Delete(&dbmodels.UserEntity{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
 }
 
 func userFromEntity(user dbmodels.UserEntity) models.User {

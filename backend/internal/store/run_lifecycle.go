@@ -4,6 +4,7 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
@@ -21,6 +22,7 @@ func (s RunStore) StartEncounter(ctx context.Context, ownerUserID, encounterID s
 			EncounterID: strings.TrimSpace(encounterID),
 			Status:      "setup",
 			IsTest:      test,
+			StartedAt:   time.Now(),
 		}
 		if err := tx.Create(&run).Error; err != nil {
 			return err
