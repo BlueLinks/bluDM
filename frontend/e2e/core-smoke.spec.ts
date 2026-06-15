@@ -50,7 +50,7 @@ test("core bluDM browser journeys", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Set initiative" })).toBeVisible();
   await page.getByRole("button", { name: "Roll All Non-Players" }).click();
   await page.getByRole("button", { name: "Begin Combat" }).click();
-  await expect(page).toHaveURL(new RegExp(`/encounter-runs/${runID}$`));
+  await expect.poll(() => new URL(page.url()).pathname).toBe(`/encounter-runs/${runID}`);
   await expect(page.getByRole("button", { name: "Finish Combat" })).toBeVisible();
 
   await page.goto(`/encounter-runs/${runID}/summary`);
