@@ -43,6 +43,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Install Playwright browser
+        run: npm run test:e2e:install
+
       - name: File size rules
         working-directory: .
         run: node scripts/check-file-size.mjs
@@ -90,6 +93,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
       - name: Validate compose
         run: docker compose config
 
@@ -112,11 +122,27 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
 
+      - name: Install smoke test dependencies
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run test:e2e:install
+
       - name: Smoke test stack
+        env:
+          ADMIN_EMAIL: e2e-dm@example.test
+          ADMIN_PASSWORD: e2e-admin-password-123
+          E2E_ADMIN_EMAIL: e2e-dm@example.test
+          E2E_ADMIN_PASSWORD: e2e-admin-password-123
         run: |
           docker compose up -d postgres api web
           timeout 90 bash -c 'until curl -fsS http://localhost:3080/health; do sleep 2; done'
           timeout 90 bash -c 'until curl -fsS http://localhost:3080/api/health; do sleep 2; done'
+          cd frontend
+          E2E_BASE_URL=http://localhost:3080 npm run test:e2e
+
+      - name: Verify Postgres backup and restore
+        run: make verify-recovery
 
       - name: Collect logs on failure
         if: failure()

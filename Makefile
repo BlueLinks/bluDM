@@ -1,7 +1,7 @@
 GO_VERSION ?= 1.25.11
 GO_TOOLCHAIN ?= go$(GO_VERSION)
 
-.PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend verify verify-security verify-docker verify-full
+.PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend test-e2e verify verify-security verify-docker verify-recovery verify-full
 
 lint: lint-frontend lint-backend format-check check-size
 
@@ -28,6 +28,9 @@ test-frontend:
 test-backend:
 	cd backend && go test ./...
 
+test-e2e:
+	cd frontend && npm run test:e2e
+
 verify: lint test
 	cd frontend && npm run build
 	docker compose config
@@ -45,7 +48,13 @@ verify-docker:
 	docker compose up -d postgres api web; \
 	timeout 90 sh -c 'until curl -fsS http://localhost:$${WEB_PORT:-3080}/health; do sleep 2; done'; \
 	timeout 90 sh -c 'until curl -fsS http://localhost:$${WEB_PORT:-3080}/api/health; do sleep 2; done'; \
+	cd frontend && E2E_BASE_URL=http://localhost:$${WEB_PORT:-3080} npm run test:e2e; \
 	trap - EXIT; \
 	docker compose down -v
 
-verify-full: verify verify-security verify-docker
+verify-recovery:
+	docker compose config
+	docker compose build migrate
+	scripts/verify-postgres-recovery.sh
+
+verify-full: verify verify-security verify-docker verify-recovery
