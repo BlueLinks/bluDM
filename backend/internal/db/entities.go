@@ -342,6 +342,7 @@ type EncounterEntity struct {
 	Description       string  `gorm:"not null;default:''"`
 	Status            string  `gorm:"not null;default:'planned'"`
 	Location          string  `gorm:"not null;default:''"`
+	LocationID        *string `gorm:"type:uuid;index"`
 	RoomNumber        string  `gorm:"not null;default:''"`
 	LootNotes         string  `gorm:"not null;default:''"`
 	BackgroundAssetID *string `gorm:"type:uuid"`

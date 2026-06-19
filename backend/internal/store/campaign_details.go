@@ -16,6 +16,7 @@ type CampaignEncounterInput struct {
 	Description string
 	Status      string
 	Location    string
+	LocationID  string
 	RoomNumber  string
 }
 
@@ -31,15 +32,25 @@ func (s CampaignStore) CreateEncounter(ctx context.Context, ownerUserID, campaig
 	if _, err := s.ByID(ctx, ownerUserID, campaignID); err != nil {
 		return models.Encounter{}, err
 	}
-	entity := dbmodels.EncounterEntity{
-		CampaignID:  strings.TrimSpace(campaignID),
-		Name:        input.Name,
-		Description: input.Description,
-		Status:      input.Status,
-		Location:    input.Location,
-		RoomNumber:  input.RoomNumber,
-	}
-	if err := s.db.WithContext(ctx).Create(&entity).Error; err != nil {
+	entity := dbmodels.EncounterEntity{}
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if input.LocationID != "" {
+			if err := ensureLocationInCampaignTx(ctx, tx, campaignID, input.LocationID); err != nil {
+				return err
+			}
+		}
+		entity = dbmodels.EncounterEntity{
+			CampaignID:  strings.TrimSpace(campaignID),
+			Name:        input.Name,
+			Description: input.Description,
+			Status:      input.Status,
+			Location:    input.Location,
+			LocationID:  optionalString(input.LocationID),
+			RoomNumber:  input.RoomNumber,
+		}
+		return tx.Create(&entity).Error
+	})
+	if err != nil {
 		return models.Encounter{}, err
 	}
 	return encounterFromCounts(entity, 0, 0), nil
@@ -70,16 +81,25 @@ func (s CampaignStore) UnlinkCreature(ctx context.Context, ownerUserID, campaign
 	if _, err := s.ByID(ctx, ownerUserID, campaignID); err != nil {
 		return err
 	}
-	result := s.db.WithContext(ctx).
-		Where("campaign_id = ? and creature_id = ?", strings.TrimSpace(campaignID), strings.TrimSpace(creatureID)).
-		Delete(&dbmodels.CampaignCreatureEntity{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		campaignID = strings.TrimSpace(campaignID)
+		creatureID = strings.TrimSpace(creatureID)
+		if err := tx.WithContext(ctx).
+			Where("campaign_id = ? and creature_id = ?", campaignID, creatureID).
+			Delete(&dbmodels.CampaignNpcLocationLinkEntity{}).Error; err != nil {
+			return err
+		}
+		result := tx.WithContext(ctx).
+			Where("campaign_id = ? and creature_id = ?", campaignID, creatureID).
+			Delete(&dbmodels.CampaignCreatureEntity{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrNotFound
+		}
+		return nil
+	})
 }
 
 func (s CampaignStore) LongRest(ctx context.Context, ownerUserID, campaignID string) ([]LongRestSnapshot, int64, error) {
@@ -257,6 +277,7 @@ func encounterFromCounts(entity dbmodels.EncounterEntity, combatantCount, enemyC
 		Description:    entity.Description,
 		Status:         entity.Status,
 		Location:       entity.Location,
+		LocationID:     entity.LocationID,
 		RoomNumber:     entity.RoomNumber,
 		LootNotes:      entity.LootNotes,
 		CombatantCount: combatantCount,
@@ -264,4 +285,12 @@ func encounterFromCounts(entity dbmodels.EncounterEntity, combatantCount, enemyC
 		CreatedAt:      entity.CreatedAt,
 		UpdatedAt:      entity.UpdatedAt,
 	}
+}
+
+func optionalString(value string) *string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil
+	}
+	return &value
 }

@@ -1,6 +1,7 @@
 import { Plus, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
+import { ActionRow, FieldGrid, ResponsiveGrid, SidebarDetailLayout } from "../../components/layout";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { InfoHelpButton } from "../../components/shared/InfoHelpButton";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
@@ -133,7 +134,7 @@ export function ItemsPage() {
         title="Items and equipment"
         copy="Browse SRD equipment alongside custom table items. Standard items stay read-only; clone one when your campaign needs its own version."
         action={
-          <div className="flex flex-wrap items-center gap-2">
+          <ActionRow>
             <InfoHelpButton title="Catalog foundation">
               <p>
                 This catalog is the base layer for player inventories, encounter rewards, material
@@ -143,7 +144,7 @@ export function ItemsPage() {
             <Button icon={Plus} onClick={() => setCreating(true)}>
               New item
             </Button>
-          </div>
+          </ActionRow>
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
@@ -156,7 +157,7 @@ export function ItemsPage() {
         onShowUserChange={setShowUser}
       />
       <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-        <div className="grid gap-3 border-b border-border bg-background p-3 lg:grid-cols-[1fr_240px]">
+        <FieldGrid className="border-b border-border bg-background p-3" variant="itemSearch">
           <FloatingInput icon={Search} label="Search items" value={search} onChange={setSearch} />
           <Select
             value={category}
@@ -164,13 +165,13 @@ export function ItemsPage() {
             options={categoryOptions}
             onValueChange={setCategory}
           />
-        </div>
+        </FieldGrid>
         {showStandard && (
           <div className="border-b border-border bg-background px-3 py-2">
             <StandardSourceToggles selected={sources} onChange={setSources} />
           </div>
         )}
-        <div className="grid lg:grid-cols-[250px_minmax(0,1fr)]">
+        <SidebarDetailLayout variant="catalog">
           <aside className="grid content-start gap-4 border-b border-border bg-muted/35 p-3 lg:border-b-0 lg:border-r">
             <FilterGroup title="Category">
               <FilterButton
@@ -207,7 +208,7 @@ export function ItemsPage() {
                 </span>
               </div>
             )}
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <ResponsiveGrid variant="cards3">
               {visibleItems.map((item) => (
                 <ItemCatalogCard
                   key={`${item.librarySource}-${item.id}`}
@@ -218,9 +219,9 @@ export function ItemsPage() {
                   onDelete={deleteItem}
                 />
               ))}
-            </div>
+            </ResponsiveGrid>
           </div>
-        </div>
+        </SidebarDetailLayout>
       </section>
       <ItemPreviewModal
         item={preview}

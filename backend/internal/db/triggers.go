@@ -45,6 +45,12 @@ begin
 	if not exists (select 1 from pg_trigger where tgname = 'campaign_locations_touch_updated_at') then
 		create trigger campaign_locations_touch_updated_at before update on campaign_locations for each row execute function touch_updated_at();
 	end if;
+	if not exists (select 1 from pg_trigger where tgname = 'campaign_maps_touch_updated_at') then
+		create trigger campaign_maps_touch_updated_at before update on campaign_maps for each row execute function touch_updated_at();
+	end if;
+	if not exists (select 1 from pg_trigger where tgname = 'campaign_map_pins_touch_updated_at') then
+		create trigger campaign_map_pins_touch_updated_at before update on campaign_map_pins for each row execute function touch_updated_at();
+	end if;
 	if not exists (select 1 from pg_trigger where tgname = 'campaign_journeys_touch_updated_at') then
 		create trigger campaign_journeys_touch_updated_at before update on campaign_journeys for each row execute function touch_updated_at();
 	end if;

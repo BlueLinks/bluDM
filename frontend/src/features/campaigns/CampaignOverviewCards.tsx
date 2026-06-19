@@ -1,10 +1,11 @@
 import { ClipboardList, Route, Swords, UsersRound } from "lucide-react";
+import { ResponsiveGrid } from "../../components/layout";
 import { DashboardCard } from "../../components/ui";
 import type { CampaignDetail } from "../../types";
 
 export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <ResponsiveGrid variant="cards4">
       <DashboardCard
         icon={UsersRound}
         title="Player Characters"
@@ -29,6 +30,6 @@ export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
         value={detail.locationCount}
         copy="Saved campaign locations plus a pop-up travel time and weather calculator."
       />
-    </div>
+    </ResponsiveGrid>
   );
 }

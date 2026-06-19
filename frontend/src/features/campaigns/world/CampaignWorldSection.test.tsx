@@ -1,0 +1,499 @@
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../../../lib/api";
+import type { Creature, Encounter, Item } from "../../../types";
+import { CampaignWorldSection } from "./CampaignWorldSection";
+import { locationPathLabel } from "./campaignWorldLocationUtils";
+import type { CampaignLocation } from "./travelTypes";
+
+vi.mock("../../../lib/api", () => ({
+  api: {
+    deleteCampaignLocation: vi.fn(),
+    campaignLocationLinks: vi.fn(),
+    campaignLocationStock: vi.fn(),
+    campaignNpcLocationLinks: vi.fn(),
+    createCampaignLocation: vi.fn(),
+    createCampaignLocationLink: vi.fn(),
+    createCampaignNpcLocationLink: vi.fn(),
+    deleteCampaignLocationLink: vi.fn(),
+    deleteCampaignLocationStock: vi.fn(),
+    deleteCampaignNpcLocationLink: vi.fn(),
+    items: vi.fn(),
+    upsertCampaignLocationStock: vi.fn(),
+    updateCampaignLocation: vi.fn(),
+  },
+}));
+
+describe("CampaignWorldSection", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(api.campaignLocationLinks).mockResolvedValue({ links: [] });
+    vi.mocked(api.campaignLocationStock).mockResolvedValue({ stock: [] });
+    vi.mocked(api.campaignNpcLocationLinks).mockResolvedValue({ links: [] });
+    vi.mocked(api.items).mockResolvedValue({ items: [item()] });
+    vi.mocked(api.createCampaignLocation).mockResolvedValue({
+      location: location({ id: "room-1", name: "Cellar" }),
+    });
+    vi.mocked(api.createCampaignLocationLink).mockResolvedValue({
+      link: {
+        id: "link-1",
+        campaignId: "campaign-1",
+        sourceLocationId: "shop-1",
+        targetLocationId: "dungeon-1",
+        linkType: "secret",
+        label: "Trapdoor",
+        direction: "bidirectional",
+        visibility: "dm",
+        notes: "Hidden below the rug.",
+        createdAt: "",
+        updatedAt: "",
+      },
+    });
+    vi.mocked(api.deleteCampaignLocationLink).mockResolvedValue(undefined);
+    vi.mocked(api.deleteCampaignLocation).mockResolvedValue(undefined);
+    vi.mocked(api.upsertCampaignLocationStock).mockResolvedValue({
+      stock: {
+        id: "stock-1",
+        campaignId: "campaign-1",
+        locationId: "shop-1",
+        itemId: "item-1",
+        librarySource: "user",
+        quantity: 4,
+        priceAmount: 75,
+        priceUnit: "sp",
+        availability: "limited",
+        notes: "Behind the counter.",
+        sortOrder: 0,
+        createdAt: "",
+        updatedAt: "",
+      },
+    });
+    vi.mocked(api.deleteCampaignLocationStock).mockResolvedValue(undefined);
+    vi.mocked(api.createCampaignNpcLocationLink).mockResolvedValue({
+      link: {
+        id: "npc-location-link-1",
+        campaignId: "campaign-1",
+        creatureId: "npc-1",
+        locationId: "shop-1",
+        linkType: "works-here",
+        visibility: "dm",
+        notes: "Keeps a ledger of strange customers.",
+        createdAt: "",
+        updatedAt: "",
+      },
+    });
+    vi.mocked(api.deleteCampaignNpcLocationLink).mockResolvedValue(undefined);
+  });
+
+  it("creates a nested child location with worldbuilding fields", async () => {
+    const onChanged = vi.fn().mockResolvedValue(undefined);
+    renderWorld({ onChanged });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Add child" }));
+    fireEvent.change(screen.getByLabelText("Location name"), { target: { value: "Cellar" } });
+    fireEvent.change(screen.getByLabelText("Summary"), {
+      target: { value: "Crates and a locked trapdoor." },
+    });
+    fireEvent.change(screen.getByLabelText("Public notes"), {
+      target: { value: "Smells like flour and copper." },
+    });
+    fireEvent.change(screen.getByLabelText("DM-only notes"), {
+      target: { value: "Secret shrine passage below." },
+    });
+    fireEvent.change(screen.getByLabelText("Tags"), { target: { value: "hidden, cellar" } });
+    fireEvent.change(screen.getByLabelText("Map marker"), { target: { value: "cellar-room" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create location" }));
+
+    await waitFor(() =>
+      expect(api.createCampaignLocation).toHaveBeenCalledWith("campaign-1", {
+        parentLocationId: "shop-1",
+        name: "Cellar",
+        locationType: "room",
+        summary: "Crates and a locked trapdoor.",
+        notes: "Smells like flour and copper.",
+        publicNotes: "Smells like flour and copper.",
+        dmNotes: "Secret shrine passage below.",
+        tags: ["hidden", "cellar"],
+        mapAnchor: { marker: "cellar-room" },
+      }),
+    );
+    expect(onChanged).toHaveBeenCalled();
+  });
+
+  it("passes the selected location to encounter generation", async () => {
+    const onGenerateEncounter = vi.fn();
+    renderWorld({ onGenerateEncounter });
+
+    expect((await screen.findAllByText("Copper Kettle")).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Generate encounter" }));
+
+    expect(onGenerateEncounter).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "shop-1", name: "Copper Kettle" }),
+    );
+  });
+
+  it("creates and removes linked locations from the detail panel", async () => {
+    renderWorld({
+      locations: [
+        location(),
+        location({
+          id: "dungeon-1",
+          name: "Old Well",
+          locationType: "dungeon",
+          path: [{ id: "dungeon-1", name: "Old Well", locationType: "dungeon" }],
+        }),
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Link" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Connect to"), {
+      target: { value: "dungeon-1" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Link type"), { target: { value: "secret" } });
+    fireEvent.change(within(dialog).getByLabelText("Label"), { target: { value: "Trapdoor" } });
+    fireEvent.change(within(dialog).getByLabelText("Connection notes"), {
+      target: { value: "Hidden below the rug." },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Connect" }));
+
+    await waitFor(() =>
+      expect(api.createCampaignLocationLink).toHaveBeenCalledWith("campaign-1", {
+        sourceLocationId: "shop-1",
+        targetLocationId: "dungeon-1",
+        linkType: "secret",
+        label: "Trapdoor",
+        notes: "Hidden below the rug.",
+        direction: "bidirectional",
+        visibility: "dm",
+      }),
+    );
+    expect(await screen.findByText("Trapdoor - Hidden below the rug.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() =>
+      expect(api.deleteCampaignLocationLink).toHaveBeenCalledWith("campaign-1", "link-1"),
+    );
+  });
+
+  it("lists encounters attached to the selected location", async () => {
+    renderWorld({
+      encounters: [
+        {
+          id: "encounter-1",
+          campaignId: "campaign-1",
+          name: "Shop Brawl",
+          description: "",
+          status: "planned",
+          location: "Brindleford / Copper Kettle",
+          locationId: "shop-1",
+          roomNumber: "front",
+          lootNotes: "",
+          combatantCount: 0,
+          enemyCount: 0,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+
+    expect(await screen.findByText("Shop Brawl")).toBeTruthy();
+    expect(screen.getByText("planned - Room front")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+      "/campaigns/campaign-1/encounters/encounter-1/edit",
+    );
+  });
+
+  it("creates and removes NPC links from a dialog without relationship clutter", async () => {
+    renderWorld({ npcs: [creature()] });
+
+    expect(screen.queryByLabelText("NPC relationship")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Add NPC" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("option", { name: /Mara Vell/i }));
+    expect(within(dialog).queryByLabelText("NPC relationship")).toBeNull();
+    fireEvent.change(within(dialog).getByLabelText("NPC notes"), {
+      target: { value: "Keeps a ledger of strange customers." },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add NPC" }));
+
+    await waitFor(() =>
+      expect(api.createCampaignNpcLocationLink).toHaveBeenCalledWith("campaign-1", {
+        creatureId: "npc-1",
+        locationId: "shop-1",
+        linkType: "associated",
+        visibility: "dm",
+        notes: "Keeps a ledger of strange customers.",
+      }),
+    );
+    expect(await screen.findByText("Mara Vell")).toBeTruthy();
+    expect(screen.getByText("Keeps a ledger of strange customers.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    expect(await screen.findByRole("dialog", { name: "Mara Vell" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() =>
+      expect(api.deleteCampaignNpcLocationLink).toHaveBeenCalledWith(
+        "campaign-1",
+        "npc-location-link-1",
+      ),
+    );
+  });
+
+  it("creates and removes shop stock from a dialog", async () => {
+    renderWorld();
+
+    expect(screen.queryByLabelText("Item")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Add stock" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Search items"), {
+      target: { value: "healing" },
+    });
+    const stockItem = within(dialog).getByText("Healing Draught").closest("article");
+    expect(stockItem).not.toBeNull();
+    fireEvent.click(within(stockItem as HTMLElement).getByRole("button", { name: "Add" }));
+    fireEvent.change(within(dialog).getByLabelText("Qty"), { target: { value: "4" } });
+    fireEvent.change(within(dialog).getByLabelText("Price"), { target: { value: "75" } });
+    fireEvent.change(within(dialog).getByLabelText("Currency"), { target: { value: "sp" } });
+    fireEvent.change(within(dialog).getByLabelText("Availability"), {
+      target: { value: "limited" },
+    });
+    fireEvent.change(within(dialog).getByLabelText("Stock notes"), {
+      target: { value: "Behind the counter." },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add 1 stock item" }));
+
+    await waitFor(() =>
+      expect(api.upsertCampaignLocationStock).toHaveBeenCalledWith("campaign-1", {
+        locationId: "shop-1",
+        itemId: "item-1",
+        librarySource: "user",
+        quantity: 4,
+        priceAmount: 75,
+        priceUnit: "sp",
+        availability: "limited",
+        notes: "Behind the counter.",
+      }),
+    );
+    expect(await screen.findByText("Healing Draught")).toBeTruthy();
+    expect(screen.getByText("75 sp")).toBeTruthy();
+    expect(screen.getByText("Qty 4 - Behind the counter.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Pricing" }));
+    const pricingDialog = await screen.findByRole("dialog", { name: "Shop pricing" });
+    expect(within(pricingDialog).getByText("75 sp")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+
+    await waitFor(() =>
+      expect(api.deleteCampaignLocationStock).toHaveBeenCalledWith("campaign-1", "stock-1"),
+    );
+  });
+
+  it("searches by NPCs, stock, encounters, type, and tag", async () => {
+    vi.mocked(api.campaignNpcLocationLinks).mockResolvedValue({
+      links: [
+        {
+          id: "npc-link-1",
+          campaignId: "campaign-1",
+          creatureId: "npc-1",
+          locationId: "shop-1",
+          linkType: "works-here",
+          visibility: "dm",
+          notes: "",
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+    vi.mocked(api.campaignLocationStock).mockResolvedValue({
+      stock: [
+        {
+          id: "stock-1",
+          campaignId: "campaign-1",
+          locationId: "shop-1",
+          itemId: "item-1",
+          librarySource: "user",
+          quantity: 2,
+          priceAmount: 50,
+          priceUnit: "gp",
+          availability: "limited",
+          notes: "",
+          sortOrder: 0,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+    });
+    renderWorld({
+      encounters: [
+        {
+          id: "encounter-1",
+          campaignId: "campaign-1",
+          name: "Shop Brawl",
+          description: "",
+          status: "planned",
+          location: "Brindleford / Copper Kettle",
+          locationId: "shop-1",
+          roomNumber: "",
+          lootNotes: "",
+          combatantCount: 0,
+          enemyCount: 0,
+          createdAt: "",
+          updatedAt: "",
+        },
+      ],
+      locations: [
+        location(),
+        location({
+          id: "dungeon-1",
+          name: "Old Well",
+          locationType: "dungeon",
+          tags: ["ruin"],
+          path: [{ id: "dungeon-1", name: "Old Well", locationType: "dungeon" }],
+        }),
+      ],
+      npcs: [creature()],
+    });
+
+    fireEvent.change(await screen.findByLabelText("Search locations"), {
+      target: { value: "mara" },
+    });
+    let results = screen.getByLabelText("Location results");
+    expect(within(results).getByText("Copper Kettle")).toBeTruthy();
+    expect(within(results).queryByText("Old Well")).toBeNull();
+    expect(screen.getByText("Showing 1 of 2 locations.")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.change(screen.getByLabelText("Relationship"), { target: { value: "has-stock" } });
+    results = screen.getByLabelText("Location results");
+    expect(within(results).getByText("Copper Kettle")).toBeTruthy();
+    expect(within(results).queryByText("Old Well")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.change(screen.getByLabelText("Search locations"), {
+      target: { value: "Shop Brawl" },
+    });
+    expect(
+      within(screen.getByLabelText("Location results")).getByText("Copper Kettle"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.change(screen.getByLabelText("Type"), { target: { value: "dungeon" } });
+    fireEvent.change(screen.getByLabelText("Tag"), { target: { value: "ruin" } });
+    results = screen.getByLabelText("Location results");
+    expect(within(results).getAllByText("Old Well").length).toBeGreaterThan(0);
+    expect(within(results).queryByText("Copper Kettle")).toBeNull();
+  });
+});
+function renderWorld({
+  encounters = [],
+  npcs = [],
+  onChanged = vi.fn().mockResolvedValue(undefined),
+  onGenerateEncounter = vi.fn(),
+  onManageNpcs = vi.fn(),
+  locations = [location()],
+}: {
+  encounters?: Encounter[];
+  npcs?: Creature[];
+  onChanged?: () => Promise<void>;
+  onGenerateEncounter?: (location: CampaignLocation) => void;
+  onManageNpcs?: () => void;
+  locations?: CampaignLocation[];
+} = {}) {
+  render(
+    <MemoryRouter>
+      <CampaignWorldSection
+        campaignId="campaign-1"
+        encounters={encounters}
+        locations={locations}
+        npcs={npcs}
+        onManageNpcs={onManageNpcs}
+        onChanged={onChanged}
+        onGenerateEncounter={onGenerateEncounter}
+      />
+    </MemoryRouter>,
+  );
+}
+
+function location(overrides: Partial<CampaignLocation> = {}): CampaignLocation {
+  return {
+    id: "shop-1",
+    campaignId: "campaign-1",
+    name: "Copper Kettle",
+    locationType: "shop",
+    notes: "Copper pots hang from the rafters.",
+    publicNotes: "Copper pots hang from the rafters.",
+    dmNotes: "",
+    tags: ["rumor hub"],
+    sortOrder: 0,
+    status: "active",
+    mapAnchor: {},
+    path: [
+      { id: "town-1", name: "Brindleford", locationType: "settlement" },
+      { id: "shop-1", name: "Copper Kettle", locationType: "shop" },
+    ],
+    ...overrides,
+  };
+}
+
+function creature(overrides: Partial<Creature> = {}): Creature {
+  return {
+    id: "npc-1",
+    name: "Mara Vell",
+    description: "Innkeeper and rumormonger.",
+    size: "Medium",
+    creatureType: "humanoid",
+    alignment: "neutral",
+    armorClass: 12,
+    hitPoints: 9,
+    hitDice: "2d8",
+    challengeRating: "0",
+    xp: 10,
+    avatarUrl: "",
+    librarySource: "user",
+    readOnly: false,
+    sourceKey: "",
+    sourceLabel: "",
+    statBlock: {},
+    createdAt: "",
+    updatedAt: "",
+    ...overrides,
+  };
+}
+
+function item(overrides: Partial<Item> = {}): Item {
+  return {
+    id: "item-1",
+    name: "Healing Draught",
+    category: "Potion",
+    itemType: "Consumable",
+    rarity: "common",
+    attunement: false,
+    valueAmount: 50,
+    valueUnit: "gp",
+    weight: 0,
+    description: "A bitter red tonic.",
+    properties: [],
+    damage: {},
+    armorClass: {},
+    data: {},
+    librarySource: "user",
+    readOnly: false,
+    sourceKey: "",
+    sourceLabel: "",
+    createdAt: "",
+    updatedAt: "",
+    ...overrides,
+  };
+}
+
+it("formats location paths with fallback names", () => {
+  expect(locationPathLabel(location())).toBe("Brindleford / Copper Kettle");
+  expect(locationPathLabel(location({ path: undefined }))).toBe("Copper Kettle");
+});

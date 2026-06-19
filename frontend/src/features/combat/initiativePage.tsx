@@ -19,6 +19,7 @@ import { GripVertical, Pencil, Play, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { ResponsiveGrid } from "../../components/layout";
 import {
   Button,
   Callout,
@@ -164,7 +165,7 @@ export function EncounterInitiativePage() {
           items={combatants.map((combatant) => combatant.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="grid gap-4 lg:grid-cols-3">
+          <ResponsiveGrid variant="equal3">
             <InitiativeGroup
               title="Players"
               combatants={grouped.player}
@@ -186,7 +187,7 @@ export function EncounterInitiativePage() {
               onUpdate={setRun}
               onRoll={() => command(() => api.rollInitiative(run.id, ["enemy"]))}
             />
-          </div>
+          </ResponsiveGrid>
         </SortableContext>
       </DndContext>
     </Page>

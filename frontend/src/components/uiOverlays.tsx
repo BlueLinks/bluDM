@@ -31,7 +31,10 @@ export function Sheet({
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Dialog.Close
+              aria-label="Close"
+              className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               <X className="h-5 w-5" />
             </Dialog.Close>
           </div>
@@ -74,7 +77,10 @@ export function Modal({
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Dialog.Close
+              aria-label="Close"
+              className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
               <X className="h-5 w-5" />
             </Dialog.Close>
           </div>

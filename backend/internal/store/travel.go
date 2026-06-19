@@ -16,11 +16,6 @@ type TravelStore struct {
 	db *gorm.DB
 }
 
-type LocationInput struct {
-	Name  string
-	Notes string
-}
-
 type JourneyInput struct {
 	Name                  string
 	Origin                string
@@ -33,77 +28,6 @@ type JourneyInput struct {
 	EncounterDistanceFeet *int
 	Weather               models.TravelWeather
 	RouteInputMode        string
-}
-
-func (s TravelStore) LocationsForCampaign(ctx context.Context, ownerUserID, campaignID string) ([]models.CampaignLocation, error) {
-	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
-		return nil, err
-	}
-	var entities []dbmodels.CampaignLocationEntity
-	if err := s.db.WithContext(ctx).
-		Where("campaign_id = ?", strings.TrimSpace(campaignID)).
-		Order("name asc").
-		Find(&entities).Error; err != nil {
-		return nil, err
-	}
-	locations := make([]models.CampaignLocation, 0, len(entities))
-	for _, entity := range entities {
-		locations = append(locations, locationFromEntity(entity))
-	}
-	return locations, nil
-}
-
-func (s TravelStore) CreateLocation(ctx context.Context, ownerUserID, campaignID string, input LocationInput) (models.CampaignLocation, error) {
-	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
-		return models.CampaignLocation{}, err
-	}
-	entity := dbmodels.CampaignLocationEntity{
-		CampaignID: strings.TrimSpace(campaignID),
-		Name:       input.Name,
-		Notes:      input.Notes,
-	}
-	if err := s.db.WithContext(ctx).Create(&entity).Error; err != nil {
-		return models.CampaignLocation{}, err
-	}
-	return locationFromEntity(entity), nil
-}
-
-func (s TravelStore) UpdateLocation(ctx context.Context, ownerUserID, campaignID, locationID string, input LocationInput) (models.CampaignLocation, error) {
-	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
-		return models.CampaignLocation{}, err
-	}
-	var entity dbmodels.CampaignLocationEntity
-	err := s.db.WithContext(ctx).
-		Where("id = ? and campaign_id = ?", strings.TrimSpace(locationID), strings.TrimSpace(campaignID)).
-		First(&entity).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return models.CampaignLocation{}, ErrNotFound
-	}
-	if err != nil {
-		return models.CampaignLocation{}, err
-	}
-	entity.Name = input.Name
-	entity.Notes = input.Notes
-	if err := s.db.WithContext(ctx).Save(&entity).Error; err != nil {
-		return models.CampaignLocation{}, err
-	}
-	return locationFromEntity(entity), nil
-}
-
-func (s TravelStore) DeleteLocation(ctx context.Context, ownerUserID, campaignID, locationID string) error {
-	if err := ensureCampaignOwnedTx(ctx, s.db, ownerUserID, campaignID); err != nil {
-		return err
-	}
-	result := s.db.WithContext(ctx).
-		Where("id = ? and campaign_id = ?", strings.TrimSpace(locationID), strings.TrimSpace(campaignID)).
-		Delete(&dbmodels.CampaignLocationEntity{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrNotFound
-	}
-	return nil
 }
 
 func (s TravelStore) JourneysForCampaign(ctx context.Context, ownerUserID, campaignID string) ([]models.CampaignJourney, error) {
@@ -204,17 +128,6 @@ func (s TravelStore) CloneJourney(ctx context.Context, ownerUserID, campaignID, 
 		return models.CampaignJourney{}, err
 	}
 	return journeyFromEntity(source)
-}
-
-func locationFromEntity(entity dbmodels.CampaignLocationEntity) models.CampaignLocation {
-	return models.CampaignLocation{
-		ID:         entity.ID,
-		CampaignID: entity.CampaignID,
-		Name:       entity.Name,
-		Notes:      entity.Notes,
-		CreatedAt:  entity.CreatedAt,
-		UpdatedAt:  entity.UpdatedAt,
-	}
 }
 
 func journeyEntityFromInput(campaignID string, input JourneyInput) (dbmodels.CampaignJourneyEntity, error) {

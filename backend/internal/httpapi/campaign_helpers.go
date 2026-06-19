@@ -65,6 +65,7 @@ type encounterRequest struct {
 	Description string `json:"description"`
 	Status      string `json:"status"`
 	Location    string `json:"location"`
+	LocationID  string `json:"locationId"`
 	RoomNumber  string `json:"roomNumber"`
 }
 

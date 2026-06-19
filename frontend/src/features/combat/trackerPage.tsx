@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { MutedPanel, useToasts } from "../../components/ui";
+import { MutedPanel, Page, useToasts } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { RollTableResolutionPayload } from "../../lib/api/encounterRuns";
 import { isDownEnemy, rotateCombatantsFromActive } from "../../lib/domain/combat";
@@ -311,7 +311,7 @@ export function CombatTrackerPage() {
   }
 
   return (
-    <div className="combat-tracker-page mx-auto grid w-full max-w-[1800px] gap-2 sm:gap-4">
+    <Page size="wide" className="combat-tracker-page gap-2 sm:gap-4">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
       <Breadcrumbs
         items={[
@@ -430,7 +430,7 @@ export function CombatTrackerPage() {
         onSetSpellDialogOpen={setSpellDialogOpen}
         onSetVictoryOpen={setVictoryOpen}
       />
-    </div>
+    </Page>
   );
 }
 

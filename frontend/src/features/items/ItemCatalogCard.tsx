@@ -1,4 +1,5 @@
 import { Copy, Edit3, Eye, Trash2 } from "lucide-react";
+import type React from "react";
 import { Button } from "../../components/ui";
 import type { Item } from "../../types";
 import { buildItemDisplay, type ItemChip, type ItemChipTone } from "./itemCatalogDisplay";
@@ -75,6 +76,30 @@ export function ItemCatalogCard({
             </Button>
           </div>
         )}
+      </div>
+    </article>
+  );
+}
+
+export function ItemCatalogCompactCard({ action, item }: { action?: React.ReactNode; item: Item }) {
+  const display = buildItemDisplay(item);
+  const icon = iconForItem(item);
+
+  return (
+    <article className="rounded-md border border-border bg-background p-3">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+        <ItemGlyph entry={icon} />
+        <div className="min-w-0">
+          <h4 className="truncate font-semibold leading-tight">{item.name}</h4>
+          <p className="mt-1 text-[0.72rem] font-extrabold uppercase tracking-wide text-muted-foreground">
+            {display.subtitle}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <CatalogStat label="Value" value={display.value} />
+            <CatalogStat label="Weight" value={display.weight} />
+          </div>
+        </div>
+        {action}
       </div>
     </article>
   );

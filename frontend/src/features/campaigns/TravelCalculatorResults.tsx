@@ -15,8 +15,8 @@ import {
   paceOptions,
   precipitationOptions,
   windOptions,
-} from "./travelOptions";
-import type { TravelCalculation, TravelWeather } from "./travelTypes";
+} from "./world/travelOptions";
+import type { TravelCalculation, TravelWeather } from "./world/travelTypes";
 
 export function TravelCalculatorResults({
   animationKey,

@@ -1,19 +1,11 @@
 import { ClipboardList, Copy, FlaskConical, Pencil, Play, Plus, Trash2 } from "lucide-react";
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-import {
-  Badge,
-  Button,
-  EmptyMini,
-  Field,
-  FloatingInput,
-  Modal,
-  SectionPanel,
-  Select,
-  Textarea,
-} from "../../components/ui";
+import { Badge, Button, EmptyMini, SectionPanel } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
 import type { Encounter } from "../../types";
+import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
+import type { CampaignLocation } from "./world/travelTypes";
 
 const encounterStatusLabel = (status: string) =>
   encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
@@ -24,6 +16,8 @@ export function CampaignEncountersSection({
   encounterOpen,
   encounters,
   location,
+  locationID,
+  locations,
   name,
   roomNumber,
   status,
@@ -31,6 +25,7 @@ export function CampaignEncountersSection({
   onCreate,
   onDescriptionChange,
   onLocationChange,
+  onLocationIDChange,
   onNameChange,
   onOpenChange,
   onRemove,
@@ -43,6 +38,8 @@ export function CampaignEncountersSection({
   encounterOpen: boolean;
   encounters: Encounter[];
   location: string;
+  locationID: string;
+  locations: CampaignLocation[];
   name: string;
   roomNumber: string;
   status: string;
@@ -50,6 +47,7 @@ export function CampaignEncountersSection({
   onCreate: (event: FormEvent) => void;
   onDescriptionChange: (description: string) => void;
   onLocationChange: (location: string) => void;
+  onLocationIDChange: (locationID: string) => void;
   onNameChange: (name: string) => void;
   onOpenChange: (open: boolean) => void;
   onRemove: (encounter: Encounter) => void;
@@ -76,48 +74,29 @@ export function CampaignEncountersSection({
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <Modal
+        <CampaignEncounterCreateDialog
+          description={description}
+          location={location}
+          locationID={locationID}
+          locations={locations}
+          name={name}
           open={encounterOpen}
-          onOpenChange={onOpenChange}
-          title="Add encounter"
+          roomNumber={roomNumber}
+          status={status}
           trigger={
             <Button type="button" icon={Plus} variant="success">
               Add encounter
             </Button>
           }
-        >
-          <form className="grid gap-4" onSubmit={onCreate}>
-            <FloatingInput label="Encounter name" value={name} onChange={onNameChange} required />
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Status">
-                <Select
-                  value={status}
-                  placeholder="Status"
-                  options={encounterStatusOptions}
-                  onValueChange={onStatusChange}
-                />
-              </Field>
-              <FloatingInput label="Location" value={location} onChange={onLocationChange} />
-              <FloatingInput label="Room number" value={roomNumber} onChange={onRoomNumberChange} />
-            </div>
-            <Field label="Description">
-              <Textarea
-                rows={4}
-                value={description}
-                onChange={(event) => onDescriptionChange(event.target.value)}
-                placeholder="Optional notes, setup, terrain, or goals"
-              />
-            </Field>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" icon={Plus} variant="success">
-                Create encounter
-              </Button>
-            </div>
-          </form>
-        </Modal>
+          onCreate={onCreate}
+          onDescriptionChange={onDescriptionChange}
+          onLocationChange={onLocationChange}
+          onLocationIDChange={onLocationIDChange}
+          onNameChange={onNameChange}
+          onOpenChange={onOpenChange}
+          onRoomNumberChange={onRoomNumberChange}
+          onStatusChange={onStatusChange}
+        />
         <Button type="button" variant="secondary" disabled>
           Import encounter
         </Button>

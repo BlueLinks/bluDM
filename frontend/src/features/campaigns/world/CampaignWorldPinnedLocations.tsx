@@ -1,0 +1,67 @@
+import { Trash2 } from "lucide-react";
+import { ActionRow } from "../../../components/layout";
+import { Button, EmptyMini } from "../../../components/ui";
+import { formatMapDistance, realMapDistance } from "./campaignMapDistance";
+import { locationPathLabel } from "./campaignWorldLocationUtils";
+import type { CampaignLocation, CampaignMap, CampaignMapPin } from "./travelTypes";
+
+export function CampaignWorldPinnedLocations({
+  locationById,
+  map,
+  onRemove,
+  onSelectLocation,
+  pins,
+}: {
+  locationById: Map<string, CampaignLocation>;
+  map: CampaignMap;
+  onRemove: (pin: CampaignMapPin) => void;
+  onSelectLocation: (locationID: string) => void;
+  pins: CampaignMapPin[];
+}) {
+  if (!pins.length) return <EmptyMini copy="No pins on this map yet." />;
+  return (
+    <div className="grid gap-2">
+      {pins.map((pin) => {
+        const location = locationById.get(pin.locationId);
+        return (
+          <div
+            key={pin.id}
+            className="grid gap-2 rounded-md border border-border bg-card p-2 text-sm"
+          >
+            <ActionRow justify="between">
+              <button
+                className="min-w-0 text-left font-semibold text-accent hover:underline"
+                type="button"
+                onClick={() => location && onSelectLocation(location.id)}
+              >
+                {pin.labelOverride || location?.name || "Pinned location"}
+              </button>
+              <Button
+                type="button"
+                icon={Trash2}
+                size="sm"
+                variant="ghost"
+                onClick={() => onRemove(pin)}
+              >
+                Remove
+              </Button>
+            </ActionRow>
+            <span className="text-xs text-muted-foreground">
+              {Math.round(pin.x)}, {Math.round(pin.y)} ·{" "}
+              {location ? locationPathLabel(location) : "Unknown location"}
+              {pins.length > 1 ? ` · ${formatNearestDistance(pin, pins, map)}` : ""}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatNearestDistance(pin: CampaignMapPin, pins: CampaignMapPin[], map: CampaignMap) {
+  const distances = pins
+    .filter((other) => other.id !== pin.id)
+    .map((other) => realMapDistance(map, pin, other));
+  if (!distances.length) return "no nearby pins";
+  return `nearest ${formatMapDistance(Math.min(...distances), map.scaleDistanceUnit)}`;
+}

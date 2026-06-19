@@ -1,5 +1,6 @@
 import { BookOpen, Copy, Eye, ListChecks, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ResponsiveGrid } from "../../components/layout";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
 import {
@@ -157,7 +158,7 @@ function SpellGrid({
     return <MutedPanel>No spells match the current filters.</MutedPanel>;
   }
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <ResponsiveGrid variant="equal2">
       {spells.map((spell) => (
         <SpellCard
           key={spell.id}
@@ -168,7 +169,7 @@ function SpellGrid({
           onPreview={onPreview}
         />
       ))}
-    </div>
+    </ResponsiveGrid>
   );
 }
 

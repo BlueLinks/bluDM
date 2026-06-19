@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { PlayerCard } from "../../components/PlayerCard";
+import { ResponsiveGrid } from "../../components/layout";
 import {
   Button,
   Callout,
@@ -65,7 +66,7 @@ export function PlayersPage() {
         {!loading && players.length === 0 && (
           <EmptyMini copy="No saved players yet. Create a full player record from the Add player page." />
         )}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <ResponsiveGrid variant="cards3">
           {players.map((player) => (
             <div className="grid gap-2" key={player.id}>
               <PlayerCard player={player} />
@@ -86,7 +87,7 @@ export function PlayersPage() {
               </div>
             </div>
           ))}
-        </div>
+        </ResponsiveGrid>
       </SectionPanel>
       <ConfirmDialog
         open={Boolean(removePlayer)}
@@ -116,18 +117,16 @@ export function PlayerCreatePage() {
   }, []);
 
   return (
-    <Page>
+    <Page size="content">
       <PageHeader
         eyebrow="Players"
         title="Add player character"
         copy="Use the full page form for structured character details and derived modifiers."
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="mx-auto w-full max-w-5xl">
-        <SectionPanel title="Create Player Character" icon={UserRound}>
-          <PlayerForm campaigns={campaigns} onCreated={() => void navigate("/players")} />
-        </SectionPanel>
-      </div>
+      <SectionPanel title="Create Player Character" icon={UserRound}>
+        <PlayerForm campaigns={campaigns} onCreated={() => void navigate("/players")} />
+      </SectionPanel>
     </Page>
   );
 }
@@ -168,7 +167,7 @@ export function PlayerEditPage() {
   }
 
   return (
-    <Page>
+    <Page size="content">
       <BackButton to="/players">Back to players</BackButton>
       <Breadcrumbs
         items={[
@@ -183,16 +182,14 @@ export function PlayerEditPage() {
         copy="Update this character sheet and campaign assignment."
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="mx-auto w-full max-w-5xl">
-        <SectionPanel title="Edit Player Character" icon={UserRound}>
-          <PlayerForm
-            campaigns={campaigns}
-            initialPlayer={player}
-            submitLabel="Save player"
-            onCreated={() => void navigate("/players")}
-          />
-        </SectionPanel>
-      </div>
+      <SectionPanel title="Edit Player Character" icon={UserRound}>
+        <PlayerForm
+          campaigns={campaigns}
+          initialPlayer={player}
+          submitLabel="Save player"
+          onCreated={() => void navigate("/players")}
+        />
+      </SectionPanel>
     </Page>
   );
 }

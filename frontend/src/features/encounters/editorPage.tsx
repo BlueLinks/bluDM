@@ -45,6 +45,7 @@ export function EncounterEditPage() {
     description: "",
     status: "planned",
     location: "",
+    locationId: "",
     roomNumber: "",
   });
   const [savedCombatants, setSavedCombatants] = useState<EncounterCombatant[]>([]);
@@ -114,6 +115,7 @@ export function EncounterEditPage() {
         description: encounterPayload.encounter.description,
         status: encounterPayload.encounter.status,
         location: encounterPayload.encounter.location,
+        locationId: encounterPayload.encounter.locationId ?? "",
         roomNumber: encounterPayload.encounter.roomNumber,
       });
       setSavedCombatants(encounterPayload.encounter.combatants ?? []);
@@ -191,6 +193,7 @@ export function EncounterEditPage() {
         description: encounter.description,
         status: encounter.status,
         location: encounter.location,
+        locationId: encounter.locationId ?? "",
         roomNumber: encounter.roomNumber,
       });
     }

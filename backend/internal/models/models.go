@@ -26,48 +26,6 @@ type Campaign struct {
 	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
-type TravelWeather struct {
-	Temperature       string              `json:"temperature"`
-	TemperatureDeltaF *int                `json:"temperatureDeltaF"`
-	Wind              string              `json:"wind"`
-	Precipitation     string              `json:"precipitation"`
-	Rolls             *TravelWeatherRolls `json:"rolls,omitempty"`
-}
-
-type TravelWeatherRolls struct {
-	TemperatureD20   *int `json:"temperatureD20,omitempty"`
-	TemperatureD4    *int `json:"temperatureD4,omitempty"`
-	WindD20          *int `json:"windD20,omitempty"`
-	PrecipitationD20 *int `json:"precipitationD20,omitempty"`
-}
-
-type CampaignLocation struct {
-	ID         string    `json:"id"`
-	CampaignID string    `json:"campaignId"`
-	Name       string    `json:"name"`
-	Notes      string    `json:"notes"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-}
-
-type CampaignJourney struct {
-	ID                    string        `json:"id"`
-	CampaignID            string        `json:"campaignId"`
-	Name                  string        `json:"name"`
-	Origin                string        `json:"origin"`
-	Destination           string        `json:"destination"`
-	Distance              float64       `json:"distance"`
-	DistanceUnit          string        `json:"distanceUnit"`
-	Terrain               string        `json:"terrain"`
-	Pace                  string        `json:"pace"`
-	GoodRoads             bool          `json:"goodRoads"`
-	EncounterDistanceFeet *int          `json:"encounterDistanceFeet"`
-	Weather               TravelWeather `json:"weather"`
-	RouteInputMode        string        `json:"routeInputMode"`
-	CreatedAt             time.Time     `json:"createdAt"`
-	UpdatedAt             time.Time     `json:"updatedAt"`
-}
-
 type Encounter struct {
 	ID             string               `json:"id"`
 	CampaignID     string               `json:"campaignId"`
@@ -75,6 +33,7 @@ type Encounter struct {
 	Description    string               `json:"description"`
 	Status         string               `json:"status"`
 	Location       string               `json:"location"`
+	LocationID     *string              `json:"locationId,omitempty"`
 	RoomNumber     string               `json:"roomNumber"`
 	LootNotes      string               `json:"lootNotes"`
 	Combatants     []EncounterCombatant `json:"combatants,omitempty"`

@@ -41,6 +41,7 @@ func (s *Server) updateEncounter(w http.ResponseWriter, r *http.Request) {
 	req.Description = strings.TrimSpace(req.Description)
 	req.Status = normalizeEncounterStatus(req.Status)
 	req.Location = strings.TrimSpace(req.Location)
+	req.LocationID = strings.TrimSpace(req.LocationID)
 	req.RoomNumber = strings.TrimSpace(req.RoomNumber)
 	if req.Name == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
@@ -51,10 +52,11 @@ func (s *Server) updateEncounter(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 		Status:      req.Status,
 		Location:    req.Location,
+		LocationID:  req.LocationID,
 		RoomNumber:  req.RoomNumber,
 	})
 	if store.IsNotFound(err) {
-		writeError(w, http.StatusNotFound, "encounter not found")
+		writeError(w, http.StatusNotFound, "encounter or campaign location not found")
 		return
 	}
 	if err != nil {

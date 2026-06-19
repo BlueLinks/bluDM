@@ -4,14 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceShell } from "../../app/shell";
 import { api } from "../../lib/api";
 import type { CampaignDetail } from "../../types";
-import type { CampaignJourney, CampaignLocation, TravelCalculation } from "./travelTypes";
+import type { CampaignJourney, CampaignLocation, TravelCalculation } from "./world/travelTypes";
 import { CampaignDetailPage } from "./pages";
 
 vi.mock("../../lib/api", () => ({
   api: {
     campaign: vi.fn(),
     campaignJourneys: vi.fn(),
+    campaignLocationLinks: vi.fn(),
+    campaignLocationStock: vi.fn(),
     campaignLocations: vi.fn(),
+    campaignNpcLocationLinks: vi.fn(),
     calculateTravel: vi.fn(),
     cloneCampaignJourney: vi.fn(),
     createCampaignLocation: vi.fn(),
@@ -21,10 +24,9 @@ vi.mock("../../lib/api", () => ({
     deleteCampaignJourney: vi.fn(),
     deleteCampaignLocation: vi.fn(),
     deleteEncounter: vi.fn(),
-    deletePlayer: vi.fn(),
+    items: vi.fn(),
     linkCampaignNpc: vi.fn(),
     longRestCampaign: vi.fn(),
-    cloneEncounter: vi.fn(),
     standardSources: vi.fn(),
     startEncounter: vi.fn(),
     undoLongRestCampaign: vi.fn(),
@@ -50,6 +52,10 @@ describe("CampaignDetailPage travel", () => {
     Element.prototype.scrollIntoView = vi.fn();
     vi.mocked(api.campaign).mockResolvedValue(campaignDetail());
     vi.mocked(api.campaignJourneys).mockResolvedValue({ journeys: [journey()] });
+    vi.mocked(api.campaignLocationLinks).mockResolvedValue({ links: [] });
+    vi.mocked(api.campaignLocationStock).mockResolvedValue({ stock: [] });
+    vi.mocked(api.campaignNpcLocationLinks).mockResolvedValue({ links: [] });
+    vi.mocked(api.items).mockResolvedValue({ items: [] });
     vi.mocked(api.campaignLocations).mockResolvedValue({ locations: [location()] });
     vi.mocked(api.standardSources).mockResolvedValue({
       sources: [
@@ -83,53 +89,25 @@ describe("CampaignDetailPage travel", () => {
     vi.mocked(api.deleteCampaignJourney).mockResolvedValue(undefined);
   });
 
-  it("renders travel count, saved campaign locations, and journey log", async () => {
+  it("renders the campaign hub, travel guidance, and journey log", async () => {
     renderCampaign();
 
-    expect(await screen.findByText("Waterdeep")).toBeTruthy();
-    expect(screen.getAllByText("Travel").length).toBeGreaterThan(0);
-    expect(screen.getByText("Harbor gate and north road marker.")).toBeTruthy();
-    expect(screen.getByText("Waterdeep to Ironford")).toBeTruthy();
+    expect(await screen.findByText("World workspace")).toBeTruthy();
+    expect(screen.getAllByRole("link", { name: "Open world" }).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText(/World locations now live in the dedicated World workspace/i),
+    ).toBeTruthy();
     expect(screen.getByText("Waterdeep to Ironford · 63 Miles")).toBeTruthy();
     expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
   });
 
-  it("creates and edits campaign locations", async () => {
-    vi.mocked(api.campaignLocations)
-      .mockResolvedValueOnce({ locations: [location()] })
-      .mockResolvedValueOnce({
-        locations: [location(), location({ id: "location-2", name: "Ironford" })],
-      })
-      .mockResolvedValueOnce({ locations: [location({ notes: "Updated road notes" })] });
+  it("shows workspace shortcuts for world, encounters, party, and npcs", async () => {
     renderCampaign();
 
-    fireEvent.change(await screen.findByLabelText("New location"), {
-      target: { value: "Ironford" },
-    });
-    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Bridge town." } });
-    fireEvent.click(screen.getByRole("button", { name: "Add location" }));
-
-    await waitFor(() =>
-      expect(api.createCampaignLocation).toHaveBeenCalledWith("campaign-1", {
-        name: "Ironford",
-        notes: "Bridge town.",
-      }),
-    );
-
-    const waterdeep = await screen.findByText("Waterdeep");
-    const card = waterdeep.closest("article");
-    if (!card) throw new Error("location card not found");
-    fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
-    fireEvent.change(screen.getByLabelText("Edit location"), { target: { value: "Waterdeep" } });
-    fireEvent.change(screen.getByLabelText("Notes"), { target: { value: "Updated road notes" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save location" }));
-
-    await waitFor(() =>
-      expect(api.updateCampaignLocation).toHaveBeenCalledWith("campaign-1", "location-1", {
-        name: "Waterdeep",
-        notes: "Updated road notes",
-      }),
-    );
+    expect((await screen.findAllByRole("link", { name: "Open world" })).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Jump to encounters" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Jump to party" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Jump to NPCs" })).toBeTruthy();
   });
 
   it("opens the calculator and recalculates when travel inputs change", async () => {
@@ -137,9 +115,6 @@ describe("CampaignDetailPage travel", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Travel" }));
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).queryByText("Climate / season")).toBeNull();
-    expect(within(dialog).queryByText("Route condition")).toBeNull();
-    expect(within(dialog).queryByRole("button", { name: "Random weather" })).toBeNull();
     expect(within(dialog).getByRole("button", { name: "Route" })).toBeTruthy();
     fireEvent.click(within(dialog).getByRole("button", { name: "Direct distance" }));
     expect(within(dialog).queryByText("Origin")).toBeNull();
@@ -158,7 +133,6 @@ describe("CampaignDetailPage travel", () => {
     });
 
     expect(await within(dialog).findByText("2.6 days")).toBeTruthy();
-    expect(within(dialog).queryByRole("tab")).toBeNull();
     expect(within(dialog).getAllByText("Encounter distance").length).toBeGreaterThan(0);
     expect(within(dialog).getByText("Weather")).toBeTruthy();
     await waitFor(() =>
@@ -442,8 +416,6 @@ function location(overrides: Partial<CampaignLocation> = {}): CampaignLocation {
     campaignId: "campaign-1",
     name: "Waterdeep",
     notes: "Harbor gate and north road marker.",
-    createdAt: "2026-06-01T00:00:00Z",
-    updatedAt: "2026-06-01T00:00:00Z",
     ...overrides,
   };
 }

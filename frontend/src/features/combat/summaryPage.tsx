@@ -2,6 +2,7 @@ import { Package, Plus, Sparkles, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { ResponsiveGrid } from "../../components/layout";
 import {
   Button,
   Field,
@@ -126,7 +127,7 @@ export function EncounterSummaryPage() {
         </SectionPanel>
       </div>
       <SectionPanel title="Assign Loot" icon={UsersRound}>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        <ResponsiveGrid variant="equal3">
           {players.map((player) => (
             <div
               key={player.id}
@@ -150,7 +151,7 @@ export function EncounterSummaryPage() {
               </div>
             </div>
           ))}
-        </div>
+        </ResponsiveGrid>
       </SectionPanel>
     </Page>
   );

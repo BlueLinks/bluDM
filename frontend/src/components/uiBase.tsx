@@ -1,8 +1,27 @@
 import { Check, HeartPulse, Info, Shield, Skull, X } from "lucide-react";
 import React from "react";
 
-export function Page({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto grid w-full max-w-7xl gap-6">{children}</div>;
+const pageSizeClasses = {
+  content: "max-w-5xl",
+  default: "max-w-screen-2xl",
+  full: "max-w-none",
+  wide: "max-w-none",
+};
+
+export function Page({
+  children,
+  className = "",
+  size = "default",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  size?: keyof typeof pageSizeClasses;
+}) {
+  return (
+    <div className={["mx-auto grid w-full gap-6", pageSizeClasses[size], className].join(" ")}>
+      {children}
+    </div>
+  );
 }
 
 export function PageHeader({
@@ -49,10 +68,10 @@ export function SectionPanel({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="mb-3 flex items-center gap-2 xl:mb-4">
+      <div className="mb-3 flex flex-wrap items-start gap-2 xl:mb-4">
         <Icon className="h-5 w-5 text-accent" />
         <h3 className="font-semibold">{title}</h3>
-        {action && <div className="ml-auto">{action}</div>}
+        {action && <div className="ml-auto min-w-0">{action}</div>}
       </div>
       <div className={bodyClassName}>{children}</div>
     </section>

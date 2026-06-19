@@ -21,6 +21,7 @@ type EncounterInput struct {
 	Description string
 	Status      string
 	Location    string
+	LocationID  string
 	RoomNumber  string
 }
 
@@ -47,6 +48,7 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 		Description    string
 		Status         string
 		Location       string
+		LocationID     *string
 		RoomNumber     string
 		LootNotes      string
 		CombatantCount int
@@ -63,6 +65,7 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 			encounters.description,
 			encounters.status,
 			encounters.location,
+			encounters.location_id,
 			encounters.room_number,
 			encounters.loot_notes,
 			count(encounter_combatants.id)::int as combatant_count,
@@ -88,6 +91,7 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 		Description:    row.Description,
 		Status:         row.Status,
 		Location:       row.Location,
+		LocationID:     row.LocationID,
 		RoomNumber:     row.RoomNumber,
 		LootNotes:      row.LootNotes,
 		CombatantCount: row.CombatantCount,
@@ -127,6 +131,12 @@ func (s EncounterStore) Update(ctx context.Context, ownerUserID, encounterID str
 		entity.Description = input.Description
 		entity.Status = input.Status
 		entity.Location = input.Location
+		if input.LocationID != "" {
+			if err := ensureLocationInCampaignTx(ctx, tx, entity.CampaignID, input.LocationID); err != nil {
+				return err
+			}
+		}
+		entity.LocationID = optionalString(input.LocationID)
 		entity.RoomNumber = input.RoomNumber
 		return tx.Save(&entity).Error
 	})
@@ -168,6 +178,7 @@ func (s EncounterStore) Clone(ctx context.Context, ownerUserID, encounterID stri
 			Description: source.Description,
 			Status:      source.Status,
 			Location:    source.Location,
+			LocationID:  source.LocationID,
 			RoomNumber:  source.RoomNumber,
 			LootNotes:   source.LootNotes,
 		}

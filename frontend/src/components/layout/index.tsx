@@ -1,0 +1,196 @@
+import type React from "react";
+
+function cx(...classes: Array<string | false | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+const actionAlignClasses = {
+  start: "items-start",
+  center: "items-center",
+  end: "items-end",
+  stretch: "items-stretch",
+};
+
+const actionGapClasses = {
+  sm: "gap-2",
+  md: "gap-3",
+};
+
+const actionJustifyClasses = {
+  start: "justify-start",
+  end: "justify-end",
+  between: "justify-between",
+};
+
+export function ActionRow({
+  align = "center",
+  children,
+  className = "",
+  gap = "sm",
+  justify = "start",
+}: {
+  align?: keyof typeof actionAlignClasses;
+  children: React.ReactNode;
+  className?: string;
+  gap?: keyof typeof actionGapClasses;
+  justify?: keyof typeof actionJustifyClasses;
+}) {
+  return (
+    <div
+      className={cx(
+        "flex flex-wrap",
+        actionAlignClasses[align],
+        actionGapClasses[gap],
+        actionJustifyClasses[justify],
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+const responsiveGridClasses = {
+  cards3: "grid gap-3 lg:grid-cols-2 2xl:grid-cols-3",
+  cards4: "grid gap-4 md:grid-cols-2 xl:grid-cols-4",
+  equal2: "grid gap-4 lg:grid-cols-2",
+  equal3: "grid gap-4 lg:grid-cols-3",
+  form2: "grid gap-4 sm:grid-cols-2",
+  stats3: "grid gap-3 sm:grid-cols-3",
+};
+
+export function ResponsiveGrid({
+  children,
+  className = "",
+  variant,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant: keyof typeof responsiveGridClasses;
+}) {
+  return <div className={cx(responsiveGridClasses[variant], className)}>{children}</div>;
+}
+
+const fieldGridClasses = {
+  itemSearch: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]",
+  link: "grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]",
+  worldSearch: "grid gap-3 md:grid-cols-[minmax(0,1.4fr)_9rem_9rem_11rem_auto] md:items-end",
+  worldMapForm: "grid gap-3 md:grid-cols-4 md:items-end",
+};
+
+export function FieldGrid({
+  children,
+  className = "",
+  variant,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant: keyof typeof fieldGridClasses;
+}) {
+  return <div className={cx(fieldGridClasses[variant], className)}>{children}</div>;
+}
+
+const sidebarDetailClasses = {
+  catalog: "grid lg:grid-cols-[250px_minmax(0,1fr)]",
+  compact: "grid gap-4 xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] xl:items-stretch",
+  summary: "grid gap-4 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] xl:items-start",
+  workspace: "grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]",
+};
+
+export function SidebarDetailLayout({
+  children,
+  className = "",
+  variant,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  variant: keyof typeof sidebarDetailClasses;
+}) {
+  return <div className={cx(sidebarDetailClasses[variant], className)}>{children}</div>;
+}
+
+export function DetailAsideLayout({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cx(
+        "grid items-start gap-4 xl:grid-cols-[fit-content(22rem)_minmax(0,1fr)]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function ContentStack({
+  as = "div",
+  children,
+  className = "",
+}: {
+  as?: "aside" | "div";
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const Component = as;
+  return (
+    <Component className={cx("grid min-w-0 content-start gap-4", className)}>{children}</Component>
+  );
+}
+
+const cardSectionTones = {
+  background: "bg-background",
+  card: "bg-card",
+};
+
+export function CardSection({
+  children,
+  className = "",
+  tone = "card",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  tone?: keyof typeof cardSectionTones;
+}) {
+  return (
+    <section
+      className={cx("rounded-md border border-border p-3", cardSectionTones[tone], className)}
+    >
+      {children}
+    </section>
+  );
+}
+
+export function SectionHeader({
+  action,
+  className = "",
+  icon: Icon,
+  meta,
+  title,
+}: {
+  action?: React.ReactNode;
+  className?: string;
+  icon?: React.ElementType;
+  meta?: React.ReactNode;
+  title: React.ReactNode;
+}) {
+  return (
+    <div className={cx("flex flex-wrap items-start justify-between gap-2", className)}>
+      <div className="min-w-0">
+        <h5 className="font-semibold">{title}</h5>
+        {meta ? (
+          <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
+            {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
+            {meta}
+          </span>
+        ) : null}
+      </div>
+      {action}
+    </div>
+  );
+}
