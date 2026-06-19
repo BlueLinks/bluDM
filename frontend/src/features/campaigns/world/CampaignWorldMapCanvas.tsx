@@ -1,14 +1,14 @@
 import { LocateFixed, MapPin, Minus, Plus } from "lucide-react";
 import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
 import { ActionRow } from "../../../components/layout";
-import { Button, Callout, Checkbox, Select } from "../../../components/ui";
+import { Button, Callout, Checkbox } from "../../../components/ui";
+import { formatMapDistance } from "./campaignMapDistance";
 import { mapDefaultsForType } from "./campaignWorldMapDefaults";
 import type { CampaignLocation, CampaignMap, CampaignMapPin } from "./travelTypes";
 import type { PlacementMode } from "./CampaignWorldMaps";
 
 export function CampaignWorldMapCanvas({
   activeMap,
-  availableMaps,
   focusedLocationID,
   loadingPins,
   locationById,
@@ -16,7 +16,6 @@ export function CampaignWorldMapCanvas({
   pins,
   saving,
   showGrid,
-  onMapChange,
   onNavigateFromPin,
   onPlacePin,
   onShowGridChange,
@@ -28,16 +27,21 @@ export function CampaignWorldMapCanvas({
   const grid = mapDefaultsForType(activeMap.mapType);
 
   useEffect(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, [activeMap.id]);
+
+  useEffect(() => {
     const pin = pins.find((item) => item.locationId === focusedLocationID);
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!pin || !rect) return;
-    const nextZoom = Math.max(zoom, 1.35);
+    const nextZoom = 1.35;
     setZoom(nextZoom);
     setPan({
       x: rect.width / 2 - (pin.x / activeMap.width) * rect.width * nextZoom,
       y: rect.height / 2 - (pin.y / activeMap.height) * rect.height * nextZoom,
     });
-  }, [activeMap.height, activeMap.width, focusedLocationID, pins, zoom]);
+  }, [activeMap.height, activeMap.width, focusedLocationID, pins]);
 
   function resetView() {
     setZoom(1);
@@ -68,15 +72,21 @@ export function CampaignWorldMapCanvas({
 
   return (
     <div className="grid min-w-0 gap-3">
-      <ActionRow justify="between">
-        <Select
-          value={activeMap.id}
-          placeholder="Select map"
-          options={availableMaps.map((map) => ({ value: map.id, label: map.name }))}
-          onValueChange={onMapChange}
-        />
+      <ActionRow
+        align="start"
+        justify="between"
+        className="rounded-md border border-border bg-background p-2"
+      >
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{activeMap.name}</p>
+          <p className="text-xs text-muted-foreground">
+            {Math.round(zoom * 100)}% zoom · drag blank space to pan · reset recenters the map
+          </p>
+        </div>
         <MapViewControls
+          canReset={zoom !== 1 || pan.x !== 0 || pan.y !== 0}
           showGrid={showGrid}
+          zoom={zoom}
           onReset={resetView}
           onShowGridChange={onShowGridChange}
           onZoomIn={() => setZoom((value) => Math.min(3, value + 0.25))}
@@ -91,11 +101,15 @@ export function CampaignWorldMapCanvas({
       ) : null}
       <div
         ref={viewportRef}
-        className="relative w-full min-w-0 overflow-hidden rounded-lg border border-border bg-muted shadow-inner"
+        className={[
+          "relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-muted shadow-inner",
+          placementMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing",
+        ].join(" ")}
         style={{ aspectRatio: `${activeMap.width} / ${activeMap.height}` }}
         onClick={handleClick}
         onPointerDown={startPan}
         onPointerMove={movePan}
+        onPointerCancel={() => (panStart.current = null)}
         onPointerUp={() => (panStart.current = null)}
       >
         <div
@@ -133,13 +147,17 @@ export function CampaignWorldMapCanvas({
 }
 
 function MapViewControls({
+  canReset,
   showGrid,
+  zoom,
   onReset,
   onShowGridChange,
   onZoomIn,
   onZoomOut,
 }: {
+  canReset: boolean;
   showGrid: boolean;
+  zoom: number;
   onReset: () => void;
   onShowGridChange: (show: boolean) => void;
   onZoomIn: () => void;
@@ -148,13 +166,34 @@ function MapViewControls({
   return (
     <ActionRow justify="end">
       <Checkbox label="Grid" checked={showGrid} onChange={onShowGridChange} />
-      <Button type="button" icon={Minus} size="sm" variant="secondary" onClick={onZoomOut}>
+      <Button
+        type="button"
+        icon={Minus}
+        size="sm"
+        variant="secondary"
+        disabled={zoom <= 0.5}
+        onClick={onZoomOut}
+      >
         Zoom out
       </Button>
-      <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onZoomIn}>
+      <Button
+        type="button"
+        icon={Plus}
+        size="sm"
+        variant="secondary"
+        disabled={zoom >= 3}
+        onClick={onZoomIn}
+      >
         Zoom in
       </Button>
-      <Button type="button" icon={LocateFixed} size="sm" variant="secondary" onClick={onReset}>
+      <Button
+        type="button"
+        icon={LocateFixed}
+        size="sm"
+        variant="secondary"
+        disabled={!canReset}
+        onClick={onReset}
+      >
         Reset
       </Button>
     </ActionRow>
@@ -179,7 +218,18 @@ function MapBackground({
     <div
       className="absolute inset-0 bg-background"
       style={showGrid ? blankGridStyle(gridMajorEvery) : undefined}
-    />
+    >
+      <div className="pointer-events-none absolute inset-3 grid place-items-center rounded-md border border-dashed border-border bg-background/70 p-4 text-center">
+        <div className="max-w-sm">
+          <p className="text-sm font-semibold">Blank grid map</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {activeMap.width}×{activeMap.height}px ·{" "}
+            {formatMapDistance(activeMap.scaleDistancePerPixel, activeMap.scaleDistanceUnit)} per
+            pixel. Use Place pins to anchor locations.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -241,7 +291,6 @@ function clamp(value: number, min: number, max: number) {
 
 type CampaignWorldMapCanvasProps = {
   activeMap: CampaignMap;
-  availableMaps: CampaignMap[];
   focusedLocationID: string;
   loadingPins: boolean;
   locationById: Map<string, CampaignLocation>;
@@ -249,7 +298,6 @@ type CampaignWorldMapCanvasProps = {
   pins: CampaignMapPin[];
   saving: boolean;
   showGrid: boolean;
-  onMapChange: (mapID: string) => void;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
   onPlacePin: (x: number, y: number) => Promise<void>;
   onShowGridChange: (show: boolean) => void;

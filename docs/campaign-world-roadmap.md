@@ -40,6 +40,11 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Dungeon structure card now surfaces child floor/room navigation.
 - Dungeon/Floor encounter lists include descendant location encounters.
 - Encounter creation from Room/Floor pages now carries clearer room context.
+- Maps workspace polish slice:
+  - clearer map selection/list cards in the existing Maps workspace.
+  - explicit pin placement counts, active placement cancel affordance, and placed/unplaced labels.
+  - more visible map-to-location navigation from pinned-location rows.
+  - zoom state, reset availability, pan/touch affordances, and blank-grid map guidance.
 
 ## In Progress
 
@@ -57,10 +62,11 @@ No active implementation phase.
 
 ### Maps Workspace Polish
 
-- Goal: Improve map list/editor usability, pin placement, navigation, and blank-grid map handling.
+- Goal: Continue improving map list/editor usability, pin placement, navigation, and blank-grid map handling after the first focused polish slice.
 - Value: High; maps are the only dedicated World workspace and strongly affect location usability.
 - Rough effort: Medium to high due to canvas interactions.
 - Dependencies: Existing map model, map pins, `CampaignWorldMaps`, `CampaignWorldMapCanvas`.
+- Remaining opportunities: richer multi-map pin summaries, stronger canvas keyboard/accessibility behavior, and deeper mobile touch testing.
 
 ### Travel Improvements
 
@@ -109,4 +115,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Begin Maps Workspace Polish with a narrow slice: improve map selection/list clarity, pin placement affordances, and map-to-location navigation in the existing Maps workspace. Do not redesign the map system or change map data models unless a concrete limitation is discovered.
+Continue Maps Workspace Polish only if follow-up browser QA or user feedback identifies a concrete map editor friction point. Otherwise, return to Dungeon And Encounter Prep or Additional UX Tightening. Do not redesign the map system or change map data models unless a concrete limitation is discovered.

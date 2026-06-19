@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { ArrowUpRight, Trash2 } from "lucide-react";
 import { ActionRow } from "../../../components/layout";
 import { Button, EmptyMini } from "../../../components/ui";
 import { formatMapDistance, realMapDistance } from "./campaignMapDistance";
@@ -36,15 +36,27 @@ export function CampaignWorldPinnedLocations({
               >
                 {pin.labelOverride || location?.name || "Pinned location"}
               </button>
-              <Button
-                type="button"
-                icon={Trash2}
-                size="sm"
-                variant="ghost"
-                onClick={() => onRemove(pin)}
-              >
-                Remove
-              </Button>
+              <ActionRow justify="end">
+                <Button
+                  type="button"
+                  icon={ArrowUpRight}
+                  size="sm"
+                  variant="ghost"
+                  disabled={!location}
+                  onClick={() => location && onSelectLocation(location.id)}
+                >
+                  Open
+                </Button>
+                <Button
+                  type="button"
+                  icon={Trash2}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onRemove(pin)}
+                >
+                  Remove
+                </Button>
+              </ActionRow>
             </ActionRow>
             <span className="text-xs text-muted-foreground">
               {Math.round(pin.x)}, {Math.round(pin.y)} ·{" "}

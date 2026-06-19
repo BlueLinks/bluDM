@@ -1,4 +1,4 @@
-import { Crosshair, Grid2X2, Map as MapIcon, MapPin, Ruler } from "lucide-react";
+import { Crosshair, Grid2X2, Map as MapIcon, MapPin, Ruler, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Callout, EmptyMini, Select } from "../../../components/ui";
@@ -6,6 +6,7 @@ import { api } from "../../../lib/api";
 import { formatMapDistance } from "./campaignMapDistance";
 import { CampaignWorldMapCanvas } from "./CampaignWorldMapCanvas";
 import { CampaignWorldMapForm } from "./CampaignWorldMapForm";
+import { CampaignWorldMapSelectionList } from "./CampaignWorldMapSelectionList";
 import { CampaignWorldPinnedLocations } from "./CampaignWorldPinnedLocations";
 import type {
   CampaignLocation,
@@ -74,6 +75,11 @@ export function CampaignWorldMaps({
       return;
     }
     let active = true;
+    setPins([]);
+    setPlacementMode(null);
+    setDistance(null);
+    setDistanceFromId("");
+    setDistanceToId("");
     setLoadingPins(true);
     setError("");
     api
@@ -199,31 +205,38 @@ export function CampaignWorldMaps({
       {!activeMap ? (
         <EmptyMini copy="Create a map attached to this location, then explicitly place pins for relevant child locations." />
       ) : (
-        <ActiveMapWorkspace
-          activeMap={activeMap}
-          availableMaps={availableMaps}
-          candidateLocations={candidateLocations}
-          distance={distance}
-          distanceFromId={distanceFromId}
-          distanceToId={distanceToId}
-          focusedLocationID={focusedLocationID}
-          loadingPins={loadingPins}
-          locationById={locationById}
-          placementMode={placementMode}
-          pinnedLocationOptions={pinnedOptions}
-          pins={pins}
-          saving={saving}
-          showGrid={showGrid}
-          onCalculateDistance={calculateDistance}
-          onDistanceFromChange={setDistanceFromId}
-          onDistanceToChange={setDistanceToId}
-          onMapChange={setActiveMapId}
-          onNavigateFromPin={onNavigateFromPin}
-          onPlacePin={placePin}
-          onRemovePin={removePin}
-          onShowGridChange={setShowGrid}
-          onStartPlacement={setPlacementMode}
-        />
+        <>
+          <CampaignWorldMapSelectionList
+            activeMap={activeMap}
+            availableMaps={availableMaps}
+            currentLocation={currentLocation}
+            pinsCount={pins.length}
+            onMapChange={setActiveMapId}
+          />
+          <ActiveMapWorkspace
+            activeMap={activeMap}
+            candidateLocations={candidateLocations}
+            distance={distance}
+            distanceFromId={distanceFromId}
+            distanceToId={distanceToId}
+            focusedLocationID={focusedLocationID}
+            loadingPins={loadingPins}
+            locationById={locationById}
+            placementMode={placementMode}
+            pinnedLocationOptions={pinnedOptions}
+            pins={pins}
+            saving={saving}
+            showGrid={showGrid}
+            onCalculateDistance={calculateDistance}
+            onDistanceFromChange={setDistanceFromId}
+            onDistanceToChange={setDistanceToId}
+            onNavigateFromPin={onNavigateFromPin}
+            onPlacePin={placePin}
+            onRemovePin={removePin}
+            onShowGridChange={setShowGrid}
+            onStartPlacement={setPlacementMode}
+          />
+        </>
       )}
     </CardSection>
   );
@@ -231,7 +244,6 @@ export function CampaignWorldMaps({
 
 function ActiveMapWorkspace({
   activeMap,
-  availableMaps,
   candidateLocations,
   distance,
   distanceFromId,
@@ -247,7 +259,6 @@ function ActiveMapWorkspace({
   onCalculateDistance,
   onDistanceFromChange,
   onDistanceToChange,
-  onMapChange,
   onNavigateFromPin,
   onPlacePin,
   onRemovePin,
@@ -258,7 +269,6 @@ function ActiveMapWorkspace({
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)]">
       <CampaignWorldMapCanvas
         activeMap={activeMap}
-        availableMaps={availableMaps}
         focusedLocationID={focusedLocationID}
         loadingPins={loadingPins}
         locationById={locationById}
@@ -266,7 +276,6 @@ function ActiveMapWorkspace({
         pins={pins}
         saving={saving}
         showGrid={showGrid}
-        onMapChange={onMapChange}
         onNavigateFromPin={onNavigateFromPin}
         onPlacePin={onPlacePin}
         onShowGridChange={onShowGridChange}
@@ -312,31 +321,47 @@ function PinPlacementList({
 }) {
   if (!candidates.length)
     return <EmptyMini copy="No relevant locations available for this map level." />;
+  const placedCount = candidates.filter((location) =>
+    pins.some((pin) => pin.locationId === location.id),
+  ).length;
   return (
-    <div className="grid gap-2 rounded-md border border-border bg-card p-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <Crosshair className="h-4 w-4 text-accent" /> Place pins
+    <div className="grid gap-3 rounded-md border border-border bg-card p-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Crosshair className="h-4 w-4 text-accent" /> Place pins
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Select a location, then click the map to place or move its pin.
+          </p>
+        </div>
+        <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+          {placedCount}/{candidates.length} placed
+        </span>
       </div>
-      {candidates.map((location) => {
-        const pinned = pins.some((pin) => pin.locationId === location.id);
-        const active = placementMode?.locationID === location.id;
-        return (
-          <Button
-            key={location.id}
-            type="button"
-            size="sm"
-            icon={pinned ? MapPin : Grid2X2}
-            variant={active ? "primary" : "secondary"}
-            onClick={() =>
-              onStartPlacement(
-                active ? null : { locationID: location.id, action: pinned ? "move" : "place" },
-              )
-            }
-          >
-            {pinned ? "Move" : "Place"} {location.name}
-          </Button>
-        );
-      })}
+      <div className="grid gap-2">
+        {candidates.map((location) => {
+          const pinned = pins.some((pin) => pin.locationId === location.id);
+          const active = placementMode?.locationID === location.id;
+          return (
+            <Button
+              key={location.id}
+              type="button"
+              className="w-full justify-start text-left"
+              size="sm"
+              icon={active ? X : pinned ? MapPin : Grid2X2}
+              variant={active ? "primary" : "secondary"}
+              onClick={() =>
+                onStartPlacement(
+                  active ? null : { locationID: location.id, action: pinned ? "move" : "place" },
+                )
+              }
+            >
+              {active ? "Cancel" : pinned ? "Move" : "Place"} {location.name}
+            </Button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -423,7 +448,6 @@ function pinOptions(pins: CampaignMapPin[], locationById: Map<string, CampaignLo
 
 type ActiveMapWorkspaceProps = {
   activeMap: CampaignMap;
-  availableMaps: CampaignMap[];
   candidateLocations: CampaignLocation[];
   distance: CampaignMapDistance | null;
   distanceFromId: string;
@@ -439,7 +463,6 @@ type ActiveMapWorkspaceProps = {
   onCalculateDistance: () => Promise<void>;
   onDistanceFromChange: (locationID: string) => void;
   onDistanceToChange: (locationID: string) => void;
-  onMapChange: (mapID: string) => void;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
   onPlacePin: (x: number, y: number) => Promise<void>;
   onRemovePin: (pin: CampaignMapPin) => void;
