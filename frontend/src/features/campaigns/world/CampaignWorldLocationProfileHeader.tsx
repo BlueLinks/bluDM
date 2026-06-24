@@ -66,7 +66,7 @@ export function LocationProfileHeader({
           ) : null}
           <LocationChips childCount={childCount} location={location} />
         </div>
-        <div className="grid justify-items-end gap-2">
+        <div className="grid w-full justify-items-start gap-2 sm:w-auto sm:justify-items-end">
           <PrimaryActions
             profile={profile}
             onAddChild={onAddChild}
@@ -75,7 +75,7 @@ export function LocationProfileHeader({
             onOpenMaps={onOpenMaps}
             onStockOpen={onStockOpen}
           />
-          <ActionRow justify="end">
+          <ActionRow className="w-full sm:w-auto sm:justify-end" justify="start">
             {!primaryActions.has("open-map") ? (
               <Button
                 type="button"
@@ -151,7 +151,7 @@ function PrimaryActions({
   onStockOpen: () => void;
 }) {
   return (
-    <ActionRow justify="end">
+    <ActionRow className="w-full sm:w-auto sm:justify-end" justify="start">
       {profile.primaryActions.slice(0, 2).map((action) => {
         if (action === "add-stock") {
           return (

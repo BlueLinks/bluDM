@@ -45,6 +45,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - explicit pin placement counts, active placement cancel affordance, and placed/unplaced labels.
   - more visible map-to-location navigation from pinned-location rows.
   - zoom state, reset availability, pan/touch affordances, and blank-grid map guidance.
+- Narrow Campaign World profile headers now keep action groups left-aligned on mobile while preserving desktop alignment.
 
 ## In Progress
 
