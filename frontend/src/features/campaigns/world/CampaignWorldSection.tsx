@@ -220,11 +220,6 @@ export function CampaignWorldSection({
     ? sortedLocations.filter((location) => location.parentLocationId === selected.id)
     : [];
   const childCount = selectedChildren.length;
-  const selectedLinks = selected
-    ? links.filter(
-        (link) => link.sourceLocationId === selected.id || link.targetLocationId === selected.id,
-      )
-    : [];
   const selectedEncounterLocationIDs = selected
     ? new Set([selected.id, ...descendantLocationIDs(sortedLocations, selected.id)])
     : new Set<string>();
@@ -417,7 +412,7 @@ export function CampaignWorldSection({
                     childCount={childCount}
                     childLocations={selectedChildren}
                     encounters={selectedEncounters}
-                    links={selectedLinks}
+                    links={links}
                     linksError={linksError}
                     linksLoading={linksLoading}
                     focusedLocationID={focusedLocationID}

@@ -1,6 +1,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import type { Creature, Encounter, Item } from "../../../types";
+import { childPrepChipsFor } from "./CampaignWorldChildPrepChips";
 import { CampaignWorldLocationEncounters } from "./CampaignWorldLocationEncounters";
 import { CampaignWorldLocationLinks, type LinkFormInput } from "./CampaignWorldLocationLinks";
 import { CampaignWorldLocationNpcs, type NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
@@ -73,18 +74,22 @@ export function CampaignWorldLocationDetail({
   const [pricingOpen, setPricingOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const parentLocation = parentFor(location, locations);
+  const selectedLinks = links.filter(
+    (link) => link.sourceLocationId === location.id || link.targetLocationId === location.id,
+  );
   const relevantJourneys = useMemo(
     () => journeys.filter((journey) => journeyInvolvesLocation(journey, location, childLocations)),
     [childLocations, journeys, location],
   );
   const sections = buildProfileSections({
+    allLinks: links,
     campaignId,
     childCount,
     childLocations,
     encounters,
     journeys: relevantJourneys,
     linkOpen,
-    links,
+    links: selectedLinks,
     linksError,
     linksLoading,
     location,
@@ -145,6 +150,7 @@ export function CampaignWorldLocationDetail({
 
 function buildProfileSections(props: ProfileSectionProps) {
   const {
+    allLinks,
     campaignId,
     childLocations,
     encounters,
@@ -199,12 +205,22 @@ function buildProfileSections(props: ProfileSectionProps) {
     profile.profile === "room" ||
     encounters.length > 0;
   const shouldShowLinks = profile.profile !== "shop" || links.length > 0 || linkOpen;
+  const prepChipsByLocationId =
+    profile.variant === "dungeon" || profile.variant === "floor"
+      ? Object.fromEntries(
+          childLocations.map((child) => [
+            child.id,
+            childPrepChipsFor({ child, encounters, links: allLinks, locations, maps }),
+          ]),
+        )
+      : undefined;
 
   return {
     childCard: shouldShowChildren ? (
       <ChildLocationsCard
         childLocations={childLocations}
         emptyCopy={profile.childEmpty}
+        prepChipsByLocationId={prepChipsByLocationId}
         title={profile.childTitle}
         onSelectLocation={onSelectLocation}
       />
@@ -437,6 +453,7 @@ type CampaignWorldLocationDetailProps = {
 };
 
 type ProfileSectionProps = CampaignWorldLocationDetailProps & {
+  allLinks: CampaignLocationLink[];
   journeys: CampaignJourney[];
   linkOpen: boolean;
   parentLocation?: CampaignLocation;

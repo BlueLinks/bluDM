@@ -13,6 +13,7 @@ import type React from "react";
 import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
+import { ChildPrepChips, type ChildPrepChip } from "./CampaignWorldChildPrepChips";
 import { locationPathLabel } from "./campaignWorldLocationUtils";
 import type { LocationProfileInfo } from "./locationProfiles";
 import type {
@@ -26,11 +27,13 @@ import type {
 export function ChildLocationsCard({
   childLocations,
   emptyCopy,
+  prepChipsByLocationId,
   title,
   onSelectLocation,
 }: {
   childLocations: CampaignLocation[];
   emptyCopy: string;
+  prepChipsByLocationId?: Record<string, ChildPrepChip[]>;
   title: string;
   onSelectLocation: (locationID: string) => void;
 }) {
@@ -57,6 +60,7 @@ export function ChildLocationsCard({
                     child.path?.map((segment) => segment.name).join(" / ") ||
                     child.name}
                 </span>
+                <ChildPrepChips chips={prepChipsByLocationId?.[child.id]} />
               </span>
               <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
                 {child.customTypeLabel || child.locationType || "custom"}
