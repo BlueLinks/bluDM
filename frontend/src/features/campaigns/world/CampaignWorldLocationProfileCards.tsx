@@ -1,14 +1,4 @@
-import {
-  Boxes,
-  CheckCircle2,
-  Coins,
-  FilePenLine,
-  Footprints,
-  Map as MapIcon,
-  MapPin,
-  Route,
-  Swords,
-} from "lucide-react";
+import { Boxes, Coins, FilePenLine, Footprints, Map as MapIcon, MapPin, Route } from "lucide-react";
 import type React from "react";
 import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
@@ -351,83 +341,6 @@ export function StructureSummaryCard({
         </div>
       ) : null}
     </CardSection>
-  );
-}
-
-export function PrepOverviewCard({
-  childLocations,
-  encounters,
-  links,
-  location,
-  maps,
-  onAddEncounter,
-}: {
-  childLocations: CampaignLocation[];
-  encounters: Encounter[];
-  links: CampaignLocationLink[];
-  location: CampaignLocation;
-  maps: CampaignMap[];
-  onAddEncounter: () => void;
-}) {
-  const hasNotes = Boolean(
-    location.summary || location.publicNotes || location.notes || location.dmNotes,
-  );
-  const hasMap = maps.some((map) => (map.parentLocationId ?? "") === location.id);
-  const hasPlacement = Object.keys(location.mapAnchor ?? {}).length > 0;
-  return (
-    <CardSection>
-      <SectionHeader
-        action={
-          <Button
-            type="button"
-            icon={Swords}
-            size="sm"
-            variant="secondary"
-            onClick={onAddEncounter}
-          >
-            Add encounter
-          </Button>
-        }
-        icon={CheckCircle2}
-        title="Prep overview"
-        meta="Ready-to-run signals"
-      />
-      <ResponsiveGrid className="mt-3" variant="stats3">
-        <MapStat label="Encounters" value={encounters.length} />
-        <MapStat label="Exits/links" value={links.length} />
-        <MapStat label="Child spaces" value={childLocations.length} />
-      </ResponsiveGrid>
-      <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
-        <PrepSignal label="Notes" ready={hasNotes} readyText="Prepared" emptyText="Needs notes" />
-        <PrepSignal
-          label="Map"
-          ready={hasMap || hasPlacement}
-          readyText={hasMap ? "Map attached" : "Position placed"}
-          emptyText="No map context yet"
-        />
-      </div>
-    </CardSection>
-  );
-}
-
-function PrepSignal({
-  emptyText,
-  label,
-  ready,
-  readyText,
-}: {
-  emptyText: string;
-  label: string;
-  ready: boolean;
-  readyText: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
-      <span className="font-semibold text-foreground">{label}</span>
-      <span className={ready ? "text-emerald-700 dark:text-emerald-200" : "text-muted-foreground"}>
-        {ready ? readyText : emptyText}
-      </span>
-    </div>
   );
 }
 

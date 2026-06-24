@@ -47,6 +47,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - zoom state, reset availability, pan/touch affordances, and blank-grid map guidance.
 - Narrow Campaign World profile headers now keep action groups left-aligned on mobile while preserving desktop alignment.
 - Dungeon/Floor child rows now show lightweight prep chips for child spaces, encounters, exits, notes, and map context where existing page data supports it.
+- Room prep overview now surfaces compact next-step prompts for missing encounters, exits, notes, and map placement.
 
 ## In Progress
 
@@ -60,7 +61,7 @@ No active implementation phase.
 - Value: Very high; these pages support immediate DM prep/play workflows.
 - Rough effort: Medium to high, depending on whether work stays in profile cards or expands encounter editing.
 - Dependencies: Existing encounter creation flow, location hierarchy, Room/Floor/Dungeon profile cards.
-- Remaining opportunities: richer room/floor structure workflows, encounter status summaries, and better room-level prep prompts beyond lightweight child-row prep chips.
+- Remaining opportunities: richer room/floor structure workflows, encounter status summaries, and deeper room-level prep prompts beyond the first next-step prompt slice.
 
 ### Maps Workspace Polish
 

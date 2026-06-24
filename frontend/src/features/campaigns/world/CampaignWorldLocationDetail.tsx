@@ -18,11 +18,11 @@ import {
   LocationNotesCard,
   ParentContextCard,
   parentFor,
-  PrepOverviewCard,
   PricingSummaryCard,
   StructureSummaryCard,
   travelLikeLinks,
 } from "./CampaignWorldLocationProfileCards";
+import { PrepOverviewCard } from "./CampaignWorldPrepOverviewCard";
 import { locationProfile, type LocationProfileInfo } from "./locationProfiles";
 import type {
   CampaignJourney,
@@ -291,7 +291,11 @@ function buildProfileSections(props: ProfileSectionProps) {
         links={links}
         location={location}
         maps={maps}
+        showRoomNextSteps={profile.profile === "room"}
         onAddEncounter={props.onGenerateEncounter}
+        onEditNotes={profile.profile === "room" ? props.onEdit : undefined}
+        onLinkExit={profile.profile === "room" ? () => setLinkOpen(true) : undefined}
+        onOpenMaps={profile.profile === "room" ? onOpenMaps : undefined}
       />
     ) : null,
     parentCard:
