@@ -1,7 +1,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import type { Creature, Encounter, Item } from "../../../types";
-import { childPrepChipsFor } from "./CampaignWorldChildPrepChips";
+import { childPrepChipsFor, childPrepIssueSummariesFor } from "./CampaignWorldChildPrepChips";
 import { CampaignWorldLocationEncounters } from "./CampaignWorldLocationEncounters";
 import { CampaignWorldLocationLinks, type LinkFormInput } from "./CampaignWorldLocationLinks";
 import { CampaignWorldLocationNpcs, type NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
@@ -205,15 +205,24 @@ function buildProfileSections(props: ProfileSectionProps) {
     profile.profile === "room" ||
     encounters.length > 0;
   const shouldShowLinks = profile.profile !== "shop" || links.length > 0 || linkOpen;
-  const prepChipsByLocationId =
-    profile.variant === "dungeon" || profile.variant === "floor"
-      ? Object.fromEntries(
-          childLocations.map((child) => [
-            child.id,
-            childPrepChipsFor({ child, encounters, links: allLinks, locations, maps }),
-          ]),
-        )
-      : undefined;
+  const showChildPrep = profile.variant === "dungeon" || profile.variant === "floor";
+  const prepChipsByLocationId = showChildPrep
+    ? Object.fromEntries(
+        childLocations.map((child) => [
+          child.id,
+          childPrepChipsFor({ child, encounters, links: allLinks, locations, maps }),
+        ]),
+      )
+    : undefined;
+  const prepSummaryChips = showChildPrep
+    ? childPrepIssueSummariesFor({
+        childLocations,
+        encounters,
+        links: allLinks,
+        locations,
+        maps,
+      })
+    : undefined;
 
   return {
     childCard: shouldShowChildren ? (
@@ -221,6 +230,7 @@ function buildProfileSections(props: ProfileSectionProps) {
         childLocations={childLocations}
         emptyCopy={profile.childEmpty}
         prepChipsByLocationId={prepChipsByLocationId}
+        prepSummaryChips={prepSummaryChips}
         title={profile.childTitle}
         onSelectLocation={onSelectLocation}
       />
@@ -230,7 +240,11 @@ function buildProfileSections(props: ProfileSectionProps) {
         actionLabel={explorationProfile(profile) ? "Add encounter" : undefined}
         campaignId={campaignId}
         encounters={encounters}
-        onAddEncounter={explorationProfile(profile) ? props.onGenerateEncounter : undefined}
+        onAddEncounter={
+          explorationProfile(profile) && profile.profile !== "room"
+            ? props.onGenerateEncounter
+            : undefined
+        }
       />
     ) : null,
     linksCard: shouldShowLinks ? (
@@ -291,6 +305,7 @@ function buildProfileSections(props: ProfileSectionProps) {
         links={links}
         location={location}
         maps={maps}
+        showEncounterAction={profile.profile !== "room"}
         showRoomNextSteps={profile.profile === "room"}
         onAddEncounter={props.onGenerateEncounter}
         onEditNotes={profile.profile === "room" ? props.onEdit : undefined}

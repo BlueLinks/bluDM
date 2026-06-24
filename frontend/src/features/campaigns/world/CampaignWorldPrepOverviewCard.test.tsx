@@ -58,6 +58,24 @@ describe("PrepOverviewCard", () => {
     expect(screen.queryByText("Next prep steps")).toBeNull();
   });
 
+  it("can hide the repeated prep header encounter action", () => {
+    render(
+      <PrepOverviewCard
+        childLocations={[]}
+        encounters={[]}
+        links={[]}
+        location={location({ notes: "", publicNotes: "" })}
+        maps={[]}
+        showEncounterAction={false}
+        showRoomNextSteps
+        onAddEncounter={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Add encounter" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add an encounter" })).toBeTruthy();
+  });
+
   it("does not show room next steps for non-room profiles", () => {
     render(
       <PrepOverviewCard

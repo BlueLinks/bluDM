@@ -12,6 +12,7 @@ export function PrepOverviewCard({
   links,
   location,
   maps,
+  showEncounterAction = true,
   showRoomNextSteps = false,
   onAddEncounter,
   onEditNotes,
@@ -23,6 +24,7 @@ export function PrepOverviewCard({
   links: CampaignLocationLink[];
   location: CampaignLocation;
   maps: CampaignMap[];
+  showEncounterAction?: boolean;
   showRoomNextSteps?: boolean;
   onAddEncounter: () => void;
   onEditNotes?: () => void;
@@ -51,15 +53,17 @@ export function PrepOverviewCard({
     <CardSection>
       <SectionHeader
         action={
-          <Button
-            type="button"
-            icon={Swords}
-            size="sm"
-            variant="secondary"
-            onClick={onAddEncounter}
-          >
-            Add encounter
-          </Button>
+          showEncounterAction ? (
+            <Button
+              type="button"
+              icon={Swords}
+              size="sm"
+              variant="secondary"
+              onClick={onAddEncounter}
+            >
+              Add encounter
+            </Button>
+          ) : undefined
         }
         icon={CheckCircle2}
         title="Prep overview"

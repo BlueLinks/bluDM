@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Encounter } from "../../../types";
-import { childPrepChipsFor } from "./CampaignWorldChildPrepChips";
+import { childPrepChipsFor, childPrepIssueSummariesFor } from "./CampaignWorldChildPrepChips";
 import type { CampaignLocation, CampaignLocationLink, CampaignMap } from "./travelTypes";
 
 describe("childPrepChipsFor", () => {
@@ -18,6 +18,29 @@ describe("childPrepChipsFor", () => {
     });
 
     expect(chips.map((chip) => chip.label)).toEqual(["1 room", "1 encounter", "Unmapped"]);
+  });
+
+  it("summarizes incomplete child prep across child rows", () => {
+    const chips = childPrepIssueSummariesFor({
+      childLocations: [
+        location({ id: "room-1", locationType: "room", notes: "", publicNotes: "" }),
+        location({ id: "room-2", locationType: "room", notes: "Prepared." }),
+      ],
+      encounters: [encounter({ locationId: "room-2" })],
+      links: [link({ sourceLocationId: "room-2", targetLocationId: "floor-1" })],
+      locations: [
+        location({ id: "room-1", locationType: "room", notes: "", publicNotes: "" }),
+        location({ id: "room-2", locationType: "room", notes: "Prepared." }),
+      ],
+      maps: [map({ parentLocationId: "room-2" })],
+    });
+
+    expect(chips.map((chip) => chip.label)).toEqual([
+      "1 room has no encounters",
+      "1 room has no exits",
+      "1 room needs notes",
+      "1 room is unmapped",
+    ]);
   });
 
   it("prioritizes room encounter, exit, notes, and map status", () => {

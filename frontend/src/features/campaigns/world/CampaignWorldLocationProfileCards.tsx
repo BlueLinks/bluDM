@@ -18,12 +18,14 @@ export function ChildLocationsCard({
   childLocations,
   emptyCopy,
   prepChipsByLocationId,
+  prepSummaryChips,
   title,
   onSelectLocation,
 }: {
   childLocations: CampaignLocation[];
   emptyCopy: string;
   prepChipsByLocationId?: Record<string, ChildPrepChip[]>;
+  prepSummaryChips?: ChildPrepChip[];
   title: string;
   onSelectLocation: (locationID: string) => void;
 }) {
@@ -34,6 +36,12 @@ export function ChildLocationsCard({
         meta={`${childLocations.length} child ${childLocations.length === 1 ? "location" : "locations"}`}
         title={title}
       />
+      {prepSummaryChips?.length ? (
+        <div className="mt-3 rounded-md border border-dashed border-border bg-background px-3 py-2">
+          <div className="text-xs font-bold uppercase text-muted-foreground">Needs attention</div>
+          <ChildPrepChips chips={prepSummaryChips} />
+        </div>
+      ) : null}
       {childLocations.length ? (
         <div className="mt-3 grid gap-2">
           {childLocations.map((child) => (

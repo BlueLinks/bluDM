@@ -36,36 +36,59 @@ export function CampaignWorldLocationEncounters({
         title="Encounters"
       />
       {encounters.length ? (
-        <div className="mt-3 grid gap-2">
-          {encounters.map((encounter) => (
-            <div
-              className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2"
-              key={encounter.id}
-            >
-              <div className="min-w-0 flex-1">
-                <div className="[overflow-wrap:anywhere] font-semibold">{encounter.name}</div>
-                <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                  {[encounter.status, encounter.roomNumber ? `Room ${encounter.roomNumber}` : ""]
-                    .filter(Boolean)
-                    .join(" - ")}
-                </p>
-              </div>
-              <Link
-                className="shrink-0"
-                to={`/campaigns/${campaignId}/encounters/${encounter.id}/edit`}
+        <>
+          <EncounterStatusSummary encounters={encounters} />
+          <div className="mt-3 grid gap-2">
+            {encounters.map((encounter) => (
+              <div
+                className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2"
+                key={encounter.id}
               >
-                <Button type="button" icon={ExternalLink} size="sm" variant="ghost">
-                  Open
-                </Button>
-              </Link>
-            </div>
-          ))}
-        </div>
+                <div className="min-w-0 flex-1">
+                  <div className="[overflow-wrap:anywhere] font-semibold">{encounter.name}</div>
+                  <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                    {[encounter.status, encounter.roomNumber ? `Room ${encounter.roomNumber}` : ""]
+                      .filter(Boolean)
+                      .join(" - ")}
+                  </p>
+                </div>
+                <Link
+                  className="shrink-0"
+                  to={`/campaigns/${campaignId}/encounters/${encounter.id}/edit`}
+                >
+                  <Button type="button" icon={ExternalLink} size="sm" variant="ghost">
+                    Open
+                  </Button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </>
       ) : (
         <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
           No encounters attached to this location yet.
         </p>
       )}
     </CardSection>
+  );
+}
+
+function EncounterStatusSummary({ encounters }: { encounters: Encounter[] }) {
+  const counts = encounters.reduce<Record<string, number>>((current, encounter) => {
+    const status = (encounter.status || "unknown").trim().toLowerCase() || "unknown";
+    current[status] = (current[status] ?? 0) + 1;
+    return current;
+  }, {});
+  return (
+    <div className="mt-3 flex min-w-0 flex-wrap gap-1.5">
+      {Object.entries(counts).map(([status, count]) => (
+        <span
+          className="rounded-full border border-border bg-background px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground"
+          key={status}
+        >
+          {count} {status}
+        </span>
+      ))}
+    </div>
   );
 }

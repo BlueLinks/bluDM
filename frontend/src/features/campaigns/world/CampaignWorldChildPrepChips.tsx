@@ -42,18 +42,13 @@ export function childPrepChipsFor({
   maps: CampaignMap[];
 }) {
   const profile = locationProfile(child);
-  const scope = scopedLocationIDs(locations, child.id);
-  const encounterCount = encounters.filter(
-    (encounter) => encounter.locationId && scope.has(encounter.locationId),
-  ).length;
-  const exitCount = links.filter(
-    (link) => scope.has(link.sourceLocationId) || scope.has(link.targetLocationId),
-  ).length;
-  const childCount = locations.filter((location) => location.parentLocationId === child.id).length;
-  const hasNotes = Boolean(child.summary || child.publicNotes || child.notes || child.dmNotes);
-  const hasMapContext =
-    Object.keys(child.mapAnchor ?? {}).length > 0 ||
-    maps.some((map) => (map.parentLocationId ?? "") === child.id);
+  const { childCount, encounterCount, exitCount, hasMapContext, hasNotes } = childPrepFacts({
+    child,
+    encounters,
+    links,
+    locations,
+    maps,
+  });
 
   if (profile.profile === "room") {
     return [
@@ -81,6 +76,89 @@ export function childPrepChipsFor({
   }
 
   return [];
+}
+
+export function childPrepIssueSummariesFor({
+  childLocations,
+  encounters,
+  links,
+  locations,
+  maps,
+}: {
+  childLocations: CampaignLocation[];
+  encounters: Encounter[];
+  links: CampaignLocationLink[];
+  locations: CampaignLocation[];
+  maps: CampaignMap[];
+}) {
+  if (!childLocations.length) return [];
+  const facts = childLocations.map((child) =>
+    childPrepFacts({ child, encounters, links, locations, maps }),
+  );
+  const label = aggregateChildLabel(childLocations);
+  return [
+    issueChip(
+      countWhere(facts, (fact) => fact.encounterCount === 0),
+      label,
+      {
+        singular: "has no encounters",
+        plural: "have no encounters",
+      },
+    ),
+    issueChip(
+      countWhere(facts, (fact) => fact.exitCount === 0),
+      label,
+      {
+        singular: "has no exits",
+        plural: "have no exits",
+      },
+    ),
+    issueChip(
+      countWhere(facts, (fact) => !fact.hasNotes),
+      label,
+      {
+        singular: "needs notes",
+        plural: "need notes",
+      },
+    ),
+    issueChip(
+      countWhere(facts, (fact) => !fact.hasMapContext),
+      label,
+      {
+        singular: "is unmapped",
+        plural: "are unmapped",
+      },
+    ),
+  ].filter(isChildPrepChip);
+}
+
+function childPrepFacts({
+  child,
+  encounters,
+  links,
+  locations,
+  maps,
+}: {
+  child: CampaignLocation;
+  encounters: Encounter[];
+  links: CampaignLocationLink[];
+  locations: CampaignLocation[];
+  maps: CampaignMap[];
+}) {
+  const scope = scopedLocationIDs(locations, child.id);
+  return {
+    childCount: locations.filter((location) => location.parentLocationId === child.id).length,
+    encounterCount: encounters.filter(
+      (encounter) => encounter.locationId && scope.has(encounter.locationId),
+    ).length,
+    exitCount: links.filter(
+      (link) => scope.has(link.sourceLocationId) || scope.has(link.targetLocationId),
+    ).length,
+    hasNotes: Boolean(child.summary || child.publicNotes || child.notes || child.dmNotes),
+    hasMapContext:
+      Object.keys(child.mapAnchor ?? {}).length > 0 ||
+      maps.some((map) => (map.parentLocationId ?? "") === child.id),
+  };
 }
 
 function scopedLocationIDs(locations: CampaignLocation[], rootID: string) {
@@ -114,4 +192,30 @@ function readyChip(label: string): ChildPrepChip {
 
 function warningChip(label: string): ChildPrepChip {
   return { label, tone: "warning" };
+}
+
+function countWhere<T>(items: T[], predicate: (item: T) => boolean) {
+  return items.filter(predicate).length;
+}
+
+function aggregateChildLabel(childLocations: CampaignLocation[]) {
+  const profiles = childLocations.map((location) => locationProfile(location));
+  if (profiles.every((profile) => profile.profile === "room")) return "room";
+  if (profiles.every((profile) => profile.variant === "floor")) return "floor";
+  if (profiles.every((profile) => profile.variant === "dungeon")) return "dungeon";
+  return "area";
+}
+
+function issueChip(
+  count: number,
+  label: string,
+  copy: { singular: string; plural: string },
+): ChildPrepChip | null {
+  if (!count) return null;
+  const noun = count === 1 ? label : `${label}s`;
+  return warningChip(`${count} ${noun} ${count === 1 ? copy.singular : copy.plural}`);
+}
+
+function isChildPrepChip(chip: ChildPrepChip | null): chip is ChildPrepChip {
+  return Boolean(chip);
 }
