@@ -11,6 +11,7 @@ export function CampaignTravelTool({
   editingJourney,
   locations,
   openRequestKey = 0,
+  planningLocation,
   onEditComplete,
   onJourneySaved,
 }: {
@@ -18,6 +19,7 @@ export function CampaignTravelTool({
   editingJourney: CampaignJourney | null;
   locations: CampaignLocation[];
   openRequestKey?: number;
+  planningLocation?: CampaignLocation | null;
   onEditComplete: () => void;
   onJourneySaved: () => Promise<void>;
 }) {
@@ -48,17 +50,15 @@ export function CampaignTravelTool({
   }, [editingJourney]);
 
   useEffect(() => {
-    if (openRequestKey > 0) {
-      onEditComplete();
-      setOpen(true);
-    }
-  }, [onEditComplete, openRequestKey]);
+    if (openRequestKey > 0) setOpen(true);
+  }, [openRequestKey]);
 
   return (
     <TravelCalculatorModal
       campaignId={campaignId}
       editingJourney={editingJourney}
       locations={locations}
+      planningLocation={planningLocation}
       onEditComplete={onEditComplete}
       onJourneySaved={onJourneySaved}
       open={open}

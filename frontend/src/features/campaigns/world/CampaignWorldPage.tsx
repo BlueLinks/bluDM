@@ -32,6 +32,9 @@ export function CampaignWorldPage() {
   const { detail, error, journeys, loading, locations, loadCampaign, setError } =
     useCampaignWorkspaceData(campaignID);
   const [editingJourney, setEditingJourney] = useState<CampaignJourney | null>(null);
+  const [travelPlanningLocation, setTravelPlanningLocation] = useState<CampaignLocation | null>(
+    null,
+  );
   const [travelOpenRequest, setTravelOpenRequest] = useState(0);
   const [encounterOpen, setEncounterOpen] = useState(false);
   const [encounterName, setEncounterName] = useState("");
@@ -67,6 +70,12 @@ export function CampaignWorldPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create encounter");
     }
+  }
+
+  function planTravelFromLocation(location: CampaignLocation) {
+    setEditingJourney(null);
+    setTravelPlanningLocation(location);
+    setTravelOpenRequest((request) => request + 1);
   }
 
   function generateEncounterAtLocation(location: CampaignLocation) {
@@ -106,7 +115,11 @@ export function CampaignWorldPage() {
         editingJourney={editingJourney}
         locations={locations}
         openRequestKey={travelOpenRequest}
-        onEditComplete={() => setEditingJourney(null)}
+        planningLocation={travelPlanningLocation}
+        onEditComplete={() => {
+          setEditingJourney(null);
+          setTravelPlanningLocation(null);
+        }}
         onJourneySaved={loadCampaign}
       />
       <BackButton to={`/campaigns/${detail.campaign.id}`}>Back to campaign</BackButton>
@@ -166,7 +179,7 @@ export function CampaignWorldPage() {
           mapsMode={mapsMode}
           routeLocationID={locationID}
           onManageNpcs={() => void navigate(`/campaigns/${detail.campaign.id}#campaign-npcs`)}
-          onPlanTravel={() => setTravelOpenRequest((request) => request + 1)}
+          onPlanTravel={planTravelFromLocation}
           onChanged={loadCampaign}
           onGenerateEncounter={generateEncounterAtLocation}
         />
@@ -179,7 +192,11 @@ export function CampaignWorldPage() {
           <TravelPanel
             campaignId={detail.campaign.id}
             journeys={journeys}
-            onEditJourney={setEditingJourney}
+            locations={locations}
+            onEditJourney={(journey) => {
+              setTravelPlanningLocation(null);
+              setEditingJourney(journey);
+            }}
             onChanged={loadCampaign}
           />
         </ResponsiveGrid>

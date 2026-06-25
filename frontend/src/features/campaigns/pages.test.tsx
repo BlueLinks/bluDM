@@ -98,6 +98,8 @@ describe("CampaignDetailPage travel", () => {
       screen.getByText(/World locations now live in the dedicated World workspace/i),
     ).toBeTruthy();
     expect(screen.getByText("Waterdeep to Ironford · 63 Miles")).toBeTruthy();
+    expect(screen.getByText("World-linked")).toBeTruthy();
+    expect(screen.getByText("Origin: Waterdeep")).toBeTruthy();
     expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
   });
 

@@ -58,6 +58,11 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - map canvas supports focus, keyboard pan/zoom/reset, Escape placement cancel, and clearer pin/control labels.
   - map controls, placement callouts, and pinned-location actions wrap more safely for narrow and touch layouts.
   - focused Campaign World map tests cover coverage summaries, placement scanability, and keyboard/cancel behavior.
+- Contextual travel improvements bundle:
+  - Plan Travel from location pages now opens the existing calculator with that location prefilled as the route origin.
+  - Travel cards show distance, terrain, and pace context for relevant saved journeys.
+  - Journey log cards identify world-linked origins/destinations and direct-distance entries.
+  - Travel panel summary shows saved route, world-linked route, and direct-distance counts.
 
 ## In Progress
 
@@ -87,6 +92,7 @@ No active implementation phase.
 - Value: Medium to high for travel-heavy campaigns.
 - Rough effort: Medium.
 - Dependencies: Existing journey log, Travel tool/modal, map distance APIs.
+- Remaining opportunities: targeted follow-ups from travel-heavy campaign use, especially saved-route filtering or stronger journey naming prompts if observed friction warrants it.
 
 ### Commerce Improvements
 
@@ -128,4 +134,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Consider Contextual Travel Improvements as the next controlled bundle now that Dungeon prep and Maps have both received polish passes. Keep travel contextual to World/location pages and the existing calculator; do not introduce a standalone Travel workspace unless concrete route-planning pain emerges.
+Consider Commerce Improvements as the next controlled contextual bundle. Keep shop workflows anchored on Shop profile pages and existing stock APIs; do not introduce a standalone Shops workspace unless campaign-wide shop review becomes a concrete need.

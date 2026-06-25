@@ -28,6 +28,7 @@ export function TravelCalculatorModal({
   locations,
   onJourneySaved,
   open,
+  planningLocation,
   onEditComplete,
   onOpenChange,
 }: {
@@ -36,6 +37,7 @@ export function TravelCalculatorModal({
   locations: CampaignLocation[];
   onJourneySaved: () => Promise<void>;
   open: boolean;
+  planningLocation?: CampaignLocation | null;
   onEditComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -79,6 +81,20 @@ export function TravelCalculatorModal({
     setJourneyName(editingJourney.name);
     setCalculation(null);
   }, [editingJourney, open]);
+
+  useEffect(() => {
+    if (!open || editingJourney || !planningLocation) return;
+    setForm({
+      ...blankTravelForm,
+      routeInputMode: "route",
+      origin: planningLocation.name,
+    });
+    setOriginMode("saved");
+    setDestinationMode("saved");
+    setJourneyName("");
+    setCalculation(null);
+    setMapDistanceNote("");
+  }, [editingJourney, open, planningLocation]);
 
   useEffect(() => {
     if (!open) return;
@@ -243,6 +259,12 @@ export function TravelCalculatorModal({
     >
       <div className="grid gap-5">
         {error && <Callout tone="danger">{error}</Callout>}
+        {!editingJourney && planningLocation ? (
+          <Callout>
+            Planning from {planningLocation.name}. Choose a saved or custom destination; shared map
+            pins will fill straight-line distance when available.
+          </Callout>
+        ) : null}
         <div className="grid gap-4">
           <TravelInputControls
             canCalculate={canCalculate}

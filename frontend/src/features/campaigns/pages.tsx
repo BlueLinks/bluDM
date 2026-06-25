@@ -323,6 +323,7 @@ export function CampaignDetailPage() {
         <TravelPanel
           campaignId={detail.campaign.id}
           journeys={journeys}
+          locations={locations}
           onEditJourney={setEditingJourney}
           onChanged={loadCampaign}
         />

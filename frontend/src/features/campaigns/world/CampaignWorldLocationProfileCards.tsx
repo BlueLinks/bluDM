@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
 import { ChildPrepChips, type ChildPrepChip } from "./CampaignWorldChildPrepChips";
 import { locationPathLabel } from "./campaignWorldLocationUtils";
+import { distanceUnitOptions, labelFor, paceOptions, terrainOptions } from "./travelOptions";
 import type { LocationProfileInfo } from "./locationProfiles";
 import type {
   CampaignJourney,
@@ -268,7 +269,11 @@ export function CompactTravelCard({
             >
               <div className="font-semibold [overflow-wrap:anywhere]">{journey.name}</div>
               <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                {[journey.origin, journey.destination].filter(Boolean).join(" → ") || location.name}
+                {journeyRouteSummary(journey, location)}
+              </p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                {journeyDistanceSummary(journey)} · {labelFor(terrainOptions, journey.terrain)} ·{" "}
+                {labelFor(paceOptions, journey.pace)} pace
               </p>
             </div>
           ))}
@@ -286,12 +291,23 @@ export function CompactTravelCard({
         </div>
       ) : (
         <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No saved journeys are tied to this location yet. Use the Travel tool when route planning
-          is needed.
+          No saved journeys are tied to this location yet. Use Plan Travel From Here to start a
+          contextual route.
         </p>
       )}
     </CardSection>
   );
+}
+
+function journeyRouteSummary(journey: CampaignJourney, location: CampaignLocation) {
+  if (journey.routeInputMode === "route") {
+    return [journey.origin, journey.destination].filter(Boolean).join(" → ") || location.name;
+  }
+  return `Direct distance from ${location.name}`;
+}
+
+function journeyDistanceSummary(journey: CampaignJourney) {
+  return `${journey.distance.toLocaleString()} ${labelFor(distanceUnitOptions, journey.distanceUnit)}`;
 }
 
 export function PricingSummaryCard({ stock }: { stock: CampaignLocationStock[] }) {
