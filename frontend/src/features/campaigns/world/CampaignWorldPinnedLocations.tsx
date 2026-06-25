@@ -20,7 +20,7 @@ export function CampaignWorldPinnedLocations({
 }) {
   if (!pins.length) return <EmptyMini copy="No pins on this map yet." />;
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-2" aria-label="Pinned locations on selected map">
       {pins.map((pin) => {
         const location = locationById.get(pin.locationId);
         return (
@@ -28,21 +28,24 @@ export function CampaignWorldPinnedLocations({
             key={pin.id}
             className="grid gap-2 rounded-md border border-border bg-card p-2 text-sm"
           >
-            <ActionRow justify="between">
+            <ActionRow justify="between" align="start">
               <button
-                className="min-w-0 text-left font-semibold text-accent hover:underline"
+                className="min-w-0 text-left font-semibold text-accent hover:underline disabled:text-muted-foreground disabled:no-underline"
                 type="button"
+                disabled={!location}
+                title={location ? `Open ${pin.labelOverride || location.name}` : undefined}
                 onClick={() => location && onSelectLocation(location.id)}
               >
                 {pin.labelOverride || location?.name || "Pinned location"}
               </button>
-              <ActionRow justify="end">
+              <ActionRow justify="end" className="w-full sm:w-auto">
                 <Button
                   type="button"
                   icon={ArrowUpRight}
                   size="sm"
                   variant="ghost"
                   disabled={!location}
+                  title={location ? `Open ${pin.labelOverride || location.name}` : undefined}
                   onClick={() => location && onSelectLocation(location.id)}
                 >
                   Open
@@ -52,6 +55,7 @@ export function CampaignWorldPinnedLocations({
                   icon={Trash2}
                   size="sm"
                   variant="ghost"
+                  title={`Remove pin for ${pin.labelOverride || location?.name || "Pinned location"}`}
                   onClick={() => onRemove(pin)}
                 >
                   Remove

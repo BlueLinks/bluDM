@@ -52,6 +52,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - encounter cards show compact status summaries.
   - Room profile encounter actions are less duplicated while preserving an obvious primary action.
   - Dungeon/Floor child lists show aggregate incomplete-child prep summaries from existing page data.
+- Maps workspace polish follow-up bundle:
+  - map selection cards show per-map pin coverage, map scope, and selected state.
+  - pin placement lists separate unplaced and placed locations with clearer status/action labels.
+  - map canvas supports focus, keyboard pan/zoom/reset, Escape placement cancel, and clearer pin/control labels.
+  - map controls, placement callouts, and pinned-location actions wrap more safely for narrow and touch layouts.
+  - focused Campaign World map tests cover coverage summaries, placement scanability, and keyboard/cancel behavior.
 
 ## In Progress
 
@@ -69,11 +75,11 @@ No active implementation phase.
 
 ### Maps Workspace Polish
 
-- Goal: Continue improving map list/editor usability, pin placement, navigation, and blank-grid map handling after the first focused polish slice.
+- Goal: Continue improving map list/editor usability, pin placement, navigation, and blank-grid map handling after the focused polish slices.
 - Value: High; maps are the only dedicated World workspace and strongly affect location usability.
 - Rough effort: Medium to high due to canvas interactions.
 - Dependencies: Existing map model, map pins, `CampaignWorldMaps`, `CampaignWorldMapCanvas`.
-- Remaining opportunities: richer multi-map pin summaries, stronger canvas keyboard/accessibility behavior, and deeper mobile touch testing.
+- Remaining opportunities: deeper real-campaign mobile touch testing and targeted follow-ups from observed canvas friction.
 
 ### Travel Improvements
 
@@ -122,4 +128,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Continue Maps Workspace Polish only if follow-up browser QA or user feedback identifies a concrete map editor friction point. Otherwise, return to Dungeon And Encounter Prep or Additional UX Tightening. Do not redesign the map system or change map data models unless a concrete limitation is discovered.
+Consider Contextual Travel Improvements as the next controlled bundle now that Dungeon prep and Maps have both received polish passes. Keep travel contextual to World/location pages and the existing calculator; do not introduce a standalone Travel workspace unless concrete route-planning pain emerges.

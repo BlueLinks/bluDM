@@ -1,13 +1,19 @@
-import { Crosshair, Grid2X2, Map as MapIcon, MapPin, Ruler, X } from "lucide-react";
+import { Map as MapIcon, Ruler } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Callout, EmptyMini, Select } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { formatMapDistance } from "./campaignMapDistance";
+import {
+  candidateLocationsForMap,
+  summarizePins,
+  type MapPinSummary,
+} from "./campaignWorldMapUtils";
 import { CampaignWorldMapCanvas } from "./CampaignWorldMapCanvas";
 import { CampaignWorldMapForm } from "./CampaignWorldMapForm";
 import { CampaignWorldMapSelectionList } from "./CampaignWorldMapSelectionList";
 import { CampaignWorldPinnedLocations } from "./CampaignWorldPinnedLocations";
+import { PinPlacementList } from "./CampaignWorldPinPlacementList";
 import type {
   CampaignLocation,
   CampaignMap,
@@ -41,6 +47,7 @@ export function CampaignWorldMaps({
 }) {
   const [activeMapId, setActiveMapId] = useState("");
   const [pins, setPins] = useState<CampaignMapPin[]>([]);
+  const [pinSummaries, setPinSummaries] = useState<Record<string, MapPinSummary>>({});
   const [placementMode, setPlacementMode] = useState<PlacementMode>(null);
   const [distanceFromId, setDistanceFromId] = useState("");
   const [distanceToId, setDistanceToId] = useState("");
@@ -51,13 +58,26 @@ export function CampaignWorldMaps({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const attachedMaps = maps.filter((map) => (map.parentLocationId ?? "") === currentLocation.id);
-  const rootMaps = maps.filter((map) => !(map.parentLocationId ?? ""));
-  const focusedMap = maps.find((map) => map.id === focusedMapID);
-  const parentMaps = maps.filter(
-    (map) => (map.parentLocationId ?? "") === (currentLocation.parentLocationId ?? ""),
+  const attachedMaps = useMemo(
+    () => maps.filter((map) => (map.parentLocationId ?? "") === currentLocation.id),
+    [currentLocation.id, maps],
   );
-  const availableMaps = attachedMaps.length ? attachedMaps : focusedMap ? [focusedMap] : rootMaps;
+  const rootMaps = useMemo(() => maps.filter((map) => !(map.parentLocationId ?? "")), [maps]);
+  const focusedMap = useMemo(
+    () => maps.find((map) => map.id === focusedMapID),
+    [focusedMapID, maps],
+  );
+  const parentMaps = useMemo(
+    () =>
+      maps.filter(
+        (map) => (map.parentLocationId ?? "") === (currentLocation.parentLocationId ?? ""),
+      ),
+    [currentLocation.parentLocationId, maps],
+  );
+  const availableMaps = useMemo(
+    () => (attachedMaps.length ? attachedMaps : focusedMap ? [focusedMap] : rootMaps),
+    [attachedMaps, focusedMap, rootMaps],
+  );
   const activeMap = availableMaps.find((map) => map.id === activeMapId) ?? availableMaps[0];
 
   useEffect(() => {
@@ -85,7 +105,12 @@ export function CampaignWorldMaps({
     api
       .campaignMapPins(campaignId, activeMap.id)
       .then(({ pins: nextPins }) => {
-        if (active) setPins(nextPins);
+        if (!active) return;
+        setPins(nextPins);
+        setPinSummaries((current) => ({
+          ...current,
+          [activeMap.id]: summarizePins(nextPins),
+        }));
       })
       .catch((err: unknown) => {
         if (active) setError(err instanceof Error ? err.message : "Could not load map pins");
@@ -98,11 +123,34 @@ export function CampaignWorldMaps({
     };
   }, [activeMap?.id, campaignId]);
 
+  useEffect(() => {
+    if (!availableMaps.length) {
+      setPinSummaries({});
+      return;
+    }
+    let active = true;
+    Promise.all(
+      availableMaps.map((map) =>
+        api
+          .campaignMapPins(campaignId, map.id)
+          .then(({ pins: mapPins }) => [map.id, summarizePins(mapPins)] as const),
+      ),
+    )
+      .then((entries) => {
+        if (active) setPinSummaries(Object.fromEntries(entries));
+      })
+      .catch((err: unknown) => {
+        if (active)
+          setError(err instanceof Error ? err.message : "Could not load map pin summaries");
+      });
+    return () => {
+      active = false;
+    };
+  }, [availableMaps, campaignId]);
+
   const candidateLocations = useMemo(() => {
     if (!activeMap) return childLocations;
-    if (!activeMap.parentLocationId)
-      return locations.filter((location) => !location.parentLocationId);
-    return locations.filter((location) => location.parentLocationId === activeMap.parentLocationId);
+    return candidateLocationsForMap(activeMap, locations);
   }, [activeMap, childLocations, locations]);
   const locationById = useMemo(
     () => new globalThis.Map(locations.map((location) => [location.id, location])),
@@ -114,6 +162,7 @@ export function CampaignWorldMaps({
     if (!mapId) return;
     const { pins: nextPins } = await api.campaignMapPins(campaignId, mapId);
     setPins(nextPins);
+    setPinSummaries((current) => ({ ...current, [mapId]: summarizePins(nextPins) }));
   }
 
   async function placePin(x: number, y: number) {
@@ -146,7 +195,14 @@ export function CampaignWorldMaps({
     setError("");
     try {
       await api.deleteCampaignMapPin(campaignId, activeMap.id, pin.id);
-      setPins((current) => current.filter((item) => item.id !== pin.id));
+      setPins((current) => {
+        const nextPins = current.filter((item) => item.id !== pin.id);
+        setPinSummaries((summaries) => ({
+          ...summaries,
+          [activeMap.id]: summarizePins(nextPins),
+        }));
+        return nextPins;
+      });
       setDistance(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove map pin");
@@ -210,7 +266,8 @@ export function CampaignWorldMaps({
             activeMap={activeMap}
             availableMaps={availableMaps}
             currentLocation={currentLocation}
-            pinsCount={pins.length}
+            locations={locations}
+            pinSummaries={pinSummaries}
             onMapChange={setActiveMapId}
           />
           <ActiveMapWorkspace
@@ -231,6 +288,7 @@ export function CampaignWorldMaps({
             onDistanceFromChange={setDistanceFromId}
             onDistanceToChange={setDistanceToId}
             onNavigateFromPin={onNavigateFromPin}
+            onCancelPlacement={() => setPlacementMode(null)}
             onPlacePin={placePin}
             onRemovePin={removePin}
             onShowGridChange={setShowGrid}
@@ -260,6 +318,7 @@ function ActiveMapWorkspace({
   onDistanceFromChange,
   onDistanceToChange,
   onNavigateFromPin,
+  onCancelPlacement,
   onPlacePin,
   onRemovePin,
   onShowGridChange,
@@ -277,6 +336,7 @@ function ActiveMapWorkspace({
         saving={saving}
         showGrid={showGrid}
         onNavigateFromPin={onNavigateFromPin}
+        onCancelPlacement={onCancelPlacement}
         onPlacePin={onPlacePin}
         onShowGridChange={onShowGridChange}
       />
@@ -304,64 +364,6 @@ function ActiveMapWorkspace({
           onDistanceToChange={onDistanceToChange}
         />
       </aside>
-    </div>
-  );
-}
-
-function PinPlacementList({
-  candidates,
-  placementMode,
-  pins,
-  onStartPlacement,
-}: {
-  candidates: CampaignLocation[];
-  placementMode: PlacementMode;
-  pins: CampaignMapPin[];
-  onStartPlacement: (mode: PlacementMode) => void;
-}) {
-  if (!candidates.length)
-    return <EmptyMini copy="No relevant locations available for this map level." />;
-  const placedCount = candidates.filter((location) =>
-    pins.some((pin) => pin.locationId === location.id),
-  ).length;
-  return (
-    <div className="grid gap-3 rounded-md border border-border bg-card p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Crosshair className="h-4 w-4 text-accent" /> Place pins
-          </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Select a location, then click the map to place or move its pin.
-          </p>
-        </div>
-        <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-          {placedCount}/{candidates.length} placed
-        </span>
-      </div>
-      <div className="grid gap-2">
-        {candidates.map((location) => {
-          const pinned = pins.some((pin) => pin.locationId === location.id);
-          const active = placementMode?.locationID === location.id;
-          return (
-            <Button
-              key={location.id}
-              type="button"
-              className="w-full justify-start text-left"
-              size="sm"
-              icon={active ? X : pinned ? MapPin : Grid2X2}
-              variant={active ? "primary" : "secondary"}
-              onClick={() =>
-                onStartPlacement(
-                  active ? null : { locationID: location.id, action: pinned ? "move" : "place" },
-                )
-              }
-            >
-              {active ? "Cancel" : pinned ? "Move" : "Place"} {location.name}
-            </Button>
-          );
-        })}
-      </div>
     </div>
   );
 }
@@ -430,8 +432,9 @@ function ParentPinSummary({
   if (!currentLocation.parentLocationId) return null;
   return (
     <p className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-      Parent map status: maps attached to the parent can pin or move {currentLocation.name}.
-      Relevant parent-level maps found: {maps.length}.
+      Parent map status: {maps.length} parent-level {maps.length === 1 ? "map can" : "maps can"} pin
+      or move {currentLocation.name}. Open the parent location if this space needs a regional or
+      floor-level pin.
     </p>
   );
 }
@@ -464,6 +467,7 @@ type ActiveMapWorkspaceProps = {
   onDistanceFromChange: (locationID: string) => void;
   onDistanceToChange: (locationID: string) => void;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
+  onCancelPlacement: () => void;
   onPlacePin: (x: number, y: number) => Promise<void>;
   onRemovePin: (pin: CampaignMapPin) => void;
   onShowGridChange: (show: boolean) => void;

@@ -1,5 +1,12 @@
 import { LocateFixed, MapPin, Minus, Plus } from "lucide-react";
-import { useEffect, useRef, useState, type MouseEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from "react";
 import { ActionRow } from "../../../components/layout";
 import { Button, Callout, Checkbox } from "../../../components/ui";
 import { formatMapDistance } from "./campaignMapDistance";
@@ -17,6 +24,7 @@ export function CampaignWorldMapCanvas({
   saving,
   showGrid,
   onNavigateFromPin,
+  onCancelPlacement,
   onPlacePin,
   onShowGridChange,
 }: CampaignWorldMapCanvasProps) {
@@ -48,6 +56,49 @@ export function CampaignWorldMapCanvas({
     setPan({ x: 0, y: 0 });
   }
 
+  function zoomIn() {
+    setZoom((value) => Math.min(3, value + 0.25));
+  }
+
+  function zoomOut() {
+    setZoom((value) => Math.max(0.5, value - 0.25));
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape" && placementMode) {
+      event.preventDefault();
+      onCancelPlacement();
+      return;
+    }
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      zoomIn();
+      return;
+    }
+    if (event.key === "-" || event.key === "_") {
+      event.preventDefault();
+      zoomOut();
+      return;
+    }
+    if (event.key === "0") {
+      event.preventDefault();
+      resetView();
+      return;
+    }
+    if (placementMode) return;
+    const panStep = event.shiftKey ? 80 : 32;
+    const panKeys: Record<string, { x: number; y: number }> = {
+      ArrowDown: { x: 0, y: -panStep },
+      ArrowLeft: { x: panStep, y: 0 },
+      ArrowRight: { x: -panStep, y: 0 },
+      ArrowUp: { x: 0, y: panStep },
+    };
+    const delta = panKeys[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    setPan((current) => ({ x: current.x + delta.x, y: current.y + delta.y }));
+  }
+
   function handleClick(event: MouseEvent<HTMLDivElement>) {
     if (!placementMode || !viewportRef.current) return;
     const rect = viewportRef.current.getBoundingClientRect();
@@ -77,7 +128,7 @@ export function CampaignWorldMapCanvas({
         justify="between"
         className="rounded-md border border-border bg-background p-2"
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{activeMap.name}</p>
           <p className="text-xs text-muted-foreground">
             {Math.round(zoom * 100)}% zoom · drag blank space to pan · reset recenters the map
@@ -89,24 +140,35 @@ export function CampaignWorldMapCanvas({
           zoom={zoom}
           onReset={resetView}
           onShowGridChange={onShowGridChange}
-          onZoomIn={() => setZoom((value) => Math.min(3, value + 0.25))}
-          onZoomOut={() => setZoom((value) => Math.max(0.5, value - 0.25))}
+          onZoomIn={zoomIn}
+          onZoomOut={zoomOut}
         />
       </ActionRow>
       {placementMode ? (
         <Callout>
-          Click the map to {placementMode.action} this pin. Pan is disabled until placement is
-          complete.
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Click or tap the map to {placementMode.action} this pin. Press Escape or cancel to
+              leave placement mode.
+            </span>
+            <Button type="button" size="sm" variant="secondary" onClick={onCancelPlacement}>
+              Cancel placement
+            </Button>
+          </div>
         </Callout>
       ) : null}
       <div
         ref={viewportRef}
+        role="region"
+        tabIndex={0}
+        aria-label={`Interactive map canvas for ${activeMap.name}. Use arrow keys to pan, plus and minus to zoom, 0 to reset, and Escape to cancel pin placement.`}
         className={[
-          "relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-muted shadow-inner",
+          "relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-muted shadow-inner outline-none focus:ring-2 focus:ring-primary/30",
           placementMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing",
         ].join(" ")}
         style={{ aspectRatio: `${activeMap.width} / ${activeMap.height}` }}
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         onPointerDown={startPan}
         onPointerMove={movePan}
         onPointerCancel={() => (panStart.current = null)}
@@ -139,8 +201,9 @@ export function CampaignWorldMapCanvas({
         </div>
       </div>
       <p className="text-xs text-muted-foreground">
-        Drag the map background to pan. Use explicit Place or Move buttons before changing pin
-        coordinates. {saving || loadingPins ? "Saving map pins…" : null}
+        Drag the map background to pan, or focus the canvas and use arrow keys. Use explicit Place
+        or Move buttons before changing pin coordinates.{" "}
+        {saving || loadingPins ? "Saving map pins…" : null}
       </p>
     </div>
   );
@@ -164,7 +227,7 @@ function MapViewControls({
   onZoomOut: () => void;
 }) {
   return (
-    <ActionRow justify="end">
+    <ActionRow justify="end" className="w-full sm:w-auto">
       <Checkbox label="Grid" checked={showGrid} onChange={onShowGridChange} />
       <Button
         type="button"
@@ -252,6 +315,7 @@ function MapPinMarker({
       type="button"
       className="absolute z-10 -translate-x-1/2 -translate-y-full text-center"
       style={{ left: `${(pin.x / map.width) * 100}%`, top: `${(pin.y / map.height) * 100}%` }}
+      aria-label={`Open pinned location ${pin.labelOverride || location?.name || "Pinned location"}`}
       onClick={(event) => {
         event.stopPropagation();
         onNavigate();
@@ -299,6 +363,7 @@ type CampaignWorldMapCanvasProps = {
   saving: boolean;
   showGrid: boolean;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
+  onCancelPlacement: () => void;
   onPlacePin: (x: number, y: number) => Promise<void>;
   onShowGridChange: (show: boolean) => void;
 };
