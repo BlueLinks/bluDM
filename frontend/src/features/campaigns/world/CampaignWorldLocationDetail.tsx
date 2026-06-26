@@ -292,6 +292,7 @@ function buildProfileSections(props: ProfileSectionProps) {
           loading={npcLinksLoading}
           location={location}
           npcs={npcs}
+          commerceMode={profile.profile === "shop"}
           onCreateNpc={onCreateNpc}
           onCreate={onCreateNpcLink}
           onDelete={onDeleteNpcLink}

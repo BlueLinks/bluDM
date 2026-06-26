@@ -14,6 +14,7 @@ export function CampaignWorldLocationNpcs({
   location,
   npcs,
   onCreateNpc,
+  commerceMode = false,
   onCreate,
   onDelete,
 }: {
@@ -21,6 +22,7 @@ export function CampaignWorldLocationNpcs({
   loading: boolean;
   location: CampaignLocation;
   npcs: Creature[];
+  commerceMode?: boolean;
   onCreateNpc: () => void;
   onCreate: (input: NpcLocationFormInput) => Promise<void>;
   onDelete: (linkID: string) => Promise<void>;
@@ -53,7 +55,7 @@ export function CampaignWorldLocationNpcs({
       await onCreate({
         creatureId: selectedCreatureID,
         locationId: location.id,
-        linkType: "associated",
+        linkType: commerceMode ? "merchant" : "associated",
         visibility: "dm",
         notes: notes.trim(),
       });
@@ -84,13 +86,13 @@ export function CampaignWorldLocationNpcs({
               disabled={!options.length}
               onClick={() => setLinkOpen(true)}
             >
-              Add NPC
+              {commerceMode ? "Add merchant" : "Add NPC"}
             </Button>
           </ActionRow>
         }
         icon={UserRound}
         meta={loading ? "Loading" : `${links.length} linked`}
-        title="NPCs here"
+        title={commerceMode ? "Merchants and staff" : "NPCs here"}
       />
 
       {links.length ? (
@@ -107,7 +109,9 @@ export function CampaignWorldLocationNpcs({
         </div>
       ) : (
         <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No NPCs connected to this location yet.
+          {commerceMode
+            ? "No merchants or staff are connected to this shop yet."
+            : "No NPCs connected to this location yet."}
         </p>
       )}
 
@@ -122,21 +126,33 @@ export function CampaignWorldLocationNpcs({
         </div>
       ) : null}
 
-      <Modal open={linkOpen} onOpenChange={setLinkOpen} title="Add NPC to location">
+      <Modal
+        open={linkOpen}
+        onOpenChange={setLinkOpen}
+        title={commerceMode ? "Add merchant to shop" : "Add NPC to location"}
+      >
         <form className="grid gap-4" onSubmit={submitLink}>
           <SearchableOptionPicker
-            emptyMessage="No matching NPCs."
-            label="NPC"
+            emptyMessage={commerceMode ? "No matching merchants." : "No matching NPCs."}
+            label={commerceMode ? "Merchant" : "NPC"}
             options={filteredNpcOptions}
-            placeholder="Search by NPC name, type, alignment, or challenge..."
+            placeholder={
+              commerceMode
+                ? "Search by merchant name, type, alignment, or challenge..."
+                : "Search by NPC name, type, alignment, or challenge..."
+            }
             search={npcSearch}
             selectedID={selectedCreatureID}
             onSearchChange={setNpcSearch}
             onSelect={setCreatureID}
           />
-          <Field label="NPC notes">
+          <Field label={commerceMode ? "Merchant notes" : "NPC notes"}>
             <Input
-              placeholder="Why they are here, mood, secret, schedule..."
+              placeholder={
+                commerceMode
+                  ? "Owner, clerk, prices, opening hours, secret stock..."
+                  : "Why they are here, mood, secret, schedule..."
+              }
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
             />
@@ -147,7 +163,7 @@ export function CampaignWorldLocationNpcs({
               Cancel
             </Button>
             <Button type="submit" icon={UserRound} disabled={saving}>
-              Add NPC
+              {commerceMode ? "Add merchant" : "Add NPC"}
             </Button>
           </ActionRow>
         </form>
@@ -193,7 +209,14 @@ function ConnectedNpcRow({
   return (
     <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
       <div className="min-w-0 flex-1">
-        <div className="[overflow-wrap:anywhere] font-semibold">{npc?.name ?? "Unknown NPC"}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="[overflow-wrap:anywhere] font-semibold">
+            {npc?.name ?? "Unknown NPC"}
+          </span>
+          <span className="rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
+            {link.linkType.replaceAll("-", " ")}
+          </span>
+        </div>
         <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
           {link.notes || npc?.description || "No notes yet."}
         </p>

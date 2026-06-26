@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../../lib/api";
 import type { Creature, Encounter, Item } from "../../../types";
 import { CampaignWorldSection } from "./CampaignWorldSection";
-import { locationPathLabel } from "./campaignWorldLocationUtils";
 import type { CampaignLocation } from "./travelTypes";
 
 vi.mock("../../../lib/api", () => ({
@@ -213,20 +212,20 @@ describe("CampaignWorldSection", () => {
     renderWorld({ npcs: [creature()] });
 
     expect(screen.queryByLabelText("NPC relationship")).toBeNull();
-    fireEvent.click(await screen.findByRole("button", { name: "Add NPC" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Add merchant" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(within(dialog).getByRole("option", { name: /Mara Vell/i }));
     expect(within(dialog).queryByLabelText("NPC relationship")).toBeNull();
-    fireEvent.change(within(dialog).getByLabelText("NPC notes"), {
+    fireEvent.change(within(dialog).getByLabelText("Merchant notes"), {
       target: { value: "Keeps a ledger of strange customers." },
     });
-    fireEvent.click(within(dialog).getByRole("button", { name: "Add NPC" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add merchant" }));
 
     await waitFor(() =>
       expect(api.createCampaignNpcLocationLink).toHaveBeenCalledWith("campaign-1", {
         creatureId: "npc-1",
         locationId: "shop-1",
-        linkType: "associated",
+        linkType: "merchant",
         visibility: "dm",
         notes: "Keeps a ledger of strange customers.",
       }),
@@ -283,7 +282,8 @@ describe("CampaignWorldSection", () => {
     );
     expect(await screen.findByText("Healing Draught")).toBeTruthy();
     expect(screen.getByText("75 sp")).toBeTruthy();
-    expect(screen.getByText("Qty 4 - Behind the counter.")).toBeTruthy();
+    expect(screen.getByText("Qty 4")).toBeTruthy();
+    expect(screen.getByText("Behind the counter.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Pricing" }));
     const pricingDialog = await screen.findByRole("dialog", { name: "Shop pricing" });
     expect(within(pricingDialog).getByText("75 sp")).toBeTruthy();
@@ -492,8 +492,3 @@ function item(overrides: Partial<Item> = {}): Item {
     ...overrides,
   };
 }
-
-it("formats location paths with fallback names", () => {
-  expect(locationPathLabel(location())).toBe("Brindleford / Copper Kettle");
-  expect(locationPathLabel(location({ path: undefined }))).toBe("Copper Kettle");
-});

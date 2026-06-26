@@ -312,6 +312,10 @@ function journeyDistanceSummary(journey: CampaignJourney) {
 
 export function PricingSummaryCard({ stock }: { stock: CampaignLocationStock[] }) {
   const priced = stock.filter((entry) => entry.priceAmount > 0);
+  const market = stock.length - priced.length;
+  const limited = stock.filter((entry) =>
+    ["limited", "special-order", "hidden"].includes(entry.availability),
+  );
   return (
     <CardSection>
       <SectionHeader
@@ -322,8 +326,16 @@ export function PricingSummaryCard({ stock }: { stock: CampaignLocationStock[] }
       <ResponsiveGrid className="mt-3" variant="stats3">
         <MapStat label="Stocked" value={stock.length} />
         <MapStat label="Priced" value={priced.length} />
-        <MapStat label="Market price" value={stock.length - priced.length} />
+        <MapStat label="Market price" value={market} />
       </ResponsiveGrid>
+      {limited.length || market ? (
+        <p className="mt-3 rounded-md border border-dashed border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+          {limited.length
+            ? `${limited.length} limited, hidden, or special-order item${limited.length === 1 ? "" : "s"}. `
+            : ""}
+          {market ? `${market} item${market === 1 ? "" : "s"} still use market pricing.` : ""}
+        </p>
+      ) : null}
     </CardSection>
   );
 }

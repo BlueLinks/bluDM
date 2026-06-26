@@ -63,6 +63,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Travel cards show distance, terrain, and pace context for relevant saved journeys.
   - Journey log cards identify world-linked origins/destinations and direct-distance entries.
   - Travel panel summary shows saved route, world-linked route, and direct-distance counts.
+- Commerce improvements bundle:
+  - Shop stock rows now show item catalog context, quantity, price, availability, and notes more clearly.
+  - Existing stock can be adjusted from the Shop page and pricing review without leaving the profile.
+  - Shop pricing summary calls out priced, market-price, limited, hidden, and special-order inventory.
+  - Shop NPC sections are merchant-aware, including merchant/staff copy, merchant notes, and merchant relationship links.
+  - Focused Campaign World commerce tests cover inventory summaries, stock adjustment, pricing, and merchant links.
 
 ## In Progress
 
@@ -100,6 +106,7 @@ No active implementation phase.
 - Value: Medium; important for shop-heavy campaigns but narrower than dungeon/map prep.
 - Rough effort: Medium.
 - Dependencies: Existing item APIs, location stock APIs, NPC links.
+- Remaining opportunities: campaign-wide shop review, restock reminders, or richer merchant pricing rules only if shop-heavy play exposes concrete friction.
 
 ### Additional UX Tightening
 
@@ -134,4 +141,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Consider Commerce Improvements as the next controlled contextual bundle. Keep shop workflows anchored on Shop profile pages and existing stock APIs; do not introduce a standalone Shops workspace unless campaign-wide shop review becomes a concrete need.
+Consider Additional UX Tightening as the next controlled bundle. Focus on QA-driven clutter, copy, action, and layout fixes across Campaign World without adding new workspaces or revisiting settled architecture.
