@@ -231,8 +231,12 @@ export function CampaignWorldMaps({
     <CardSection className="grid min-w-0 gap-4 p-4" tone="card">
       <SectionHeader
         icon={MapIcon}
-        meta={`${attachedMaps.length} attached ${attachedMaps.length === 1 ? "map" : "maps"}`}
-        title="Location map"
+        meta={
+          attachedMaps.length
+            ? `${attachedMaps.length} ${attachedMaps.length === 1 ? "map" : "maps"} available here`
+            : undefined
+        }
+        title="Maps"
         action={
           <Button
             type="button"
@@ -432,9 +436,10 @@ function ParentPinSummary({
   if (!currentLocation.parentLocationId) return null;
   return (
     <p className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-      Parent map status: {maps.length} parent-level {maps.length === 1 ? "map can" : "maps can"} pin
-      or move {currentLocation.name}. Open the parent location if this space needs a regional or
-      floor-level pin.
+      {maps.length
+        ? `${currentLocation.name} can be placed or moved from its parent map.`
+        : `${currentLocation.name} does not have a parent map yet.`}{" "}
+      Open the parent location to manage its broader map position.
     </p>
   );
 }

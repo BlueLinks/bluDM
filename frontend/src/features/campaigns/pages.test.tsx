@@ -95,10 +95,10 @@ describe("CampaignDetailPage travel", () => {
     expect(await screen.findByText("World workspace")).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "Open world" }).length).toBeGreaterThan(0);
     expect(
-      screen.getByText(/World locations now live in the dedicated World workspace/i),
+      screen.getByText(/Use saved journeys for routes the party may travel again/i),
     ).toBeTruthy();
     expect(screen.getByText("Waterdeep to Ironford · 63 Miles")).toBeTruthy();
-    expect(screen.getByText("World-linked")).toBeTruthy();
+    expect(screen.getByText("Use world places")).toBeTruthy();
     expect(screen.getByText("Origin: Waterdeep")).toBeTruthy();
     expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
   });

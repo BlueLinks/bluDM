@@ -69,6 +69,11 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Shop pricing summary calls out priced, market-price, limited, hidden, and special-order inventory.
   - Shop NPC sections are merchant-aware, including merchant/staff copy, merchant notes, and merchant relationship links.
   - Focused Campaign World commerce tests cover inventory summaries, stock adjustment, pricing, and merchant links.
+- Additional UX Tightening bundle:
+  - Campaign World profile headers now emphasize the place name, profile type, summary, tags, and parent context while moving generic actions into contextual sections.
+  - Map, link, NPC, encounter, shop stock, and travel copy now favors DM-facing status language over implementation/count labels, with lower-priority map counts moved into expandable details.
+  - Location detail cards use two-column desktop layouts where practical while preserving narrow wrapping behavior.
+  - Demo seed data now includes realistic regions, settlements, shops, merchants, NPC links, dungeon floors/rooms, encounters, exits, maps, pins, stock, and travel routes.
 
 ## In Progress
 
@@ -108,13 +113,6 @@ No active implementation phase.
 - Dependencies: Existing item APIs, location stock APIs, NPC links.
 - Remaining opportunities: campaign-wide shop review, restock reminders, or richer merchant pricing rules only if shop-heavy play exposes concrete friction.
 
-### Additional UX Tightening
-
-- Goal: Reduce clutter, clarify copy/actions, and fix layout issues discovered through use.
-- Value: High when based on observed friction.
-- Rough effort: Low to medium.
-- Dependencies: Browser QA and user feedback.
-
 ## Deferred
 
 - Standalone Travel workspace.
@@ -141,4 +139,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Consider Additional UX Tightening as the next controlled bundle. Focus on QA-driven clutter, copy, action, and layout fixes across Campaign World without adding new workspaces or revisiting settled architecture.
+Consider Dungeon And Encounter Prep as the next controlled bundle. Focus on richer room/floor running cues and deeper prep prompts without introducing a standalone encounter workspace.

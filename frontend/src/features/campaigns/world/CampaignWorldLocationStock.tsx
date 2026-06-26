@@ -88,7 +88,7 @@ export function CampaignWorldLocationStock({
           </ActionRow>
         }
         icon={PackagePlus}
-        meta={loading ? "Loading" : `${stock.length} stocked`}
+        meta={loading ? "Loading" : stock.length ? `${stock.length} items for sale` : undefined}
         title="Shop stock"
       />
 

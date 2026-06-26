@@ -91,7 +91,7 @@ export function CampaignWorldLocationNpcs({
           </ActionRow>
         }
         icon={UserRound}
-        meta={loading ? "Loading" : `${links.length} linked`}
+        meta={loading ? "Loading" : links.length ? `${links.length} here` : undefined}
         title={commerceMode ? "Merchants and staff" : "NPCs here"}
       />
 

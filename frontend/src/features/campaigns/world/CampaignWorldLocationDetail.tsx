@@ -1,5 +1,8 @@
+import { Plus } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
+import { ActionRow } from "../../../components/layout";
+import { Button } from "../../../components/ui";
 import type { Creature, Encounter, Item } from "../../../types";
 import { childPrepChipsFor, childPrepIssueSummariesFor } from "./CampaignWorldChildPrepChips";
 import { CampaignWorldLocationEncounters } from "./CampaignWorldLocationEncounters";
@@ -10,20 +13,25 @@ import {
   type LocationStockFormInput,
 } from "./CampaignWorldLocationStock";
 import { LocationProfileHeader } from "./CampaignWorldLocationProfileHeader";
+import { ParentContextCard, parentFor } from "./CampaignWorldLocationContextCards";
 import {
   ChildLocationsCard,
   CompactTravelCard,
   journeyInvolvesLocation,
   LocationMapCard,
   LocationNotesCard,
-  ParentContextCard,
-  parentFor,
   PricingSummaryCard,
   StructureSummaryCard,
   travelLikeLinks,
 } from "./CampaignWorldLocationProfileCards";
 import { PrepOverviewCard } from "./CampaignWorldPrepOverviewCard";
-import { locationProfile, type LocationProfileInfo } from "./locationProfiles";
+import { sectionOrder } from "./CampaignWorldLocationSectionOrder";
+import {
+  defaultTypeForProfileAction,
+  labelForProfileAction,
+  locationProfile,
+  type LocationProfileInfo,
+} from "./locationProfiles";
 import type {
   CampaignJourney,
   CampaignLocation,
@@ -143,7 +151,7 @@ export function CampaignWorldLocationDetail({
         onSelectLocation={onSelectLocation}
         onStockOpen={() => setStockOpen(true)}
       />
-      <div className="grid min-w-0 gap-4">{sectionOrder(profile, sections)}</div>
+      <div className="grid min-w-0 gap-4 xl:grid-cols-2">{sectionOrder(profile, sections)}</div>
     </article>
   );
 }
@@ -232,6 +240,7 @@ function buildProfileSections(props: ProfileSectionProps) {
         prepChipsByLocationId={prepChipsByLocationId}
         prepSummaryChips={prepSummaryChips}
         title={profile.childTitle}
+        action={<ChildLocationActions profile={profile} onAddChild={props.onAddChild} />}
         onSelectLocation={onSelectLocation}
       />
     ) : null,
@@ -362,77 +371,39 @@ function buildProfileSections(props: ProfileSectionProps) {
   };
 }
 
-function explorationProfile(profile: LocationProfileInfo) {
-  return profile.profile === "room" || profile.variant === "dungeon" || profile.variant === "floor";
+function ChildLocationActions({
+  profile,
+  onAddChild,
+}: {
+  profile: LocationProfileInfo;
+  onAddChild: (locationType?: string) => void;
+}) {
+  const childActions = profile.primaryActions.filter((action) =>
+    ["add-town", "add-landmark", "add-building", "add-shop", "add-floor", "add-room"].includes(
+      action,
+    ),
+  );
+  if (!childActions.length) return null;
+  return (
+    <ActionRow justify="end">
+      {childActions.map((action) => (
+        <Button
+          key={action}
+          type="button"
+          icon={Plus}
+          size="sm"
+          variant="secondary"
+          onClick={() => onAddChild(defaultTypeForProfileAction(action))}
+        >
+          {labelForProfileAction(action)}
+        </Button>
+      ))}
+    </ActionRow>
+  );
 }
 
-function sectionOrder(profile: LocationProfileInfo, sections: Record<string, React.ReactNode>) {
-  const orders: Record<string, string[]> = {
-    region: [
-      "mapCard",
-      "childCard",
-      "travelCard",
-      "linksCard",
-      "notesCard",
-      "encountersCard",
-      "npcsCard",
-    ],
-    town: [
-      "mapCard",
-      "childCard",
-      "npcsCard",
-      "travelCard",
-      "notesCard",
-      "encountersCard",
-      "linksCard",
-    ],
-    dungeon: [
-      "structureCard",
-      "childCard",
-      "prepCard",
-      "mapCard",
-      "encountersCard",
-      "linksCard",
-      "notesCard",
-      "npcsCard",
-      "travelCard",
-    ],
-    floor: [
-      "mapCard",
-      "childCard",
-      "prepCard",
-      "encountersCard",
-      "linksCard",
-      "notesCard",
-      "npcsCard",
-    ],
-    shop: [
-      "stockCard",
-      "pricingCard",
-      "npcsCard",
-      "notesCard",
-      "mapCard",
-      "parentCard",
-      "encountersCard",
-      "linksCard",
-      "childCard",
-    ],
-    room: [
-      "notesCard",
-      "prepCard",
-      "encountersCard",
-      "linksCard",
-      "npcsCard",
-      "mapCard",
-      "parentCard",
-      "childCard",
-    ],
-  };
-  const key = profile.profile === "container" ? (profile.variant ?? "region") : profile.profile;
-  return orders[key].flatMap((name) => {
-    const section = sections[name];
-    return section ? [<div key={name}>{section}</div>] : [];
-  });
+function explorationProfile(profile: LocationProfileInfo) {
+  return profile.profile === "room" || profile.variant === "dungeon" || profile.variant === "floor";
 }
 
 type CampaignWorldLocationDetailProps = {

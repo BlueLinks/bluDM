@@ -82,7 +82,7 @@ function summaryLabel(
   placedCount: number,
   candidateCount: number,
 ) {
-  if (!summary) return "Loading pin coverage";
+  if (!summary) return "Checking placed locations";
   if (!candidateCount) return `${summary.totalPins} ${summary.totalPins === 1 ? "pin" : "pins"}`;
   return `${placedCount}/${candidateCount} placed · ${summary.totalPins} ${summary.totalPins === 1 ? "pin" : "pins"}`;
 }

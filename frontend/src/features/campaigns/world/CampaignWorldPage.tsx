@@ -152,7 +152,7 @@ export function CampaignWorldPage() {
               status={encounterStatus}
               trigger={
                 <Button type="button" icon={Plus} variant="secondary">
-                  New encounter
+                  Create encounter
                 </Button>
               }
               onCreate={(event: FormEvent) => void createEncounter(event)}
@@ -216,7 +216,7 @@ function WorldSummary({
 }) {
   const stats = [
     { label: "Locations", value: locationCount, icon: Map },
-    { label: "Linked NPCs", value: npcCount, icon: Swords },
+    { label: "NPC roster", value: npcCount, icon: Swords },
     { label: "Encounters", value: encounterCount, icon: ClipboardList },
   ];
 
@@ -224,7 +224,7 @@ function WorldSummary({
     <section className="rounded-lg border border-border bg-card p-4">
       <h3 className="font-semibold">World summary</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Keep an eye on the structures and hooks that support session improvisation.
+        Adventure prep at a glance: places to visit, people to meet, and scenes ready to run.
       </p>
       <ResponsiveGrid className="mt-4" variant="stats3">
         {stats.map((stat) => (
@@ -240,7 +240,7 @@ function WorldSummary({
         ))}
       </ResponsiveGrid>
       <div className="mt-4">
-        <EmptyMini copy="Use the World workspace to create locations. Travel keeps the reusable route calculations and journey history beside it." />
+        <EmptyMini copy="Open a location to focus maps, local notes, NPCs, commerce, encounters, and travel from that exact place." />
       </div>
     </section>
   );

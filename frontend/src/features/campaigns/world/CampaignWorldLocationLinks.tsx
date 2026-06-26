@@ -89,7 +89,7 @@ export function CampaignWorldLocationLinks({
           </Button>
         }
         icon={Link2}
-        meta={loading ? "Loading" : `${links.length} linked`}
+        meta={loading ? "Loading" : links.length ? `${links.length} connected` : undefined}
         title={title}
       />
 

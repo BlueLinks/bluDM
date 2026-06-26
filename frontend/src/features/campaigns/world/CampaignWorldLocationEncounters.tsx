@@ -32,7 +32,7 @@ export function CampaignWorldLocationEncounters({
           ) : undefined
         }
         icon={Swords}
-        meta={`${encounters.length} attached`}
+        meta={encounters.length ? `${encounters.length} ready to review` : undefined}
         title="Encounters"
       />
       {encounters.length ? (
@@ -82,13 +82,20 @@ function EncounterStatusSummary({ encounters }: { encounters: Encounter[] }) {
   return (
     <div className="mt-3 flex min-w-0 flex-wrap gap-1.5">
       {Object.entries(counts).map(([status, count]) => (
-        <span
-          className="rounded-full border border-border bg-background px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground"
-          key={status}
-        >
+        <span className={statusChipClass(status)} key={status}>
           {count} {status}
         </span>
       ))}
     </div>
   );
+}
+
+function statusChipClass(status: string) {
+  if (["ready", "active", "running"].includes(status)) {
+    return "rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[0.68rem] font-bold uppercase text-emerald-700 dark:text-emerald-200";
+  }
+  if (["draft", "planned", "planning"].includes(status)) {
+    return "rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[0.68rem] font-bold uppercase text-amber-700 dark:text-amber-200";
+  }
+  return "rounded-full border border-border bg-background px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground";
 }

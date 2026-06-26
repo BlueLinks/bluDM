@@ -180,15 +180,19 @@ export function SectionHeader({
   title: React.ReactNode;
 }) {
   return (
-    <div className={cx("flex flex-wrap items-start justify-between gap-2", className)}>
-      <div className="min-w-0">
-        <h5 className="font-semibold">{title}</h5>
-        {meta ? (
-          <span className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-            {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
-            {meta}
+    <div className={cx("flex flex-wrap items-start justify-between gap-3", className)}>
+      <div className="flex min-w-0 items-start gap-2">
+        {Icon ? (
+          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+            <Icon className="h-4 w-4" />
           </span>
         ) : null}
+        <div className="min-w-0">
+          <h5 className="font-semibold leading-tight">{title}</h5>
+          {meta ? (
+            <span className="mt-1 block text-xs font-semibold text-muted-foreground">{meta}</span>
+          ) : null}
+        </div>
       </div>
       {action}
     </div>

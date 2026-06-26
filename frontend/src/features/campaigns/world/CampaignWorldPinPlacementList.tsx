@@ -28,7 +28,7 @@ export function PinPlacementList({
             <Crosshair className="h-4 w-4 text-accent" /> Place pins
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Unplaced locations stay first. Select one, then click the map to set coordinates.
+            Unplaced locations stay first. Select one, then click the map where it belongs.
           </p>
         </div>
         <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">

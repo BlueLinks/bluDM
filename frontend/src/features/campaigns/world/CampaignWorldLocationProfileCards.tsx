@@ -1,4 +1,14 @@
-import { Boxes, Coins, FilePenLine, Footprints, Map as MapIcon, MapPin, Route } from "lucide-react";
+import {
+  AlertTriangle,
+  Boxes,
+  CheckCircle2,
+  Coins,
+  FilePenLine,
+  Footprints,
+  Map as MapIcon,
+  MapPin,
+  Route,
+} from "lucide-react";
 import type React from "react";
 import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
@@ -22,6 +32,7 @@ export function ChildLocationsCard({
   prepSummaryChips,
   title,
   onSelectLocation,
+  action,
 }: {
   childLocations: CampaignLocation[];
   emptyCopy: string;
@@ -29,12 +40,18 @@ export function ChildLocationsCard({
   prepSummaryChips?: ChildPrepChip[];
   title: string;
   onSelectLocation: (locationID: string) => void;
+  action?: React.ReactNode;
 }) {
   return (
     <CardSection>
       <SectionHeader
+        action={action}
         icon={MapPin}
-        meta={`${childLocations.length} child ${childLocations.length === 1 ? "location" : "locations"}`}
+        meta={
+          childLocations.length
+            ? `${childLocations.length} ${childLocations.length === 1 ? "place" : "places"} ready to open`
+            : undefined
+        }
         title={title}
       />
       {prepSummaryChips?.length ? (
@@ -83,7 +100,7 @@ export function LocationNotesCard({
   location: CampaignLocation;
   title: string;
 }) {
-  const hasNotes = location.summary || location.publicNotes || location.notes || location.dmNotes;
+  const hasNotes = location.publicNotes || location.notes || location.dmNotes;
   return (
     <CardSection>
       <SectionHeader
@@ -93,9 +110,8 @@ export function LocationNotesCard({
       />
       {hasNotes ? (
         <div className="mt-3 grid gap-3">
-          {location.summary && <WorldNote label="Summary" value={location.summary} />}
           {(location.publicNotes || location.notes) && (
-            <WorldNote label="Notes" value={location.publicNotes || location.notes} />
+            <WorldNote label="Player-facing notes" value={location.publicNotes || location.notes} />
           )}
           {location.dmNotes && <WorldNote label="DM-only" value={location.dmNotes} secret />}
         </div>
@@ -149,7 +165,8 @@ export function LocationMapCard({
   const parentMaps = maps.filter(
     (map) => (map.parentLocationId ?? "") === (location.parentLocationId ?? ""),
   );
-  const preview = attachedMaps.find((map) => map.imageUrl) ?? attachedMaps[0];
+  const relevantMaps = compact ? parentMaps : attachedMaps;
+  const preview = relevantMaps.find((map) => map.imageUrl) ?? relevantMaps[0];
   const hasAnchor = Object.keys(location.mapAnchor ?? {}).length > 0;
   return (
     <CardSection className="grid min-w-0 gap-3">
@@ -168,28 +185,51 @@ export function LocationMapCard({
           </ActionRow>
         }
       />
-      {preview?.imageUrl ? (
-        <img
-          className="max-h-64 w-full rounded-md border border-border object-cover"
-          src={preview.imageUrl}
-          alt={`${preview.name} preview`}
-        />
-      ) : (
-        <div className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm text-muted-foreground">
-          {mapEmptyCopy(compact, hasAnchor, attachedMaps.length)}
+      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
+        {preview?.imageUrl ? (
+          <img
+            className="max-h-64 w-full rounded-md border border-border object-cover"
+            src={preview.imageUrl}
+            alt={`${preview.name} preview`}
+          />
+        ) : (
+          <div className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm text-muted-foreground">
+            {mapEmptyCopy(compact, hasAnchor, relevantMaps.length)}
+          </div>
+        )}
+        <div className="grid gap-2">
+          <MapStatusPill
+            ready={Boolean(preview)}
+            readyText={compact ? "Parent map available" : "Map available"}
+            emptyText={compact ? "Needs parent map" : "Needs map"}
+          />
+          <MapStatusPill
+            ready={compact ? hasAnchor : attachedMaps.length > 0}
+            readyText={compact ? "Pinned on map" : "Regional map available"}
+            emptyText={compact ? "Not placed yet" : "No attached map yet"}
+          />
+          {!compact && childLocations.length ? (
+            <p className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+              {childLocations.length} relevant{" "}
+              {childLocations.length === 1 ? "place can" : "places can"} be pinned from Maps.
+            </p>
+          ) : null}
         </div>
-      )}
-      <ResponsiveGrid variant="stats3">
-        <MapStat
-          label={compact ? "Parent maps" : "Attached maps"}
-          value={compact ? parentMaps.length : attachedMaps.length}
-        />
-        <MapStat
-          label={compact ? "Placement" : "Relevant children"}
-          value={compact ? (hasAnchor ? "Placed" : "Unplaced") : childLocations.length}
-        />
-        <MapStat label="Map status" value={preview ? "Ready" : "Needs map"} />
-      </ResponsiveGrid>
+      </div>
+      <details className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+        <summary className="cursor-pointer font-semibold text-foreground">Map details</summary>
+        <ResponsiveGrid className="mt-3" variant="stats3">
+          <MapStat
+            label={compact ? "Parent maps" : "Attached maps"}
+            value={compact ? parentMaps.length : attachedMaps.length}
+          />
+          <MapStat
+            label={compact ? "Placement" : "Pin candidates"}
+            value={compact ? (hasAnchor ? "Placed" : "Unplaced") : childLocations.length}
+          />
+          <MapStat label="Map record" value={preview ? "Ready" : "Missing"} />
+        </ResponsiveGrid>
+      </details>
     </CardSection>
   );
 }
@@ -200,9 +240,37 @@ function mapMeta(
   parentMapCount: number,
   attachedMapCount: number,
 ) {
-  if (!compact) return `${attachedMapCount} attached ${attachedMapCount === 1 ? "map" : "maps"}`;
+  if (!compact) {
+    if (!attachedMapCount) return undefined;
+    return attachedMapCount === 1 ? "Regional map available" : `${attachedMapCount} maps available`;
+  }
   if (hasAnchor) return "Pinned on parent map";
   return parentMapCount ? "Not placed on parent map" : "No parent map";
+}
+
+function MapStatusPill({
+  emptyText,
+  ready,
+  readyText,
+}: {
+  emptyText: string;
+  ready: boolean;
+  readyText: string;
+}) {
+  const Icon = ready ? CheckCircle2 : AlertTriangle;
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold",
+        ready
+          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
+          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
+      ].join(" ")}
+    >
+      <Icon className="h-4 w-4" />
+      {ready ? readyText : emptyText}
+    </span>
+  );
 }
 
 function mapEmptyCopy(compact: boolean, hasAnchor: boolean, attachedMapCount: number) {
@@ -378,50 +446,6 @@ export function StructureSummaryCard({
       ) : null}
     </CardSection>
   );
-}
-
-export function ParentContextCard({
-  parent,
-  onSelectLocation,
-}: {
-  parent?: CampaignLocation;
-  onSelectLocation: (locationID: string) => void;
-}) {
-  return (
-    <CardSection>
-      <SectionHeader
-        icon={MapPin}
-        title="Parent context"
-        meta={parent ? "In hierarchy" : "No parent"}
-      />
-      {parent ? (
-        <button
-          className="mt-3 w-full rounded-md border border-border bg-background px-3 py-2 text-left text-sm transition hover:border-primary/60"
-          type="button"
-          onClick={() => onSelectLocation(parent.id)}
-        >
-          <span className="font-semibold text-accent">{locationPathLabel(parent)}</span>
-          {parent.summary ? (
-            <span className="mt-1 block text-xs text-muted-foreground">{parent.summary}</span>
-          ) : null}
-        </button>
-      ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          This location is at the top level of the world tree.
-        </p>
-      )}
-    </CardSection>
-  );
-}
-
-export function parentFor(location: CampaignLocation, locations: CampaignLocation[]) {
-  if (location.parentLocationId)
-    return locations.find((candidate) => candidate.id === location.parentLocationId);
-  const previousSegment =
-    location.path && location.path.length > 1 ? location.path[location.path.length - 2] : undefined;
-  return previousSegment
-    ? locations.find((candidate) => candidate.id === previousSegment.id)
-    : undefined;
 }
 
 export function journeyInvolvesLocation(

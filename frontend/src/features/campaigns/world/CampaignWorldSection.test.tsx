@@ -2,8 +2,9 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../../lib/api";
-import type { Creature, Encounter, Item } from "../../../types";
+import type { Creature, Encounter } from "../../../types";
 import { CampaignWorldSection } from "./CampaignWorldSection";
+import { creature, item, location } from "./CampaignWorldSectionTestFixtures";
 import type { CampaignLocation } from "./travelTypes";
 
 vi.mock("../../../lib/api", () => ({
@@ -91,9 +92,19 @@ describe("CampaignWorldSection", () => {
 
   it("creates a nested child location with worldbuilding fields", async () => {
     const onChanged = vi.fn().mockResolvedValue(undefined);
-    renderWorld({ onChanged });
+    renderWorld({
+      onChanged,
+      locations: [
+        location({
+          id: "town-1",
+          name: "Brindleford",
+          locationType: "settlement",
+          path: [{ id: "town-1", name: "Brindleford", locationType: "settlement" }],
+        }),
+      ],
+    });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Add child" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Add Building" }));
     fireEvent.change(screen.getByLabelText("Location name"), { target: { value: "Cellar" } });
     fireEvent.change(screen.getByLabelText("Summary"), {
       target: { value: "Crates and a locked trapdoor." },
@@ -110,9 +121,9 @@ describe("CampaignWorldSection", () => {
 
     await waitFor(() =>
       expect(api.createCampaignLocation).toHaveBeenCalledWith("campaign-1", {
-        parentLocationId: "shop-1",
+        parentLocationId: "town-1",
         name: "Cellar",
-        locationType: "room",
+        locationType: "building",
         summary: "Crates and a locked trapdoor.",
         notes: "Smells like flour and copper.",
         publicNotes: "Smells like flour and copper.",
@@ -126,20 +137,56 @@ describe("CampaignWorldSection", () => {
 
   it("passes the selected location to encounter generation", async () => {
     const onGenerateEncounter = vi.fn();
-    renderWorld({ onGenerateEncounter });
+    renderWorld({
+      onGenerateEncounter,
+      locations: [
+        location({
+          id: "room-1",
+          name: "Copper Kettle Cellar",
+          locationType: "room",
+          path: [
+            { id: "shop-1", name: "Copper Kettle", locationType: "shop" },
+            { id: "room-1", name: "Copper Kettle Cellar", locationType: "room" },
+          ],
+        }),
+      ],
+    });
 
-    expect((await screen.findAllByText("Copper Kettle")).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Generate encounter" }));
+    expect((await screen.findAllByText("Copper Kettle Cellar")).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Add an encounter" }));
 
     expect(onGenerateEncounter).toHaveBeenCalledWith(
-      expect.objectContaining({ id: "shop-1", name: "Copper Kettle" }),
+      expect.objectContaining({ id: "room-1", name: "Copper Kettle Cellar" }),
     );
   });
 
   it("creates and removes linked locations from the detail panel", async () => {
+    vi.mocked(api.createCampaignLocationLink).mockResolvedValue({
+      link: {
+        id: "link-1",
+        campaignId: "campaign-1",
+        sourceLocationId: "room-1",
+        targetLocationId: "dungeon-1",
+        linkType: "secret",
+        label: "Trapdoor",
+        direction: "bidirectional",
+        visibility: "dm",
+        notes: "Hidden below the rug.",
+        createdAt: "",
+        updatedAt: "",
+      },
+    });
     renderWorld({
       locations: [
-        location(),
+        location({
+          id: "room-1",
+          name: "Copper Kettle Cellar",
+          locationType: "room",
+          path: [
+            { id: "shop-1", name: "Copper Kettle", locationType: "shop" },
+            { id: "room-1", name: "Copper Kettle Cellar", locationType: "room" },
+          ],
+        }),
         location({
           id: "dungeon-1",
           name: "Old Well",
@@ -149,7 +196,7 @@ describe("CampaignWorldSection", () => {
       ],
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Link" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Link exit" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Connect to"), {
       target: { value: "dungeon-1" },
@@ -163,7 +210,7 @@ describe("CampaignWorldSection", () => {
 
     await waitFor(() =>
       expect(api.createCampaignLocationLink).toHaveBeenCalledWith("campaign-1", {
-        sourceLocationId: "shop-1",
+        sourceLocationId: "room-1",
         targetLocationId: "dungeon-1",
         linkType: "secret",
         label: "Trapdoor",
@@ -419,76 +466,4 @@ function renderWorld({
       />
     </MemoryRouter>,
   );
-}
-
-function location(overrides: Partial<CampaignLocation> = {}): CampaignLocation {
-  return {
-    id: "shop-1",
-    campaignId: "campaign-1",
-    name: "Copper Kettle",
-    locationType: "shop",
-    notes: "Copper pots hang from the rafters.",
-    publicNotes: "Copper pots hang from the rafters.",
-    dmNotes: "",
-    tags: ["rumor hub"],
-    sortOrder: 0,
-    status: "active",
-    mapAnchor: {},
-    path: [
-      { id: "town-1", name: "Brindleford", locationType: "settlement" },
-      { id: "shop-1", name: "Copper Kettle", locationType: "shop" },
-    ],
-    ...overrides,
-  };
-}
-
-function creature(overrides: Partial<Creature> = {}): Creature {
-  return {
-    id: "npc-1",
-    name: "Mara Vell",
-    description: "Innkeeper and rumormonger.",
-    size: "Medium",
-    creatureType: "humanoid",
-    alignment: "neutral",
-    armorClass: 12,
-    hitPoints: 9,
-    hitDice: "2d8",
-    challengeRating: "0",
-    xp: 10,
-    avatarUrl: "",
-    librarySource: "user",
-    readOnly: false,
-    sourceKey: "",
-    sourceLabel: "",
-    statBlock: {},
-    createdAt: "",
-    updatedAt: "",
-    ...overrides,
-  };
-}
-
-function item(overrides: Partial<Item> = {}): Item {
-  return {
-    id: "item-1",
-    name: "Healing Draught",
-    category: "Potion",
-    itemType: "Consumable",
-    rarity: "common",
-    attunement: false,
-    valueAmount: 50,
-    valueUnit: "gp",
-    weight: 0,
-    description: "A bitter red tonic.",
-    properties: [],
-    damage: {},
-    armorClass: {},
-    data: {},
-    librarySource: "user",
-    readOnly: false,
-    sourceKey: "",
-    sourceLabel: "",
-    createdAt: "",
-    updatedAt: "",
-    ...overrides,
-  };
 }

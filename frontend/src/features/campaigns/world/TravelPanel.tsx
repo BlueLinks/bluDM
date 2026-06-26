@@ -54,7 +54,7 @@ export function TravelPanel({
   return (
     <SectionPanel title="Travel" icon={Route} className="h-full">
       {error && <Callout tone="danger">{error}</Callout>}
-      <EmptyMini copy="World locations now live in the dedicated World workspace. The travel calculator and journey log stay here for route planning, revisit notes, and weather prep." />
+      <EmptyMini copy="Use saved journeys for routes the party may travel again, weather assumptions, and quick revisits during prep." />
       <TravelContextSummary
         directDistanceCount={directDistanceCount}
         linkedJourneyCount={linkedJourneyCount}
@@ -108,9 +108,9 @@ function TravelContextSummary({
 }) {
   return (
     <div className="mt-3 grid gap-2 rounded-md border border-border bg-background p-3 sm:grid-cols-3">
-      <TravelStat label="World-linked" value={linkedJourneyCount} />
-      <TravelStat label="Direct distances" value={directDistanceCount} />
-      <TravelStat label="Saved routes" value={totalJourneys} />
+      <TravelStat label="Use world places" value={linkedJourneyCount} />
+      <TravelStat label="Point-to-point" value={directDistanceCount} />
+      <TravelStat label="Saved journeys" value={totalJourneys} />
     </div>
   );
 }
