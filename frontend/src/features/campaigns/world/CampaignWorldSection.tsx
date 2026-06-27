@@ -351,6 +351,9 @@ export function CampaignWorldSection({
     setSelectedID(locationID);
     void navigate(`/campaigns/${campaignId}/world/location/${locationID}`);
   }
+  function addCustomStockItem(item: Item) {
+    setStockItems((current) => [item, ...current]);
+  }
   async function loadMaps() {
     setMapsLoading(true);
     setMapsError("");
@@ -380,7 +383,6 @@ export function CampaignWorldSection({
             type={typeFilter}
             types={typeOptions}
             onClear={clearSearchFilters}
-            onQueryChange={setSearchQuery}
             onRelationshipChange={setRelationshipFilter}
             onTagChange={setTagFilter}
             onTypeChange={setTypeFilter}
@@ -400,7 +402,11 @@ export function CampaignWorldSection({
               <SidebarDetailLayout variant="compact">
                 <WorldLocationList
                   locations={filteredLocations}
+                  query={searchQuery}
+                  resultCount={filteredLocations.length}
                   selectedID={selected?.id ?? ""}
+                  totalCount={sortedLocations.length}
+                  onQueryChange={setSearchQuery}
                   onSelect={(locationID) => {
                     if (mapsMode) setSelectedID(locationID);
                     else selectLocation(locationID);
@@ -437,9 +443,7 @@ export function CampaignWorldSection({
                     onCreateNpc={onManageNpcs}
                     onCreateNpcLink={createNpcLocationLink}
                     onCreateStock={createLocationStock}
-                    onCustomStockItemCreated={(item) =>
-                      setStockItems((current) => [item, ...current])
-                    }
+                    onCustomStockItemCreated={addCustomStockItem}
                     onDeleteLink={deleteLocationLink}
                     onDeleteLocation={() => setDeleteLocation(selected)}
                     onDeleteNpcLink={deleteNpcLocationLink}

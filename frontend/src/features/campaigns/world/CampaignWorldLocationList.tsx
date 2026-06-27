@@ -1,5 +1,6 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { Button, Input } from "../../../components/ui";
 import { LocationIcon } from "./CampaignWorldLocationIcon";
 import { locationPathLabel } from "./campaignWorldLocationUtils";
 import type { CampaignLocation } from "./travelTypes";
@@ -11,11 +12,19 @@ type LocationNode = {
 
 export function WorldLocationList({
   locations,
+  query,
+  resultCount,
   selectedID,
+  totalCount,
+  onQueryChange,
   onSelect,
 }: {
   locations: CampaignLocation[];
+  query: string;
+  resultCount: number;
   selectedID: string;
+  totalCount: number;
+  onQueryChange: (value: string) => void;
   onSelect: (locationID: string) => void;
 }) {
   const { nodes, parentByID } = useMemo(() => buildLocationTree(locations), [locations]);
@@ -39,6 +48,16 @@ export function WorldLocationList({
     });
   }
 
+  const expandableIDs = useMemo(() => nodeIDsWithChildren(nodes), [nodes]);
+  const selectedAncestorIDs = useMemo(
+    () => new Set(ancestorIDs(selectedID, parentByID)),
+    [parentByID, selectedID],
+  );
+  const canExpandAll = expandableIDs.some((id) => !expandedIDs.has(id));
+  const canCollapseAll = expandableIDs.some(
+    (id) => expandedIDs.has(id) && !selectedAncestorIDs.has(id),
+  );
+
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, node: LocationNode) {
     if (!node.children.length) return;
     if (event.key === "ArrowRight") {
@@ -55,21 +74,79 @@ export function WorldLocationList({
     }
   }
 
+  function expandAll() {
+    setExpandedIDs(new Set(expandableIDs));
+  }
+
+  function collapseAll() {
+    setExpandedIDs(new Set(selectedAncestorIDs));
+  }
+
   return (
-    <nav aria-label="Location results" className="grid h-full min-h-0 gap-0.5 overflow-auto pr-1">
-      {nodes.map((node) => (
-        <LocationTreeNode
-          expandedIDs={expandedIDs}
-          key={node.location.id}
-          node={node}
-          root
-          selectedID={selectedID}
-          onKeyDown={handleKeyDown}
-          onSelect={onSelect}
-          onToggleExpanded={toggleExpanded}
-        />
-      ))}
-    </nav>
+    <div className="flex h-full min-h-0 flex-col gap-2">
+      <div className="grid content-start gap-2 rounded-md border border-border bg-card p-2">
+        <div className="grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1">
+          <span aria-hidden="true" className="h-7 w-6" />
+          <div className="min-w-0">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label="Search locations"
+                className="w-full pl-9"
+                placeholder="Search locations"
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+              />
+            </div>
+            <p className="mt-1 text-xs font-semibold text-muted-foreground">
+              Showing {resultCount} of {totalCount} locations.
+            </p>
+          </div>
+        </div>
+        <div className="grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1">
+          <span aria-hidden="true" className="h-7 w-6" />
+          <div className="grid min-w-0 grid-cols-2 gap-1">
+            <Button
+              className="w-full"
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!canExpandAll}
+              onClick={expandAll}
+            >
+              Expand
+            </Button>
+            <Button
+              className="w-full"
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={!canCollapseAll}
+              onClick={collapseAll}
+            >
+              Collapse
+            </Button>
+          </div>
+        </div>
+      </div>
+      <nav
+        aria-label="Location results"
+        className="grid min-h-0 flex-1 content-start gap-1 overflow-auto pr-1"
+      >
+        {nodes.map((node) => (
+          <LocationTreeNode
+            expandedIDs={expandedIDs}
+            key={node.location.id}
+            node={node}
+            root
+            selectedID={selectedID}
+            onKeyDown={handleKeyDown}
+            onSelect={onSelect}
+            onToggleExpanded={toggleExpanded}
+          />
+        ))}
+      </nav>
+    </div>
   );
 }
 
@@ -96,8 +173,8 @@ function LocationTreeNode({
   const typeLabel = node.location.customTypeLabel || node.location.locationType || "custom";
 
   return (
-    <div className="grid gap-0.5">
-      <div className="flex min-w-0 items-center gap-1">
+    <div className="grid gap-1">
+      <div className="grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1">
         {hasChildren ? (
           <button
             aria-label={`${expanded ? "Collapse" : "Expand"} ${node.location.name}`}
@@ -118,7 +195,7 @@ function LocationTreeNode({
           aria-current={active ? "page" : undefined}
           aria-expanded={hasChildren ? expanded : undefined}
           className={[
-            "flex min-h-8 min-w-0 flex-1 items-start gap-2 rounded-md border px-2 py-1 text-left text-sm transition",
+            "flex min-h-8 w-full min-w-0 items-start gap-2 rounded-md border px-2 py-1 text-left text-sm transition",
             active
               ? "border-primary bg-primary/10"
               : "border-border bg-background hover:border-primary/60",
@@ -148,7 +225,7 @@ function LocationTreeNode({
         </button>
       </div>
       {expanded ? (
-        <div className="ml-4 grid gap-0.5 border-l border-border/70 pl-2">
+        <div className="ml-6 grid gap-1 border-l border-border/70 pl-3">
           {node.children.map((child) => (
             <LocationTreeNode
               expandedIDs={expandedIDs}
@@ -184,6 +261,15 @@ function buildLocationTree(locations: CampaignLocation[]) {
   }
 
   return { nodes: roots, parentByID };
+}
+
+function nodeIDsWithChildren(nodes: LocationNode[]) {
+  const ids: string[] = [];
+  for (const node of nodes) {
+    if (node.children.length) ids.push(node.location.id);
+    ids.push(...nodeIDsWithChildren(node.children));
+  }
+  return ids;
 }
 
 function rootIDs(nodes: LocationNode[]) {

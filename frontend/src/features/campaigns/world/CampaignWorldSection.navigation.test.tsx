@@ -53,6 +53,23 @@ describe("CampaignWorldSection navigation", () => {
     expect(readInputValue(screen.getByLabelText("Search locations"))).toBe("");
   });
 
+  it("collapses and expands the visible location picker tree", async () => {
+    renderWorld();
+
+    const results = await screen.findByLabelText("Location results");
+    fireEvent.click(within(results).getByRole("button", { name: /^Brindleford/i }));
+    expect(within(results).getByRole("button", { name: /Copper Kettle/i })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
+
+    expect(within(results).queryByRole("button", { name: /Copper Kettle/i })).toBeNull();
+    expect(screen.getByLabelText("Search locations")).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+
+    expect(within(results).getByRole("button", { name: /Copper Kettle/i })).toBeTruthy();
+  });
+
   it("starts create flow from the empty search state with the query prefilled", async () => {
     renderWorld();
 

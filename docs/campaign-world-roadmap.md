@@ -78,6 +78,10 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Prep overview cards now include compact running cues for scene focus, threats, routes, and note/map references.
   - Room next-step prompts now pair actions with table-facing prep questions for threats, routes, notes/secrets, and map position.
   - Focused prep overview tests cover running cues and deeper room prompts.
+- Location picker refinement bundle:
+  - World location search now sits directly above the tree in the left picker and aligns with location row widths without widening the sidebar.
+  - Expand and collapse controls let large visible location trees be opened or reduced in one step.
+  - Location tree rows now use a consistent gutter/button grid and stable row gaps so spacing does not shift between expanded and collapsed states.
 
 ## In Progress
 

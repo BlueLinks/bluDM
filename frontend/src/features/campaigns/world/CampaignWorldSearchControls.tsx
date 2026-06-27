@@ -1,7 +1,7 @@
-import { Search, X } from "lucide-react";
+import { X } from "lucide-react";
 import type React from "react";
 import { ActionRow, FieldGrid } from "../../../components/layout";
-import { Button, Field, Input } from "../../../components/ui";
+import { Button, Field } from "../../../components/ui";
 import type { WorldRelationshipFilter } from "./campaignWorldSearch";
 
 export function CampaignWorldSearchControls({
@@ -15,7 +15,6 @@ export function CampaignWorldSearchControls({
   totalCount,
   action,
   onClear,
-  onQueryChange,
   onRelationshipChange,
   onTagChange,
   onTypeChange,
@@ -30,7 +29,6 @@ export function CampaignWorldSearchControls({
   totalCount: number;
   action?: React.ReactNode;
   onClear: () => void;
-  onQueryChange: (value: string) => void;
   onRelationshipChange: (value: WorldRelationshipFilter) => void;
   onTagChange: (value: string) => void;
   onTypeChange: (value: string) => void;
@@ -40,25 +38,14 @@ export function CampaignWorldSearchControls({
     <div className="grid gap-3 rounded-md border border-border bg-card p-3">
       <ActionRow justify="between">
         <div className="min-w-0">
-          <h4 className="font-semibold">Find locations</h4>
+          <h4 className="font-semibold">Location filters</h4>
           <p className="text-xs font-semibold text-muted-foreground">
-            Showing {resultCount} of {totalCount} locations.
+            Refine {resultCount} of {totalCount} visible locations.
           </p>
         </div>
         {action}
       </ActionRow>
       <FieldGrid variant="worldSearch">
-        <Field label="Search locations">
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Name, path, tag, NPC, stock, encounter"
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-            />
-          </div>
-        </Field>
         <Field label="Type">
           <select
             className="min-h-10 w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-primary/30 transition focus:ring-2"
