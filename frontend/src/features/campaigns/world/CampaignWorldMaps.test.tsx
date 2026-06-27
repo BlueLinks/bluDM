@@ -36,12 +36,15 @@ describe("CampaignWorldMaps", () => {
     expect(screen.getByLabelText(/Selected map: Upper Floor/i)).toBeTruthy();
     expect(screen.getByLabelText(/Select map: Lower Floor/i)).toBeTruthy();
 
-    expect(screen.getByText("Needs placement")).toBeTruthy();
-    expect(screen.getByText("Already placed")).toBeTruthy();
     expect(screen.getByText("East Room")).toBeTruthy();
     expect(screen.getAllByText("North Room").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Place pin for East Room" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Move pin for North Room" })).toBeTruthy();
+    expect(screen.queryByText("Already placed")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show map pin actions for North Room" }));
+
+    expect(screen.getByRole("button", { name: "Move" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
   });
 
   it("supports explicit placement cancel and keyboard map view controls", async () => {
@@ -55,6 +58,9 @@ describe("CampaignWorldMaps", () => {
     expect(screen.getByText(/125% zoom/i)).toBeTruthy();
     fireEvent.keyDown(canvas, { key: "0" });
     expect(screen.getByText(/100% zoom/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Zoom out" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reset map view" })).toBeTruthy();
     fireEvent.keyDown(canvas, { key: "Escape" });
 
     await waitFor(() => expect(screen.queryByText(/Click or tap the map/i)).toBeNull());

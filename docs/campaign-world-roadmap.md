@@ -82,6 +82,11 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - World location search now sits directly above the tree in the left picker without widening the sidebar, replacing the former top filter bar.
   - Compact icon actions let DMs add a location or expand/collapse large visible location trees in one step.
   - Location tree rows now use a consistent gutter/button grid and stable row gaps so spacing does not shift between expanded and collapsed states.
+- Map refinement audit bundle:
+  - Map mode now reveals a collapsible map workspace above the location profile instead of replacing the rest of the location page.
+  - Location map summary cards now remove redundant status/count/details copy and use a single Show map tools action.
+  - Map zoom/reset/grid controls now live on the canvas, and pan/zoom is constrained so the view cannot expose canvas outside the map.
+  - Placed-pin management moved onto map pins with Open, Move, and Remove actions, while the side list focuses on missing placements only.
 
 ## In Progress
 

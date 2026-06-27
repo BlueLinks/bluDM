@@ -282,11 +282,9 @@ function buildProfileSections(props: ProfileSectionProps) {
     ) : null,
     mapCard: (
       <LocationMapCard
-        childLocations={childLocations}
         compact={profile.compactMap}
         location={location}
         maps={maps}
-        profile={profile}
         onOpenMaps={onOpenMaps}
       />
     ),

@@ -12,7 +12,6 @@ import {
 import { CampaignWorldMapCanvas } from "./CampaignWorldMapCanvas";
 import { CampaignWorldMapForm } from "./CampaignWorldMapForm";
 import { CampaignWorldMapSelectionList } from "./CampaignWorldMapSelectionList";
-import { CampaignWorldPinnedLocations } from "./CampaignWorldPinnedLocations";
 import { PinPlacementList } from "./CampaignWorldPinPlacementList";
 import type {
   CampaignLocation,
@@ -66,13 +65,6 @@ export function CampaignWorldMaps({
   const focusedMap = useMemo(
     () => maps.find((map) => map.id === focusedMapID),
     [focusedMapID, maps],
-  );
-  const parentMaps = useMemo(
-    () =>
-      maps.filter(
-        (map) => (map.parentLocationId ?? "") === (currentLocation.parentLocationId ?? ""),
-      ),
-    [currentLocation.parentLocationId, maps],
   );
   const availableMaps = useMemo(
     () => (attachedMaps.length ? attachedMaps : focusedMap ? [focusedMap] : rootMaps),
@@ -250,7 +242,6 @@ export function CampaignWorldMaps({
         }
       />
       {error ? <Callout tone="danger">{error}</Callout> : null}
-      <ParentPinSummary currentLocation={currentLocation} maps={parentMaps} />
       {formOpen ? (
         <CampaignWorldMapForm
           campaignId={campaignId}
@@ -342,7 +333,9 @@ function ActiveMapWorkspace({
         onNavigateFromPin={onNavigateFromPin}
         onCancelPlacement={onCancelPlacement}
         onPlacePin={onPlacePin}
+        onRemovePin={onRemovePin}
         onShowGridChange={onShowGridChange}
+        onStartPlacement={onStartPlacement}
       />
       <aside className="grid min-w-0 content-start gap-3">
         <PinPlacementList
@@ -350,13 +343,6 @@ function ActiveMapWorkspace({
           placementMode={placementMode}
           pins={pins}
           onStartPlacement={onStartPlacement}
-        />
-        <CampaignWorldPinnedLocations
-          pins={pins}
-          locationById={locationById}
-          map={activeMap}
-          onRemove={onRemovePin}
-          onSelectLocation={(locationID) => onNavigateFromPin(locationID, activeMap.id)}
         />
         <DistancePanel
           distance={distance}
@@ -423,24 +409,6 @@ function DistancePanel({
         </p>
       ) : null}
     </div>
-  );
-}
-
-function ParentPinSummary({
-  currentLocation,
-  maps,
-}: {
-  currentLocation: CampaignLocation;
-  maps: CampaignMap[];
-}) {
-  if (!currentLocation.parentLocationId) return null;
-  return (
-    <p className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-      {maps.length
-        ? `${currentLocation.name} can be placed or moved from its parent map.`
-        : `${currentLocation.name} does not have a parent map yet.`}{" "}
-      Open the parent location to manage its broader map position.
-    </p>
   );
 }
 

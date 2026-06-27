@@ -1,16 +1,6 @@
-import {
-  AlertTriangle,
-  Boxes,
-  CheckCircle2,
-  Coins,
-  FilePenLine,
-  Footprints,
-  Map as MapIcon,
-  MapPin,
-  Route,
-} from "lucide-react";
+import { Boxes, Coins, FilePenLine, Footprints, Map as MapIcon, MapPin, Route } from "lucide-react";
 import type React from "react";
-import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
+import { CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
 import { ChildPrepChips, type ChildPrepChip } from "./CampaignWorldChildPrepChips";
@@ -147,18 +137,14 @@ function WorldNote({
 }
 
 export function LocationMapCard({
-  childLocations,
   compact,
   location,
   maps,
-  profile,
   onOpenMaps,
 }: {
-  childLocations: CampaignLocation[];
   compact: boolean;
   location: CampaignLocation;
   maps: CampaignMap[];
-  profile: LocationProfileInfo;
   onOpenMaps: () => void;
 }) {
   const attachedMaps = maps.filter((map) => (map.parentLocationId ?? "") === location.id);
@@ -175,61 +161,22 @@ export function LocationMapCard({
         meta={mapMeta(compact, hasAnchor, parentMaps.length, attachedMaps.length)}
         title={compact ? "Map position" : "Map"}
         action={
-          <ActionRow justify="end">
-            <Button type="button" icon={MapIcon} size="sm" variant="secondary" onClick={onOpenMaps}>
-              Open Map
-            </Button>
-            <Button type="button" icon={MapPin} size="sm" variant="secondary" onClick={onOpenMaps}>
-              {placeLabel(compact, profile)}
-            </Button>
-          </ActionRow>
+          <Button type="button" icon={MapIcon} size="sm" variant="secondary" onClick={onOpenMaps}>
+            Show map tools
+          </Button>
         }
       />
-      <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
-        {preview?.imageUrl ? (
-          <img
-            className="max-h-64 w-full rounded-md border border-border object-cover"
-            src={preview.imageUrl}
-            alt={`${preview.name} preview`}
-          />
-        ) : (
-          <div className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm text-muted-foreground">
-            {mapEmptyCopy(compact, hasAnchor, relevantMaps.length)}
-          </div>
-        )}
-        <div className="grid gap-2">
-          <MapStatusPill
-            ready={Boolean(preview)}
-            readyText={compact ? "Parent map available" : "Map available"}
-            emptyText={compact ? "Needs parent map" : "Needs map"}
-          />
-          <MapStatusPill
-            ready={compact ? hasAnchor : attachedMaps.length > 0}
-            readyText={compact ? "Pinned on map" : "Regional map available"}
-            emptyText={compact ? "Not placed yet" : "No attached map yet"}
-          />
-          {!compact && childLocations.length ? (
-            <p className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-              {childLocations.length} relevant{" "}
-              {childLocations.length === 1 ? "place can" : "places can"} be pinned from Maps.
-            </p>
-          ) : null}
+      {preview?.imageUrl ? (
+        <img
+          className="max-h-64 w-full rounded-md border border-border object-cover"
+          src={preview.imageUrl}
+          alt={`${preview.name} preview`}
+        />
+      ) : (
+        <div className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm text-muted-foreground">
+          {mapEmptyCopy(compact, hasAnchor, relevantMaps.length)}
         </div>
-      </div>
-      <details className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-        <summary className="cursor-pointer font-semibold text-foreground">Map details</summary>
-        <ResponsiveGrid className="mt-3" variant="stats3">
-          <MapStat
-            label={compact ? "Parent maps" : "Attached maps"}
-            value={compact ? parentMaps.length : attachedMaps.length}
-          />
-          <MapStat
-            label={compact ? "Placement" : "Pin candidates"}
-            value={compact ? (hasAnchor ? "Placed" : "Unplaced") : childLocations.length}
-          />
-          <MapStat label="Map record" value={preview ? "Ready" : "Missing"} />
-        </ResponsiveGrid>
-      </details>
+      )}
     </CardSection>
   );
 }
@@ -248,47 +195,15 @@ function mapMeta(
   return parentMapCount ? "Not placed on parent map" : "No parent map";
 }
 
-function MapStatusPill({
-  emptyText,
-  ready,
-  readyText,
-}: {
-  emptyText: string;
-  ready: boolean;
-  readyText: string;
-}) {
-  const Icon = ready ? CheckCircle2 : AlertTriangle;
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold",
-        ready
-          ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
-          : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
-      ].join(" ")}
-    >
-      <Icon className="h-4 w-4" />
-      {ready ? readyText : emptyText}
-    </span>
-  );
-}
-
 function mapEmptyCopy(compact: boolean, hasAnchor: boolean, attachedMapCount: number) {
   if (compact) {
     return hasAnchor
-      ? "This location has map placement data. Open Maps to review or move the pin."
-      : "This location is not placed yet. Open Maps to place it on a parent map.";
+      ? "Pinned on a parent map. Show map tools to review or move it."
+      : "Not pinned yet. Show map tools to place it on a parent map.";
   }
   return attachedMapCount
-    ? "Map records are attached. Open Maps to edit pins, placement, and distances."
-    : "No map is attached yet. Open Maps to create a map and place relevant locations.";
-}
-
-function placeLabel(compact: boolean, profile: LocationProfileInfo) {
-  if (compact) return "Place Location";
-  if (profile.variant === "town") return "Place Buildings";
-  if (profile.variant === "dungeon" || profile.variant === "floor") return "Place Rooms";
-  return "Place Locations";
+    ? "Map ready. Show map tools to manage pins and distances."
+    : "No map attached yet. Show map tools to create one.";
 }
 
 export function MapStat({ label, value }: { label: string; value: React.ReactNode }) {

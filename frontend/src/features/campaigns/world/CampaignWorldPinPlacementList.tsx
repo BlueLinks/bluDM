@@ -1,4 +1,4 @@
-import { Crosshair, Grid2X2, MapPin, X } from "lucide-react";
+import { CheckCircle2, Crosshair, Grid2X2, X } from "lucide-react";
 import { Button, EmptyMini } from "../../../components/ui";
 import type { PlacementMode } from "./CampaignWorldMaps";
 import type { CampaignLocation, CampaignMapPin } from "./travelTypes";
@@ -18,8 +18,7 @@ export function PinPlacementList({
     return <EmptyMini copy="No relevant locations available for this map level." />;
   const pinByLocationId = new globalThis.Map(pins.map((pin) => [pin.locationId, pin]));
   const unplaced = candidates.filter((location) => !pinByLocationId.has(location.id));
-  const placed = candidates.filter((location) => pinByLocationId.has(location.id));
-  const placedCount = placed.length;
+  const placedCount = candidates.length - unplaced.length;
   return (
     <div className="grid gap-3 rounded-md border border-border bg-card p-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -28,53 +27,43 @@ export function PinPlacementList({
             <Crosshair className="h-4 w-4 text-accent" /> Place pins
           </div>
           <p className="mt-1 text-xs text-muted-foreground">
-            Unplaced locations stay first. Select one, then click the map where it belongs.
+            Select a missing place, then click the map where it belongs.
           </p>
         </div>
         <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
           {placedCount}/{candidates.length} placed
         </span>
       </div>
-      <PlacementGroup
-        label="Needs placement"
-        locations={unplaced}
-        pinByLocationId={pinByLocationId}
-        placementMode={placementMode}
-        onStartPlacement={onStartPlacement}
-      />
-      <PlacementGroup
-        label="Already placed"
-        locations={placed}
-        pinByLocationId={pinByLocationId}
-        placementMode={placementMode}
-        onStartPlacement={onStartPlacement}
-      />
+      {unplaced.length ? (
+        <PlacementGroup
+          locations={unplaced}
+          placementMode={placementMode}
+          onStartPlacement={onStartPlacement}
+        />
+      ) : (
+        <p className="inline-flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+          <CheckCircle2 className="h-4 w-4" /> All relevant places are pinned. Click pins on the map
+          to manage them.
+        </p>
+      )}
     </div>
   );
 }
 
 function PlacementGroup({
-  label,
   locations,
-  pinByLocationId,
   placementMode,
   onStartPlacement,
 }: {
-  label: string;
   locations: CampaignLocation[];
-  pinByLocationId: Map<string, CampaignMapPin>;
   placementMode: PlacementMode;
   onStartPlacement: (mode: PlacementMode) => void;
 }) {
   if (!locations.length) return null;
   return (
     <div className="grid gap-2">
-      <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
       {locations.map((location) => {
-        const pin = pinByLocationId.get(location.id);
-        const pinned = Boolean(pin);
         const active = placementMode?.locationID === location.id;
-        const action = pinned ? "move" : "place";
         return (
           <div
             key={location.id}
@@ -85,23 +74,21 @@ function PlacementGroup({
           >
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold">{location.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {pinned
-                  ? `Placed at ${Math.round(pin?.x ?? 0)}, ${Math.round(pin?.y ?? 0)}`
-                  : "Unplaced on this map"}
-              </p>
+              <p className="text-xs text-muted-foreground">Not placed on this map</p>
             </div>
             <Button
               type="button"
               className="w-full justify-start text-left sm:w-auto"
               size="sm"
-              icon={active ? X : pinned ? MapPin : Grid2X2}
+              icon={active ? X : Grid2X2}
               variant={active ? "primary" : "secondary"}
               aria-pressed={active}
-              aria-label={`${active ? "Cancel placement for" : pinned ? "Move pin for" : "Place pin for"} ${location.name}`}
-              onClick={() => onStartPlacement(active ? null : { locationID: location.id, action })}
+              aria-label={`${active ? "Cancel placement for" : "Place pin for"} ${location.name}`}
+              onClick={() =>
+                onStartPlacement(active ? null : { locationID: location.id, action: "place" })
+              }
             >
-              {active ? "Cancel" : pinned ? "Move" : "Place"}
+              {active ? "Cancel" : "Place"}
             </Button>
           </div>
         );
