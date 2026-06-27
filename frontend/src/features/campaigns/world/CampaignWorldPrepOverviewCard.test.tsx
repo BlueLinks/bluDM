@@ -28,6 +28,19 @@ describe("PrepOverviewCard", () => {
       />,
     );
 
+    expect(
+      screen.getByText("What changes if the party waits, searches, or makes noise here?"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Where can the party go next, and what door, stair, or passage shows it?"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("What should players notice first, and what can they discover with care?"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Where does this room sit relative to the floor and nearby exits?"),
+    ).toBeTruthy();
+
     fireEvent.click(screen.getByRole("button", { name: "Add an encounter" }));
     fireEvent.click(screen.getByRole("button", { name: "Link an exit" }));
     fireEvent.click(screen.getByRole("button", { name: "Add room notes" }));
@@ -74,6 +87,25 @@ describe("PrepOverviewCard", () => {
 
     expect(screen.queryByRole("button", { name: "Add encounter" })).toBeNull();
     expect(screen.getByRole("button", { name: "Add an encounter" })).toBeTruthy();
+  });
+
+  it("summarizes running cues for prepared exploration spaces", () => {
+    render(
+      <PrepOverviewCard
+        childLocations={[location({ id: "room-2", name: "Collapsed Hall" })]}
+        encounters={[encounter({ status: "planned" }), encounter({ id: "encounter-2" })]}
+        links={[link()]}
+        location={location({ summary: "A flooded archive with a whispering shelf." })}
+        maps={[]}
+        onAddEncounter={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Running cues")).toBeTruthy();
+    expect(screen.getByText("A flooded archive with a whispering shelf.")).toBeTruthy();
+    expect(screen.getByText("2 of 2 encounters planned to run.")).toBeTruthy();
+    expect(screen.getByText("1 exit can move players onward.")).toBeTruthy();
+    expect(screen.getByText("Notes are ready; map context is missing.")).toBeTruthy();
   });
 
   it("does not show room next steps for non-room profiles", () => {

@@ -74,20 +74,16 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Map, link, NPC, encounter, shop stock, and travel copy now favors DM-facing status language over implementation/count labels, with lower-priority map counts moved into expandable details.
   - Location detail cards use two-column desktop layouts where practical while preserving narrow wrapping behavior.
   - Demo seed data now includes realistic regions, settlements, shops, merchants, NPC links, dungeon floors/rooms, encounters, exits, maps, pins, stock, and travel routes.
+- Dungeon and encounter prep follow-up bundle:
+  - Prep overview cards now include compact running cues for scene focus, threats, routes, and note/map references.
+  - Room next-step prompts now pair actions with table-facing prep questions for threats, routes, notes/secrets, and map position.
+  - Focused prep overview tests cover running cues and deeper room prompts.
 
 ## In Progress
 
 No active implementation phase.
 
 ## Planned
-
-### Dungeon And Encounter Prep
-
-- Goal: Continue improving Dungeon, Floor, and Room pages for session prep and running exploration.
-- Value: Very high; these pages support immediate DM prep/play workflows.
-- Rough effort: Medium to high, depending on whether work stays in profile cards or expands encounter editing.
-- Dependencies: Existing encounter creation flow, location hierarchy, Room/Floor/Dungeon profile cards.
-- Remaining opportunities: richer room/floor structure workflows and deeper room-level prep prompts beyond the first next-step prompt slice.
 
 ### Maps Workspace Polish
 
@@ -123,6 +119,8 @@ No active implementation phase.
   - Rationale: Encounters already have existing campaign flows and are contextual from Dungeon/Floor/Room pages. A World-specific encounter workspace should wait for clear review/prep pain.
 - Major backend redesigns.
   - Rationale: Current UX phases use existing models and APIs adequately. Backend changes should be driven by specific limitations.
+- Embedded encounter editing inside World profile cards.
+  - Rationale: Dungeon/Room pages now surface running cues, creation entry points, and links to existing encounter editing. More editing UI should wait for specific prep friction rather than duplicating existing encounter flows.
 - Full map editor redesign.
   - Rationale: Maps needs polish first; redesign only if targeted improvements expose model or interaction limits.
 
@@ -139,4 +137,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Consider Dungeon And Encounter Prep as the next controlled bundle. Focus on richer room/floor running cues and deeper prep prompts without introducing a standalone encounter workspace.
+Continue with Maps Workspace Polish only if targeted mobile/canvas friction is identified during QA; otherwise mark remaining speculative polish as deferred for this PR.
