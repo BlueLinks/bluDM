@@ -48,16 +48,6 @@ export function DeleteLocationConfirm({
   );
 }
 
-export function AddWorldLocationAction({ onCreate }: { onCreate: () => void }) {
-  return (
-    <ActionRow justify="end">
-      <Button type="button" icon={MapPin} size="sm" onClick={onCreate}>
-        Add World Location
-      </Button>
-    </ActionRow>
-  );
-}
-
 export function FilterHiddenNotice({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-100">

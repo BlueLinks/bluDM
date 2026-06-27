@@ -60,12 +60,12 @@ describe("CampaignWorldSection navigation", () => {
     fireEvent.click(within(results).getByRole("button", { name: /^Brindleford/i }));
     expect(within(results).getByRole("button", { name: /Copper Kettle/i })).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Collapse" }));
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all locations" }));
 
     expect(within(results).queryByRole("button", { name: /Copper Kettle/i })).toBeNull();
     expect(screen.getByLabelText("Search locations")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand all locations" }));
 
     expect(within(results).getByRole("button", { name: /Copper Kettle/i })).toBeTruthy();
   });

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Button, Input } from "../../../components/ui";
 import { LocationIcon } from "./CampaignWorldLocationIcon";
@@ -16,6 +16,7 @@ export function WorldLocationList({
   resultCount,
   selectedID,
   totalCount,
+  onCreate,
   onQueryChange,
   onSelect,
 }: {
@@ -24,6 +25,7 @@ export function WorldLocationList({
   resultCount: number;
   selectedID: string;
   totalCount: number;
+  onCreate: () => void;
   onQueryChange: (value: string) => void;
   onSelect: (locationID: string) => void;
 }) {
@@ -85,48 +87,66 @@ export function WorldLocationList({
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <div className="grid content-start gap-2 rounded-md border border-border bg-card p-2">
-        <div className="grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1">
-          <span aria-hidden="true" className="h-7 w-6" />
+        <div className="flex min-w-0 items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search locations"
-                className="w-full pl-9"
-                placeholder="Search locations"
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-              />
-            </div>
-            <p className="mt-1 text-xs font-semibold text-muted-foreground">
-              Showing {resultCount} of {totalCount} locations.
+            <h4 className="text-sm font-semibold">Locations</h4>
+            <p className="text-xs font-semibold text-muted-foreground">
+              Showing {resultCount} of {totalCount}.
             </p>
           </div>
-        </div>
-        <div className="grid min-w-0 grid-cols-[1.5rem_minmax(0,1fr)] items-start gap-1">
-          <span aria-hidden="true" className="h-7 w-6" />
-          <div className="grid min-w-0 grid-cols-2 gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <Button
-              className="w-full"
+              aria-label="Add world location"
+              className="h-8 w-8 p-0"
+              icon={MapPin}
+              title="Add world location"
+              type="button"
+              size="sm"
+              onClick={onCreate}
+            />
+            <Button
+              aria-label="Expand all locations"
+              className="h-8 w-8 p-0"
+              icon={ChevronDown}
+              title="Expand all locations"
               type="button"
               size="sm"
               variant="secondary"
               disabled={!canExpandAll}
               onClick={expandAll}
-            >
-              Expand
-            </Button>
+            />
             <Button
-              className="w-full"
+              aria-label="Collapse all locations"
+              className="h-8 w-8 p-0"
+              icon={ChevronRight}
+              title="Collapse all locations"
               type="button"
               size="sm"
               variant="secondary"
               disabled={!canCollapseAll}
               onClick={collapseAll}
-            >
-              Collapse
-            </Button>
+            />
           </div>
+        </div>
+        <div className="relative min-w-0">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            aria-label="Search locations"
+            className={query ? "w-full pl-9 pr-9" : "w-full pl-9"}
+            placeholder="Search locations"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+          />
+          {query ? (
+            <button
+              aria-label="Clear location search"
+              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              type="button"
+              onClick={() => onQueryChange("")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          ) : null}
         </div>
       </div>
       <nav

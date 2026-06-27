@@ -74,7 +74,6 @@ export function ResponsiveGrid({
 const fieldGridClasses = {
   itemSearch: "grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]",
   link: "grid gap-3 sm:grid-cols-[10rem_minmax(0,1fr)]",
-  worldSearch: "grid gap-3 sm:grid-cols-2 lg:grid-cols-[9rem_9rem_11rem_auto] lg:items-end",
   worldMapForm: "grid gap-3 md:grid-cols-4 md:items-end",
 };
 

@@ -12,9 +12,7 @@ import { CampaignWorldSearchEmptyState } from "./CampaignWorldSearchEmptyState";
 import type { LinkFormInput } from "./CampaignWorldLocationLinks";
 import type { NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
 import type { LocationStockFormInput } from "./CampaignWorldLocationStock";
-import { CampaignWorldSearchControls } from "./CampaignWorldSearchControls";
 import {
-  AddWorldLocationAction,
   compareLocations,
   DeleteLocationConfirm,
   descendantLocationIDs,
@@ -23,12 +21,7 @@ import {
   locationMapMarker,
   MissingLocationFallback,
 } from "./CampaignWorldSectionHelpers";
-import {
-  filterWorldLocations,
-  locationTagOptions,
-  locationTypeOptions,
-  type WorldRelationshipFilter,
-} from "./campaignWorldSearch";
+import { filterWorldLocations } from "./campaignWorldSearch";
 import type {
   CampaignLocation,
   CampaignLocationLink,
@@ -75,9 +68,6 @@ export function CampaignWorldSection({
   const [tags, setTags] = useState("");
   const [mapMarker, setMapMarker] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [tagFilter, setTagFilter] = useState("");
-  const [relationshipFilter, setRelationshipFilter] = useState<WorldRelationshipFilter>("");
   const [error, setError] = useState("");
   const [deleteLocation, setDeleteLocation] = useState<CampaignLocation | null>(null);
   const [links, setLinks] = useState<CampaignLocationLink[]>([]);
@@ -101,28 +91,15 @@ export function CampaignWorldSection({
         sortedLocations,
         {
           query: searchQuery,
-          relationship: relationshipFilter,
-          tag: tagFilter,
-          type: typeFilter,
+          relationship: "",
+          tag: "",
+          type: "",
         },
         { encounters, npcLinks, npcs, stock, stockItems },
       ),
-    [
-      encounters,
-      npcLinks,
-      npcs,
-      relationshipFilter,
-      searchQuery,
-      sortedLocations,
-      stock,
-      stockItems,
-      tagFilter,
-      typeFilter,
-    ],
+    [encounters, npcLinks, npcs, searchQuery, sortedLocations, stock, stockItems],
   );
-  const typeOptions = useMemo(() => locationTypeOptions(sortedLocations), [sortedLocations]);
-  const tagOptions = useMemo(() => locationTagOptions(sortedLocations), [sortedLocations]);
-  const hasActiveFilters = Boolean(searchQuery || typeFilter || tagFilter || relationshipFilter);
+  const hasActiveFilters = Boolean(searchQuery);
   const effectiveSelectedID = routeLocationID ?? selectedID;
   const selected = routeLocationID
     ? sortedLocations.find((location) => location.id === routeLocationID)
@@ -325,9 +302,6 @@ export function CampaignWorldSection({
   }
   function clearSearchFilters() {
     setSearchQuery("");
-    setTypeFilter("");
-    setTagFilter("");
-    setRelationshipFilter("");
   }
   function selectLocation(locationID: string, { clearFilters = false } = {}) {
     if (clearFilters) clearSearchFilters();
@@ -372,21 +346,6 @@ export function CampaignWorldSection({
         <EmptyWorldLocations onCreate={() => openCreate()} />
       ) : (
         <div className="grid gap-4">
-          <CampaignWorldSearchControls
-            action={<AddWorldLocationAction onCreate={() => openCreate()} />}
-            query={searchQuery}
-            relationship={relationshipFilter}
-            resultCount={filteredLocations.length}
-            tag={tagFilter}
-            tags={tagOptions}
-            totalCount={sortedLocations.length}
-            type={typeFilter}
-            types={typeOptions}
-            onClear={clearSearchFilters}
-            onRelationshipChange={setRelationshipFilter}
-            onTagChange={setTagFilter}
-            onTypeChange={setTypeFilter}
-          />
           {missingRouteLocation ? (
             <MissingLocationFallback campaignId={campaignId} />
           ) : filteredLocations.length === 0 && !selected ? (
@@ -406,6 +365,7 @@ export function CampaignWorldSection({
                   resultCount={filteredLocations.length}
                   selectedID={selected?.id ?? ""}
                   totalCount={sortedLocations.length}
+                  onCreate={() => openCreate()}
                   onQueryChange={setSearchQuery}
                   onSelect={(locationID) => {
                     if (mapsMode) setSelectedID(locationID);

@@ -414,15 +414,17 @@ describe("CampaignWorldSection", () => {
     let results = screen.getByLabelText("Location results");
     expect(within(results).getByText("Copper Kettle")).toBeTruthy();
     expect(within(results).queryByText("Old Well")).toBeNull();
-    expect(screen.getByText("Showing 1 of 2 locations.")).toBeTruthy();
+    expect(screen.getByText(/Showing\s+1\s+of\s+2\./)).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-    fireEvent.change(screen.getByLabelText("Relationship"), { target: { value: "has-stock" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clear location search" }));
+    fireEvent.change(screen.getByLabelText("Search locations"), {
+      target: { value: "Healing Draught" },
+    });
     results = screen.getByLabelText("Location results");
     expect(within(results).getByText("Copper Kettle")).toBeTruthy();
     expect(within(results).queryByText("Old Well")).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+    fireEvent.click(screen.getByRole("button", { name: "Clear location search" }));
     fireEvent.change(screen.getByLabelText("Search locations"), {
       target: { value: "Shop Brawl" },
     });
@@ -430,9 +432,14 @@ describe("CampaignWorldSection", () => {
       within(screen.getByLabelText("Location results")).getByText("Copper Kettle"),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-    fireEvent.change(screen.getByLabelText("Type"), { target: { value: "dungeon" } });
-    fireEvent.change(screen.getByLabelText("Tag"), { target: { value: "ruin" } });
+    fireEvent.click(screen.getByRole("button", { name: "Clear location search" }));
+    fireEvent.change(screen.getByLabelText("Search locations"), { target: { value: "ruin" } });
+    results = screen.getByLabelText("Location results");
+    expect(within(results).getAllByText("Old Well").length).toBeGreaterThan(0);
+    expect(within(results).queryByText("Copper Kettle")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear location search" }));
+    fireEvent.change(screen.getByLabelText("Search locations"), { target: { value: "dungeon" } });
     results = screen.getByLabelText("Location results");
     expect(within(results).getAllByText("Old Well").length).toBeGreaterThan(0);
     expect(within(results).queryByText("Copper Kettle")).toBeNull();
