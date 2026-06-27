@@ -85,29 +85,7 @@ No active implementation phase.
 
 ## Planned
 
-### Maps Workspace Polish
-
-- Goal: Continue improving map list/editor usability, pin placement, navigation, and blank-grid map handling after the focused polish slices.
-- Value: High; maps are the only dedicated World workspace and strongly affect location usability.
-- Rough effort: Medium to high due to canvas interactions.
-- Dependencies: Existing map model, map pins, `CampaignWorldMaps`, `CampaignWorldMapCanvas`.
-- Remaining opportunities: deeper real-campaign mobile touch testing and targeted follow-ups from observed canvas friction.
-
-### Travel Improvements
-
-- Goal: Improve compact travel summaries and contextual route planning without embedding a full planner into profile pages.
-- Value: Medium to high for travel-heavy campaigns.
-- Rough effort: Medium.
-- Dependencies: Existing journey log, Travel tool/modal, map distance APIs.
-- Remaining opportunities: targeted follow-ups from travel-heavy campaign use, especially saved-route filtering or stronger journey naming prompts if observed friction warrants it.
-
-### Commerce Improvements
-
-- Goal: Improve stock editing, merchant context, and pricing workflows on Shop pages.
-- Value: Medium; important for shop-heavy campaigns but narrower than dungeon/map prep.
-- Rough effort: Medium.
-- Dependencies: Existing item APIs, location stock APIs, NPC links.
-- Remaining opportunities: campaign-wide shop review, restock reminders, or richer merchant pricing rules only if shop-heavy play exposes concrete friction.
+No active Campaign World implementation items remain planned for this PR.
 
 ## Deferred
 
@@ -123,6 +101,12 @@ No active implementation phase.
   - Rationale: Dungeon/Room pages now surface running cues, creation entry points, and links to existing encounter editing. More editing UI should wait for specific prep friction rather than duplicating existing encounter flows.
 - Full map editor redesign.
   - Rationale: Maps needs polish first; redesign only if targeted improvements expose model or interaction limits.
+- Additional Maps workspace polish beyond the completed slices.
+  - Rationale: The remaining map notes are deeper real-campaign mobile touch testing and targeted canvas follow-ups. Those should be driven by observed canvas friction rather than speculative UI changes in this PR.
+- Additional Travel improvements beyond the completed contextual travel bundle.
+  - Rationale: Saved-route filtering and stronger journey naming prompts should wait for travel-heavy campaign use to show concrete friction.
+- Additional Commerce improvements beyond the completed shop-profile bundle.
+  - Rationale: Campaign-wide shop review, restock reminders, and richer merchant pricing rules should wait for shop-heavy play needs instead of expanding scope in this PR.
 
 ## Rejected
 
@@ -137,4 +121,4 @@ No active implementation phase.
 
 ## Next Recommended Task
 
-Continue with Maps Workspace Polish only if targeted mobile/canvas friction is identified during QA; otherwise mark remaining speculative polish as deferred for this PR.
+No remaining Campaign World roadmap item is planned for this PR. Future Campaign World work should start from a deferred item only when concrete play or QA friction justifies reopening it.
