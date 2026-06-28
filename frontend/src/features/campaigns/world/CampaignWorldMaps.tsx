@@ -1,17 +1,11 @@
 import { Map as MapIcon, Ruler } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Callout, EmptyMini, Select } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { formatMapDistance } from "./campaignMapDistance";
-import {
-  candidateLocationsForMap,
-  summarizePins,
-  type MapPinSummary,
-} from "./campaignWorldMapUtils";
+import { candidateLocationsForMap } from "./campaignWorldMapUtils";
 import { CampaignWorldMapCanvas } from "./CampaignWorldMapCanvas";
 import { CampaignWorldMapForm } from "./CampaignWorldMapForm";
-import { CampaignWorldMapSelectionList } from "./CampaignWorldMapSelectionList";
 import { PinPlacementList } from "./CampaignWorldPinPlacementList";
 import type {
   CampaignLocation,
@@ -46,7 +40,6 @@ export function CampaignWorldMaps({
 }) {
   const [activeMapId, setActiveMapId] = useState("");
   const [pins, setPins] = useState<CampaignMapPin[]>([]);
-  const [pinSummaries, setPinSummaries] = useState<Record<string, MapPinSummary>>({});
   const [placementMode, setPlacementMode] = useState<PlacementMode>(null);
   const [distanceFromId, setDistanceFromId] = useState("");
   const [distanceToId, setDistanceToId] = useState("");
@@ -99,10 +92,6 @@ export function CampaignWorldMaps({
       .then(({ pins: nextPins }) => {
         if (!active) return;
         setPins(nextPins);
-        setPinSummaries((current) => ({
-          ...current,
-          [activeMap.id]: summarizePins(nextPins),
-        }));
       })
       .catch((err: unknown) => {
         if (active) setError(err instanceof Error ? err.message : "Could not load map pins");
@@ -114,31 +103,6 @@ export function CampaignWorldMaps({
       active = false;
     };
   }, [activeMap?.id, campaignId]);
-
-  useEffect(() => {
-    if (!availableMaps.length) {
-      setPinSummaries({});
-      return;
-    }
-    let active = true;
-    Promise.all(
-      availableMaps.map((map) =>
-        api
-          .campaignMapPins(campaignId, map.id)
-          .then(({ pins: mapPins }) => [map.id, summarizePins(mapPins)] as const),
-      ),
-    )
-      .then((entries) => {
-        if (active) setPinSummaries(Object.fromEntries(entries));
-      })
-      .catch((err: unknown) => {
-        if (active)
-          setError(err instanceof Error ? err.message : "Could not load map pin summaries");
-      });
-    return () => {
-      active = false;
-    };
-  }, [availableMaps, campaignId]);
 
   const candidateLocations = useMemo(() => {
     if (!activeMap) return childLocations;
@@ -154,7 +118,6 @@ export function CampaignWorldMaps({
     if (!mapId) return;
     const { pins: nextPins } = await api.campaignMapPins(campaignId, mapId);
     setPins(nextPins);
-    setPinSummaries((current) => ({ ...current, [mapId]: summarizePins(nextPins) }));
   }
 
   async function placePin(x: number, y: number) {
@@ -187,14 +150,7 @@ export function CampaignWorldMaps({
     setError("");
     try {
       await api.deleteCampaignMapPin(campaignId, activeMap.id, pin.id);
-      setPins((current) => {
-        const nextPins = current.filter((item) => item.id !== pin.id);
-        setPinSummaries((summaries) => ({
-          ...summaries,
-          [activeMap.id]: summarizePins(nextPins),
-        }));
-        return nextPins;
-      });
+      setPins((current) => current.filter((item) => item.id !== pin.id));
       setDistance(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove map pin");
@@ -220,78 +176,67 @@ export function CampaignWorldMaps({
   }
 
   return (
-    <CardSection className="grid min-w-0 gap-4 p-4" tone="card">
-      <SectionHeader
-        icon={MapIcon}
-        meta={
-          attachedMaps.length
-            ? `${attachedMaps.length} ${attachedMaps.length === 1 ? "map" : "maps"} available here`
-            : undefined
-        }
-        title="Maps"
-        action={
-          <Button
-            type="button"
-            icon={MapIcon}
-            size="sm"
-            variant="secondary"
-            onClick={() => setFormOpen((open) => !open)}
-          >
-            {formOpen ? "Close map form" : "Create map"}
-          </Button>
-        }
-      />
+    <div className="grid min-w-0 gap-4">
       {error ? <Callout tone="danger">{error}</Callout> : null}
-      {formOpen ? (
-        <CampaignWorldMapForm
-          campaignId={campaignId}
-          currentLocation={currentLocation}
-          onCreated={async () => {
-            setFormOpen(false);
-            await onMapsChanged();
-          }}
-          onError={setError}
-        />
-      ) : null}
       {!activeMap ? (
-        <EmptyMini copy="Create a map attached to this location, then explicitly place pins for relevant child locations." />
+        <div className="grid min-w-0 gap-3 rounded-md border border-dashed border-border bg-background p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">Map tools</p>
+              <p className="text-xs text-muted-foreground">
+                Create one map for this location, then place relevant child locations on it.
+              </p>
+            </div>
+            <Button
+              type="button"
+              icon={MapIcon}
+              size="sm"
+              variant="secondary"
+              onClick={() => setFormOpen((open) => !open)}
+            >
+              {formOpen ? "Close map form" : "Create map"}
+            </Button>
+          </div>
+          {formOpen ? (
+            <CampaignWorldMapForm
+              campaignId={campaignId}
+              currentLocation={currentLocation}
+              onCreated={async () => {
+                setFormOpen(false);
+                await onMapsChanged();
+              }}
+              onError={setError}
+            />
+          ) : null}
+          <EmptyMini copy="Create a map attached to this location, then explicitly place pins for relevant child locations." />
+        </div>
       ) : (
-        <>
-          <CampaignWorldMapSelectionList
-            activeMap={activeMap}
-            availableMaps={availableMaps}
-            currentLocation={currentLocation}
-            locations={locations}
-            pinSummaries={pinSummaries}
-            onMapChange={setActiveMapId}
-          />
-          <ActiveMapWorkspace
-            activeMap={activeMap}
-            candidateLocations={candidateLocations}
-            distance={distance}
-            distanceFromId={distanceFromId}
-            distanceToId={distanceToId}
-            focusedLocationID={focusedLocationID}
-            loadingPins={loadingPins}
-            locationById={locationById}
-            placementMode={placementMode}
-            pinnedLocationOptions={pinnedOptions}
-            pins={pins}
-            saving={saving}
-            showGrid={showGrid}
-            onCalculateDistance={calculateDistance}
-            onDistanceFromChange={setDistanceFromId}
-            onDistanceToChange={setDistanceToId}
-            onNavigateFromPin={onNavigateFromPin}
-            onCancelPlacement={() => setPlacementMode(null)}
-            onPlacePin={placePin}
-            onRemovePin={removePin}
-            onShowGridChange={setShowGrid}
-            onStartPlacement={setPlacementMode}
-          />
-        </>
+        <ActiveMapWorkspace
+          activeMap={activeMap}
+          candidateLocations={candidateLocations}
+          distance={distance}
+          distanceFromId={distanceFromId}
+          distanceToId={distanceToId}
+          focusedLocationID={focusedLocationID}
+          loadingPins={loadingPins}
+          locationById={locationById}
+          placementMode={placementMode}
+          pinnedLocationOptions={pinnedOptions}
+          pins={pins}
+          saving={saving}
+          showGrid={showGrid}
+          onCalculateDistance={calculateDistance}
+          onDistanceFromChange={setDistanceFromId}
+          onDistanceToChange={setDistanceToId}
+          onNavigateFromPin={onNavigateFromPin}
+          onCancelPlacement={() => setPlacementMode(null)}
+          onPlacePin={placePin}
+          onRemovePin={removePin}
+          onShowGridChange={setShowGrid}
+          onStartPlacement={setPlacementMode}
+        />
       )}
-    </CardSection>
+    </div>
   );
 }
 

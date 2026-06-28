@@ -28,13 +28,14 @@ describe("CampaignWorldMaps", () => {
     );
   });
 
-  it("summarizes pin coverage per map and keeps unplaced locations scannable", async () => {
+  it("shows one embedded map workspace and keeps unplaced locations scannable", async () => {
     renderMaps();
 
-    expect(await screen.findByText("2 maps available")).toBeTruthy();
-    expect(await screen.findByText("1/2 placed · 1 pin")).toBeTruthy();
-    expect(screen.getByLabelText(/Selected map: Upper Floor/i)).toBeTruthy();
-    expect(screen.getByLabelText(/Select map: Lower Floor/i)).toBeTruthy();
+    expect(
+      await screen.findByRole("region", { name: /Interactive map canvas for Upper Floor/i }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Maps for this workspace")).toBeNull();
+    expect(screen.queryByText("Lower Floor")).toBeNull();
 
     expect(screen.getByText("East Room")).toBeTruthy();
     expect(screen.getAllByText("North Room").length).toBeGreaterThan(0);
@@ -56,8 +57,15 @@ describe("CampaignWorldMaps", () => {
     const canvas = screen.getByRole("region", { name: /Interactive map canvas for Upper Floor/i });
     fireEvent.keyDown(canvas, { key: "+" });
     expect(screen.getByText(/125% zoom/i)).toBeTruthy();
-    fireEvent.wheel(canvas, { clientX: 200, clientY: 160, deltaY: -120 });
-    expect(screen.getByText(/141% zoom/i)).toBeTruthy();
+    const wheelEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 200,
+      clientY: 160,
+      deltaY: -120,
+    });
+    expect(fireEvent(canvas, wheelEvent)).toBe(false);
+    await waitFor(() => expect(screen.getByText(/141% zoom/i)).toBeTruthy());
     fireEvent.keyDown(canvas, { key: "0" });
     expect(screen.getByText(/100% zoom/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();

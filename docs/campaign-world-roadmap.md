@@ -88,7 +88,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Map zoom/reset/grid controls now live on the canvas, and pan/zoom is constrained so the view cannot expose canvas outside the map.
   - Placed-pin management moved onto map pins with Open, Move, and Remove actions, while the side list focuses on missing placements only.
   - The Map profile card now owns the single Show/Hide map tools toggle, embedding tools beside the map frame instead of using a separate top workspace disclosure.
-  - Map canvas supports scroll-wheel/trackpad zoom anchored under the pointer while preserving the existing bounds clamp.
+  - Map tools now render the single active map directly in the Map card instead of nesting a redundant Maps selector frame.
+  - Map canvas supports scroll-wheel/trackpad zoom anchored under the pointer while preserving the existing bounds clamp and consuming page scroll while the pointer is over the canvas.
 
 ## In Progress
 

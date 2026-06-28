@@ -6,7 +6,6 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
-  type WheelEvent,
 } from "react";
 import { Button, Callout, Checkbox } from "../../../components/ui";
 import { formatMapDistance } from "./campaignMapDistance";
@@ -60,6 +59,13 @@ export function CampaignWorldMapCanvas({
     setPan(nextPan);
   }, [activeMap.height, activeMap.width, focusedLocationID, pins]);
 
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    viewport.addEventListener("wheel", handleWheel, { passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel);
+  });
+
   function resetView() {
     setZoom(MIN_ZOOM);
     setPan({ x: 0, y: 0 });
@@ -102,8 +108,9 @@ export function CampaignWorldMapCanvas({
     });
   }
 
-  function handleWheel(event: WheelEvent<HTMLDivElement>) {
-    if (event.cancelable) event.preventDefault();
+  function handleWheel(event: WheelEvent) {
+    event.preventDefault();
+    event.stopPropagation();
     const rect = viewportRef.current?.getBoundingClientRect();
     if (!rect) return;
     zoomTowardPoint(Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY), {
@@ -207,7 +214,6 @@ export function CampaignWorldMapCanvas({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         onPointerDown={startPan}
-        onWheel={handleWheel}
         onPointerMove={movePan}
         onPointerCancel={() => (panStart.current = null)}
         onPointerUp={() => (panStart.current = null)}
