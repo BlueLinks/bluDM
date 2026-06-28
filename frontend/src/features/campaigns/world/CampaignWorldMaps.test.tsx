@@ -39,6 +39,7 @@ describe("CampaignWorldMaps", () => {
 
     expect(screen.getByText("East Room")).toBeTruthy();
     expect(screen.getAllByText("North Room").length).toBeGreaterThan(0);
+    expect(document.querySelector('[data-map-pin-type="room"]')).toBeTruthy();
     expect(screen.getByRole("button", { name: "Place pin for East Room" })).toBeTruthy();
     expect(screen.queryByText("Already placed")).toBeNull();
 

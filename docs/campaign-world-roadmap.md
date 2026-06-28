@@ -90,6 +90,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - The Map profile card now owns the single Show/Hide map tools toggle, embedding tools beside the map frame instead of using a separate top workspace disclosure.
   - Map tools now render the single active map directly in the Map card instead of nesting a redundant Maps selector frame.
   - Map canvas supports scroll-wheel/trackpad zoom anchored under the pointer while preserving the existing bounds clamp and consuming page scroll while the pointer is over the canvas.
+  - Map pins now use the pinned location's existing type icon, such as settlement, shop, dungeon, room, or landmark.
 
 ## In Progress
 

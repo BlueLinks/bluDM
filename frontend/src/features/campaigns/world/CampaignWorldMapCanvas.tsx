@@ -10,6 +10,7 @@ import {
 import { Button, Callout, Checkbox } from "../../../components/ui";
 import { formatMapDistance } from "./campaignMapDistance";
 import { mapDefaultsForType } from "./campaignWorldMapDefaults";
+import { LocationIcon } from "./CampaignWorldLocationIcon";
 import type { CampaignLocation, CampaignMap, CampaignMapPin } from "./travelTypes";
 import type { PlacementMode } from "./CampaignWorldMaps";
 
@@ -383,9 +384,11 @@ function MapPinMarker({
   onSelect: () => void;
 }) {
   const label = pin.labelOverride || location?.name || "Pin";
+  const locationType = location?.locationType ?? "custom";
   return (
     <div
       data-map-pin
+      data-map-pin-type={locationType}
       className="absolute z-10 -translate-x-1/2 -translate-y-full text-center"
       style={{ left: `${(pin.x / map.width) * 100}%`, top: `${(pin.y / map.height) * 100}%` }}
     >
@@ -406,12 +409,16 @@ function MapPinMarker({
         >
           {label}
         </span>
-        <MapPin
+        <span
           className={[
-            "mx-auto h-7 w-7 drop-shadow",
-            active || selected ? "fill-primary text-primary" : "fill-accent text-accent",
+            "relative mx-auto grid h-8 w-8 place-items-center rounded-full border shadow-md after:absolute after:left-1/2 after:top-6 after:h-3 after:w-3 after:-translate-x-1/2 after:rotate-45 after:border-b after:border-r after:bg-inherit",
+            active || selected
+              ? "border-primary bg-primary text-primary-foreground after:border-primary"
+              : "border-accent bg-accent text-accent-foreground after:border-accent",
           ].join(" ")}
-        />
+        >
+          <LocationIcon className="relative z-10 h-4 w-4" locationType={locationType} />
+        </span>
       </button>
       {selected ? (
         <div
