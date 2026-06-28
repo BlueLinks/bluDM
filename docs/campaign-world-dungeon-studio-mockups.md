@@ -77,6 +77,10 @@ The goal is not to copy a VTT. The goal is a DM prep tool that feels like the re
 │ ┌─────────────────┐ │
 │ │ ▦ Floor Brush   │ │ active
 │ │ ⌫ Erase         │ │
+│ │ ▭ Rectangle     │ │
+│ │ □ Square        │ │
+│ │ ○ Round         │ │
+│ │ ◯ Oval          │ │
 │ │ ║ Wall Edge     │ │
 │ │ ╱ Diagonal Wall │ │
 │ │ ▣ Door          │ │
@@ -103,6 +107,7 @@ The goal is not to copy a VTT. The goal is a DM prep tool that feels like the re
 │ [✓] Snap to grid         │
 │                          │
 │ Quick actions            │
+│ [Add outer walls]        │
 │ [Fill enclosed room]     │
 │ [Trace wall outline]     │
 └──────────────────────────┘

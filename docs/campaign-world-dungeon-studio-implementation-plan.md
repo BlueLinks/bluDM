@@ -425,9 +425,54 @@ Acceptance criteria:
 - User can place doors on edges.
 - Save/reload preserves structure.
 
-### Phase 3: Terrain And Cliffs
+### Phase 3A: Shape Drawing And Auto-Walls
 
-Next milestone. Build on the Phase 2 sparse cell/edge editing helpers rather than adding a rendering dependency.
+Status: Completed. The SVG editor now supports rectangle/square and round/oval shape tools with live previews, Escape cancellation, grid-cell persistence, selected-region feedback, undo/redo history, and an undoable Add outer walls action that uses the existing wall edge model without replacing existing door openings.
+
+Deliverables:
+
+- Shape drawing tools for quickly creating room and area footprints:
+  - rectangle room tool.
+  - square room tool if distinct/useful in the UI.
+  - circle/round room tool.
+  - ellipse/oval room tool.
+  - freeform floor brush remains available.
+  - erase remains available.
+- Rectangles and squares snap to grid cells.
+- Circles and ellipses approximate occupied grid cells from a grid-aligned drag box.
+- Shape tools create floor/room area cells using the existing floor-cell layer model.
+- Do not introduce a separate geometry persistence model unless a later phase clearly justifies it.
+- Live drag preview for shape tools.
+- Common drawing-app behavior:
+  - select a shape tool.
+  - click/touch a start cell.
+  - drag to preview.
+  - release to apply.
+  - Escape cancels the active drawing.
+  - undo/redo treats each completed shape as one action.
+  - active tool state is clear.
+  - keyboard accessibility is preserved where practical.
+  - mobile/touch behavior is considered through pointer events and grid snapping.
+- `Add outer walls` action/tool:
+  - wraps outside walls around a selected floor/room region when a region selection exists.
+  - otherwise wraps outside walls around all painted floor cells.
+  - uses the existing wall edge model.
+  - avoids replacing existing door openings where practical.
+  - is undoable.
+
+Acceptance criteria:
+
+- User can draw rectangle/square and circle/ellipse floor areas with preview.
+- Escape cancels a pending shape without changing the document.
+- Completed shapes are stored as floor cells and survive save/reload.
+- Add outer walls generates boundary wall edges around the selected shape or all floor cells.
+- Existing doors are not unnecessarily overwritten by generated walls.
+- Shape drawing and auto-wall actions are undoable/redoable.
+- Existing brush, erase, wall, diagonal wall, and door tools continue to work.
+
+### Phase 3B: Terrain And Cliffs
+
+Next milestone. Build on the Phase 2/3A sparse cell/edge editing helpers rather than adding a rendering dependency. Do not lose the terrain/cliff scope; it follows the near-term drawing-tools milestone.
 
 Deliverables:
 

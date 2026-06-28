@@ -1,26 +1,38 @@
 import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Undo2 } from "lucide-react";
-import { useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { ActionRow } from "../../../components/layout";
 import { Button, EmptyMini } from "../../../components/ui";
 import {
   eraseFloorCell,
+  isShapeTool,
   paintFloorCell,
+  paintFloorCells,
+  shapeRoomCells,
   toggleEdgeFeature,
   type DungeonStudioSelection,
+  type DungeonStudioShapeTool,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import type {
-  DungeonStudioDocument,
-  DungeonStudioEdgeDirection,
-  DungeonStudioEdgeFeature,
-  DungeonStudioRoomRegion,
-  GridCell,
-} from "./dungeonStudioDocument";
+import type { DungeonStudioDocument } from "./dungeonStudioDocument";
+import {
+  CellRect,
+  DUNGEON_STUDIO_CELL_SIZE,
+  EdgeLine,
+  GridLines,
+  RoomOverlay,
+  SelectionOverlay,
+  ShapePreview,
+  closestDiagonalDirection,
+  closestOrthogonalDirection,
+  type DungeonStudioShapeDraft,
+} from "./DungeonStudioPreviewElements";
 
-const CELL_SIZE = 24;
+const CELL_SIZE = DUNGEON_STUDIO_CELL_SIZE;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.35;
+
+type ShapeDraft = DungeonStudioShapeDraft;
 
 const cellLayerFills: Record<string, string> = {
   floor: "hsl(var(--muted))",
@@ -60,7 +72,9 @@ export function DungeonStudioPreview({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const drawing = useRef(false);
+  const shapeDraftRef = useRef<ShapeDraft | null>(null);
   const lastPaintedCell = useRef("");
+  const [shapeDraft, setShapeDraft] = useState<ShapeDraft | null>(null);
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dimensions = useMemo(
@@ -73,6 +87,18 @@ export function DungeonStudioPreview({
   const floorCellCount = document.layers
     .filter((layer) => layer.cellKind === "floor")
     .reduce((total, layer) => total + layer.cells.length, 0);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape" || !shapeDraftRef.current) return;
+      event.preventDefault();
+      shapeDraftRef.current = null;
+      setShapeDraft(null);
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   function changeZoom(delta: number) {
     setZoom((current) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + delta)));
@@ -104,6 +130,10 @@ export function DungeonStudioPreview({
       return;
     }
     safeSetPointerCapture(event);
+    if (isShapeTool(activeTool)) {
+      startShapeDraft(event, activeTool);
+      return;
+    }
     if (activeTool === "floor" || activeTool === "erase") {
       drawing.current = true;
       applyCellTool(event);
@@ -117,14 +147,71 @@ export function DungeonStudioPreview({
       movePan(event);
       return;
     }
+    if (shapeDraftRef.current) {
+      updateShapeDraft(event);
+      return;
+    }
     if (!drawing.current) return;
     applyCellTool(event);
   }
 
-  function handlePointerEnd() {
+  function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
+    panStart.current = null;
+    if (shapeDraftRef.current) applyShapeDraft(event);
+    drawing.current = false;
+    lastPaintedCell.current = "";
+  }
+
+  function handlePointerCancel() {
     panStart.current = null;
     drawing.current = false;
     lastPaintedCell.current = "";
+    cancelShapeDraft();
+  }
+
+  function startShapeDraft(event: PointerEvent<HTMLDivElement>, tool: DungeonStudioShapeTool) {
+    const point = gridPointForEvent(event);
+    if (!point) return;
+    const draft = {
+      tool,
+      start: point.cell,
+      current: point.cell,
+      cells: shapeRoomCells(document, tool, point.cell, point.cell),
+    } satisfies ShapeDraft;
+    shapeDraftRef.current = draft;
+    setShapeDraft(draft);
+  }
+
+  function updateShapeDraft(event: PointerEvent<HTMLDivElement>) {
+    const currentDraft = shapeDraftRef.current;
+    const point = gridPointForEvent(event);
+    if (!currentDraft || !point) return;
+    const draft = {
+      ...currentDraft,
+      current: point.cell,
+      cells: shapeRoomCells(document, currentDraft.tool, currentDraft.start, point.cell),
+    } satisfies ShapeDraft;
+    shapeDraftRef.current = draft;
+    setShapeDraft(draft);
+  }
+
+  function applyShapeDraft(event: PointerEvent<HTMLDivElement>) {
+    updateShapeDraft(event);
+    const draft = shapeDraftRef.current;
+    if (!draft) return;
+    const selection = {
+      type: "region",
+      cells: draft.cells,
+      label: toolLabel(draft.tool),
+    } satisfies DungeonStudioSelection;
+    onDocumentChange((current) => paintFloorCells(current, draft.cells), selection);
+    shapeDraftRef.current = null;
+    setShapeDraft(null);
+  }
+
+  function cancelShapeDraft() {
+    shapeDraftRef.current = null;
+    setShapeDraft(null);
   }
 
   function applyCellTool(event: PointerEvent<HTMLDivElement>) {
@@ -248,7 +335,7 @@ export function DungeonStudioPreview({
         style={{ aspectRatio: `${document.grid.width} / ${document.grid.height}` }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerCancel={handlePointerEnd}
+        onPointerCancel={handlePointerCancel}
         onPointerUp={handlePointerEnd}
         onClick={() => undefined}
       >
@@ -267,6 +354,7 @@ export function DungeonStudioPreview({
               )),
             )}
           <GridLines width={document.grid.width} height={document.grid.height} />
+          {shapeDraft ? <ShapePreview draft={shapeDraft} /> : null}
           {document.rooms.map((room) => (
             <RoomOverlay key={room.id} room={room} />
           ))}
@@ -280,144 +368,6 @@ export function DungeonStudioPreview({
   );
 }
 
-function CellRect({ cell, fill, opacity }: { cell: GridCell; fill: string; opacity: number }) {
-  return (
-    <rect
-      x={cell.x * CELL_SIZE}
-      y={cell.y * CELL_SIZE}
-      width={CELL_SIZE}
-      height={CELL_SIZE}
-      fill={fill}
-      opacity={opacity}
-    />
-  );
-}
-
-function GridLines({ width, height }: { width: number; height: number }) {
-  const vertical = Array.from({ length: width + 1 }, (_, index) => index);
-  const horizontal = Array.from({ length: height + 1 }, (_, index) => index);
-  return (
-    <g stroke="hsl(var(--border))" strokeWidth="1" opacity="0.65">
-      {vertical.map((x) => (
-        <line key={`v-${x}`} x1={x * CELL_SIZE} x2={x * CELL_SIZE} y1="0" y2={height * CELL_SIZE} />
-      ))}
-      {horizontal.map((y) => (
-        <line key={`h-${y}`} x1="0" x2={width * CELL_SIZE} y1={y * CELL_SIZE} y2={y * CELL_SIZE} />
-      ))}
-    </g>
-  );
-}
-
-function RoomOverlay({ room }: { room: DungeonStudioRoomRegion }) {
-  if (!room.cells.length) return null;
-  const center = room.cells.reduce(
-    (total, cell) => ({ x: total.x + cell.x, y: total.y + cell.y }),
-    { x: 0, y: 0 },
-  );
-  const labelX = (center.x / room.cells.length + 0.5) * CELL_SIZE;
-  const labelY = (center.y / room.cells.length + 0.55) * CELL_SIZE;
-  return (
-    <g>
-      {room.cells.map((cell) => (
-        <rect
-          key={`${room.id}-${cell.x}-${cell.y}`}
-          x={cell.x * CELL_SIZE + 2}
-          y={cell.y * CELL_SIZE + 2}
-          width={CELL_SIZE - 4}
-          height={CELL_SIZE - 4}
-          rx="4"
-          fill={room.color}
-          opacity="0.24"
-        />
-      ))}
-      <text
-        x={labelX}
-        y={labelY}
-        textAnchor="middle"
-        fontSize="12"
-        fontWeight="700"
-        fill="hsl(var(--foreground))"
-      >
-        {room.label}
-      </text>
-    </g>
-  );
-}
-
-function EdgeLine({ edge }: { edge: DungeonStudioEdgeFeature }) {
-  const { x, y } = edge.cell;
-  const startX = x * CELL_SIZE;
-  const startY = y * CELL_SIZE;
-  const coordinates = edgeCoordinates(startX, startY, edge.direction);
-  const stroke = edge.kind === "door" ? "rgb(245 158 11)" : "hsl(var(--foreground))";
-  return (
-    <line
-      {...coordinates}
-      stroke={stroke}
-      strokeLinecap="round"
-      strokeWidth={edge.kind === "door" ? 4 : 3}
-      strokeDasharray={edge.kind === "door" ? "8 4" : undefined}
-    />
-  );
-}
-
-function SelectionOverlay({ selection }: { selection: NonNullable<DungeonStudioSelection> }) {
-  if (selection.type === "cell") {
-    return (
-      <rect
-        x={selection.cell.x * CELL_SIZE + 1}
-        y={selection.cell.y * CELL_SIZE + 1}
-        width={CELL_SIZE - 2}
-        height={CELL_SIZE - 2}
-        fill="none"
-        stroke="hsl(var(--primary))"
-        strokeWidth="2"
-      />
-    );
-  }
-  const coordinates = edgeCoordinates(
-    selection.cell.x * CELL_SIZE,
-    selection.cell.y * CELL_SIZE,
-    selection.direction,
-  );
-  return (
-    <line
-      {...coordinates}
-      stroke="hsl(var(--primary))"
-      strokeLinecap="round"
-      strokeWidth="6"
-      opacity="0.55"
-    />
-  );
-}
-
-function edgeCoordinates(x: number, y: number, direction: DungeonStudioEdgeFeature["direction"]) {
-  if (direction === "n") return { x1: x, y1: y, x2: x + CELL_SIZE, y2: y };
-  if (direction === "e") return { x1: x + CELL_SIZE, y1: y, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
-  if (direction === "s") return { x1: x, y1: y + CELL_SIZE, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
-  if (direction === "w") return { x1: x, y1: y, x2: x, y2: y + CELL_SIZE };
-  if (direction === "ne") return { x1: x, y1: y, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
-  if (direction === "nw") return { x1: x + CELL_SIZE, y1: y, x2: x, y2: y + CELL_SIZE };
-  if (direction === "se") return { x1: x, y1: y + CELL_SIZE, x2: x + CELL_SIZE, y2: y };
-  return { x1: x, y1: y, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
-}
-
-function closestOrthogonalDirection(localX: number, localY: number): DungeonStudioEdgeDirection {
-  const distances = [
-    { direction: "n" as const, distance: localY },
-    { direction: "e" as const, distance: CELL_SIZE - localX },
-    { direction: "s" as const, distance: CELL_SIZE - localY },
-    { direction: "w" as const, distance: localX },
-  ];
-  return distances.sort((left, right) => left.distance - right.distance)[0].direction;
-}
-
-function closestDiagonalDirection(localX: number, localY: number): DungeonStudioEdgeDirection {
-  const fallingDistance = Math.abs(localX - localY);
-  const risingDistance = Math.abs(localX + localY - CELL_SIZE);
-  return fallingDistance <= risingDistance ? "ne" : "nw";
-}
-
 function clampPan(
   nextPan: { x: number; y: number },
   dimensions: { width: number; height: number },
@@ -429,6 +379,19 @@ function clampPan(
     x: Math.min(maxX, Math.max(0, nextPan.x)),
     y: Math.min(maxY, Math.max(0, nextPan.y)),
   };
+}
+
+function toolLabel(tool: DungeonStudioShapeTool) {
+  switch (tool) {
+    case "rectangle-room":
+      return "Rectangle room";
+    case "square-room":
+      return "Square room";
+    case "circle-room":
+      return "Round room";
+    case "ellipse-room":
+      return "Oval room";
+  }
 }
 
 function safeSetPointerCapture(event: PointerEvent<HTMLDivElement>) {

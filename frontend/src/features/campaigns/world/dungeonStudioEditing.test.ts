@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { createDungeonStudioDocument, edgeKey } from "./dungeonStudioDocument";
 import {
+  addOuterWallsAroundFloorCells,
+  circleRoomCells,
+  commitDungeonStudioChange,
+  ellipseRoomCells,
   eraseFloorCell,
   floorCells,
   paintFloorCell,
+  paintFloorCells,
+  rectangleRoomCells,
+  redoDungeonStudioChange,
+  squareRoomCells,
   toggleEdgeFeature,
+  undoDungeonStudioChange,
 } from "./dungeonStudioEditing";
 
 describe("dungeonStudioEditing", () => {
@@ -42,5 +51,112 @@ describe("dungeonStudioEditing", () => {
     const document = toggleEdgeFeature(createDungeonStudioDocument(), { x: 4, y: 4 }, "ne", "wall");
 
     expect(document.edges[0]).toMatchObject({ cell: { x: 4, y: 4 }, direction: "ne" });
+  });
+
+  it("generates grid-snapped rectangle and square floor cells", () => {
+    const document = createDungeonStudioDocument();
+
+    expect(rectangleRoomCells(document, { x: 1, y: 1 }, { x: 3, y: 2 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+    ]);
+    expect(squareRoomCells(document, { x: 1, y: 1 }, { x: 3, y: 2 })).toHaveLength(9);
+  });
+
+  it("approximates circle and ellipse rooms as occupied grid cells", () => {
+    const document = createDungeonStudioDocument();
+    const circle = circleRoomCells(document, { x: 1, y: 1 }, { x: 3, y: 2 });
+    const ellipse = ellipseRoomCells(document, { x: 1, y: 1 }, { x: 4, y: 2 });
+
+    expect(circle).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 1, y: 3 },
+      { x: 2, y: 3 },
+      { x: 3, y: 3 },
+    ]);
+    expect(ellipse).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+      { x: 4, y: 1 },
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+      { x: 3, y: 2 },
+      { x: 4, y: 2 },
+    ]);
+  });
+
+  it("adds outer walls around floor cells without replacing door openings", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const withDoor = toggleEdgeFeature(document, { x: 1, y: 1 }, "n", "door");
+    const wrapped = addOuterWallsAroundFloorCells(withDoor);
+    const edgeKinds = new Map(
+      wrapped.edges.map((edge) => [edgeKey(edge.cell, edge.direction), edge.kind]),
+    );
+
+    expect(wrapped.edges).toHaveLength(6);
+    expect(edgeKinds.get("1,1,n")).toBe("door");
+    expect(edgeKinds.get("1,1,w")).toBe("wall");
+    expect(edgeKinds.get("3,1,w")).toBe("wall");
+    expect(edgeKinds.has("2,1,w")).toBe(false);
+  });
+
+  it("wraps a selected region instead of every painted floor cell", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 8, y: 8 },
+    ]);
+    const wrapped = addOuterWallsAroundFloorCells(document, [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+
+    expect(wrapped.edges.map((edge) => edgeKey(edge.cell, edge.direction))).not.toContain("8,8,n");
+  });
+
+  it("undoes and redoes shape and auto-wall commits as single actions", () => {
+    const document = createDungeonStudioDocument();
+    const shapeCells = rectangleRoomCells(document, { x: 1, y: 1 }, { x: 2, y: 2 });
+    const shapeCommit = commitDungeonStudioChange(
+      document,
+      (current) => paintFloorCells(current, shapeCells),
+      { undoStack: [], redoStack: [] },
+    );
+    const wallCommit = commitDungeonStudioChange(
+      shapeCommit.document,
+      (current) => addOuterWallsAroundFloorCells(current, shapeCells),
+      { undoStack: shapeCommit.undoStack, redoStack: shapeCommit.redoStack },
+    );
+    const undoneWalls = undoDungeonStudioChange(wallCommit.document, {
+      undoStack: wallCommit.undoStack,
+      redoStack: wallCommit.redoStack,
+    });
+    const undoneShape = undoDungeonStudioChange(undoneWalls.document, {
+      undoStack: undoneWalls.undoStack,
+      redoStack: undoneWalls.redoStack,
+    });
+    const redoneShape = redoDungeonStudioChange(undoneShape.document, {
+      undoStack: undoneShape.undoStack,
+      redoStack: undoneShape.redoStack,
+    });
+
+    expect(shapeCommit.changed).toBe(true);
+    expect(wallCommit.changed).toBe(true);
+    expect(undoneWalls.document.edges).toEqual([]);
+    expect(floorCells(undoneShape.document)).toEqual([]);
+    expect(floorCells(redoneShape.document)).toEqual(shapeCells);
   });
 });
