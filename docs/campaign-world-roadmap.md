@@ -109,10 +109,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Studio maps now support grid floor paint/erase, wall and diagonal wall toggles, door placement, undo/redo, dirty-state tracking, and save/reload persistence.
 - Dungeon Studio Phase 3A shape drawing and auto-walls:
   - Studio maps now support grid-snapped rectangle/square rooms, round/oval room approximation from occupied floor cells, live shape previews with Escape cancellation, selected-region feedback, undo/redo, and undoable outer-wall generation that preserves door openings.
+- Dungeon Studio Phase 3B terrain and cliffs:
+  - Studio maps now support water, chasm, and cliff terrain cells; terrain erasing; cliff-edge features; distinct terrain rendering; cave floor styling; undo/redo; and save/reload persistence.
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 3A is complete; Phase 3B terrain and cliffs is the next major milestone.
+- Dungeon Studio implementation is underway. Phase 3B is complete; Phase 4 room layer editor is the next major milestone.
 
 ## Planned
 
@@ -152,4 +154,4 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Next Recommended Task
 
-Continue with Dungeon Studio Phase 3B: terrain cells, water, chasms/cliffs, cliff-edge support, and cave styling polish.
+Continue with Dungeon Studio Phase 4: room layer editing, cell selection, room-region creation/linking, labels, colors, and unassigned floor-cell coverage.

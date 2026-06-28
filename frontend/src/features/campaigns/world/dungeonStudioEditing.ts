@@ -3,6 +3,7 @@ import {
   edgeKey,
   normalizeEdgeReference,
   serializeDungeonStudioDocument,
+  type DungeonStudioCellKind,
   type DungeonStudioDocument,
   type DungeonStudioEdgeDirection,
   type DungeonStudioEdgeFeature,
@@ -16,14 +17,20 @@ export type DungeonStudioTool =
   | "square-room"
   | "circle-room"
   | "ellipse-room"
+  | "water"
+  | "chasm"
+  | "cliff"
+  | "erase-terrain"
   | "wall"
   | "diagonal-wall"
-  | "door";
+  | "door"
+  | "cliff-edge";
 
 export type DungeonStudioShapeTool = Extract<
   DungeonStudioTool,
   "rectangle-room" | "square-room" | "circle-room" | "ellipse-room"
 >;
+export type DungeonStudioTerrainTool = Extract<DungeonStudioTool, "water" | "chasm" | "cliff">;
 
 export type DungeonStudioSelection =
   | { type: "cell"; cell: GridCell }
@@ -41,9 +48,39 @@ export function paintFloorCell(document: DungeonStudioDocument, cell: GridCell) 
 }
 
 export function paintFloorCells(document: DungeonStudioDocument, cells: GridCell[]) {
+  return paintCellLayerCells(document, "floor", cells);
+}
+
+export function paintTerrainCell(
+  document: DungeonStudioDocument,
+  cell: GridCell,
+  kind: DungeonStudioTerrainTool,
+) {
+  return paintTerrainCells(document, [cell], kind);
+}
+
+export function paintTerrainCells(
+  document: DungeonStudioDocument,
+  cells: GridCell[],
+  kind: DungeonStudioTerrainTool,
+) {
   const validCells = cells.filter((cell) => cellInBounds(document, cell));
   if (!validCells.length) return document;
-  return updateFloorCells(document, (currentCells) => mergeCells(currentCells, validCells));
+  const paintedKeys = new Set(validCells.map(cellKey));
+  const withoutOverlappingTerrain = removeCellsFromLayers(
+    document,
+    TERRAIN_CELL_KINDS.filter((cellKind) => cellKind !== kind),
+    paintedKeys,
+  );
+  return paintCellLayerCells(withoutOverlappingTerrain, kind, validCells);
+}
+
+export function eraseTerrainCell(document: DungeonStudioDocument, cell: GridCell) {
+  return eraseTerrainCells(document, [cell]);
+}
+
+export function eraseTerrainCells(document: DungeonStudioDocument, cells: GridCell[]) {
+  return removeCellsFromLayers(document, TERRAIN_CELL_KINDS, new Set(cells.map(cellKey)));
 }
 
 export function eraseFloorCell(document: DungeonStudioDocument, cell: GridCell) {
@@ -156,6 +193,10 @@ export function isShapeTool(tool: DungeonStudioTool): tool is DungeonStudioShape
   );
 }
 
+export function isTerrainTool(tool: DungeonStudioTool): tool is DungeonStudioTerrainTool {
+  return tool === "water" || tool === "chasm" || tool === "cliff";
+}
+
 export function addOuterWallsAroundFloorCells(
   document: DungeonStudioDocument,
   regionCells?: GridCell[],
@@ -194,8 +235,16 @@ export function addOuterWallsAroundFloorCells(
 }
 
 export function floorCells(document: DungeonStudioDocument) {
+  return layerCells(document, "floor");
+}
+
+export function terrainCells(document: DungeonStudioDocument, kind: DungeonStudioTerrainTool) {
+  return layerCells(document, kind);
+}
+
+export function layerCells(document: DungeonStudioDocument, kind: DungeonStudioCellKind) {
   return document.layers
-    .filter((layer) => layer.kind === "cells" && layer.cellKind === "floor")
+    .filter((layer) => layer.kind === "cells" && layer.cellKind === kind)
     .flatMap((layer) => layer.cells);
 }
 
@@ -275,6 +324,7 @@ export function redoDungeonStudioChange(
 }
 
 const ORTHOGONAL_DIRECTIONS = ["n", "e", "s", "w"] as const;
+const TERRAIN_CELL_KINDS = ["water", "chasm", "cliff"] as const;
 
 function boundedRectangleCells(document: DungeonStudioDocument, start: GridCell, end: GridCell) {
   const bounds = cellBounds(document, start, end);
@@ -323,21 +373,41 @@ function updateFloorCells(
   document: DungeonStudioDocument,
   update: (cells: GridCell[]) => GridCell[],
 ): DungeonStudioDocument {
-  const floorLayerIndex = document.layers.findIndex(
-    (layer) => layer.kind === "cells" && layer.cellKind === "floor",
+  return updateCellLayerCells(document, "floor", update);
+}
+
+function paintCellLayerCells(
+  document: DungeonStudioDocument,
+  kind: DungeonStudioCellKind,
+  cells: GridCell[],
+) {
+  const validCells = cells.filter((cell) => cellInBounds(document, cell));
+  if (!validCells.length) return document;
+  return updateCellLayerCells(document, kind, (currentCells) =>
+    mergeCells(currentCells, validCells),
   );
-  if (floorLayerIndex < 0) {
+}
+
+function updateCellLayerCells(
+  document: DungeonStudioDocument,
+  kind: DungeonStudioCellKind,
+  update: (cells: GridCell[]) => GridCell[],
+): DungeonStudioDocument {
+  const layerIndex = document.layers.findIndex(
+    (layer) => layer.kind === "cells" && layer.cellKind === kind,
+  );
+  if (layerIndex < 0) {
     return {
       ...document,
       layers: [
         ...document.layers,
         {
-          id: "floor",
-          name: "Floor",
+          id: kind,
+          name: layerName(kind),
           kind: "cells",
           visible: true,
-          opacity: 1,
-          cellKind: "floor",
+          opacity: kind === "floor" ? 1 : 0.9,
+          cellKind: kind,
           cells: update([]),
         },
       ],
@@ -346,7 +416,23 @@ function updateFloorCells(
   return {
     ...document,
     layers: document.layers.map((layer, index) =>
-      index === floorLayerIndex ? { ...layer, cells: update(layer.cells) } : layer,
+      index === layerIndex ? { ...layer, cells: update(layer.cells) } : layer,
+    ),
+  };
+}
+
+function removeCellsFromLayers(
+  document: DungeonStudioDocument,
+  kinds: readonly DungeonStudioCellKind[],
+  cellKeys: Set<string>,
+) {
+  if (!cellKeys.size) return document;
+  return {
+    ...document,
+    layers: document.layers.map((layer) =>
+      kinds.includes(layer.cellKind)
+        ? { ...layer, cells: layer.cells.filter((cell) => !cellKeys.has(cellKey(cell))) }
+        : layer,
     ),
   };
 }
@@ -355,6 +441,27 @@ function mergeCells(currentCells: GridCell[], nextCells: GridCell[]) {
   const merged = new globalThis.Map(currentCells.map((item) => [cellKey(item), item]));
   for (const cell of nextCells) merged.set(cellKey(cell), cell);
   return [...merged.values()].sort((left, right) => left.y - right.y || left.x - right.x);
+}
+
+function layerName(kind: DungeonStudioCellKind) {
+  switch (kind) {
+    case "floor":
+      return "Floor";
+    case "water":
+      return "Water";
+    case "chasm":
+      return "Chasm";
+    case "cliff":
+      return "Cliff";
+    case "rubble":
+      return "Rubble";
+    case "hazard":
+      return "Hazard";
+    case "road":
+      return "Road";
+    case "grass":
+      return "Grass";
+  }
 }
 
 function neighborCell(cell: GridCell, direction: (typeof ORTHOGONAL_DIRECTIONS)[number]) {

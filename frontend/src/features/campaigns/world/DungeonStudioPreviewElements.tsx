@@ -125,14 +125,16 @@ export function EdgeLine({ edge }: { edge: DungeonStudioEdgeFeature }) {
   const startX = x * DUNGEON_STUDIO_CELL_SIZE;
   const startY = y * DUNGEON_STUDIO_CELL_SIZE;
   const coordinates = edgeCoordinates(startX, startY, edge.direction);
-  const stroke = edge.kind === "door" ? "rgb(245 158 11)" : "hsl(var(--foreground))";
+  const stroke = edgeStroke(edge.kind);
   return (
     <line
       {...coordinates}
       stroke={stroke}
       strokeLinecap="round"
-      strokeWidth={edge.kind === "door" ? 4 : 3}
-      strokeDasharray={edge.kind === "door" ? "8 4" : undefined}
+      strokeWidth={edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
+      strokeDasharray={
+        edge.kind === "door" ? "8 4" : edge.kind === "cliff-edge" ? "3 5" : undefined
+      }
     />
   );
 }
@@ -210,6 +212,12 @@ export function closestDiagonalDirection(
   const fallingDistance = Math.abs(localX - localY);
   const risingDistance = Math.abs(localX + localY - DUNGEON_STUDIO_CELL_SIZE);
   return fallingDistance <= risingDistance ? "ne" : "nw";
+}
+
+function edgeStroke(kind: DungeonStudioEdgeFeature["kind"]) {
+  if (kind === "door") return "rgb(245 158 11)";
+  if (kind === "cliff-edge") return "rgb(217 119 6)";
+  return "hsl(var(--foreground))";
 }
 
 function edgeCoordinates(x: number, y: number, direction: DungeonStudioEdgeFeature["direction"]) {

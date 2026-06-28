@@ -4,9 +4,11 @@ import {
   DraftingCompass,
   Eraser,
   Grid2X2,
+  Mountain,
   RectangleHorizontal,
   Slash,
   Square,
+  Waves,
   Wand2,
 } from "lucide-react";
 import type { ElementType } from "react";
@@ -24,7 +26,7 @@ export function DungeonStudioToolPanel({
 }) {
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
-      <SectionHeader title="Tools" meta="Structure drawing" />
+      <SectionHeader title="Tools" meta="Structure and terrain drawing" />
       <ToolGroupLabel>Paint</ToolGroupLabel>
       <ToolPill
         active={activeTool === "floor"}
@@ -69,6 +71,35 @@ export function DungeonStudioToolPanel({
         label="Oval Room"
         onClick={() => onToolChange("ellipse-room")}
       />
+      <ToolGroupLabel>Terrain</ToolGroupLabel>
+      <ToolPill
+        active={activeTool === "water"}
+        copy="Paint water cells over floor or cave areas."
+        icon={Waves}
+        label="Water"
+        onClick={() => onToolChange("water")}
+      />
+      <ToolPill
+        active={activeTool === "chasm"}
+        copy="Paint pits, holes, and void cells."
+        icon={Circle}
+        label="Chasm"
+        onClick={() => onToolChange("chasm")}
+      />
+      <ToolPill
+        active={activeTool === "cliff"}
+        copy="Paint cliff or raised/lowered terrain cells."
+        icon={Mountain}
+        label="Cliff Terrain"
+        onClick={() => onToolChange("cliff")}
+      />
+      <ToolPill
+        active={activeTool === "erase-terrain"}
+        copy="Erase water, chasm, and cliff cells without changing floors."
+        icon={Eraser}
+        label="Erase Terrain"
+        onClick={() => onToolChange("erase-terrain")}
+      />
       <ToolGroupLabel>Edges</ToolGroupLabel>
       <ToolPill
         active={activeTool === "wall"}
@@ -91,6 +122,13 @@ export function DungeonStudioToolPanel({
         label="Door"
         onClick={() => onToolChange("door")}
       />
+      <ToolPill
+        active={activeTool === "cliff-edge"}
+        copy="Click an edge to mark a dangerous cliff boundary."
+        icon={Mountain}
+        label="Cliff Edge"
+        onClick={() => onToolChange("cliff-edge")}
+      />
     </CardSection>
   );
 }
@@ -110,13 +148,22 @@ export function DungeonStudioInspectorPanel({
   selected: DungeonStudioSelection;
   onAddOuterWalls: () => void;
 }) {
+  const terrainCount = document.layers
+    .filter(
+      (layer) =>
+        layer.cellKind === "water" || layer.cellKind === "chasm" || layer.cellKind === "cliff",
+    )
+    .reduce((total, layer) => total + layer.cells.length, 0);
+  const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
       <SectionHeader title="Inspector" meta={toolLabel(activeTool)} />
       <InspectorRow label="Map record" value={mapName} />
       <InspectorRow label="Selection" value={selectionLabel(selected)} />
       <InspectorRow label="Floor cells" value={String(floorCellCount)} />
-      <InspectorRow label="Walls / doors" value={String(document.edges.length)} />
+      <InspectorRow label="Terrain cells" value={String(terrainCount)} />
+      <InspectorRow label="Walls / doors" value={String(document.edges.length - cliffEdgeCount)} />
+      <InspectorRow label="Cliff edges" value={String(cliffEdgeCount)} />
       <InspectorRow label="Room regions" value={String(document.rooms.length)} />
       <div className="rounded-md border border-border bg-background px-3 py-2">
         <div className="text-xs font-bold uppercase text-muted-foreground">Quick action</div>
@@ -190,12 +237,22 @@ function toolLabel(tool: DungeonStudioTool) {
       return "Round Room";
     case "ellipse-room":
       return "Oval Room";
+    case "water":
+      return "Water";
+    case "chasm":
+      return "Chasm";
+    case "cliff":
+      return "Cliff Terrain";
+    case "erase-terrain":
+      return "Erase Terrain";
     case "wall":
       return "Wall Edge";
     case "diagonal-wall":
       return "Diagonal Wall";
     case "door":
       return "Door";
+    case "cliff-edge":
+      return "Cliff Edge";
   }
 }
 
@@ -213,12 +270,22 @@ function toolTip(tool: DungeonStudioTool) {
       return "Drag to preview a round room approximation. The result is stored as occupied floor cells, not separate geometry.";
     case "ellipse-room":
       return "Drag to preview an oval room approximation. The result is stored as occupied floor cells, not separate geometry.";
+    case "water":
+      return "Drag across cells to paint water terrain. Water is stored in a sparse terrain layer above floor cells.";
+    case "chasm":
+      return "Drag across cells to mark pits, holes, or void spaces. Chasm terrain survives save and reload.";
+    case "cliff":
+      return "Drag across cells to mark cliff or elevation terrain. Use Cliff Edge for the hazardous boundary line.";
+    case "erase-terrain":
+      return "Drag across cells to remove water, chasm, and cliff terrain without erasing the underlying floor.";
     case "wall":
       return "Click near the north, east, south, or west edge of a cell to toggle a wall on that edge.";
     case "diagonal-wall":
       return "Click a cell to toggle the nearest diagonal wall. The editor snaps the diagonal to the grid cell.";
     case "door":
       return "Click near an edge to place a closed door. Clicking the same door removes it.";
+    case "cliff-edge":
+      return "Click near an edge to toggle an amber cliff boundary using the existing edge model.";
   }
 }
 

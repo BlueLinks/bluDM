@@ -318,6 +318,13 @@ function DungeonStudioShell({
     .filter((layer) => layer.cellKind === "floor")
     .reduce((total, layer) => total + layer.cells.length, 0);
   const selectedRegionCells = selected?.type === "region" ? selected.cells : undefined;
+  const terrainCellCount = document.layers
+    .filter(
+      (layer) =>
+        layer.cellKind === "water" || layer.cellKind === "chasm" || layer.cellKind === "cliff",
+    )
+    .reduce((total, layer) => total + layer.cells.length, 0);
+  const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCells = document.rooms.reduce((total, room) => total + room.cells.length, 0);
   const unassignedFloorCells = Math.max(0, floorCellCount - roomCells);
 
@@ -376,6 +383,8 @@ function DungeonStudioShell({
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
           <ActionRow>
             <Badge>Floor layer ✓</Badge>
+            <Badge>Terrain {terrainCellCount ? `${terrainCellCount} cells` : "ready"}</Badge>
+            <Badge>Cliff edges {cliffEdgeCount ? cliffEdgeCount : "ready"}</Badge>
             <Badge>Walls ✓</Badge>
             <Badge>Rooms ✓</Badge>
             <Badge>{maps.length} campaign maps loaded</Badge>

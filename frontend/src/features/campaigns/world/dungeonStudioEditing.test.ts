@@ -6,12 +6,15 @@ import {
   commitDungeonStudioChange,
   ellipseRoomCells,
   eraseFloorCell,
+  eraseTerrainCell,
   floorCells,
   paintFloorCell,
   paintFloorCells,
+  paintTerrainCell,
   rectangleRoomCells,
   redoDungeonStudioChange,
   squareRoomCells,
+  terrainCells,
   toggleEdgeFeature,
   undoDungeonStudioChange,
 } from "./dungeonStudioEditing";
@@ -51,6 +54,34 @@ describe("dungeonStudioEditing", () => {
     const document = toggleEdgeFeature(createDungeonStudioDocument(), { x: 4, y: 4 }, "ne", "wall");
 
     expect(document.edges[0]).toMatchObject({ cell: { x: 4, y: 4 }, direction: "ne" });
+  });
+
+  it("paints and erases sparse terrain cells without changing floors", () => {
+    const document = paintFloorCell(createDungeonStudioDocument(), { x: 2, y: 2 });
+    const water = paintTerrainCell(document, { x: 2, y: 2 }, "water");
+    const chasm = paintTerrainCell(water, { x: 2, y: 2 }, "chasm");
+    const erased = eraseTerrainCell(chasm, { x: 2, y: 2 });
+
+    expect(floorCells(erased)).toEqual([{ x: 2, y: 2 }]);
+    expect(terrainCells(water, "water")).toEqual([{ x: 2, y: 2 }]);
+    expect(terrainCells(chasm, "water")).toEqual([]);
+    expect(terrainCells(chasm, "chasm")).toEqual([{ x: 2, y: 2 }]);
+    expect(terrainCells(erased, "chasm")).toEqual([]);
+  });
+
+  it("toggles cliff-edge features using the existing edge model", () => {
+    const document = toggleEdgeFeature(
+      createDungeonStudioDocument(),
+      { x: 3, y: 3 },
+      "s",
+      "cliff-edge",
+    );
+
+    expect(document.edges[0]).toMatchObject({
+      cell: { x: 3, y: 4 },
+      direction: "n",
+      kind: "cliff-edge",
+    });
   });
 
   it("generates grid-snapped rectangle and square floor cells", () => {
@@ -125,6 +156,36 @@ describe("dungeonStudioEditing", () => {
     ]);
 
     expect(wrapped.edges.map((edge) => edgeKey(edge.cell, edge.direction))).not.toContain("8,8,n");
+  });
+
+  it("undoes and redoes terrain and cliff-edge commits", () => {
+    const document = createDungeonStudioDocument();
+    const terrainCommit = commitDungeonStudioChange(
+      document,
+      (current) => paintTerrainCell(current, { x: 5, y: 5 }, "water"),
+      { undoStack: [], redoStack: [] },
+    );
+    const edgeCommit = commitDungeonStudioChange(
+      terrainCommit.document,
+      (current) => toggleEdgeFeature(current, { x: 5, y: 5 }, "e", "cliff-edge"),
+      { undoStack: terrainCommit.undoStack, redoStack: terrainCommit.redoStack },
+    );
+    const undoneEdge = undoDungeonStudioChange(edgeCommit.document, {
+      undoStack: edgeCommit.undoStack,
+      redoStack: edgeCommit.redoStack,
+    });
+    const undoneTerrain = undoDungeonStudioChange(undoneEdge.document, {
+      undoStack: undoneEdge.undoStack,
+      redoStack: undoneEdge.redoStack,
+    });
+    const redoneTerrain = redoDungeonStudioChange(undoneTerrain.document, {
+      undoStack: undoneTerrain.undoStack,
+      redoStack: undoneTerrain.redoStack,
+    });
+
+    expect(undoneEdge.document.edges).toEqual([]);
+    expect(terrainCells(undoneTerrain.document, "water")).toEqual([]);
+    expect(terrainCells(redoneTerrain.document, "water")).toEqual([{ x: 5, y: 5 }]);
   });
 
   it("undoes and redoes shape and auto-wall commits as single actions", () => {
