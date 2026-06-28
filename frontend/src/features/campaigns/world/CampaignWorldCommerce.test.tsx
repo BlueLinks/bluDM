@@ -23,9 +23,10 @@ describe("CampaignWorld commerce polish", () => {
       />,
     );
 
-    expect(screen.getByText("Market price")).toBeTruthy();
+    expect(screen.getByText("Limited/hidden")).toBeTruthy();
     expect(screen.getByText("Inventory")).toBeTruthy();
-    expect(screen.getByText("Potion · Consumable · common")).toBeTruthy();
+    expect(screen.getByText("Potion / Consumable")).toBeTruthy();
+    expect(screen.getByText("common")).toBeTruthy();
     expect(screen.getByText("Behind the counter.")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Adjust" }));

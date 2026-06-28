@@ -46,7 +46,6 @@ export function sectionOrder(
     ],
     shop: [
       "stockCard",
-      "pricingCard",
       "npcsCard",
       "notesCard",
       "mapCard",

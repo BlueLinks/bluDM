@@ -3,6 +3,9 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Field, Input, Modal } from "../../../components/ui";
 import type { Item } from "../../../types";
+import { ItemChipView } from "../../items/ItemCatalogCard";
+import { buildItemDisplay } from "../../items/itemCatalogDisplay";
+import { iconForItem, itemIconRegistry, ItemGlyph } from "../../items/itemIcons";
 import { AddStockModal } from "./CampaignWorldLocationStockDialog";
 import { AvailabilitySelect, CurrencySelect } from "./CampaignWorldStockFields";
 import {
@@ -92,15 +95,15 @@ export function CampaignWorldLocationStock({
         title="Shop stock"
       />
 
-      {dominant ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <StockStat label="Stocked" value={stock.length} />
-          <StockStat label="Priced" value={pricedCount} />
-          <StockStat label="Market price" value={marketPriceCount} />
-          <StockStat label="Limited/hidden" value={limitedCount} />
-          <StockStat label="Sold out" value={soldOutCount} />
-          <StockStat label="Inventory" value={stockInventoryTotal(stock)} />
-        </div>
+      {dominant && stock.length ? (
+        <StockSummaryStrip
+          inventoryTotal={stockInventoryTotal(stock)}
+          limitedCount={limitedCount}
+          marketPriceCount={marketPriceCount}
+          pricedCount={pricedCount}
+          soldOutCount={soldOutCount}
+          stockedCount={stock.length}
+        />
       ) : null}
 
       {stock.length ? (
@@ -144,12 +147,64 @@ export function CampaignWorldLocationStock({
   );
 }
 
-function StockStat({ label, value }: { label: string; value: number }) {
+function StockSummaryStrip({
+  inventoryTotal,
+  limitedCount,
+  marketPriceCount,
+  pricedCount,
+  soldOutCount,
+  stockedCount,
+}: {
+  inventoryTotal: number;
+  limitedCount: number;
+  marketPriceCount: number;
+  pricedCount: number;
+  soldOutCount: number;
+  stockedCount: number;
+}) {
+  const stats = [
+    { label: "Stocked", value: stockedCount, tone: "strong" as const },
+    { label: "Inventory", value: inventoryTotal, tone: "strong" as const },
+    ...(pricedCount ? [{ label: "Priced", value: pricedCount }] : []),
+    ...(marketPriceCount ? [{ label: "Market price", value: marketPriceCount }] : []),
+    ...(limitedCount
+      ? [{ label: "Limited/hidden", value: limitedCount, tone: "warn" as const }]
+      : []),
+    ...(soldOutCount ? [{ label: "Sold out", value: soldOutCount, tone: "warn" as const }] : []),
+  ];
+
   return (
-    <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 text-lg font-semibold">{value}</div>
+    <div className="mt-3 flex flex-wrap gap-2 rounded-md border border-border bg-background/70 p-2">
+      {stats.map((stat) => (
+        <StockSummaryPill key={stat.label} {...stat} />
+      ))}
     </div>
+  );
+}
+
+function StockSummaryPill({
+  label,
+  tone = "default",
+  value,
+}: {
+  label: string;
+  tone?: "default" | "strong" | "warn";
+  value: number;
+}) {
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold uppercase leading-none",
+        tone === "strong"
+          ? "border-primary/25 bg-primary/10 text-primary"
+          : tone === "warn"
+            ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+            : "border-border bg-card text-muted-foreground",
+      ].join(" ")}
+    >
+      <strong className="text-sm leading-none text-foreground">{value}</strong>
+      {label}
+    </span>
   );
 }
 
@@ -164,29 +219,42 @@ function StockRow({
   onDelete: (stockID: string) => Promise<void>;
   onEdit: (entry: CampaignLocationStock) => void;
 }) {
+  const display = item ? buildItemDisplay(item) : undefined;
+  const chips = display?.chips.slice(0, 2) ?? [];
+
   return (
-    <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="font-semibold [overflow-wrap:anywhere]">
-            {item?.name ?? "Unknown item"}
-          </span>
-          <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
-            {availabilityLabel(entry.availability)}
-          </span>
+    <article className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+        <ItemGlyph
+          className="h-8 w-8 rounded-md [&_img]:h-4 [&_img]:w-4 [&_svg]:h-4 [&_svg]:w-4"
+          entry={item ? iconForItem(item) : itemIconRegistry.unknown}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+            <h4 className="font-semibold leading-tight [overflow-wrap:anywhere]">
+              {item?.name ?? "Unknown item"}
+            </h4>
+            <AvailabilityChip availability={entry.availability} />
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="font-bold uppercase tracking-wide [overflow-wrap:anywhere]">
+              {display?.subtitle ?? itemCatalogMeta(item)}
+            </span>
+            <StockMetric label="Price" value={stockPriceLabel(entry)} tone="price" />
+            <StockMetric label="Qty" value={String(entry.quantity)} />
+            {display && display.value !== "n/a" ? (
+              <StockMetric label="Catalog" value={display.value} />
+            ) : null}
+            {chips.map((chip) => (
+              <ItemChipView chip={chip} key={chip.label} />
+            ))}
+          </div>
+          {entry.notes ? (
+            <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+              {entry.notes}
+            </p>
+          ) : null}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-          {itemCatalogMeta(item)}
-        </p>
-        <div className="mt-1 flex flex-wrap gap-2 text-sm">
-          <span className="font-bold text-foreground">{stockPriceLabel(entry)}</span>
-          <span className="text-muted-foreground">Qty {entry.quantity}</span>
-        </div>
-        {entry.notes ? (
-          <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-            {entry.notes}
-          </p>
-        ) : null}
       </div>
       <ActionRow justify="end" className="w-full sm:w-auto">
         <Button type="button" icon={Pencil} size="sm" variant="ghost" onClick={() => onEdit(entry)}>
@@ -202,7 +270,59 @@ function StockRow({
           Remove
         </Button>
       </ActionRow>
-    </div>
+    </article>
+  );
+}
+
+function AvailabilityChip({ availability }: { availability: string }) {
+  const normalized = availability || "in-stock";
+  return (
+    <span
+      className={[
+        "shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-bold uppercase",
+        normalized === "sold-out"
+          ? "border-destructive/25 bg-destructive/10 text-destructive"
+          : ["limited", "special-order", "hidden"].includes(normalized)
+            ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
+            : "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+      ].join(" ")}
+    >
+      {availabilityLabel(normalized)}
+    </span>
+  );
+}
+
+function StockMetric({
+  label,
+  tone = "default",
+  value,
+}: {
+  label: string;
+  tone?: "default" | "price";
+  value: string;
+}) {
+  const isPrice = tone === "price";
+  return (
+    <span
+      className={[
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 leading-tight",
+        isPrice
+          ? "border-amber-500/35 bg-amber-500/15 text-xs shadow-sm shadow-amber-500/10"
+          : "border-border bg-card text-[0.7rem]",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "font-extrabold uppercase tracking-wide",
+          isPrice ? "text-amber-700 dark:text-amber-200" : "text-muted-foreground",
+        ].join(" ")}
+      >
+        {label}
+      </span>
+      <strong className={isPrice ? "text-sm text-amber-800 dark:text-amber-100" : undefined}>
+        {value}
+      </strong>
+    </span>
   );
 }
 

@@ -31,6 +31,20 @@ function iconForLocation(locationType: string) {
     case "street":
       return Castle;
     case "shop":
+    case "market":
+    case "vendor":
+    case "merchant":
+    case "blacksmith":
+    case "apothecary":
+    case "general-store":
+    case "armoury":
+    case "armory":
+    case "potion-store":
+    case "tavern":
+    case "inn":
+    case "magic-shop":
+    case "black-market":
+    case "stable":
       return Store;
     case "house":
       return Home;

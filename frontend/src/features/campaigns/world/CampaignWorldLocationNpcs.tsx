@@ -2,6 +2,7 @@ import { Eye, Plus, Trash2, UserRound } from "lucide-react";
 import type React from "react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import { avatarImageSrc } from "../../../components/AvatarImagePicker";
 import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Field, Input, Modal } from "../../../components/ui";
 import type { Creature } from "../../../types";
@@ -208,18 +209,21 @@ function ConnectedNpcRow({
   const npc = npcs.find((candidate) => candidate.id === link.creatureId);
   return (
     <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="[overflow-wrap:anywhere] font-semibold">
-            {npc?.name ?? "Unknown NPC"}
-          </span>
-          <span className="rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
-            {link.linkType.replaceAll("-", " ")}
-          </span>
+      <div className="flex min-w-0 flex-1 items-start gap-2.5">
+        <NpcAvatar npc={npc} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="[overflow-wrap:anywhere] font-semibold">
+              {npc?.name ?? "Unknown NPC"}
+            </span>
+            <span className="rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
+              {link.linkType.replaceAll("-", " ")}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+            {link.notes || npc?.description || "No notes yet."}
+          </p>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-          {link.notes || npc?.description || "No notes yet."}
-        </p>
       </div>
       <div className="flex shrink-0 gap-1">
         {npc ? (
@@ -238,6 +242,27 @@ function ConnectedNpcRow({
         </Button>
       </div>
     </div>
+  );
+}
+
+function NpcAvatar({ npc }: { npc?: Creature }) {
+  const src = avatarImageSrc(npc?.imageAssetId, npc?.avatarUrl);
+  const initials = npc?.name
+    ?.split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  return (
+    <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-muted text-xs font-bold text-muted-foreground">
+      {src ? (
+        <img alt="" className="h-full w-full object-cover" src={src} />
+      ) : initials ? (
+        initials
+      ) : (
+        <UserRound className="h-4 w-4" />
+      )}
+    </span>
   );
 }
 

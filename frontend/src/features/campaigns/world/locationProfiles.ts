@@ -85,7 +85,13 @@ const shopTypes = new Set([
   "blacksmith",
   "apothecary",
   "general-store",
+  "armoury",
+  "armory",
+  "potion-store",
+  "tavern",
+  "inn",
   "magic-shop",
+  "black-market",
   "stable",
 ]);
 

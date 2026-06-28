@@ -4,11 +4,12 @@ import { useNavigate } from "react-router-dom";
 import { SidebarDetailLayout } from "../../../components/layout";
 import { SectionPanel } from "../../../components/ui";
 import { api } from "../../../lib/api";
-import type { Creature, Encounter, Item } from "../../../types";
+import type { Item } from "../../../types";
 import { CampaignWorldLocationEditor, worldLocationPayload } from "./CampaignWorldLocationEditor";
 import { CampaignWorldLocationWorkspace } from "./CampaignWorldLocationWorkspace";
 import { WorldLocationList } from "./CampaignWorldLocationList";
 import { CampaignWorldSearchEmptyState } from "./CampaignWorldSearchEmptyState";
+import type { CampaignWorldSectionProps } from "./CampaignWorldSectionTypes";
 import type { LinkFormInput } from "./CampaignWorldLocationLinks";
 import type { NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
 import type { LocationStockFormInput } from "./CampaignWorldLocationStock";
@@ -22,6 +23,12 @@ import {
   MissingLocationFallback,
 } from "./CampaignWorldSectionHelpers";
 import { filterWorldLocations } from "./campaignWorldSearch";
+import {
+  applyShopTemplateDefaults,
+  shopTemplateFor,
+  shopTemplateKeyForLabel,
+  shopTemplateLabel,
+} from "./campaignWorldShopTemplates";
 import type {
   CampaignLocation,
   CampaignLocationLink,
@@ -29,6 +36,7 @@ import type {
   CampaignMap,
   CampaignNpcLocationLink,
 } from "./travelTypes";
+
 export function CampaignWorldSection({
   campaignId,
   encounters,
@@ -43,21 +51,7 @@ export function CampaignWorldSection({
   onGenerateEncounter,
   onPlanTravel,
   onStartEncounter = () => undefined,
-}: {
-  campaignId: string;
-  encounters: Encounter[];
-  locations: CampaignLocation[];
-  npcs: Creature[];
-  journeys?: import("./travelTypes").CampaignJourney[];
-  mapsMode?: boolean;
-  routeLocationID?: string;
-  onManageNpcs: () => void;
-  onChanged: () => Promise<void>;
-  onCloneEncounter?: (encounter: Encounter) => void;
-  onGenerateEncounter: (location: CampaignLocation) => void;
-  onPlanTravel?: (location: CampaignLocation) => void;
-  onStartEncounter?: (encounter: Encounter, test: boolean) => void;
-}) {
+}: CampaignWorldSectionProps) {
   const navigate = useNavigate();
   const sortedLocations = useMemo(() => [...locations].sort(compareLocations), [locations]);
   const [selectedID, setSelectedID] = useState(sortedLocations[0]?.id ?? "");
@@ -71,6 +65,7 @@ export function CampaignWorldSection({
   const [dmNotes, setDmNotes] = useState("");
   const [tags, setTags] = useState("");
   const [mapMarker, setMapMarker] = useState("");
+  const [shopTemplate, setShopTemplate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState("");
   const [deleteLocation, setDeleteLocation] = useState<CampaignLocation | null>(null);
@@ -223,6 +218,7 @@ export function CampaignWorldSection({
     setDmNotes("");
     setTags("");
     setMapMarker("");
+    setShopTemplate("");
     setError("");
     setEditorOpen(true);
   }
@@ -236,15 +232,23 @@ export function CampaignWorldSection({
     setDmNotes(location.dmNotes ?? "");
     setTags((location.tags ?? []).join(", "));
     setMapMarker(locationMapMarker(location));
+    setShopTemplate(
+      location.locationType === "shop" ? shopTemplateKeyForLabel(location.customTypeLabel) : "",
+    );
     setError("");
     setEditorOpen(true);
   }
   async function saveLocation(event: FormEvent) {
     event.preventDefault();
+    const selectedShopTemplateLabel = shopTemplateLabel(shopTemplate);
     const payload = worldLocationPayload({
       parentID,
       name,
       locationType,
+      customTypeLabel:
+        locationType === "shop"
+          ? selectedShopTemplateLabel || editingLocation?.customTypeLabel
+          : undefined,
       summary,
       publicNotes,
       dmNotes,
@@ -338,6 +342,25 @@ export function CampaignWorldSection({
   }
   function addCustomStockItem(item: Item) {
     setStockItems((current) => [item, ...current]);
+  }
+  function changeLocationType(nextType: string) {
+    setLocationType(nextType);
+    if (nextType !== "shop") setShopTemplate("");
+  }
+  function changeShopTemplate(nextTemplateKey: string) {
+    const nextTemplate = shopTemplateFor(nextTemplateKey);
+    setShopTemplate(nextTemplateKey);
+    if (editingLocation || !nextTemplate) return;
+    const nextDefaults = applyShopTemplateDefaults(
+      { dmNotes, mapMarker, publicNotes, summary, tags },
+      shopTemplate,
+      nextTemplateKey,
+    );
+    setSummary(nextDefaults.summary);
+    setPublicNotes(nextDefaults.publicNotes);
+    setDmNotes(nextDefaults.dmNotes);
+    setTags(nextDefaults.tags);
+    setMapMarker(nextDefaults.mapMarker);
   }
   async function loadMaps() {
     setMapsLoading(true);
@@ -445,18 +468,20 @@ export function CampaignWorldSection({
         open={editorOpen}
         parentID={parentID}
         publicNotes={publicNotes}
+        shopTemplate={shopTemplate}
         summary={summary}
         tags={tags}
         locations={sortedLocations}
         dmNotes={dmNotes}
         onClose={() => setEditorOpen(false)}
         onDmNotesChange={setDmNotes}
-        onLocationTypeChange={setLocationType}
+        onLocationTypeChange={changeLocationType}
         onMapMarkerChange={setMapMarker}
         onNameChange={setName}
         onOpenChange={setEditorOpen}
         onParentIDChange={setParentID}
         onPublicNotesChange={setPublicNotes}
+        onShopTemplateChange={changeShopTemplate}
         onSubmit={saveLocation}
         onSummaryChange={setSummary}
         onTagsChange={setTags}

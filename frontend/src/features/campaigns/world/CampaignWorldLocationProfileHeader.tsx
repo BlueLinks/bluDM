@@ -37,7 +37,8 @@ export function LocationProfileHeader({
         <div className="min-w-0">
           <LocationPath location={location} onSelectLocation={onSelectLocation} />
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <ProfileBadge label={profile.label} />
+            <ProfileBadge label={location.customTypeLabel || profile.label} />
+            {location.customTypeLabel ? <Chip>{profile.label}</Chip> : null}
             {(location.tags ?? []).slice(0, 3).map((tag) => (
               <Chip key={tag}>{tag}</Chip>
             ))}

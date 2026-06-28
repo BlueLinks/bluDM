@@ -15,6 +15,7 @@ import { Button, Callout, Field, Input, Modal, Textarea } from "../../../compone
 import { Select } from "../../../components/uiSelect";
 import type { CampaignLocation, CampaignLocationInput } from "./travelTypes";
 import { locationPathLabel } from "./campaignWorldLocationUtils";
+import { shopTemplateOptions } from "./campaignWorldShopTemplates";
 
 export function CampaignWorldLocationEditor({
   editingLocation,
@@ -26,6 +27,7 @@ export function CampaignWorldLocationEditor({
   open,
   parentID,
   publicNotes,
+  shopTemplate,
   summary,
   tags,
   dmNotes,
@@ -37,6 +39,7 @@ export function CampaignWorldLocationEditor({
   onOpenChange,
   onParentIDChange,
   onPublicNotesChange,
+  onShopTemplateChange,
   onSubmit,
   onSummaryChange,
   onTagsChange,
@@ -71,6 +74,19 @@ export function CampaignWorldLocationEditor({
             />
           </Field>
         </ResponsiveGrid>
+        {locationType === "shop" ? (
+          <Field
+            label="Shop template"
+            help="Templates set a shop subtype and fill useful starter notes when the fields are still blank."
+          >
+            <Select
+              value={shopTemplate}
+              placeholder="Choose shop template"
+              options={shopTemplateOptions}
+              onValueChange={onShopTemplateChange}
+            />
+          </Field>
+        ) : null}
         <Field label="Summary">
           <Input value={summary} onChange={(event) => onSummaryChange(event.target.value)} />
         </Field>
@@ -124,6 +140,7 @@ export function worldLocationPayload({
   dmNotes,
   tags,
   mapMarker,
+  customTypeLabel,
 }: {
   parentID: string;
   name: string;
@@ -133,11 +150,14 @@ export function worldLocationPayload({
   dmNotes: string;
   tags: string;
   mapMarker: string;
+  customTypeLabel?: string;
 }): CampaignLocationInput {
+  const trimmedCustomTypeLabel = customTypeLabel?.trim();
   return {
     parentLocationId: parentID || undefined,
     name: name.trim(),
     locationType,
+    ...(trimmedCustomTypeLabel ? { customTypeLabel: trimmedCustomTypeLabel } : {}),
     summary: summary.trim(),
     notes: publicNotes.trim(),
     publicNotes: publicNotes.trim(),
@@ -185,6 +205,7 @@ type CampaignWorldLocationEditorProps = {
   open: boolean;
   parentID: string;
   publicNotes: string;
+  shopTemplate: string;
   summary: string;
   tags: string;
   dmNotes: string;
@@ -196,6 +217,7 @@ type CampaignWorldLocationEditorProps = {
   onOpenChange: (open: boolean) => void;
   onParentIDChange: (value: string) => void;
   onPublicNotesChange: (value: string) => void;
+  onShopTemplateChange: (value: string) => void;
   onSubmit: (event: FormEvent) => Promise<void>;
   onSummaryChange: (value: string) => void;
   onTagsChange: (value: string) => void;

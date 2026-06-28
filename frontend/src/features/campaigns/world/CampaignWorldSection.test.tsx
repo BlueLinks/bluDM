@@ -338,10 +338,12 @@ describe("CampaignWorldSection", () => {
         notes: "Behind the counter.",
       }),
     );
-    expect(await screen.findByText("Healing Draught")).toBeTruthy();
-    expect(screen.getByText("75 sp")).toBeTruthy();
-    expect(screen.getByText("Qty 4")).toBeTruthy();
-    expect(screen.getByText("Behind the counter.")).toBeTruthy();
+    const stockRow = (await screen.findByText("Healing Draught")).closest("article");
+    expect(stockRow).toBeTruthy();
+    expect(within(stockRow as HTMLElement).getByText("75 sp")).toBeTruthy();
+    expect(within(stockRow as HTMLElement).getByText("Qty")).toBeTruthy();
+    expect(within(stockRow as HTMLElement).getByText("4")).toBeTruthy();
+    expect(within(stockRow as HTMLElement).getByText("Behind the counter.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Pricing" }));
     const pricingDialog = await screen.findByRole("dialog", { name: "Shop pricing" });
     expect(within(pricingDialog).getByText("75 sp")).toBeTruthy();
