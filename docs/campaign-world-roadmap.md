@@ -92,6 +92,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Map tools now render the single active map directly in the Map card instead of nesting a redundant Maps selector frame.
   - Map canvas supports scroll-wheel/trackpad zoom anchored under the pointer while preserving the existing bounds clamp and consuming page scroll while the pointer is over the canvas.
   - Existing maps can be edited after creation, including replacing a blank map with an uploaded image while preserving pin positions by their prior x/y percentages.
+  - Image map forms preview the uploaded/current image and use image dimensions as read-only map resolution.
+  - Map distance now auto-calculates when two pins are selected, and the same distance panel can calibrate map scale from a known distance between those pins.
   - Map pins now use the pinned location's existing type icon, such as settlement, shop, dungeon, room, or landmark.
 
 ## In Progress

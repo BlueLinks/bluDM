@@ -24,10 +24,33 @@ describe("CampaignWorldMaps", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    Element.prototype.scrollIntoView = vi.fn();
+    pinsByMap["map-a"] = [pin({ id: "pin-1", locationId: "room-1", x: 120, y: 80 })];
+    pinsByMap["map-b"] = [];
     vi.mocked(api.campaignMapPins).mockImplementation((_campaignId, mapId) =>
       Promise.resolve({
         pins: pinsByMap[mapId] ?? [],
       }),
+    );
+    vi.mocked(api.campaignMapDistance).mockImplementation(
+      (_campaignId, mapId, originId, targetId) => {
+        const origin = pinsByMap[mapId]?.find((item) => item.locationId === originId);
+        const target = pinsByMap[mapId]?.find((item) => item.locationId === targetId);
+        const pixelDistance =
+          origin && target ? Math.hypot(origin.x - target.x, origin.y - target.y) : 0;
+        return Promise.resolve({
+          distance: {
+            mapId,
+            originLocationId: originId,
+            targetLocationId: targetId,
+            pixelDistance,
+            distance: pixelDistance * 5,
+            distanceUnit: "feet",
+            travelDistance: (pixelDistance * 5) / 5280,
+            travelDistanceUnit: "miles",
+          },
+        });
+      },
     );
     vi.mocked(api.updateCampaignMap).mockImplementation((_campaignId, _mapId, payload) =>
       Promise.resolve({ map: map({ ...payload, id: "map-a" }) }),
@@ -83,6 +106,67 @@ describe("CampaignWorldMaps", () => {
     expect(onMapsChanged).toHaveBeenCalled();
   });
 
+  it("auto-calculates distance and calibrates scale from selected pins", async () => {
+    const onMapsChanged = vi.fn().mockResolvedValue(undefined);
+    pinsByMap["map-a"] = [
+      pin({ id: "pin-1", locationId: "room-1", x: 0, y: 0 }),
+      pin({ id: "pin-2", locationId: "room-2", x: 300, y: 400 }),
+    ];
+    renderMaps({ onMapsChanged });
+
+    await selectOption(0, "North Room");
+    await selectOption(1, "East Room");
+
+    expect(screen.queryByRole("button", { name: /Calculate straight-line distance/i })).toBeNull();
+    await waitFor(() =>
+      expect(api.campaignMapDistance).toHaveBeenCalledWith(
+        "campaign-1",
+        "map-a",
+        "room-1",
+        "room-2",
+      ),
+    );
+    expect(await screen.findByText(/2,500 feet \(500\.0 px\)/i)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Known distance"), { target: { value: "50" } });
+    fireEvent.click(screen.getByRole("button", { name: "Use this distance" }));
+
+    await waitFor(() =>
+      expect(api.updateCampaignMap).toHaveBeenCalledWith(
+        "campaign-1",
+        "map-a",
+        expect.objectContaining({
+          scaleDistancePerPixel: 0.1,
+          scaleDistanceUnit: "feet",
+          calibrationPixelLength: 500,
+          calibrationDistance: 50,
+        }),
+      ),
+    );
+    expect(onMapsChanged).toHaveBeenCalled();
+  });
+
+  it("previews image maps and keeps uploaded dimensions read-only", async () => {
+    renderMaps({
+      maps: [
+        map({
+          id: "map-a",
+          name: "Upper Floor",
+          mode: "image",
+          imageAssetId: "asset-1",
+          imageUrl: "/api/assets/asset-1",
+        }),
+      ],
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit map image" }));
+
+    expect(screen.getByAltText("Map image preview")).toBeTruthy();
+    expect(screen.getByText("1000×800px")).toBeTruthy();
+    expect(screen.queryByLabelText("Width")).toBeNull();
+    expect(screen.queryByLabelText("Height")).toBeNull();
+  });
+
   it("supports explicit placement cancel and keyboard map view controls", async () => {
     renderMaps();
 
@@ -112,7 +196,16 @@ describe("CampaignWorldMaps", () => {
   });
 });
 
-function renderMaps({ onMapsChanged = vi.fn().mockResolvedValue(undefined) } = {}) {
+async function selectOption(index: number, name: string) {
+  await waitFor(() => expect(screen.getAllByRole("combobox").length).toBeGreaterThan(index));
+  fireEvent.click(screen.getAllByRole("combobox")[index]);
+  fireEvent.click(await screen.findByRole("option", { name }));
+}
+
+function renderMaps({
+  maps = [map({ id: "map-a", name: "Upper Floor" }), map({ id: "map-b", name: "Lower Floor" })],
+  onMapsChanged = vi.fn().mockResolvedValue(undefined),
+} = {}) {
   render(
     <CampaignWorldMaps
       campaignId="campaign-1"
@@ -128,7 +221,7 @@ function renderMaps({ onMapsChanged = vi.fn().mockResolvedValue(undefined) } = {
         room({ id: "room-1", name: "North Room" }),
         room({ id: "room-2", name: "East Room" }),
       ]}
-      maps={[map({ id: "map-a", name: "Upper Floor" }), map({ id: "map-b", name: "Lower Floor" })]}
+      maps={maps}
       onMapsChanged={onMapsChanged}
       onNavigateFromPin={vi.fn()}
       onSelectLocation={vi.fn()}

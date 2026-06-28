@@ -1,16 +1,18 @@
-import { Map as MapIcon, Ruler } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Button, Callout, EmptyMini, Select } from "../../../components/ui";
+import { Button, Callout, EmptyMini } from "../../../components/ui";
 import { api } from "../../../lib/api";
-import { formatMapDistance } from "./campaignMapDistance";
 import { candidateLocationsForMap } from "./campaignWorldMapUtils";
+import { mapInputFromMap, relativeCoordinate, scaleMapDistance } from "./campaignWorldMapScale";
 import { CampaignWorldMapCanvas } from "./CampaignWorldMapCanvas";
+import { CampaignWorldMapDistancePanel } from "./CampaignWorldMapDistancePanel";
 import { CampaignWorldMapForm } from "./CampaignWorldMapForm";
 import { PinPlacementList } from "./CampaignWorldPinPlacementList";
 import type {
   CampaignLocation,
   CampaignMap,
   CampaignMapDistance,
+  CampaignMapDistanceUnit,
   CampaignMapPin,
 } from "./travelTypes";
 
@@ -44,10 +46,12 @@ export function CampaignWorldMaps({
   const [distanceFromId, setDistanceFromId] = useState("");
   const [distanceToId, setDistanceToId] = useState("");
   const [distance, setDistance] = useState<CampaignMapDistance | null>(null);
+  const [distanceLoading, setDistanceLoading] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [loadingPins, setLoadingPins] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scaleSaving, setScaleSaving] = useState(false);
   const [error, setError] = useState("");
 
   const attachedMaps = useMemo(
@@ -159,19 +163,62 @@ export function CampaignWorldMaps({
     }
   }
 
-  async function calculateDistance() {
-    if (!activeMap || !distanceFromId || !distanceToId || distanceFromId === distanceToId) return;
+  useEffect(() => {
+    if (!activeMap || !distanceFromId || !distanceToId || distanceFromId === distanceToId) {
+      setDistance(null);
+      setDistanceLoading(false);
+      return;
+    }
+    let active = true;
+    setDistanceLoading(true);
+    setError("");
+    api
+      .campaignMapDistance(campaignId, activeMap.id, distanceFromId, distanceToId)
+      .then(({ distance: nextDistance }) => {
+        if (active) setDistance(nextDistance);
+      })
+      .catch((err: unknown) => {
+        if (active)
+          setError(err instanceof Error ? err.message : "Could not calculate map distance");
+      })
+      .finally(() => {
+        if (active) setDistanceLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    activeMap?.id,
+    activeMap?.scaleDistancePerPixel,
+    activeMap?.scaleDistanceUnit,
+    campaignId,
+    distanceFromId,
+    distanceToId,
+    pins,
+  ]);
+
+  async function handleScaleCalibration(realDistance: number, unit: CampaignMapDistanceUnit) {
+    if (!activeMap || !distance || distance.pixelDistance <= 0 || realDistance <= 0) return;
+    const scaleDistancePerPixel = realDistance / distance.pixelDistance;
+    setScaleSaving(true);
     setError("");
     try {
-      const payload = await api.campaignMapDistance(
+      await api.updateCampaignMap(
         campaignId,
         activeMap.id,
-        distanceFromId,
-        distanceToId,
+        mapInputFromMap(activeMap, {
+          scaleDistancePerPixel,
+          scaleDistanceUnit: unit,
+          calibrationPixelLength: distance.pixelDistance,
+          calibrationDistance: realDistance,
+        }),
       );
-      setDistance(payload.distance);
+      setDistance(scaleMapDistance(distance, scaleDistancePerPixel, unit));
+      await onMapsChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not calculate map distance");
+      setError(err instanceof Error ? err.message : "Could not calibrate map scale");
+    } finally {
+      setScaleSaving(false);
     }
   }
 
@@ -259,6 +306,7 @@ export function CampaignWorldMaps({
             candidateLocations={candidateLocations}
             distance={distance}
             distanceFromId={distanceFromId}
+            distanceLoading={distanceLoading}
             distanceToId={distanceToId}
             focusedLocationID={focusedLocationID}
             loadingPins={loadingPins}
@@ -267,8 +315,9 @@ export function CampaignWorldMaps({
             pinnedLocationOptions={pinnedOptions}
             pins={pins}
             saving={saving}
+            scaleSaving={scaleSaving}
             showGrid={showGrid}
-            onCalculateDistance={calculateDistance}
+            onCalibrateScale={handleScaleCalibration}
             onDistanceFromChange={setDistanceFromId}
             onDistanceToChange={setDistanceToId}
             onNavigateFromPin={onNavigateFromPin}
@@ -314,6 +363,7 @@ function ActiveMapWorkspace({
   candidateLocations,
   distance,
   distanceFromId,
+  distanceLoading,
   distanceToId,
   focusedLocationID,
   loadingPins,
@@ -322,8 +372,9 @@ function ActiveMapWorkspace({
   pinnedLocationOptions,
   pins,
   saving,
+  scaleSaving,
   showGrid,
-  onCalculateDistance,
+  onCalibrateScale,
   onDistanceFromChange,
   onDistanceToChange,
   onNavigateFromPin,
@@ -358,81 +409,21 @@ function ActiveMapWorkspace({
           pins={pins}
           onStartPlacement={onStartPlacement}
         />
-        <DistancePanel
+        <CampaignWorldMapDistancePanel
+          activeMap={activeMap}
           distance={distance}
           distanceFromId={distanceFromId}
+          distanceLoading={distanceLoading}
           distanceToId={distanceToId}
           options={pinnedLocationOptions}
-          onCalculateDistance={onCalculateDistance}
+          scaleSaving={scaleSaving}
+          onCalibrateScale={onCalibrateScale}
           onDistanceFromChange={onDistanceFromChange}
           onDistanceToChange={onDistanceToChange}
         />
       </aside>
     </div>
   );
-}
-
-function DistancePanel({
-  distance,
-  distanceFromId,
-  distanceToId,
-  options,
-  onCalculateDistance,
-  onDistanceFromChange,
-  onDistanceToChange,
-}: {
-  distance: CampaignMapDistance | null;
-  distanceFromId: string;
-  distanceToId: string;
-  options: Array<{ value: string; label: string }>;
-  onCalculateDistance: () => Promise<void>;
-  onDistanceFromChange: (locationID: string) => void;
-  onDistanceToChange: (locationID: string) => void;
-}) {
-  return (
-    <div className="grid gap-2 rounded-md border border-border bg-card p-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <Ruler className="h-4 w-4 text-accent" /> Distance
-      </div>
-      <Select
-        value={distanceFromId}
-        placeholder="From"
-        options={options}
-        onValueChange={onDistanceFromChange}
-      />
-      <Select
-        value={distanceToId}
-        placeholder="To"
-        options={options}
-        onValueChange={onDistanceToChange}
-      />
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        disabled={!distanceFromId || !distanceToId || distanceFromId === distanceToId}
-        onClick={() => void onCalculateDistance()}
-      >
-        Calculate straight-line distance
-      </Button>
-      {distance ? (
-        <p className="text-sm text-muted-foreground">
-          {formatMapDistance(distance.distance, distance.distanceUnit)} (
-          {distance.pixelDistance.toFixed(1)} px). Travel calculator uses{" "}
-          {distance.travelDistance.toFixed(2)} {distance.travelDistanceUnit}.
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function relativeCoordinate(value: number, previousSize: number, nextSize: number) {
-  if (previousSize <= 0) return clamp(value, 0, nextSize);
-  return clamp((value / previousSize) * nextSize, 0, nextSize);
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
 }
 
 function pinOptions(pins: CampaignMapPin[], locationById: Map<string, CampaignLocation>) {
@@ -450,6 +441,7 @@ type ActiveMapWorkspaceProps = {
   candidateLocations: CampaignLocation[];
   distance: CampaignMapDistance | null;
   distanceFromId: string;
+  distanceLoading: boolean;
   distanceToId: string;
   focusedLocationID: string;
   loadingPins: boolean;
@@ -458,8 +450,9 @@ type ActiveMapWorkspaceProps = {
   pinnedLocationOptions: Array<{ value: string; label: string }>;
   pins: CampaignMapPin[];
   saving: boolean;
+  scaleSaving: boolean;
   showGrid: boolean;
-  onCalculateDistance: () => Promise<void>;
+  onCalibrateScale: (distance: number, unit: CampaignMapDistanceUnit) => Promise<void>;
   onDistanceFromChange: (locationID: string) => void;
   onDistanceToChange: (locationID: string) => void;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;

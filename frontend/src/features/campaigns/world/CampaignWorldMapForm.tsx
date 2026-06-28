@@ -1,5 +1,5 @@
 import { Image as ImageIcon } from "lucide-react";
-import { useState, type ChangeEvent } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { ActionRow, FieldGrid } from "../../../components/layout";
 import { Button, Field, Input, Select, Textarea } from "../../../components/ui";
 import { api } from "../../../lib/api";
@@ -57,7 +57,20 @@ export function CampaignWorldMapForm({
     initialDefaults.scaleDistanceUnit,
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(existingMap?.imageUrl ?? "");
   const [saving, setSaving] = useState(false);
+  const hasImage = Boolean(imageFile || existingMap?.imageAssetId);
+
+  useEffect(() => {
+    if (!imageFile) {
+      setImagePreviewUrl(existingMap?.imageUrl ?? "");
+      return;
+    }
+    const previewUrl = URL.createObjectURL(imageFile);
+    setImagePreviewUrl(previewUrl);
+    void applyImageDimensions(previewUrl, setWidth, setHeight);
+    return () => URL.revokeObjectURL(previewUrl);
+  }, [existingMap?.imageUrl, imageFile]);
 
   async function submit() {
     const trimmedName = name.trim();
@@ -108,33 +121,49 @@ export function CampaignWorldMapForm({
               const nextType = value as CampaignMapType;
               const nextDefaults = mapDefaultsForType(nextType);
               setMapType(nextType);
-              setWidth(String(nextDefaults.width));
-              setHeight(String(nextDefaults.height));
+              if (!hasImage) {
+                setWidth(String(nextDefaults.width));
+                setHeight(String(nextDefaults.height));
+              }
               setScaleDistance(String(nextDefaults.scaleDistancePerPixel));
               setScaleUnit(nextDefaults.scaleDistanceUnit);
             }}
           />
         </Field>
-        <Field label="Width">
-          <Input
-            min="1"
-            type="number"
-            value={width}
-            onChange={(event) => setWidth(event.target.value)}
-          />
-        </Field>
-        <Field label="Height">
-          <Input
-            min="1"
-            type="number"
-            value={height}
-            onChange={(event) => setHeight(event.target.value)}
-          />
-        </Field>
+        {hasImage ? (
+          <div className="grid min-w-0 content-end gap-2 text-sm font-medium md:col-span-2">
+            <span className="text-[0.82rem] font-semibold text-muted-foreground">
+              Image dimensions
+            </span>
+            <div className="min-h-10 rounded-md border border-border bg-muted px-3 py-2 text-sm">
+              {width}×{height}px
+            </div>
+          </div>
+        ) : (
+          <>
+            <Field label="Width">
+              <Input
+                min="1"
+                type="number"
+                value={width}
+                onChange={(event) => setWidth(event.target.value)}
+              />
+            </Field>
+            <Field label="Height">
+              <Input
+                min="1"
+                type="number"
+                value={height}
+                onChange={(event) => setHeight(event.target.value)}
+              />
+            </Field>
+          </>
+        )}
       </FieldGrid>
       <p className="rounded-md border border-dashed border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-        This map is attached to {currentLocation.name}. If dimensions change, existing pins keep
-        their same relative position on the new map size.
+        This map is attached to {currentLocation.name}. Image map dimensions come from the uploaded
+        file. If dimensions change, existing pins keep their same relative position on the new map
+        size.
       </p>
       <Field label="Description / notes">
         <Textarea
@@ -172,15 +201,24 @@ export function CampaignWorldMapForm({
             type="file"
             accept="image/png,image/jpeg,image/gif,image/webp"
             onChange={(event: ChangeEvent<HTMLInputElement>) => {
-              const file = event.target.files?.[0] ?? null;
-              setImageFile(file);
-              if (file) void applyImageDimensions(file, setWidth, setHeight);
+              setImageFile(event.target.files?.[0] ?? null);
             }}
           />
         </Field>
       </div>
+      {imagePreviewUrl ? (
+        <div className="grid gap-2 rounded-md border border-border bg-background p-2">
+          <p className="text-xs font-semibold text-muted-foreground">Image preview</p>
+          <img
+            alt="Map image preview"
+            className="max-h-56 w-full rounded-md border border-border object-contain"
+            src={imagePreviewUrl}
+          />
+        </div>
+      ) : null}
       <p className="text-xs text-muted-foreground">
-        {mapDefaultsForType(mapType).scaleDescription}
+        {mapDefaultsForType(mapType).scaleDescription} You can also calibrate scale later from two
+        placed pins in the Distance panel.
       </p>
       <ActionRow justify="end">
         <Button type="button" disabled={!name.trim() || saving} onClick={() => void submit()}>
@@ -192,28 +230,21 @@ export function CampaignWorldMapForm({
 }
 
 async function applyImageDimensions(
-  file: File,
+  imageUrl: string,
   setWidth: (value: string) => void,
   setHeight: (value: string) => void,
 ) {
-  const dimensions = await imageDimensions(file);
+  const dimensions = await imageDimensions(imageUrl);
   if (!dimensions) return;
   setWidth(String(dimensions.width));
   setHeight(String(dimensions.height));
 }
 
-function imageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+function imageDimensions(imageUrl: string): Promise<{ width: number; height: number } | null> {
   return new Promise((resolve) => {
-    const url = URL.createObjectURL(file);
     const image = new Image();
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve({ width: image.naturalWidth, height: image.naturalHeight });
-    };
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(null);
-    };
-    image.src = url;
+    image.onload = () => resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => resolve(null);
+    image.src = imageUrl;
   });
 }
