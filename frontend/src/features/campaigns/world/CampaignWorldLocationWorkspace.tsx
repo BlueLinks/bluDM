@@ -50,6 +50,7 @@ export function CampaignWorldLocationWorkspace({
   onDeleteNpcLink,
   onDeleteStock,
   onEdit,
+  onCloneEncounter,
   onCloseMaps,
   onGenerateEncounter,
   onMapsChanged,
@@ -57,6 +58,7 @@ export function CampaignWorldLocationWorkspace({
   onOpenMaps,
   onPlanTravel,
   onSelectLocation,
+  onStartEncounter,
 }: CampaignWorldLocationWorkspaceProps) {
   const mapWorkspace = mapsMode ? (
     <LocationMapWorkspace
@@ -111,10 +113,12 @@ export function CampaignWorldLocationWorkspace({
         onDeleteStock={onDeleteStock}
         onEdit={onEdit}
         onGenerateEncounter={onGenerateEncounter}
+        onCloneEncounter={onCloneEncounter}
         onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
         onPlanTravel={onPlanTravel}
         onSelectLocation={onSelectLocation}
+        onStartEncounter={onStartEncounter}
       />
     </div>
   );
@@ -193,6 +197,7 @@ type CampaignWorldLocationWorkspaceProps = {
   onDeleteNpcLink: (linkID: string) => Promise<void>;
   onDeleteStock: (stockID: string) => Promise<void>;
   onEdit: () => void;
+  onCloneEncounter: (encounter: Encounter) => void;
   onGenerateEncounter: () => void;
   onMapsChanged: () => Promise<void>;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
@@ -200,6 +205,7 @@ type CampaignWorldLocationWorkspaceProps = {
   onOpenMaps: () => void;
   onPlanTravel?: () => void;
   onSelectLocation: (locationID: string) => void;
+  onStartEncounter: (encounter: Encounter, test: boolean) => void;
 };
 
 type LocationMapWorkspaceProps = {

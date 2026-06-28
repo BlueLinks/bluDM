@@ -62,7 +62,7 @@ export function CampaignEncountersSection({
       ) : (
         <div className="grid gap-3">
           {encounters.map((encounter) => (
-            <EncounterCard
+            <CampaignEncounterCard
               campaignID={campaignID}
               encounter={encounter}
               key={encounter.id}
@@ -105,7 +105,7 @@ export function CampaignEncountersSection({
   );
 }
 
-function EncounterCard({
+export function CampaignEncounterCard({
   campaignID,
   encounter,
   onClone,
@@ -115,7 +115,7 @@ function EncounterCard({
   campaignID: string;
   encounter: Encounter;
   onClone: (encounter: Encounter) => void;
-  onRemove: (encounter: Encounter) => void;
+  onRemove?: (encounter: Encounter) => void;
   onStart: (encounter: Encounter, test: boolean) => void;
 }) {
   return (
@@ -161,15 +161,17 @@ function EncounterCard({
           >
             Clone
           </Button>
-          <Button
-            type="button"
-            icon={Trash2}
-            size="sm"
-            variant="danger"
-            onClick={() => onRemove(encounter)}
-          >
-            Remove
-          </Button>
+          {onRemove ? (
+            <Button
+              type="button"
+              icon={Trash2}
+              size="sm"
+              variant="danger"
+              onClick={() => onRemove(encounter)}
+            >
+              Remove
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

@@ -39,6 +39,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Dungeon/Floor/Room prep overview card with ready-to-run signals.
 - Dungeon structure card now surfaces child floor/room navigation.
 - Dungeon/Floor encounter lists include descendant location encounters.
+- World encounter cards reuse the main campaign encounter actions for Run, Test, Edit, and Clone from location context.
 - Encounter creation from Room/Floor pages now carries clearer room context.
 - Maps workspace polish slice:
   - clearer map selection/list cards in the existing Maps workspace.

@@ -39,8 +39,10 @@ export function CampaignWorldSection({
   mapsMode = false,
   routeLocationID,
   onChanged,
+  onCloneEncounter = () => undefined,
   onGenerateEncounter,
   onPlanTravel,
+  onStartEncounter = () => undefined,
 }: {
   campaignId: string;
   encounters: Encounter[];
@@ -51,8 +53,10 @@ export function CampaignWorldSection({
   routeLocationID?: string;
   onManageNpcs: () => void;
   onChanged: () => Promise<void>;
+  onCloneEncounter?: (encounter: Encounter) => void;
   onGenerateEncounter: (location: CampaignLocation) => void;
   onPlanTravel?: (location: CampaignLocation) => void;
+  onStartEncounter?: (encounter: Encounter, test: boolean) => void;
 }) {
   const navigate = useNavigate();
   const sortedLocations = useMemo(() => [...locations].sort(compareLocations), [locations]);
@@ -416,6 +420,7 @@ export function CampaignWorldSection({
                     onDeleteNpcLink={deleteNpcLocationLink}
                     onDeleteStock={deleteLocationStock}
                     onEdit={() => openEdit(selected)}
+                    onCloneEncounter={onCloneEncounter}
                     onGenerateEncounter={() => onGenerateEncounter(selected)}
                     onCloseMaps={() => closeMapsForLocation(selected.id)}
                     onMapsChanged={loadMaps}
@@ -423,6 +428,7 @@ export function CampaignWorldSection({
                     onOpenMaps={() => openMapsForLocation(selected.id)}
                     onPlanTravel={() => onPlanTravel?.(selected)}
                     onSelectLocation={jumpToLocation}
+                    onStartEncounter={onStartEncounter}
                   />
                 )}
               </SidebarDetailLayout>

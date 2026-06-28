@@ -227,32 +227,43 @@ describe("CampaignWorldSection", () => {
     );
   });
 
-  it("lists encounters attached to the selected location", async () => {
-    renderWorld({
-      encounters: [
-        {
-          id: "encounter-1",
-          campaignId: "campaign-1",
-          name: "Shop Brawl",
-          description: "",
-          status: "planned",
-          location: "Brindleford / Copper Kettle",
-          locationId: "shop-1",
-          roomNumber: "front",
-          lootNotes: "",
-          combatantCount: 0,
-          enemyCount: 0,
-          createdAt: "",
-          updatedAt: "",
-        },
-      ],
-    });
+  it("reuses campaign encounter actions for encounters attached to the selected location", async () => {
+    const onCloneEncounter = vi.fn();
+    const onStartEncounter = vi.fn();
+    const encounter: Encounter = {
+      id: "encounter-1",
+      campaignId: "campaign-1",
+      name: "Shop Brawl",
+      description: "",
+      status: "planned",
+      location: "Brindleford / Copper Kettle",
+      locationId: "shop-1",
+      roomNumber: "front",
+      lootNotes: "",
+      combatantCount: 0,
+      enemyCount: 0,
+      createdAt: "",
+      updatedAt: "",
+    };
+    renderWorld({ encounters: [encounter], onCloneEncounter, onStartEncounter });
 
-    expect(await screen.findByText("Shop Brawl")).toBeTruthy();
-    expect(screen.getByText("planned - Room front")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Open" }).getAttribute("href")).toBe(
+    const encounterCard = (await screen.findByText("Shop Brawl")).closest("div.rounded-md");
+    expect(encounterCard).not.toBeNull();
+    const card = encounterCard as HTMLElement;
+    expect(within(card).getByText("Planned")).toBeTruthy();
+    expect(within(card).getByText("Brindleford / Copper Kettle")).toBeTruthy();
+    expect(within(card).getByText("Room front")).toBeTruthy();
+
+    fireEvent.click(within(card).getByRole("button", { name: "Run" }));
+    expect(onStartEncounter).toHaveBeenCalledWith(encounter, false);
+    fireEvent.click(within(card).getByRole("button", { name: "Test" }));
+    expect(onStartEncounter).toHaveBeenCalledWith(encounter, true);
+    expect(within(card).getByRole("link", { name: "Edit" }).getAttribute("href")).toBe(
       "/campaigns/campaign-1/encounters/encounter-1/edit",
     );
+    fireEvent.click(within(card).getByRole("button", { name: "Clone" }));
+    expect(onCloneEncounter).toHaveBeenCalledWith(encounter);
+    expect(within(card).queryByRole("button", { name: "Remove" })).toBeNull();
   });
 
   it("creates and removes NPC links from a dialog without relationship clutter", async () => {
@@ -449,15 +460,19 @@ function renderWorld({
   encounters = [],
   npcs = [],
   onChanged = vi.fn().mockResolvedValue(undefined),
+  onCloneEncounter = vi.fn(),
   onGenerateEncounter = vi.fn(),
   onManageNpcs = vi.fn(),
+  onStartEncounter = vi.fn(),
   locations = [location()],
 }: {
   encounters?: Encounter[];
   npcs?: Creature[];
   onChanged?: () => Promise<void>;
+  onCloneEncounter?: (encounter: Encounter) => void;
   onGenerateEncounter?: (location: CampaignLocation) => void;
   onManageNpcs?: () => void;
+  onStartEncounter?: (encounter: Encounter, test: boolean) => void;
   locations?: CampaignLocation[];
 } = {}) {
   render(
@@ -469,7 +484,9 @@ function renderWorld({
         npcs={npcs}
         onManageNpcs={onManageNpcs}
         onChanged={onChanged}
+        onCloneEncounter={onCloneEncounter}
         onGenerateEncounter={onGenerateEncounter}
+        onStartEncounter={onStartEncounter}
       />
     </MemoryRouter>,
   );

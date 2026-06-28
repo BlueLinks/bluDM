@@ -14,6 +14,7 @@ import {
   useToasts,
 } from "../../../components/ui";
 import { api } from "../../../lib/api";
+import type { Encounter } from "../../../types";
 import { CampaignEncounterCreateDialog } from "../CampaignEncounterCreateDialog";
 import { CampaignTravelTool } from "../CampaignTravelTool";
 import { CampaignWorkspaceTabs } from "../CampaignWorkspaceTabs";
@@ -69,6 +70,28 @@ export function CampaignWorldPage() {
       await loadCampaign();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create encounter");
+    }
+  }
+
+  async function cloneEncounter(encounter: Encounter) {
+    setError("");
+    try {
+      const payload = await api.cloneEncounter(encounter.id);
+      toast.push(`${payload.encounter.name} cloned`);
+      await loadCampaign();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not clone encounter");
+    }
+  }
+
+  async function startEncounter(encounter: Encounter, test: boolean) {
+    setError("");
+    try {
+      const payload = await api.startEncounter(encounter.id, test);
+      toast.push(test ? "Test run snapshot created" : "Encounter run snapshot created");
+      void navigate(`/encounter-runs/${payload.run.id}/initiative`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start encounter");
     }
   }
 
@@ -181,7 +204,9 @@ export function CampaignWorldPage() {
           onManageNpcs={() => void navigate(`/campaigns/${detail.campaign.id}#campaign-npcs`)}
           onPlanTravel={planTravelFromLocation}
           onChanged={loadCampaign}
+          onCloneEncounter={(encounter) => void cloneEncounter(encounter)}
           onGenerateEncounter={generateEncounterAtLocation}
+          onStartEncounter={(encounter, test) => void startEncounter(encounter, test)}
         />
         <ResponsiveGrid variant="equal2">
           <WorldSummary

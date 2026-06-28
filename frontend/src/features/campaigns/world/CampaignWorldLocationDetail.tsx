@@ -75,10 +75,12 @@ export function CampaignWorldLocationDetail({
   onDeleteStock,
   onEdit,
   onGenerateEncounter,
+  onCloneEncounter,
   onCloseMaps,
   onOpenMaps,
   onPlanTravel,
   onSelectLocation,
+  onStartEncounter,
 }: CampaignWorldLocationDetailProps) {
   const profile = locationProfile(location);
   const [stockOpen, setStockOpen] = useState(false);
@@ -135,10 +137,12 @@ export function CampaignWorldLocationDetail({
     onDeleteStock,
     onEdit,
     onGenerateEncounter,
+    onCloneEncounter,
     onCloseMaps,
     onOpenMaps,
     onPlanTravel,
     onSelectLocation,
+    onStartEncounter,
   });
 
   return (
@@ -201,6 +205,7 @@ function buildProfileSections(props: ProfileSectionProps) {
     onDeleteLink,
     onDeleteNpcLink,
     onDeleteStock,
+    onCloneEncounter,
     onCloseMaps,
     onOpenMaps,
     onPlanTravel,
@@ -263,6 +268,8 @@ function buildProfileSections(props: ProfileSectionProps) {
             ? props.onGenerateEncounter
             : undefined
         }
+        onCloneEncounter={onCloneEncounter}
+        onStartEncounter={props.onStartEncounter}
       />
     ) : null,
     linksCard: shouldShowLinks ? (
@@ -451,7 +458,9 @@ type CampaignWorldLocationDetailProps = {
   onDeleteStock: (stockID: string) => Promise<void>;
   onEdit: () => void;
   onGenerateEncounter: () => void;
+  onCloneEncounter: (encounter: Encounter) => void;
   onCloseMaps: () => void;
+  onStartEncounter: (encounter: Encounter, test: boolean) => void;
   onOpenMaps: () => void;
   onPlanTravel?: () => void;
   onSelectLocation: (locationID: string) => void;

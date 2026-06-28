@@ -1,19 +1,23 @@
-import { ExternalLink, Plus, Swords } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Plus, Swords } from "lucide-react";
 import { CardSection, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
+import { CampaignEncounterCard } from "../CampaignEncountersSection";
 
 export function CampaignWorldLocationEncounters({
   actionLabel = "Add encounter",
   campaignId,
   encounters,
   onAddEncounter,
+  onCloneEncounter = () => undefined,
+  onStartEncounter = () => undefined,
 }: {
   actionLabel?: string;
   campaignId: string;
   encounters: Encounter[];
   onAddEncounter?: () => void;
+  onCloneEncounter?: (encounter: Encounter) => void;
+  onStartEncounter?: (encounter: Encounter, test: boolean) => void;
 }) {
   return (
     <CardSection>
@@ -40,27 +44,13 @@ export function CampaignWorldLocationEncounters({
           <EncounterStatusSummary encounters={encounters} />
           <div className="mt-3 grid gap-2">
             {encounters.map((encounter) => (
-              <div
-                className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2"
+              <CampaignEncounterCard
+                campaignID={campaignId}
+                encounter={encounter}
                 key={encounter.id}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="[overflow-wrap:anywhere] font-semibold">{encounter.name}</div>
-                  <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                    {[encounter.status, encounter.roomNumber ? `Room ${encounter.roomNumber}` : ""]
-                      .filter(Boolean)
-                      .join(" - ")}
-                  </p>
-                </div>
-                <Link
-                  className="shrink-0"
-                  to={`/campaigns/${campaignId}/encounters/${encounter.id}/edit`}
-                >
-                  <Button type="button" icon={ExternalLink} size="sm" variant="ghost">
-                    Open
-                  </Button>
-                </Link>
-              </div>
+                onClone={onCloneEncounter}
+                onStart={onStartEncounter}
+              />
             ))}
           </div>
         </>
