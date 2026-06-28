@@ -44,7 +44,7 @@ export function CampaignWorldMaps({
   const [distanceFromId, setDistanceFromId] = useState("");
   const [distanceToId, setDistanceToId] = useState("");
   const [distance, setDistance] = useState<CampaignMapDistance | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"create" | "edit" | null>(null);
   const [showGrid, setShowGrid] = useState(true);
   const [loadingPins, setLoadingPins] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -175,6 +175,37 @@ export function CampaignWorldMaps({
     }
   }
 
+  async function handleMapSaved(savedMap: CampaignMap) {
+    if (formMode === "edit" && activeMap) {
+      await resizePinsForUpdatedMap(activeMap, savedMap, pins);
+      await refreshPins(savedMap.id);
+    }
+    setFormMode(null);
+    await onMapsChanged();
+  }
+
+  async function resizePinsForUpdatedMap(
+    previousMap: CampaignMap,
+    nextMap: CampaignMap,
+    mapPins: CampaignMapPin[],
+  ) {
+    await Promise.all(
+      mapPins.map((pin) => {
+        const nextX = relativeCoordinate(pin.x, previousMap.width, nextMap.width);
+        const nextY = relativeCoordinate(pin.y, previousMap.height, nextMap.height);
+        return api.updateCampaignMapPin(campaignId, nextMap.id, pin.id, {
+          locationId: pin.locationId,
+          x: nextX,
+          y: nextY,
+          labelOverride: pin.labelOverride,
+          visibility: pin.visibility,
+          state: pin.state,
+          metadata: pin.metadata,
+        });
+      }),
+    );
+  }
+
   return (
     <div className="grid min-w-0 gap-4">
       {error ? <Callout tone="danger">{error}</Callout> : null}
@@ -192,50 +223,88 @@ export function CampaignWorldMaps({
               icon={MapIcon}
               size="sm"
               variant="secondary"
-              onClick={() => setFormOpen((open) => !open)}
+              onClick={() => setFormMode((mode) => (mode === "create" ? null : "create"))}
             >
-              {formOpen ? "Close map form" : "Create map"}
+              {formMode === "create" ? "Close map form" : "Create map"}
             </Button>
           </div>
-          {formOpen ? (
+          {formMode === "create" ? (
             <CampaignWorldMapForm
               campaignId={campaignId}
               currentLocation={currentLocation}
-              onCreated={async () => {
-                setFormOpen(false);
-                await onMapsChanged();
-              }}
               onError={setError}
+              onSaved={handleMapSaved}
             />
           ) : null}
           <EmptyMini copy="Create a map attached to this location, then explicitly place pins for relevant child locations." />
         </div>
       ) : (
-        <ActiveMapWorkspace
-          activeMap={activeMap}
-          candidateLocations={candidateLocations}
-          distance={distance}
-          distanceFromId={distanceFromId}
-          distanceToId={distanceToId}
-          focusedLocationID={focusedLocationID}
-          loadingPins={loadingPins}
-          locationById={locationById}
-          placementMode={placementMode}
-          pinnedLocationOptions={pinnedOptions}
-          pins={pins}
-          saving={saving}
-          showGrid={showGrid}
-          onCalculateDistance={calculateDistance}
-          onDistanceFromChange={setDistanceFromId}
-          onDistanceToChange={setDistanceToId}
-          onNavigateFromPin={onNavigateFromPin}
-          onCancelPlacement={() => setPlacementMode(null)}
-          onPlacePin={placePin}
-          onRemovePin={removePin}
-          onShowGridChange={setShowGrid}
-          onStartPlacement={setPlacementMode}
-        />
+        <>
+          <ActiveMapToolbar
+            activeMap={activeMap}
+            editing={formMode === "edit"}
+            onEditToggle={() => setFormMode((mode) => (mode === "edit" ? null : "edit"))}
+          />
+          {formMode === "edit" ? (
+            <CampaignWorldMapForm
+              campaignId={campaignId}
+              currentLocation={currentLocation}
+              existingMap={activeMap}
+              onError={setError}
+              onSaved={handleMapSaved}
+            />
+          ) : null}
+          <ActiveMapWorkspace
+            activeMap={activeMap}
+            candidateLocations={candidateLocations}
+            distance={distance}
+            distanceFromId={distanceFromId}
+            distanceToId={distanceToId}
+            focusedLocationID={focusedLocationID}
+            loadingPins={loadingPins}
+            locationById={locationById}
+            placementMode={placementMode}
+            pinnedLocationOptions={pinnedOptions}
+            pins={pins}
+            saving={saving}
+            showGrid={showGrid}
+            onCalculateDistance={calculateDistance}
+            onDistanceFromChange={setDistanceFromId}
+            onDistanceToChange={setDistanceToId}
+            onNavigateFromPin={onNavigateFromPin}
+            onCancelPlacement={() => setPlacementMode(null)}
+            onPlacePin={placePin}
+            onRemovePin={removePin}
+            onShowGridChange={setShowGrid}
+            onStartPlacement={setPlacementMode}
+          />
+        </>
       )}
+    </div>
+  );
+}
+
+function ActiveMapToolbar({
+  activeMap,
+  editing,
+  onEditToggle,
+}: {
+  activeMap: CampaignMap;
+  editing: boolean;
+  onEditToggle: () => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-semibold">{activeMap.name}</p>
+        <p className="text-xs text-muted-foreground">
+          {activeMap.mode === "image" ? "Image map" : "Blank grid"} · {activeMap.width}×
+          {activeMap.height}px
+        </p>
+      </div>
+      <Button type="button" icon={MapIcon} size="sm" variant="secondary" onClick={onEditToggle}>
+        {editing ? "Close map editor" : "Edit map image"}
+      </Button>
     </div>
   );
 }
@@ -355,6 +424,15 @@ function DistancePanel({
       ) : null}
     </div>
   );
+}
+
+function relativeCoordinate(value: number, previousSize: number, nextSize: number) {
+  if (previousSize <= 0) return clamp(value, 0, nextSize);
+  return clamp((value / previousSize) * nextSize, 0, nextSize);
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function pinOptions(pins: CampaignMapPin[], locationById: Map<string, CampaignLocation>) {

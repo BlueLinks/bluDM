@@ -8,9 +8,12 @@ vi.mock("../../../lib/api", () => ({
   api: {
     campaignMapDistance: vi.fn(),
     campaignMapPins: vi.fn(),
+    createCampaignMap: vi.fn(),
     createCampaignMapPin: vi.fn(),
     deleteCampaignMapPin: vi.fn(),
+    updateCampaignMap: vi.fn(),
     updateCampaignMapPin: vi.fn(),
+    uploadImage: vi.fn(),
   },
 }));
 
@@ -25,6 +28,12 @@ describe("CampaignWorldMaps", () => {
       Promise.resolve({
         pins: pinsByMap[mapId] ?? [],
       }),
+    );
+    vi.mocked(api.updateCampaignMap).mockImplementation((_campaignId, _mapId, payload) =>
+      Promise.resolve({ map: map({ ...payload, id: "map-a" }) }),
+    );
+    vi.mocked(api.updateCampaignMapPin).mockImplementation((_campaignId, _mapId, _pinId, payload) =>
+      Promise.resolve({ pin: pin(payload) }),
     );
   });
 
@@ -47,6 +56,31 @@ describe("CampaignWorldMaps", () => {
 
     expect(screen.getByRole("button", { name: "Move" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Remove" })).toBeTruthy();
+  });
+
+  it("resizes pins by relative position when map dimensions change", async () => {
+    const onMapsChanged = vi.fn().mockResolvedValue(undefined);
+    renderMaps({ onMapsChanged });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit map image" }));
+    fireEvent.change(screen.getByLabelText("Width"), { target: { value: "2000" } });
+    fireEvent.change(screen.getByLabelText("Height"), { target: { value: "1600" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save map" }));
+
+    await waitFor(() =>
+      expect(api.updateCampaignMap).toHaveBeenCalledWith(
+        "campaign-1",
+        "map-a",
+        expect.objectContaining({ width: 2000, height: 1600 }),
+      ),
+    );
+    expect(api.updateCampaignMapPin).toHaveBeenCalledWith(
+      "campaign-1",
+      "map-a",
+      "pin-1",
+      expect.objectContaining({ locationId: "room-1", x: 240, y: 160 }),
+    );
+    expect(onMapsChanged).toHaveBeenCalled();
   });
 
   it("supports explicit placement cancel and keyboard map view controls", async () => {
@@ -78,7 +112,7 @@ describe("CampaignWorldMaps", () => {
   });
 });
 
-function renderMaps() {
+function renderMaps({ onMapsChanged = vi.fn().mockResolvedValue(undefined) } = {}) {
   render(
     <CampaignWorldMaps
       campaignId="campaign-1"
@@ -95,7 +129,7 @@ function renderMaps() {
         room({ id: "room-2", name: "East Room" }),
       ]}
       maps={[map({ id: "map-a", name: "Upper Floor" }), map({ id: "map-b", name: "Lower Floor" })]}
-      onMapsChanged={vi.fn().mockResolvedValue(undefined)}
+      onMapsChanged={onMapsChanged}
       onNavigateFromPin={vi.fn()}
       onSelectLocation={vi.fn()}
     />,
