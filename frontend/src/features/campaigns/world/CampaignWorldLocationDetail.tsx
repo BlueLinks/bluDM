@@ -20,7 +20,6 @@ import {
   journeyInvolvesLocation,
   LocationMapCard,
   LocationNotesCard,
-  PricingSummaryCard,
   StructureSummaryCard,
   travelLikeLinks,
 } from "./CampaignWorldLocationProfileCards";
@@ -302,6 +301,11 @@ function buildProfileSections(props: ProfileSectionProps) {
         location={location}
         maps={maps}
         toolsOpen={mapsMode}
+        studioPath={
+          profile.variant === "dungeon" || profile.variant === "floor"
+            ? `/campaigns/${campaignId}/world/location/${location.id}/studio`
+            : undefined
+        }
         onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
       >
@@ -345,7 +349,6 @@ function buildProfileSections(props: ProfileSectionProps) {
       profile.profile === "shop" || profile.profile === "room" ? (
         <ParentContextCard parent={parentLocation} onSelectLocation={onSelectLocation} />
       ) : null,
-    pricingCard: profile.profile === "shop" ? <PricingSummaryCard stock={stock} /> : null,
     stockCard:
       profile.profile === "shop" ? (
         <>

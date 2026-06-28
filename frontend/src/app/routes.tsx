@@ -23,6 +23,11 @@ const CampaignWorldPage = lazy(() =>
     default: module.CampaignWorldPage,
   })),
 );
+const DungeonStudioPage = lazy(() =>
+  import("../features/campaigns/world/DungeonStudioPage").then((module) => ({
+    default: module.DungeonStudioPage,
+  })),
+);
 const PlayerCreatePage = lazy(() =>
   import("../features/players/pages").then((module) => ({ default: module.PlayerCreatePage })),
 );
@@ -88,6 +93,10 @@ export function AppRoutes() {
         <Route
           path="/campaigns/:campaignID/world/location/:locationID"
           element={<CampaignWorldPage />}
+        />
+        <Route
+          path="/campaigns/:campaignID/world/location/:locationID/studio"
+          element={<DungeonStudioPage />}
         />
         <Route path="/campaigns/:campaignID/world/maps" element={<CampaignWorldPage />} />
         <Route

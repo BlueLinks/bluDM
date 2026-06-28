@@ -1,6 +1,15 @@
-import { Boxes, Coins, FilePenLine, Footprints, Map as MapIcon, MapPin, Route } from "lucide-react";
+import {
+  Boxes,
+  DraftingCompass,
+  FilePenLine,
+  Footprints,
+  Map as MapIcon,
+  MapPin,
+  Route,
+} from "lucide-react";
 import type React from "react";
-import { CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
+import { Link } from "react-router-dom";
+import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
 import { ChildPrepChips, type ChildPrepChip } from "./CampaignWorldChildPrepChips";
@@ -11,7 +20,6 @@ import type {
   CampaignJourney,
   CampaignLocation,
   CampaignLocationLink,
-  CampaignLocationStock,
   CampaignMap,
 } from "./travelTypes";
 
@@ -144,6 +152,7 @@ export function LocationMapCard({
   toolsOpen,
   onCloseMaps,
   onOpenMaps,
+  studioPath,
 }: {
   children?: React.ReactNode;
   compact: boolean;
@@ -152,6 +161,7 @@ export function LocationMapCard({
   toolsOpen: boolean;
   onCloseMaps: () => void;
   onOpenMaps: () => void;
+  studioPath?: string;
 }) {
   const attachedMaps = maps.filter((map) => (map.parentLocationId ?? "") === location.id);
   const parentMaps = maps.filter(
@@ -167,16 +177,25 @@ export function LocationMapCard({
         meta={mapMeta(compact, hasAnchor, parentMaps.length, attachedMaps.length)}
         title={compact ? "Map position" : "Map"}
         action={
-          <Button
-            type="button"
-            icon={MapIcon}
-            size="sm"
-            variant="secondary"
-            aria-expanded={toolsOpen}
-            onClick={toolsOpen ? onCloseMaps : onOpenMaps}
-          >
-            {toolsOpen ? "Hide map tools" : "Show map tools"}
-          </Button>
+          <ActionRow justify="end">
+            {studioPath ? (
+              <Link to={studioPath}>
+                <Button type="button" icon={DraftingCompass} size="sm" variant="secondary">
+                  Open Dungeon Studio
+                </Button>
+              </Link>
+            ) : null}
+            <Button
+              type="button"
+              icon={MapIcon}
+              size="sm"
+              variant="secondary"
+              aria-expanded={toolsOpen}
+              onClick={toolsOpen ? onCloseMaps : onOpenMaps}
+            >
+              {toolsOpen ? "Hide map tools" : "Show map tools"}
+            </Button>
+          </ActionRow>
         }
       />
       {toolsOpen ? (
@@ -306,36 +325,6 @@ function journeyRouteSummary(journey: CampaignJourney, location: CampaignLocatio
 
 function journeyDistanceSummary(journey: CampaignJourney) {
   return `${journey.distance.toLocaleString()} ${labelFor(distanceUnitOptions, journey.distanceUnit)}`;
-}
-
-export function PricingSummaryCard({ stock }: { stock: CampaignLocationStock[] }) {
-  const priced = stock.filter((entry) => entry.priceAmount > 0);
-  const market = stock.length - priced.length;
-  const limited = stock.filter((entry) =>
-    ["limited", "special-order", "hidden"].includes(entry.availability),
-  );
-  return (
-    <CardSection>
-      <SectionHeader
-        icon={Coins}
-        title="Pricing summary"
-        meta={`${priced.length} priced ${priced.length === 1 ? "item" : "items"}`}
-      />
-      <ResponsiveGrid className="mt-3" variant="stats3">
-        <MapStat label="Stocked" value={stock.length} />
-        <MapStat label="Priced" value={priced.length} />
-        <MapStat label="Market price" value={market} />
-      </ResponsiveGrid>
-      {limited.length || market ? (
-        <p className="mt-3 rounded-md border border-dashed border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          {limited.length
-            ? `${limited.length} limited, hidden, or special-order item${limited.length === 1 ? "" : "s"}. `
-            : ""}
-          {market ? `${market} item${market === 1 ? "" : "s"} still use market pricing.` : ""}
-        </p>
-      ) : null}
-    </CardSection>
-  );
 }
 
 export function StructureSummaryCard({

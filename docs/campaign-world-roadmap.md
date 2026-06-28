@@ -95,14 +95,24 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Image map forms preview the uploaded/current image and use image dimensions as read-only map resolution.
   - Map distance now auto-calculates when two pins are selected, and the same distance panel can calibrate map scale from a known distance between those pins.
   - Map pins now use the pinned location's existing type icon, such as settlement, shop, dungeon, room, or landmark.
+- Shop layout refinement bundle:
+  - Shop stock summaries now use compact non-zero status pills instead of a large repeated pricing grid.
+  - Shop stock rows use compact item catalog glyphs, subtitles, and chips while surfacing shop-specific price, quantity, availability, and notes.
+  - Shop creation supports templates for general stores, armouries, potion stores, taverns, magic shops, and black markets.
+  - World NPC rows now show NPC avatars or initials beside their location role and notes.
+- Dungeon Studio planning document added:
+  - documents a grid-based dungeon/floor editor concept with tilesets, diagonal walls, doors, terrain layers, and room-region assignment back to Campaign World locations.
+  - recommends starting with studio metadata on existing CampaignMap records before considering backend schema expansion.
+- Dungeon Studio Phase 1 shell:
+  - Dungeon/Floor profiles open a location-scoped Studio route that creates or reuses a studio map, stores versioned metadata on `CampaignMap.metadata.studio`, and renders the read-only SVG grid shell.
 
 ## In Progress
 
-No active implementation phase.
+- Dungeon Studio implementation is underway. Phase 1 is complete; Phase 2 manual structure drawing is the next major milestone.
 
 ## Planned
 
-No active Campaign World implementation items remain planned for this PR.
+- Continue Dungeon Studio phase-by-phase from `docs/campaign-world-dungeon-studio-implementation-plan.md` without duplicating detailed task lists here.
 
 ## Deferred
 
@@ -138,4 +148,4 @@ No active Campaign World implementation items remain planned for this PR.
 
 ## Next Recommended Task
 
-No remaining Campaign World roadmap item is planned for this PR. Future Campaign World work should start from a deferred item only when concrete play or QA friction justifies reopening it.
+Continue with Dungeon Studio Phase 2: manual floor, wall, diagonal wall, door, undo/redo, dirty-state, and save/reload editing.
