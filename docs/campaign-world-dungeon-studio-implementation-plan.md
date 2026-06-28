@@ -168,7 +168,13 @@ export type DungeonStudioGrid = {
 };
 
 export type DungeonStudioTilesetKey =
-  "dungeon" | "cave" | "castle" | "sewer" | "shop" | "home" | "town";
+  | "dungeon"
+  | "cave"
+  | "castle"
+  | "sewer"
+  | "shop"
+  | "home"
+  | "town";
 ```
 
 ### Cell Layers
@@ -402,7 +408,7 @@ Acceptance criteria:
 
 ### Phase 2: Manual Structure Drawing
 
-Next milestone. Keep the current SVG renderer and add editing state/actions without introducing rendering dependencies.
+Status: Completed. The SVG canvas now supports floor paint/erase, orthogonal wall toggles, diagonal wall toggles, door placement/removal, selected cell/edge feedback, undo/redo history, dirty-state badges, and save/reload persistence through `CampaignMap.metadata.studio`.
 
 Deliverables:
 
@@ -420,6 +426,8 @@ Acceptance criteria:
 - Save/reload preserves structure.
 
 ### Phase 3: Terrain And Cliffs
+
+Next milestone. Build on the Phase 2 sparse cell/edge editing helpers rather than adding a rendering dependency.
 
 Deliverables:
 

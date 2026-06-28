@@ -105,10 +105,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - recommends starting with studio metadata on existing CampaignMap records before considering backend schema expansion.
 - Dungeon Studio Phase 1 shell:
   - Dungeon/Floor profiles open a location-scoped Studio route that creates or reuses a studio map, stores versioned metadata on `CampaignMap.metadata.studio`, and renders the read-only SVG grid shell.
+- Dungeon Studio Phase 2 manual structure drawing:
+  - Studio maps now support grid floor paint/erase, wall and diagonal wall toggles, door placement, undo/redo, dirty-state tracking, and save/reload persistence.
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 1 is complete; Phase 2 manual structure drawing is the next major milestone.
+- Dungeon Studio implementation is underway. Phase 2 is complete; Phase 3 terrain and cliffs is the next major milestone.
 
 ## Planned
 
@@ -148,4 +150,4 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Next Recommended Task
 
-Continue with Dungeon Studio Phase 2: manual floor, wall, diagonal wall, door, undo/redo, dirty-state, and save/reload editing.
+Continue with Dungeon Studio Phase 3: terrain cells, water, chasms/cliffs, cliff-edge support, and cave styling polish.

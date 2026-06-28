@@ -1,9 +1,17 @@
-import { Grid2X2, Minus, Plus, RotateCcw } from "lucide-react";
+import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Undo2 } from "lucide-react";
 import { useMemo, useRef, useState, type PointerEvent } from "react";
 import { ActionRow } from "../../../components/layout";
 import { Button, EmptyMini } from "../../../components/ui";
+import {
+  eraseFloorCell,
+  paintFloorCell,
+  toggleEdgeFeature,
+  type DungeonStudioSelection,
+  type DungeonStudioTool,
+} from "./dungeonStudioEditing";
 import type {
   DungeonStudioDocument,
+  DungeonStudioEdgeDirection,
   DungeonStudioEdgeFeature,
   DungeonStudioRoomRegion,
   GridCell,
@@ -25,9 +33,34 @@ const cellLayerFills: Record<string, string> = {
   grass: "rgb(34 197 94 / 0.24)",
 };
 
-export function DungeonStudioPreview({ document }: { document: DungeonStudioDocument }) {
+export function DungeonStudioPreview({
+  activeTool,
+  canRedo,
+  canUndo,
+  dirty,
+  document,
+  selected,
+  onDocumentChange,
+  onRedo,
+  onUndo,
+}: {
+  activeTool: DungeonStudioTool;
+  canRedo: boolean;
+  canUndo: boolean;
+  dirty: boolean;
+  document: DungeonStudioDocument;
+  selected: DungeonStudioSelection;
+  onDocumentChange: (
+    update: (current: DungeonStudioDocument) => DungeonStudioDocument,
+    selection: DungeonStudioSelection,
+  ) => void;
+  onRedo: () => void;
+  onUndo: () => void;
+}) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const drawing = useRef(false);
+  const lastPaintedCell = useRef("");
   const [zoom, setZoom] = useState(MIN_ZOOM);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const dimensions = useMemo(
@@ -52,7 +85,7 @@ export function DungeonStudioPreview({ document }: { document: DungeonStudioDocu
 
   function startPan(event: PointerEvent<HTMLDivElement>) {
     panStart.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
-    event.currentTarget.setPointerCapture(event.pointerId);
+    safeSetPointerCapture(event);
   }
 
   function movePan(event: PointerEvent<HTMLDivElement>) {
@@ -63,6 +96,87 @@ export function DungeonStudioPreview({ document }: { document: DungeonStudioDocu
       y: panStart.current.panY - ((event.clientY - panStart.current.y) / rect.height) * viewHeight,
     };
     setPan(clampPan(nextPan, dimensions, zoom));
+  }
+
+  function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
+    if (event.altKey) {
+      startPan(event);
+      return;
+    }
+    safeSetPointerCapture(event);
+    if (activeTool === "floor" || activeTool === "erase") {
+      drawing.current = true;
+      applyCellTool(event);
+      return;
+    }
+    applyEdgeTool(event);
+  }
+
+  function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
+    if (panStart.current) {
+      movePan(event);
+      return;
+    }
+    if (!drawing.current) return;
+    applyCellTool(event);
+  }
+
+  function handlePointerEnd() {
+    panStart.current = null;
+    drawing.current = false;
+    lastPaintedCell.current = "";
+  }
+
+  function applyCellTool(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    if (!point) return;
+    const nextKey = `${point.cell.x},${point.cell.y},${activeTool}`;
+    if (nextKey === lastPaintedCell.current) return;
+    lastPaintedCell.current = nextKey;
+    const selection = { type: "cell", cell: point.cell } satisfies DungeonStudioSelection;
+    onDocumentChange(
+      (current) =>
+        activeTool === "erase"
+          ? eraseFloorCell(current, point.cell)
+          : paintFloorCell(current, point.cell),
+      selection,
+    );
+  }
+
+  function applyEdgeTool(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    if (!point) return;
+    const direction =
+      activeTool === "diagonal-wall"
+        ? closestDiagonalDirection(point.localX, point.localY)
+        : closestOrthogonalDirection(point.localX, point.localY);
+    const kind = activeTool === "door" ? "door" : "wall";
+    const selection = {
+      type: "edge",
+      cell: point.cell,
+      direction,
+      kind,
+    } satisfies DungeonStudioSelection;
+    onDocumentChange(
+      (current) => toggleEdgeFeature(current, point.cell, direction, kind),
+      selection,
+    );
+  }
+
+  function gridPointForEvent(event: PointerEvent<HTMLDivElement>) {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const svgX = pan.x + ((event.clientX - rect.left) / rect.width) * viewWidth;
+    const svgY = pan.y + ((event.clientY - rect.top) / rect.height) * viewHeight;
+    const cell = {
+      x: clamp(Math.floor(svgX / CELL_SIZE), 0, document.grid.width - 1),
+      y: clamp(Math.floor(svgY / CELL_SIZE), 0, document.grid.height - 1),
+    };
+    return {
+      cell,
+      localX: svgX - cell.x * CELL_SIZE,
+      localY: svgY - cell.y * CELL_SIZE,
+    };
   }
 
   return (
@@ -96,23 +210,47 @@ export function DungeonStudioPreview({ document }: { document: DungeonStudioDocu
             Reset
           </Button>
         </ActionRow>
+        <ActionRow>
+          <Button
+            type="button"
+            icon={Undo2}
+            size="sm"
+            variant="secondary"
+            disabled={!canUndo}
+            onClick={onUndo}
+          >
+            Undo
+          </Button>
+          <Button
+            type="button"
+            icon={Redo2}
+            size="sm"
+            variant="secondary"
+            disabled={!canRedo}
+            onClick={onRedo}
+          >
+            Redo
+          </Button>
+        </ActionRow>
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">
-          <Grid2X2 className="h-3.5 w-3.5" /> Drag to pan this read-only preview
+          <Grid2X2 className="h-3.5 w-3.5" /> {dirty ? "Unsaved changes" : "Saved"} • Alt-drag to
+          pan
         </span>
       </div>
       {!floorCellCount ? (
-        <EmptyMini copy="Blank starter grid. Phase 2 will add floor, wall, and door drawing tools here." />
+        <EmptyMini copy="Blank starter grid. Use Floor Brush to paint rooms and corridors." />
       ) : null}
       <div
         ref={viewportRef}
-        role="img"
-        aria-label={`Read-only Dungeon Studio grid preview, ${document.grid.width} by ${document.grid.height} cells`}
-        className="relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-background shadow-inner cursor-grab active:cursor-grabbing"
+        role="application"
+        aria-label={`Dungeon Studio grid editor, ${document.grid.width} by ${document.grid.height} cells`}
+        className="relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-background shadow-inner cursor-crosshair"
         style={{ aspectRatio: `${document.grid.width} / ${document.grid.height}` }}
-        onPointerDown={startPan}
-        onPointerMove={movePan}
-        onPointerCancel={() => (panStart.current = null)}
-        onPointerUp={() => (panStart.current = null)}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerCancel={handlePointerEnd}
+        onPointerUp={handlePointerEnd}
+        onClick={() => undefined}
       >
         <svg className="h-full w-full" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
           <rect width={dimensions.width} height={dimensions.height} fill="hsl(var(--background))" />
@@ -135,6 +273,7 @@ export function DungeonStudioPreview({ document }: { document: DungeonStudioDocu
           {document.edges.map((edge) => (
             <EdgeLine key={edge.id} edge={edge} />
           ))}
+          {selected ? <SelectionOverlay selection={selected} /> : null}
         </svg>
       </div>
     </div>
@@ -222,6 +361,36 @@ function EdgeLine({ edge }: { edge: DungeonStudioEdgeFeature }) {
   );
 }
 
+function SelectionOverlay({ selection }: { selection: NonNullable<DungeonStudioSelection> }) {
+  if (selection.type === "cell") {
+    return (
+      <rect
+        x={selection.cell.x * CELL_SIZE + 1}
+        y={selection.cell.y * CELL_SIZE + 1}
+        width={CELL_SIZE - 2}
+        height={CELL_SIZE - 2}
+        fill="none"
+        stroke="hsl(var(--primary))"
+        strokeWidth="2"
+      />
+    );
+  }
+  const coordinates = edgeCoordinates(
+    selection.cell.x * CELL_SIZE,
+    selection.cell.y * CELL_SIZE,
+    selection.direction,
+  );
+  return (
+    <line
+      {...coordinates}
+      stroke="hsl(var(--primary))"
+      strokeLinecap="round"
+      strokeWidth="6"
+      opacity="0.55"
+    />
+  );
+}
+
 function edgeCoordinates(x: number, y: number, direction: DungeonStudioEdgeFeature["direction"]) {
   if (direction === "n") return { x1: x, y1: y, x2: x + CELL_SIZE, y2: y };
   if (direction === "e") return { x1: x + CELL_SIZE, y1: y, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
@@ -231,6 +400,22 @@ function edgeCoordinates(x: number, y: number, direction: DungeonStudioEdgeFeatu
   if (direction === "nw") return { x1: x + CELL_SIZE, y1: y, x2: x, y2: y + CELL_SIZE };
   if (direction === "se") return { x1: x, y1: y + CELL_SIZE, x2: x + CELL_SIZE, y2: y };
   return { x1: x, y1: y, x2: x + CELL_SIZE, y2: y + CELL_SIZE };
+}
+
+function closestOrthogonalDirection(localX: number, localY: number): DungeonStudioEdgeDirection {
+  const distances = [
+    { direction: "n" as const, distance: localY },
+    { direction: "e" as const, distance: CELL_SIZE - localX },
+    { direction: "s" as const, distance: CELL_SIZE - localY },
+    { direction: "w" as const, distance: localX },
+  ];
+  return distances.sort((left, right) => left.distance - right.distance)[0].direction;
+}
+
+function closestDiagonalDirection(localX: number, localY: number): DungeonStudioEdgeDirection {
+  const fallingDistance = Math.abs(localX - localY);
+  const risingDistance = Math.abs(localX + localY - CELL_SIZE);
+  return fallingDistance <= risingDistance ? "ne" : "nw";
 }
 
 function clampPan(
@@ -244,4 +429,16 @@ function clampPan(
     x: Math.min(maxX, Math.max(0, nextPan.x)),
     y: Math.min(maxY, Math.max(0, nextPan.y)),
   };
+}
+
+function safeSetPointerCapture(event: PointerEvent<HTMLDivElement>) {
+  try {
+    event.currentTarget.setPointerCapture(event.pointerId);
+  } catch {
+    // Programmatic QA events do not always create an active pointer; real pointer input still captures.
+  }
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
 }
