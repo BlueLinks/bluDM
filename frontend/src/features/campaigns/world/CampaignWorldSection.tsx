@@ -317,6 +317,13 @@ export function CampaignWorldSection({
     if (locationID) setSelectedID(locationID);
     void navigate(`/campaigns/${campaignId}/world/maps`);
   }
+  function closeMapsForLocation(locationID = selected?.id ?? "") {
+    if (!locationID) return;
+    setFocusedMapID("");
+    setFocusedLocationID("");
+    setSelectedID(locationID);
+    void navigate(`/campaigns/${campaignId}/world/location/${locationID}`);
+  }
   function navigateFromPin(locationID: string, sourceMapID: string) {
     clearSearchFilters();
     const ownMap = maps.find((map) => (map.parentLocationId ?? "") === locationID);
@@ -410,6 +417,7 @@ export function CampaignWorldSection({
                     onDeleteStock={deleteLocationStock}
                     onEdit={() => openEdit(selected)}
                     onGenerateEncounter={() => onGenerateEncounter(selected)}
+                    onCloseMaps={() => closeMapsForLocation(selected.id)}
                     onMapsChanged={loadMaps}
                     onNavigateFromPin={navigateFromPin}
                     onOpenMaps={() => openMapsForLocation(selected.id)}

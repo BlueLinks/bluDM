@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type PointerEvent,
+  type WheelEvent,
 } from "react";
 import { Button, Callout, Checkbox } from "../../../components/ui";
 import { formatMapDistance } from "./campaignMapDistance";
@@ -77,6 +78,37 @@ export function CampaignWorldMapCanvas({
       const nextZoom = Math.max(MIN_ZOOM, value - 0.25);
       setPan((current) => clampedPan(current, nextZoom));
       return nextZoom;
+    });
+  }
+
+  function zoomTowardPoint(zoomFactor: number, point: { x: number; y: number }) {
+    setZoom((currentZoom) => {
+      const nextZoom = clamp(currentZoom * zoomFactor, MIN_ZOOM, MAX_ZOOM);
+      if (nextZoom === currentZoom) return currentZoom;
+      setPan((currentPan) => {
+        const mapPoint = {
+          x: (point.x - currentPan.x) / currentZoom,
+          y: (point.y - currentPan.y) / currentZoom,
+        };
+        return clampedPan(
+          {
+            x: point.x - mapPoint.x * nextZoom,
+            y: point.y - mapPoint.y * nextZoom,
+          },
+          nextZoom,
+        );
+      });
+      return nextZoom;
+    });
+  }
+
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    if (event.cancelable) event.preventDefault();
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    zoomTowardPoint(Math.exp(-event.deltaY * WHEEL_ZOOM_SENSITIVITY), {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
     });
   }
 
@@ -166,7 +198,7 @@ export function CampaignWorldMapCanvas({
         ref={viewportRef}
         role="region"
         tabIndex={0}
-        aria-label={`Interactive map canvas for ${activeMap.name}. Use arrow keys to pan, plus and minus to zoom, 0 to reset, and Escape to cancel pin placement.`}
+        aria-label={`Interactive map canvas for ${activeMap.name}. Use arrow keys to pan, scroll or use plus and minus to zoom, 0 to reset, and Escape to cancel pin placement.`}
         className={[
           "relative w-full min-w-0 touch-none overflow-hidden rounded-lg border border-border bg-muted shadow-inner outline-none focus:ring-2 focus:ring-primary/30",
           placementMode ? "cursor-crosshair" : "cursor-grab active:cursor-grabbing",
@@ -175,6 +207,7 @@ export function CampaignWorldMapCanvas({
         onClick={handleClick}
         onKeyDown={handleKeyDown}
         onPointerDown={startPan}
+        onWheel={handleWheel}
         onPointerMove={movePan}
         onPointerCancel={() => (panStart.current = null)}
         onPointerUp={() => (panStart.current = null)}
@@ -225,7 +258,7 @@ export function CampaignWorldMapCanvas({
       <p className="text-xs text-muted-foreground">
         {saving || loadingPins
           ? "Saving map pins…"
-          : "Drag the map background to pan; click a pin for actions."}
+          : "Drag the map background to pan, scroll to zoom, and click a pin for actions."}
       </p>
     </div>
   );
@@ -406,6 +439,7 @@ function blankGridStyle(majorEvery: number) {
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
+const WHEEL_ZOOM_SENSITIVITY = 0.001;
 
 function clampPan(
   pan: { x: number; y: number },

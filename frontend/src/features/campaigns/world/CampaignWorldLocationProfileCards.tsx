@@ -137,14 +137,20 @@ function WorldNote({
 }
 
 export function LocationMapCard({
+  children,
   compact,
   location,
   maps,
+  toolsOpen,
+  onCloseMaps,
   onOpenMaps,
 }: {
+  children?: React.ReactNode;
   compact: boolean;
   location: CampaignLocation;
   maps: CampaignMap[];
+  toolsOpen: boolean;
+  onCloseMaps: () => void;
   onOpenMaps: () => void;
 }) {
   const attachedMaps = maps.filter((map) => (map.parentLocationId ?? "") === location.id);
@@ -161,12 +167,21 @@ export function LocationMapCard({
         meta={mapMeta(compact, hasAnchor, parentMaps.length, attachedMaps.length)}
         title={compact ? "Map position" : "Map"}
         action={
-          <Button type="button" icon={MapIcon} size="sm" variant="secondary" onClick={onOpenMaps}>
-            Show map tools
+          <Button
+            type="button"
+            icon={MapIcon}
+            size="sm"
+            variant="secondary"
+            aria-expanded={toolsOpen}
+            onClick={toolsOpen ? onCloseMaps : onOpenMaps}
+          >
+            {toolsOpen ? "Hide map tools" : "Show map tools"}
           </Button>
         }
       />
-      {preview?.imageUrl ? (
+      {toolsOpen ? (
+        <div className="grid min-w-0 gap-3">{children}</div>
+      ) : preview?.imageUrl ? (
         <img
           className="max-h-64 w-full rounded-md border border-border object-cover"
           src={preview.imageUrl}

@@ -56,6 +56,8 @@ describe("CampaignWorldMaps", () => {
     const canvas = screen.getByRole("region", { name: /Interactive map canvas for Upper Floor/i });
     fireEvent.keyDown(canvas, { key: "+" });
     expect(screen.getByText(/125% zoom/i)).toBeTruthy();
+    fireEvent.wheel(canvas, { clientX: 200, clientY: 160, deltaY: -120 });
+    expect(screen.getByText(/141% zoom/i)).toBeTruthy();
     fireEvent.keyDown(canvas, { key: "0" });
     expect(screen.getByText(/100% zoom/i)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Zoom in" })).toBeTruthy();

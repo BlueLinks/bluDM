@@ -1,5 +1,3 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
 import { EmptyMini } from "../../../components/ui";
 import type { Creature, Encounter, Item } from "../../../types";
 import { CampaignWorldLocationDetail } from "./CampaignWorldLocationDetail";
@@ -52,6 +50,7 @@ export function CampaignWorldLocationWorkspace({
   onDeleteNpcLink,
   onDeleteStock,
   onEdit,
+  onCloseMaps,
   onGenerateEncounter,
   onMapsChanged,
   onNavigateFromPin,
@@ -59,24 +58,25 @@ export function CampaignWorldLocationWorkspace({
   onPlanTravel,
   onSelectLocation,
 }: CampaignWorldLocationWorkspaceProps) {
+  const mapWorkspace = mapsMode ? (
+    <LocationMapWorkspace
+      campaignId={campaignId}
+      childLocations={childLocations}
+      focusedLocationID={focusedLocationID}
+      focusedMapID={focusedMapID}
+      location={location}
+      locations={locations}
+      maps={maps}
+      mapsError={mapsError}
+      mapsLoading={mapsLoading}
+      onMapsChanged={onMapsChanged}
+      onNavigateFromPin={onNavigateFromPin}
+      onSelectLocation={onSelectLocation}
+    />
+  ) : null;
+
   return (
     <div className="grid min-w-0 gap-4">
-      {mapsMode ? (
-        <LocationMapWorkspace
-          campaignId={campaignId}
-          childLocations={childLocations}
-          focusedLocationID={focusedLocationID}
-          focusedMapID={focusedMapID}
-          location={location}
-          locations={locations}
-          maps={maps}
-          mapsError={mapsError}
-          mapsLoading={mapsLoading}
-          onMapsChanged={onMapsChanged}
-          onNavigateFromPin={onNavigateFromPin}
-          onSelectLocation={onSelectLocation}
-        />
-      ) : null}
       <CampaignWorldLocationDetail
         campaignId={campaignId}
         childCount={childCount}
@@ -87,6 +87,8 @@ export function CampaignWorldLocationWorkspace({
         location={location}
         locations={locations}
         maps={maps}
+        mapsMode={mapsMode}
+        mapWorkspace={mapWorkspace}
         journeys={journeys}
         encounters={encounters}
         npcs={npcs}
@@ -109,6 +111,7 @@ export function CampaignWorldLocationWorkspace({
         onDeleteStock={onDeleteStock}
         onEdit={onEdit}
         onGenerateEncounter={onGenerateEncounter}
+        onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
         onPlanTravel={onPlanTravel}
         onSelectLocation={onSelectLocation}
@@ -131,40 +134,26 @@ function LocationMapWorkspace({
   onNavigateFromPin,
   onSelectLocation,
 }: LocationMapWorkspaceProps) {
-  const [open, setOpen] = useState(true);
-  const Icon = open ? ChevronDown : ChevronRight;
   return (
-    <section className="rounded-md border border-border bg-card p-3">
-      <button
-        aria-expanded={open}
-        className="flex w-full items-center gap-2 text-left text-sm font-semibold"
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <Icon className="h-4 w-4 text-accent" /> Map workspace
-      </button>
-      {open ? (
-        <div className="mt-3 grid min-w-0 gap-3">
-          {mapsError ? <p className="text-sm font-semibold text-destructive">{mapsError}</p> : null}
-          {mapsLoading ? (
-            <EmptyMini copy="Loading maps…" />
-          ) : (
-            <CampaignWorldMaps
-              campaignId={campaignId}
-              childLocations={childLocations}
-              currentLocation={location}
-              focusedLocationID={focusedLocationID}
-              focusedMapID={focusedMapID}
-              locations={locations}
-              maps={maps}
-              onMapsChanged={onMapsChanged}
-              onNavigateFromPin={onNavigateFromPin}
-              onSelectLocation={onSelectLocation}
-            />
-          )}
-        </div>
-      ) : null}
-    </section>
+    <div className="grid min-w-0 gap-3">
+      {mapsError ? <p className="text-sm font-semibold text-destructive">{mapsError}</p> : null}
+      {mapsLoading ? (
+        <EmptyMini copy="Loading maps…" />
+      ) : (
+        <CampaignWorldMaps
+          campaignId={campaignId}
+          childLocations={childLocations}
+          currentLocation={location}
+          focusedLocationID={focusedLocationID}
+          focusedMapID={focusedMapID}
+          locations={locations}
+          maps={maps}
+          onMapsChanged={onMapsChanged}
+          onNavigateFromPin={onNavigateFromPin}
+          onSelectLocation={onSelectLocation}
+        />
+      )}
+    </div>
   );
 }
 
@@ -207,6 +196,7 @@ type CampaignWorldLocationWorkspaceProps = {
   onGenerateEncounter: () => void;
   onMapsChanged: () => Promise<void>;
   onNavigateFromPin: (locationID: string, sourceMapID: string) => void;
+  onCloseMaps: () => void;
   onOpenMaps: () => void;
   onPlanTravel?: () => void;
   onSelectLocation: (locationID: string) => void;

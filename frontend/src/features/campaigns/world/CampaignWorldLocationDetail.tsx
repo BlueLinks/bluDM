@@ -53,6 +53,8 @@ export function CampaignWorldLocationDetail({
   location,
   locations,
   maps,
+  mapsMode,
+  mapWorkspace,
   stock,
   stockItems,
   stockLoading,
@@ -73,6 +75,7 @@ export function CampaignWorldLocationDetail({
   onDeleteStock,
   onEdit,
   onGenerateEncounter,
+  onCloseMaps,
   onOpenMaps,
   onPlanTravel,
   onSelectLocation,
@@ -103,6 +106,8 @@ export function CampaignWorldLocationDetail({
     location,
     locations,
     maps,
+    mapsMode,
+    mapWorkspace,
     npcLinks,
     npcLinksError,
     npcLinksLoading,
@@ -130,6 +135,7 @@ export function CampaignWorldLocationDetail({
     onDeleteStock,
     onEdit,
     onGenerateEncounter,
+    onCloseMaps,
     onOpenMaps,
     onPlanTravel,
     onSelectLocation,
@@ -170,6 +176,8 @@ function buildProfileSections(props: ProfileSectionProps) {
     location,
     locations,
     maps,
+    mapsMode,
+    mapWorkspace,
     npcLinks,
     npcLinksError,
     npcLinksLoading,
@@ -193,6 +201,7 @@ function buildProfileSections(props: ProfileSectionProps) {
     onDeleteLink,
     onDeleteNpcLink,
     onDeleteStock,
+    onCloseMaps,
     onOpenMaps,
     onPlanTravel,
     onSelectLocation,
@@ -285,8 +294,12 @@ function buildProfileSections(props: ProfileSectionProps) {
         compact={profile.compactMap}
         location={location}
         maps={maps}
+        toolsOpen={mapsMode}
+        onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
-      />
+      >
+        {mapWorkspace}
+      </LocationMapCard>
     ),
     notesCard: <LocationNotesCard location={location} title={profile.notesTitle} />,
     npcsCard: shouldShowNpcs ? (
@@ -416,6 +429,8 @@ type CampaignWorldLocationDetailProps = {
   location: CampaignLocation;
   locations: CampaignLocation[];
   maps: CampaignMap[];
+  mapsMode: boolean;
+  mapWorkspace?: React.ReactNode;
   stock: CampaignLocationStockRecord[];
   stockItems: Item[];
   stockLoading: boolean;
@@ -436,6 +451,7 @@ type CampaignWorldLocationDetailProps = {
   onDeleteStock: (stockID: string) => Promise<void>;
   onEdit: () => void;
   onGenerateEncounter: () => void;
+  onCloseMaps: () => void;
   onOpenMaps: () => void;
   onPlanTravel?: () => void;
   onSelectLocation: (locationID: string) => void;
