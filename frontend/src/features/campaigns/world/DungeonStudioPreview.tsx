@@ -6,12 +6,16 @@ import {
   canToggleEdgeFeature,
   deleteMapCells,
   eraseFloorCell,
+  eraseRoomCells,
   eraseTerrainCell,
   isShapeTool,
   isTerrainTool,
+  nextRoomRegionId,
   paintFloorCell,
   paintFloorCells,
+  paintRoomCells,
   paintTerrainCell,
+  roomRegionForCell,
   shapeRoomCells,
   toggleEdgeFeature,
   type DungeonStudioChangeOptions,
@@ -19,11 +23,8 @@ import {
   type DungeonStudioShapeTool,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import type {
-  DungeonStudioCellKind,
-  DungeonStudioDocument,
-  GridCell,
-} from "./dungeonStudioDocument";
+import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
+import { cellLayerFill, clamp, clampPan } from "./dungeonStudioPreviewViewport";
 import {
   CellRect,
   DUNGEON_STUDIO_CELL_SIZE,
@@ -43,17 +44,6 @@ const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.35;
 
 type ShapeDraft = DungeonStudioShapeDraft;
-
-const cellLayerFills: Record<DungeonStudioCellKind, string> = {
-  floor: "hsl(var(--muted))",
-  water: "rgb(56 189 248 / 0.38)",
-  cliff: "rgb(120 113 108 / 0.34)",
-  chasm: "rgb(15 23 42 / 0.70)",
-  rubble: "rgb(161 98 7 / 0.28)",
-  hazard: "rgb(239 68 68 / 0.26)",
-  road: "rgb(180 83 9 / 0.24)",
-  grass: "rgb(34 197 94 / 0.24)",
-};
 
 export function DungeonStudioPreview({
   activeTool,
@@ -84,6 +74,8 @@ export function DungeonStudioPreview({
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const drawing = useRef(false);
   const brushStrokeStarted = useRef(false);
+  const roomSelectionCells = useRef<GridCell[]>([]);
+  const roomBrushTargetId = useRef<string | null>(null);
   const shapeDraftRef = useRef<ShapeDraft | null>(null);
   const lastPaintedCell = useRef("");
   const [shapeDraft, setShapeDraft] = useState<ShapeDraft | null>(null);
@@ -96,9 +88,16 @@ export function DungeonStudioPreview({
   const viewWidth = dimensions.width / zoom;
   const viewHeight = dimensions.height / zoom;
   const viewBox = `${pan.x} ${pan.y} ${viewWidth} ${viewHeight}`;
-  const floorCellCount = document.layers
-    .filter((layer) => layer.cellKind === "floor")
-    .reduce((total, layer) => total + layer.cells.length, 0);
+  const floorCellKeys = useMemo(
+    () =>
+      new Set(
+        document.layers
+          .filter((layer) => layer.cellKind === "floor")
+          .flatMap((layer) => layer.cells.map(cellKey)),
+      ),
+    [document.layers],
+  );
+  const floorCellCount = floorCellKeys.size;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -146,11 +145,21 @@ export function DungeonStudioPreview({
       selectCell(event);
       return;
     }
+    if (activeTool === "room-select") {
+      drawing.current = true;
+      roomSelectionCells.current = [];
+      addRoomSelectionCell(event);
+      return;
+    }
     if (isShapeTool(activeTool)) {
       startShapeDraft(event, activeTool);
       return;
     }
     if (isBrushTool(activeTool)) {
+      roomBrushTargetId.current =
+        activeTool === "room-brush"
+          ? (selectedRoomId(selected) ?? nextRoomRegionId(document))
+          : null;
       drawing.current = true;
       brushStrokeStarted.current = false;
       applyCellTool(event);
@@ -169,7 +178,8 @@ export function DungeonStudioPreview({
       return;
     }
     if (!drawing.current) return;
-    applyCellTool(event);
+    if (activeTool === "room-select") addRoomSelectionCell(event);
+    else applyCellTool(event);
   }
 
   function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
@@ -177,6 +187,8 @@ export function DungeonStudioPreview({
     if (shapeDraftRef.current) applyShapeDraft(event);
     drawing.current = false;
     brushStrokeStarted.current = false;
+    roomSelectionCells.current = [];
+    roomBrushTargetId.current = null;
     lastPaintedCell.current = "";
   }
 
@@ -184,6 +196,8 @@ export function DungeonStudioPreview({
     panStart.current = null;
     drawing.current = false;
     brushStrokeStarted.current = false;
+    roomSelectionCells.current = [];
+    roomBrushTargetId.current = null;
     lastPaintedCell.current = "";
     cancelShapeDraft();
   }
@@ -236,7 +250,25 @@ export function DungeonStudioPreview({
   function selectCell(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
     if (!point) return;
-    onDocumentChange((current) => current, { type: "cell", cell: point.cell });
+    const room = roomRegionForCell(document, point.cell);
+    onDocumentChange(
+      (current) => current,
+      room
+        ? { type: "region", cells: room.cells, label: room.label, roomId: room.id }
+        : { type: "cell", cell: point.cell },
+    );
+  }
+
+  function addRoomSelectionCell(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    if (!point || !floorCellKeys.has(cellKey(point.cell))) return;
+    if (roomSelectionCells.current.some((cell) => cellKey(cell) === cellKey(point.cell))) return;
+    roomSelectionCells.current = [...roomSelectionCells.current, point.cell];
+    onDocumentChange((current) => current, {
+      type: "region",
+      cells: roomSelectionCells.current,
+      label: "Room selection",
+    });
   }
 
   function applyCellTool(event: PointerEvent<HTMLDivElement>) {
@@ -245,7 +277,7 @@ export function DungeonStudioPreview({
     const nextKey = `${point.cell.x},${point.cell.y},${activeTool}`;
     if (nextKey === lastPaintedCell.current) return;
     lastPaintedCell.current = nextKey;
-    const selection = { type: "cell", cell: point.cell } satisfies DungeonStudioSelection;
+    const selection = roomCellSelection(activeTool, point.cell, roomBrushTargetId.current);
     const mergeWithPrevious = brushStrokeStarted.current;
     brushStrokeStarted.current = true;
     onDocumentChange((current) => applyCellUpdate(current, point.cell), selection, {
@@ -256,6 +288,14 @@ export function DungeonStudioPreview({
   function applyCellUpdate(current: DungeonStudioDocument, cell: GridCell) {
     if (activeTool === "delete") return deleteMapCells(current, [cell]);
     if (activeTool === "erase") return eraseFloorCell(current, cell);
+    if (activeTool === "erase-room") return eraseRoomCells(current, [cell]);
+    if (activeTool === "room-brush") {
+      return paintRoomCells(
+        current,
+        [cell],
+        roomBrushTargetId.current ?? nextRoomRegionId(current),
+      );
+    }
     if (activeTool === "erase-terrain") return eraseTerrainCell(current, cell);
     if (isTerrainTool(activeTool)) return paintTerrainCell(current, cell, activeTool);
     return paintFloorCell(current, cell);
@@ -414,27 +454,26 @@ function isBrushTool(tool: DungeonStudioTool) {
     tool === "floor" ||
     tool === "erase" ||
     tool === "delete" ||
+    tool === "erase-room" ||
+    tool === "room-brush" ||
     tool === "erase-terrain" ||
     isTerrainTool(tool)
   );
 }
 
-function cellLayerFill(kind: DungeonStudioCellKind, document: DungeonStudioDocument) {
-  if (kind === "floor" && document.tileset === "cave") return "rgb(87 83 78 / 0.42)";
-  return cellLayerFills[kind];
+function roomCellSelection(
+  activeTool: DungeonStudioTool,
+  cell: GridCell,
+  roomId: string | null,
+): DungeonStudioSelection {
+  if (activeTool === "room-brush") {
+    return { type: "region", cells: [cell], label: "Room brush", roomId: roomId ?? undefined };
+  }
+  return { type: "cell", cell };
 }
 
-function clampPan(
-  nextPan: { x: number; y: number },
-  dimensions: { width: number; height: number },
-  zoom: number,
-) {
-  const maxX = dimensions.width - dimensions.width / zoom;
-  const maxY = dimensions.height - dimensions.height / zoom;
-  return {
-    x: Math.min(maxX, Math.max(0, nextPan.x)),
-    y: Math.min(maxY, Math.max(0, nextPan.y)),
-  };
+function selectedRoomId(selection: DungeonStudioSelection) {
+  return selection?.type === "region" ? selection.roomId : undefined;
 }
 
 function toolLabel(tool: DungeonStudioShapeTool) {
@@ -456,8 +495,4 @@ function safeSetPointerCapture(event: PointerEvent<HTMLDivElement>) {
   } catch {
     // Programmatic QA events do not always create an active pointer; real pointer input still captures.
   }
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
 }

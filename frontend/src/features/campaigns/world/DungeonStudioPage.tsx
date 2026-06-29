@@ -11,7 +11,9 @@ import { DungeonStudioPreview } from "./DungeonStudioPreview";
 import {
   addOuterWallsAroundFloorCells,
   commitDungeonStudioChange,
+  createRoomRegion,
   floorCells as studioFloorCells,
+  nextRoomRegionId,
   redoDungeonStudioChange,
   studioDocumentSignature,
   undoDungeonStudioChange,
@@ -349,6 +351,17 @@ function DungeonStudioShell({
     );
   }
 
+  function createRoomFromSelection() {
+    if (selected?.type !== "region" || selected.roomId) return;
+    const roomId = nextRoomRegionId(document);
+    onDocumentChange((current) => createRoomRegion(current, selected.cells, roomId), {
+      type: "region",
+      cells: selected.cells,
+      label: `Room ${document.rooms.length + 1}`,
+      roomId,
+    });
+  }
+
   return (
     <div className="grid min-w-0 gap-4">
       <CardSection tone="background" className="p-4">
@@ -386,6 +399,7 @@ function DungeonStudioShell({
           mapName={map.name}
           selected={selected}
           onAddOuterWalls={addOuterWalls}
+          onCreateRoomFromSelection={createRoomFromSelection}
         />
       </div>
       <CardSection tone="background">

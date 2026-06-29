@@ -114,7 +114,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 3B is complete; Phase 4 room layer editor is the next major milestone.
+- Dungeon Studio implementation is underway. Phase 3B is complete; Phase 4 room layer editor is in progress with room mode selection, room brush/eraser coverage, and unlinked room-region creation now started.
 
 ## Planned
 
@@ -154,4 +154,4 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Next Recommended Task
 
-Continue with Dungeon Studio Phase 4: room layer editing, cell selection, room-region creation/linking, labels, colors, and unassigned floor-cell coverage.
+Continue with Dungeon Studio Phase 4: room-region linking to Campaign World locations, room labels/colors controls, and unassigned floor-cell coverage refinement.

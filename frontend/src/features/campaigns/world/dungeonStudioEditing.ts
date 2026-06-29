@@ -5,6 +5,13 @@ import {
   shapeRoomCells,
   squareRoomCells,
 } from "./dungeonStudioShapeGeometry";
+export {
+  createRoomRegion,
+  eraseRoomCells,
+  nextRoomRegionId,
+  paintRoomCells,
+  roomRegionForCell,
+} from "./dungeonStudioRoomEditing";
 import {
   cellKey,
   edgeKey,
@@ -22,6 +29,9 @@ export type DungeonStudioTool =
   | "floor"
   | "erase"
   | "delete"
+  | "room-select"
+  | "room-brush"
+  | "erase-room"
   | "rectangle-room"
   | "square-room"
   | "circle-room"
@@ -44,7 +54,7 @@ export type DungeonStudioTerrainTool = Extract<DungeonStudioTool, "water" | "cha
 export type DungeonStudioSelection =
   | { type: "cell"; cell: GridCell }
   | { type: "edge"; cell: GridCell; direction: DungeonStudioEdgeDirection; kind: string }
-  | { type: "region"; cells: GridCell[]; label: string }
+  | { type: "region"; cells: GridCell[]; label: string; roomId?: string }
   | null;
 
 export type DungeonStudioHistoryStacks = {

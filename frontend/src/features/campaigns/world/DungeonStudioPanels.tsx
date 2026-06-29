@@ -19,7 +19,7 @@ import { Button, EmptyMini } from "../../../components/ui";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
 import type { DungeonStudioDocument } from "./dungeonStudioDocument";
 
-type ToolMode = "select" | "floor" | "terrain" | "delete";
+type ToolMode = "select" | "floor" | "terrain" | "room" | "delete";
 
 type ToolDefinition = {
   tool: DungeonStudioTool;
@@ -113,6 +113,26 @@ const modeTools: Record<ToolMode, ToolDefinition[]> = {
       icon: Mountain,
     },
   ],
+  room: [
+    {
+      tool: "room-select",
+      label: "Room Select",
+      copy: "Drag floor cells for a room region.",
+      icon: Square,
+    },
+    {
+      tool: "room-brush",
+      label: "Room Brush",
+      copy: "Paint cells into the active room.",
+      icon: Paintbrush,
+    },
+    {
+      tool: "erase-room",
+      label: "Room Eraser",
+      copy: "Remove room coverage only.",
+      icon: Eraser,
+    },
+  ],
   delete: [
     {
       tool: "delete",
@@ -139,6 +159,7 @@ const modeDefaults: Record<ToolMode, DungeonStudioTool> = {
   select: "select",
   floor: "floor",
   terrain: "water",
+  room: "room-select",
   delete: "delete",
 };
 
@@ -192,6 +213,7 @@ export function DungeonStudioInspectorPanel({
   mapName,
   selected,
   onAddOuterWalls,
+  onCreateRoomFromSelection,
 }: {
   activeTool: DungeonStudioTool;
   document: DungeonStudioDocument;
@@ -199,6 +221,7 @@ export function DungeonStudioInspectorPanel({
   mapName: string;
   selected: DungeonStudioSelection;
   onAddOuterWalls: () => void;
+  onCreateRoomFromSelection: () => void;
 }) {
   const terrainCount = document.layers
     .filter(
@@ -207,6 +230,9 @@ export function DungeonStudioInspectorPanel({
     )
     .reduce((total, layer) => total + layer.cells.length, 0);
   const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
+  const roomCellCount = document.rooms.reduce((total, room) => total + room.cells.length, 0);
+  const canCreateRoom =
+    selected?.type === "region" && !selected.roomId && selected.cells.length > 0;
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
       <SectionHeader title="Tool options" meta={toolLabel(activeTool)} />
@@ -218,6 +244,7 @@ export function DungeonStudioInspectorPanel({
       <InspectorRow label="Walls / doors" value={String(document.edges.length - cliffEdgeCount)} />
       <InspectorRow label="Cliff edges" value={String(cliffEdgeCount)} />
       <InspectorRow label="Room regions" value={String(document.rooms.length)} />
+      <InspectorRow label="Room cells" value={String(roomCellCount)} />
       <div className="rounded-md border border-border bg-background px-3 py-2">
         <div className="text-xs font-bold uppercase text-muted-foreground">Quick action</div>
         <Button
@@ -233,6 +260,20 @@ export function DungeonStudioInspectorPanel({
         </Button>
         <p className="mt-2 text-xs text-muted-foreground">
           Uses the selected shape region when available; otherwise wraps every painted floor cell.
+        </p>
+        <Button
+          type="button"
+          className="mt-3 w-full"
+          disabled={!canCreateRoom}
+          icon={Square}
+          size="sm"
+          variant="secondary"
+          onClick={onCreateRoomFromSelection}
+        >
+          Create room region
+        </Button>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Select floor cells in Room mode, then create an unlinked room region.
         </p>
       </div>
       <EmptyMini copy={toolTip(activeTool)} />
@@ -307,6 +348,7 @@ function modeForTool(tool: DungeonStudioTool): ToolMode {
   if (tool === "water" || tool === "chasm" || tool === "cliff" || tool === "cliff-edge") {
     return "terrain";
   }
+  if (tool === "room-select" || tool === "room-brush" || tool === "erase-room") return "room";
   if (tool === "delete" || tool === "erase" || tool === "erase-terrain") return "delete";
   return "floor";
 }
@@ -319,6 +361,8 @@ function modeLabel(mode: ToolMode) {
       return "Floor";
     case "terrain":
       return "Terrain";
+    case "room":
+      return "Room";
     case "delete":
       return "Delete";
   }
@@ -334,6 +378,12 @@ function toolLabel(tool: DungeonStudioTool) {
       return "Floor Eraser";
     case "delete":
       return "Delete Brush";
+    case "room-select":
+      return "Room Select";
+    case "room-brush":
+      return "Room Brush";
+    case "erase-room":
+      return "Room Eraser";
     case "rectangle-room":
       return "Rectangle Room";
     case "square-room":
@@ -371,6 +421,12 @@ function toolTip(tool: DungeonStudioTool) {
       return "Drag across floor cells to erase floor only. Use Delete Brush when you want terrain and touched edges removed too.";
     case "delete":
       return "Drag across cells to delete floor, terrain, and any edge features touched by those cells as one brush stroke.";
+    case "room-select":
+      return "Drag over existing floor cells to collect a room selection without changing the map. Use Create room region when the selection is ready.";
+    case "room-brush":
+      return "Drag over floor cells to paint them into the active room region. Select an existing room first to extend it.";
+    case "erase-room":
+      return "Drag over cells to remove only room-region coverage while keeping floor, terrain, and walls intact.";
     case "rectangle-room":
       return "Click or touch a start cell, drag to preview a grid-snapped rectangle, then release to paint it as floor. Escape cancels the preview.";
     case "square-room":

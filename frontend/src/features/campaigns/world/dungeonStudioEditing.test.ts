@@ -5,16 +5,20 @@ import {
   canToggleEdgeFeature,
   circleRoomCells,
   commitDungeonStudioChange,
+  createRoomRegion,
   deleteMapCells,
   ellipseRoomCells,
   eraseFloorCell,
+  eraseRoomCells,
   eraseTerrainCell,
   floorCells,
   paintFloorCell,
   paintFloorCells,
+  paintRoomCells,
   paintTerrainCell,
   rectangleRoomCells,
   redoDungeonStudioChange,
+  roomRegionForCell,
   squareRoomCells,
   terrainCells,
   toggleEdgeFeature,
@@ -154,6 +158,59 @@ describe("dungeonStudioEditing", () => {
       { x: 3, y: 2 },
       { x: 4, y: 2 },
     ]);
+  });
+
+  it("creates room regions from floor-cell selections only", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const withRoom = createRoomRegion(document, [
+      { x: 1, y: 1 },
+      { x: 9, y: 9 },
+    ]);
+
+    expect(withRoom.rooms).toHaveLength(1);
+    expect(withRoom.rooms[0]).toMatchObject({ id: "room-1", label: "Room 1" });
+    expect(withRoom.rooms[0].cells).toEqual([{ x: 1, y: 1 }]);
+  });
+
+  it("paints and erases room coverage without changing floors", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const firstRoom = paintRoomCells(document, [{ x: 1, y: 1 }], "room-a");
+    const secondRoom = paintRoomCells(
+      firstRoom,
+      [
+        { x: 1, y: 1 },
+        { x: 2, y: 1 },
+      ],
+      "room-b",
+    );
+    const erased = eraseRoomCells(secondRoom, [{ x: 2, y: 1 }]);
+
+    expect(floorCells(erased)).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    expect(secondRoom.rooms.find((room) => room.id === "room-a")?.cells).toEqual([]);
+    expect(secondRoom.rooms.find((room) => room.id === "room-b")?.cells).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    expect(erased.rooms.find((room) => room.id === "room-b")?.cells).toEqual([{ x: 1, y: 1 }]);
+  });
+
+  it("finds the room region for a selected cell", () => {
+    const document = createRoomRegion(
+      paintFloorCell(createDungeonStudioDocument(), { x: 3, y: 4 }),
+      [{ x: 3, y: 4 }],
+    );
+
+    expect(roomRegionForCell(document, { x: 3, y: 4 })?.label).toBe("Room 1");
+    expect(roomRegionForCell(document, { x: 4, y: 4 })).toBeUndefined();
   });
 
   it("adds outer walls around floor cells without replacing door openings", () => {

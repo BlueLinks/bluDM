@@ -493,6 +493,8 @@ Acceptance criteria:
 
 ### Phase 4: Room Layer Editor
 
+Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, unlinked room-region creation from selections, room overlays, room counts, undo/redo integration, and save/reload persistence through the existing document model.
+
 Deliverables:
 
 - Room mode with cell selection.
