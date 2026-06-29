@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import type { ElementType } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
-import { Button, EmptyMini } from "../../../components/ui";
+import { EmptyMini } from "../../../components/ui";
 import {
   brushShapeLabel,
   brushShapeOptions,
@@ -57,13 +57,13 @@ const modeTools: Record<ToolMode, ToolDefinition[]> = {
     {
       tool: "wall",
       label: "Wall",
-      copy: "Click a valid edge.",
+      copy: "Click or drag valid edges.",
       icon: DraftingCompass,
     },
     {
       tool: "diagonal-wall",
       label: "Diagonal",
-      copy: "Click a valid cell diagonal.",
+      copy: "Click or drag valid diagonals.",
       icon: Slash,
     },
     {
@@ -174,6 +174,7 @@ export function DungeonStudioToolPanel({
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
       <SectionHeader title="Toolbox" meta={`${modeLabel(activeMode)} mode`} />
+      <ToolGroupLabel>What you're editing</ToolGroupLabel>
       <div className="grid grid-cols-2 gap-2" aria-label="Dungeon Studio modes">
         {(Object.keys(modeDefaults) as ToolMode[]).map((mode) => (
           <ModeButton
@@ -185,22 +186,6 @@ export function DungeonStudioToolPanel({
           />
         ))}
       </div>
-      {supportsBrushShape(activeTool) ? (
-        <>
-          <ToolGroupLabel>Brush shape</ToolGroupLabel>
-          <div className="grid grid-cols-3 gap-2" aria-label="Brush shape">
-            {brushShapeOptions.map((option) => (
-              <ShapeButton
-                key={option.shape}
-                active={brushShape === option.shape}
-                icon={option.icon}
-                label={option.label}
-                onClick={() => onBrushShapeChange(option.shape)}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
       <ToolGroupLabel>Brushes and tools</ToolGroupLabel>
       <div className="grid grid-cols-2 gap-2" aria-label={`${modeLabel(activeMode)} tools`}>
         {modeTools[activeMode].map((tool) => (
@@ -214,10 +199,26 @@ export function DungeonStudioToolPanel({
           />
         ))}
       </div>
+      {supportsBrushShape(activeTool) ? (
+        <>
+          <ToolGroupLabel>How you're editing</ToolGroupLabel>
+          <div className="grid grid-cols-3 gap-2" aria-label="Brush shape">
+            {brushShapeOptions.map((option) => (
+              <ShapeButton
+                key={option.shape}
+                active={brushShape === option.shape}
+                icon={option.icon}
+                label={option.label}
+                onClick={() => onBrushShapeChange(option.shape)}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
       {activeMode === "delete" ? (
         <>
           <ToolGroupLabel>Delete target</ToolGroupLabel>
-          <div className="grid grid-cols-2 gap-2" aria-label="Delete target">
+          <div className="grid gap-2" aria-label="Delete target">
             {deleteTargetOptions.map((option) => (
               <TargetButton
                 key={option.target}
@@ -237,6 +238,9 @@ export function DungeonStudioToolPanel({
           {activeMode === "delete" ? ` • ${deleteTargetLabel(deleteTarget)}` : ""}
         </div>
         <p className="mt-1">{toolTip(activeTool)}</p>
+        <p className="mt-1">
+          Right-click on the canvas erases the matching safe target for the active tool.
+        </p>
       </div>
     </CardSection>
   );
@@ -252,8 +256,10 @@ export function DungeonStudioInspectorPanel({
   onCreateRoomFromSelection,
   onDeleteRoom,
   onDoneRoom,
+  onEditRoom,
   onRenameRoom,
   onStartNewRoom,
+  onToolChange,
 }: {
   activeTool: DungeonStudioTool;
   document: DungeonStudioDocument;
@@ -264,8 +270,10 @@ export function DungeonStudioInspectorPanel({
   onCreateRoomFromSelection: () => void;
   onDeleteRoom: (roomId: string) => void;
   onDoneRoom: () => void;
+  onEditRoom: (roomId: string) => void;
   onRenameRoom: (roomId: string, label: string) => void;
   onStartNewRoom: () => void;
+  onToolChange: (tool: DungeonStudioTool) => void;
 }) {
   const terrainCount = document.layers
     .filter(
@@ -275,35 +283,36 @@ export function DungeonStudioInspectorPanel({
     .reduce((total, layer) => total + layer.cells.length, 0);
   const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCellCount = document.rooms.reduce((total, room) => total + room.cells.length, 0);
+  const activeMode = modeForTool(activeTool);
   const canCreateRoom =
     selected?.type === "region" && !selected.roomId && selected.cells.length > 0;
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
-      <SectionHeader title="Tool options" meta={toolLabel(activeTool)} />
-      <DungeonStudioRoomInspector
-        selectedRoom={selectedRoom}
-        onDeleteRoom={onDeleteRoom}
-        onDoneRoom={onDoneRoom}
-        onRenameRoom={onRenameRoom}
-        onStartNewRoom={onStartNewRoom}
+      <SectionHeader
+        title={activeMode === "room" ? "Room workflow" : "Tool options"}
+        meta={toolLabel(activeTool)}
       />
-      <div className="rounded-md border border-border bg-background px-3 py-2">
-        <div className="text-xs font-bold uppercase text-muted-foreground">Room action</div>
-        <Button
-          type="button"
-          className="mt-2 w-full"
-          disabled={!canCreateRoom}
-          icon={Square}
-          size="sm"
-          variant="secondary"
-          onClick={onCreateRoomFromSelection}
-        >
-          Create room region
-        </Button>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Select floor cells in Room mode, then create an unlinked room region.
-        </p>
-      </div>
+      {activeMode === "room" ? (
+        <DungeonStudioRoomInspector
+          activeTool={activeTool}
+          canCreateRoom={canCreateRoom}
+          rooms={document.rooms}
+          selected={selected}
+          selectedRoom={selectedRoom}
+          onCreateRoomFromSelection={onCreateRoomFromSelection}
+          onDeleteRoom={onDeleteRoom}
+          onDoneRoom={onDoneRoom}
+          onEditRoom={onEditRoom}
+          onRenameRoom={onRenameRoom}
+          onStartNewRoom={onStartNewRoom}
+          onToolChange={onToolChange}
+        />
+      ) : (
+        <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+          Use the canvas as the primary workspace. Left-click draws with the active tool;
+          right-click erases the matching safe target.
+        </div>
+      )}
       <details className="rounded-md border border-border bg-background px-3 py-2 text-sm">
         <summary className="cursor-pointer text-xs font-bold uppercase text-muted-foreground">
           More details

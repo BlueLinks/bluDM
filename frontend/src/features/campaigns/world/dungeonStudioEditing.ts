@@ -136,79 +136,17 @@ export function deleteMapCells(document: DungeonStudioDocument, cells: GridCell[
   return removeEdgeFeaturesByKeys(withoutFloors, edgeKeysTouchingCells(cells));
 }
 
-export function deleteWallFeaturesForCells(document: DungeonStudioDocument, cells: GridCell[]) {
-  const edgeKeys = edgeKeysTouchingCells(cells);
-  if (!edgeKeys.size) return document;
-  return {
-    ...document,
-    edges: document.edges.filter(
-      (edge) => !edgeKeys.has(edgeKey(edge.cell, edge.direction)) || edge.kind === "cliff-edge",
-    ),
-  };
-}
-
-export function toggleEdgeFeature(
-  document: DungeonStudioDocument,
-  cell: GridCell,
-  direction: DungeonStudioEdgeDirection,
-  kind: DungeonStudioEdgeFeature["kind"],
-): DungeonStudioDocument {
-  const edge = normalizeEdgeReference(cell, direction);
-  const key = edgeKey(edge.cell, edge.direction);
-  const existing = document.edges.find(
-    (feature) => edgeKey(feature.cell, feature.direction) === key,
-  );
-  const remaining = document.edges.filter(
-    (feature) => edgeKey(feature.cell, feature.direction) !== key,
-  );
-  if (existing?.kind === kind) return { ...document, edges: remaining };
-  return {
-    ...document,
-    edges: [
-      ...remaining,
-      {
-        id: `${kind}-${key}`,
-        cell: edge.cell,
-        direction: edge.direction,
-        kind,
-        state: kind === "door" ? "closed" : undefined,
-      },
-    ],
-  };
-}
-
-export function canToggleEdgeFeature(
-  document: DungeonStudioDocument,
-  cell: GridCell,
-  direction: DungeonStudioEdgeDirection,
-) {
-  const edge = normalizeEdgeReference(cell, direction);
-  const key = edgeKey(edge.cell, edge.direction);
-  const existing = document.edges.some(
-    (feature) => edgeKey(feature.cell, feature.direction) === key,
-  );
-  return existing || isSupportedEdgePlacement(document, cell, direction);
-}
-
-export function isSupportedEdgePlacement(
-  document: DungeonStudioDocument,
-  cell: GridCell,
-  direction: DungeonStudioEdgeDirection,
-) {
-  const edge = normalizeEdgeReference(cell, direction);
-  const geometryKeys = new Set(
-    document.layers
-      .filter((layer) => layer.cellKind === "floor" || isTerrainCellKind(layer.cellKind))
-      .flatMap((layer) => layer.cells.map(cellKey)),
-  );
-  if (direction === "ne" || direction === "nw" || direction === "se" || direction === "sw") {
-    return geometryKeys.has(cellKey(edge.cell));
-  }
-  return supportedCellsForEdge(edge.cell, edge.direction).some(
-    (supportCell) => cellInBounds(document, supportCell) && geometryKeys.has(cellKey(supportCell)),
-  );
-}
-
+export {
+  applyEdgeFeatureStroke,
+  canToggleEdgeFeature,
+  deleteWallFeaturesForCells,
+  edgeFeatureAt,
+  isSupportedEdgePlacement,
+  removeEdgeFeature,
+  setEdgeFeature,
+  toggleEdgeFeature,
+  type DungeonStudioEdgeStrokeAction,
+} from "./dungeonStudioEdgeEditing";
 export { circleRoomCells, ellipseRoomCells, rectangleRoomCells, shapeRoomCells, squareRoomCells };
 
 export function isShapeTool(tool: DungeonStudioTool): tool is DungeonStudioShapeTool {
@@ -356,10 +294,6 @@ export function redoDungeonStudioChange(
 const ORTHOGONAL_DIRECTIONS = ["n", "e", "s", "w"] as const;
 const TERRAIN_CELL_KINDS = ["water", "chasm", "cliff"] as const;
 
-function isTerrainCellKind(kind: DungeonStudioCellKind): kind is DungeonStudioTerrainTool {
-  return kind === "water" || kind === "chasm" || kind === "cliff";
-}
-
 function updateFloorCells(
   document: DungeonStudioDocument,
   update: (cells: GridCell[]) => GridCell[],
@@ -450,14 +384,6 @@ function removeEdgeFeaturesByKeys(document: DungeonStudioDocument, edgeKeys: Set
     ...document,
     edges: document.edges.filter((edge) => !edgeKeys.has(edgeKey(edge.cell, edge.direction))),
   };
-}
-
-function supportedCellsForEdge(cell: GridCell, direction: DungeonStudioEdgeDirection) {
-  if (direction === "n") return [cell, { x: cell.x, y: cell.y - 1 }];
-  if (direction === "e") return [cell, { x: cell.x + 1, y: cell.y }];
-  if (direction === "s") return [cell, { x: cell.x, y: cell.y + 1 }];
-  if (direction === "w") return [cell, { x: cell.x - 1, y: cell.y }];
-  return [cell];
 }
 
 function layerName(kind: DungeonStudioCellKind) {

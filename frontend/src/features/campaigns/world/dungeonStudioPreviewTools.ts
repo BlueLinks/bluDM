@@ -77,6 +77,14 @@ export function shapeToolLabel(tool: DungeonStudioShapeTool) {
   }
 }
 
+export function isDraggableEdgeTool(tool: DungeonStudioTool) {
+  return tool === "wall" || tool === "diagonal-wall" || tool === "cliff-edge";
+}
+
+export function isEdgeEraseTool(tool: DungeonStudioTool) {
+  return tool === "wall" || tool === "diagonal-wall" || tool === "door" || tool === "cliff-edge";
+}
+
 export function safeSetPointerCapture(event: PointerEvent<HTMLDivElement>) {
   try {
     event.currentTarget.setPointerCapture(event.pointerId);

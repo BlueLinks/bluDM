@@ -44,7 +44,7 @@ export function hasBlockingWall(
   return document.edges.some(
     (edge) =>
       edgeKey(edge.cell, edge.direction) === key &&
-      edge.kind !== "door" &&
+      (edge.kind === "wall" || edge.kind === "door") &&
       (edge.direction === "n" ||
         edge.direction === "e" ||
         edge.direction === "s" ||

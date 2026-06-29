@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createDungeonStudioDocument, edgeKey } from "./dungeonStudioDocument";
 import {
   addOuterWallsAroundFloorCells,
+  applyEdgeFeatureStroke,
   canToggleEdgeFeature,
   circleRoomCells,
   commitDungeonStudioChange,
@@ -229,7 +230,7 @@ describe("dungeonStudioEditing", () => {
     expect(roomRegionForCell(document, { x: 4, y: 4 })).toBeUndefined();
   });
 
-  it("fills room cells until manual walls while treating doors as pass-throughs", () => {
+  it("fills room cells until manual walls and doors", () => {
     const document = paintFloorCells(createDungeonStudioDocument(), [
       { x: 1, y: 1 },
       { x: 2, y: 1 },
@@ -245,7 +246,6 @@ describe("dungeonStudioEditing", () => {
     expect(roomFillCells(withDoor, { x: 1, y: 1 })).toEqual([
       { x: 1, y: 1 },
       { x: 2, y: 1 },
-      { x: 3, y: 1 },
     ]);
   });
 
@@ -375,6 +375,45 @@ describe("dungeonStudioEditing", () => {
     expect(undoneEdge.document.edges).toEqual([]);
     expect(terrainCells(undoneTerrain.document, "water")).toEqual([]);
     expect(terrainCells(redoneTerrain.document, "water")).toEqual([{ x: 5, y: 5 }]);
+  });
+
+  it("places a dragged wall stroke as one undoable action while preserving validation", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+    const first = commitDungeonStudioChange(
+      document,
+      (current) => applyEdgeFeatureStroke(current, { x: 1, y: 1 }, "n", "wall", "add"),
+      { undoStack: [], redoStack: [] },
+    );
+    const second = commitDungeonStudioChange(
+      first.document,
+      (current) => applyEdgeFeatureStroke(current, { x: 2, y: 1 }, "n", "wall", "add"),
+      { undoStack: first.undoStack, redoStack: first.redoStack },
+      50,
+      { mergeWithPrevious: true },
+    );
+    const invalid = commitDungeonStudioChange(
+      second.document,
+      (current) => applyEdgeFeatureStroke(current, { x: 9, y: 9 }, "n", "wall", "add"),
+      { undoStack: second.undoStack, redoStack: second.redoStack },
+      50,
+      { mergeWithPrevious: true },
+    );
+    const undone = undoDungeonStudioChange(second.document, {
+      undoStack: second.undoStack,
+      redoStack: second.redoStack,
+    });
+
+    expect(second.document.edges.map((edge) => edgeKey(edge.cell, edge.direction))).toEqual([
+      "1,1,n",
+      "2,1,n",
+    ]);
+    expect(second.undoStack).toHaveLength(1);
+    expect(invalid.changed).toBe(false);
+    expect(undone.document.edges).toEqual([]);
   });
 
   it("undoes and redoes shape and auto-wall commits as single actions", () => {

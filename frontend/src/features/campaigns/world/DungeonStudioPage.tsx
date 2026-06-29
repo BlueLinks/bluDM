@@ -45,7 +45,7 @@ export function DungeonStudioPage() {
   const documentRef = useRef<DungeonStudioDocument | null>(null);
   const [activeTool, setActiveTool] = useState<DungeonStudioTool>("select");
   const [brushShape, setBrushShape] = useState<DungeonStudioBrushShape>("single");
-  const [deleteTarget, setDeleteTarget] = useState<DungeonStudioDeleteTarget>("contents");
+  const [deleteTarget, setDeleteTarget] = useState<DungeonStudioDeleteTarget>("all");
   const [selected, setSelected] = useState<DungeonStudioSelection>(null);
   const [undoStack, setUndoStack] = useState<DungeonStudioDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DungeonStudioDocument[]>([]);
@@ -396,6 +396,13 @@ function DungeonStudioShell({
     onToolChange("room-select");
   }
 
+  function editRoom(roomId: string) {
+    const room = document.rooms.find((item) => item.id === roomId);
+    if (!room) return;
+    onSelectionChange({ type: "region", cells: room.cells, label: room.label, roomId: room.id });
+    onToolChange("room-brush");
+  }
+
   return (
     <div className="grid min-w-0 gap-4">
       <CardSection tone="background" className="p-4">
@@ -445,8 +452,10 @@ function DungeonStudioShell({
           onCreateRoomFromSelection={createRoomFromSelection}
           onDeleteRoom={deleteSelectedRoom}
           onDoneRoom={finishRoomEditing}
+          onEditRoom={editRoom}
           onRenameRoom={renameSelectedRoom}
           onStartNewRoom={startNewRoom}
+          onToolChange={onToolChange}
         />
       </div>
       <CardSection tone="background">

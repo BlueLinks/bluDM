@@ -493,7 +493,7 @@ Acceptance criteria:
 
 ### Phase 4: Room Layer Editor
 
-Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, shared single/rectangle/circle brush shapes across floor/room/terrain/delete where applicable, delete target controls for content vs. walls-only deletion, room fill preview/fill for orthogonal wall-bounded areas that protects existing rooms by default, unlinked room-region creation from selections, selected-room naming/done/delete workflow, implicit rendered boundary walls around exposed floor edges, room overlays, room counts, canvas wheel zoom, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware room fill remains a follow-up.
+Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, shared single/rectangle/circle brush shapes across floor/room/terrain/delete where applicable, clearer delete targets, room fill preview/fill for orthogonal wall/door-bounded areas that protects existing rooms by default, unlinked room-region creation from selections, a compact Room Workflow panel for naming/painting/filling/done/edit/delete, implicit rendered boundary walls around exposed floor edges, drag wall strokes, right-click contextual erase, room overlays, room counts, canvas wheel zoom, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware room fill remains a follow-up.
 
 Deliverables:
 

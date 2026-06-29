@@ -87,13 +87,13 @@ export function toolTip(tool: DungeonStudioTool) {
     case "erase":
       return "Erase floor cells with the active brush shape. Boundary walls update automatically.";
     case "delete":
-      return "Delete floor, terrain, room coverage, and touched edges with the active brush shape.";
+      return "Delete the selected target with the active brush shape. Right-click uses this same target.";
     case "room-select":
       return "Select floor cells for a room region with the active brush shape.";
     case "room-brush":
       return "Paint cells into the active room with the active brush shape.";
     case "room-fill":
-      return "Hover over a floor cell to preview the bounded area, then click to assign that area.";
+      return "Hover over a floor cell to preview the bounded area, then click to assign it. Walls and doors stop the fill.";
     case "erase-room":
       return "Remove room-region coverage with the active brush shape while keeping floor and walls intact.";
     case "rectangle-room":
@@ -113,9 +113,9 @@ export function toolTip(tool: DungeonStudioTool) {
     case "erase-terrain":
       return "Remove water, chasm, and cliff terrain with the active brush shape.";
     case "wall":
-      return "Click near a valid floor or terrain edge to toggle a manual wall.";
+      return "Click or drag across valid floor or terrain edges to place a wall stroke.";
     case "diagonal-wall":
-      return "Click a valid floor or terrain cell to toggle the nearest diagonal wall.";
+      return "Click or drag through valid floor or terrain cells to place diagonal walls.";
     case "door":
       return "Click near a valid floor or terrain edge to place or remove a closed door.";
     case "cliff-edge":

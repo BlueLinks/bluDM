@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { brushShapeCells } from "./dungeonStudioBrushes";
+import {
+  applyDeleteTarget,
+  brushShapeCells,
+  contextualEraseTargetForTool,
+} from "./dungeonStudioBrushes";
 import { createDungeonStudioDocument, edgeKey } from "./dungeonStudioDocument";
 import {
   commitDungeonStudioChange,
@@ -50,6 +54,43 @@ describe("dungeonStudioBrushWorkflow", () => {
     expect(room.rooms[0].cells).toEqual(rectangle);
     expect(floorCells(deleted)).toEqual([]);
     expect(deleted.rooms[0].cells).toEqual([]);
+  });
+
+  it("applies explicit delete targets without surprising adjacent layers", () => {
+    const document = createRoomRegion(
+      toggleEdgeFeature(
+        paintTerrainCells(
+          paintFloorCells(createDungeonStudioDocument(), [
+            { x: 1, y: 1 },
+            { x: 2, y: 1 },
+          ]),
+          [{ x: 1, y: 1 }],
+          "water",
+        ),
+        { x: 1, y: 1 },
+        "n",
+        "wall",
+      ),
+      [{ x: 1, y: 1 }],
+    );
+
+    expect(floorCells(applyDeleteTarget(document, [{ x: 1, y: 1 }], "terrain"))).toHaveLength(2);
+    expect(terrainCells(applyDeleteTarget(document, [{ x: 1, y: 1 }], "terrain"), "water")).toEqual(
+      [],
+    );
+    expect(applyDeleteTarget(document, [{ x: 1, y: 1 }], "rooms").rooms[0].cells).toEqual([]);
+    expect(applyDeleteTarget(document, [{ x: 1, y: 1 }], "walls").edges).toEqual([]);
+    expect(floorCells(applyDeleteTarget(document, [{ x: 1, y: 1 }], "all"))).toEqual([
+      { x: 2, y: 1 },
+    ]);
+  });
+
+  it("maps right-click erase to the active tool's safe target", () => {
+    expect(contextualEraseTargetForTool("delete", "walls")).toBe("walls");
+    expect(contextualEraseTargetForTool("room-brush", "all")).toBe("rooms");
+    expect(contextualEraseTargetForTool("water", "all")).toBe("terrain");
+    expect(contextualEraseTargetForTool("wall", "all")).toBe("walls");
+    expect(contextualEraseTargetForTool("floor", "all")).toBe("floor");
   });
 
   it("deletes wall and door edges without deleting floor or room cells", () => {
@@ -103,6 +144,34 @@ describe("dungeonStudioBrushWorkflow", () => {
     expect(filled.rooms.find((room) => room.id === "room-a")?.cells).toEqual([{ x: 1, y: 1 }]);
     expect(filled.rooms.find((room) => room.id === "room-b")?.cells).toEqual(fillCells);
     expect(roomFillCells(document, { x: 1, y: 1 })).toEqual([]);
+  });
+
+  it("undoes and redoes a contextual right-click floor erase stroke", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const deleteCommit = commitDungeonStudioChange(
+      document,
+      (current) =>
+        applyDeleteTarget(current, [{ x: 1, y: 1 }], contextualEraseTargetForTool("floor", "all")),
+      { undoStack: [], redoStack: [] },
+    );
+    const undone = undoDungeonStudioChange(deleteCommit.document, {
+      undoStack: deleteCommit.undoStack,
+      redoStack: deleteCommit.redoStack,
+    });
+    const redone = redoDungeonStudioChange(undone.document, {
+      undoStack: undone.undoStack,
+      redoStack: undone.redoStack,
+    });
+
+    expect(floorCells(deleteCommit.document)).toEqual([{ x: 2, y: 1 }]);
+    expect(floorCells(undone.document)).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    expect(floorCells(redone.document)).toEqual([{ x: 2, y: 1 }]);
   });
 
   it("undoes and redoes wall-only deletion", () => {
