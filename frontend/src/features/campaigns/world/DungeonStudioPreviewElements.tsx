@@ -181,13 +181,15 @@ export function SelectionOverlay({
     selection.cell.y * DUNGEON_STUDIO_CELL_SIZE,
     selection.direction,
   );
+  const invalid = selection.kind.toLowerCase().startsWith("invalid");
   return (
     <line
       {...coordinates}
-      stroke="hsl(var(--primary))"
+      stroke={invalid ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
       strokeLinecap="round"
       strokeWidth="6"
-      opacity="0.55"
+      opacity={invalid ? "0.75" : "0.55"}
+      strokeDasharray={invalid ? "4 4" : undefined}
     />
   );
 }

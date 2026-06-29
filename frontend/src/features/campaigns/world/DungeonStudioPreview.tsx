@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import { ActionRow } from "../../../components/layout";
 import { Button, EmptyMini } from "../../../components/ui";
 import {
+  canToggleEdgeFeature,
+  deleteMapCells,
   eraseFloorCell,
   eraseTerrainCell,
   isShapeTool,
@@ -12,11 +14,16 @@ import {
   paintTerrainCell,
   shapeRoomCells,
   toggleEdgeFeature,
+  type DungeonStudioChangeOptions,
   type DungeonStudioSelection,
   type DungeonStudioShapeTool,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import type { DungeonStudioCellKind, DungeonStudioDocument } from "./dungeonStudioDocument";
+import type {
+  DungeonStudioCellKind,
+  DungeonStudioDocument,
+  GridCell,
+} from "./dungeonStudioDocument";
 import {
   CellRect,
   DUNGEON_STUDIO_CELL_SIZE,
@@ -68,6 +75,7 @@ export function DungeonStudioPreview({
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
     selection: DungeonStudioSelection,
+    options?: DungeonStudioChangeOptions,
   ) => void;
   onRedo: () => void;
   onUndo: () => void;
@@ -75,6 +83,7 @@ export function DungeonStudioPreview({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
   const drawing = useRef(false);
+  const brushStrokeStarted = useRef(false);
   const shapeDraftRef = useRef<ShapeDraft | null>(null);
   const lastPaintedCell = useRef("");
   const [shapeDraft, setShapeDraft] = useState<ShapeDraft | null>(null);
@@ -133,17 +142,17 @@ export function DungeonStudioPreview({
       return;
     }
     safeSetPointerCapture(event);
+    if (activeTool === "select") {
+      selectCell(event);
+      return;
+    }
     if (isShapeTool(activeTool)) {
       startShapeDraft(event, activeTool);
       return;
     }
-    if (
-      activeTool === "floor" ||
-      activeTool === "erase" ||
-      isTerrainTool(activeTool) ||
-      activeTool === "erase-terrain"
-    ) {
+    if (isBrushTool(activeTool)) {
       drawing.current = true;
+      brushStrokeStarted.current = false;
       applyCellTool(event);
       return;
     }
@@ -167,12 +176,14 @@ export function DungeonStudioPreview({
     panStart.current = null;
     if (shapeDraftRef.current) applyShapeDraft(event);
     drawing.current = false;
+    brushStrokeStarted.current = false;
     lastPaintedCell.current = "";
   }
 
   function handlePointerCancel() {
     panStart.current = null;
     drawing.current = false;
+    brushStrokeStarted.current = false;
     lastPaintedCell.current = "";
     cancelShapeDraft();
   }
@@ -222,6 +233,12 @@ export function DungeonStudioPreview({
     setShapeDraft(null);
   }
 
+  function selectCell(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    if (!point) return;
+    onDocumentChange((current) => current, { type: "cell", cell: point.cell });
+  }
+
   function applyCellTool(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
     if (!point) return;
@@ -229,10 +246,15 @@ export function DungeonStudioPreview({
     if (nextKey === lastPaintedCell.current) return;
     lastPaintedCell.current = nextKey;
     const selection = { type: "cell", cell: point.cell } satisfies DungeonStudioSelection;
-    onDocumentChange((current) => applyCellUpdate(current, point.cell), selection);
+    const mergeWithPrevious = brushStrokeStarted.current;
+    brushStrokeStarted.current = true;
+    onDocumentChange((current) => applyCellUpdate(current, point.cell), selection, {
+      mergeWithPrevious,
+    });
   }
 
-  function applyCellUpdate(current: DungeonStudioDocument, cell: { x: number; y: number }) {
+  function applyCellUpdate(current: DungeonStudioDocument, cell: GridCell) {
+    if (activeTool === "delete") return deleteMapCells(current, [cell]);
     if (activeTool === "erase") return eraseFloorCell(current, cell);
     if (activeTool === "erase-terrain") return eraseTerrainCell(current, cell);
     if (isTerrainTool(activeTool)) return paintTerrainCell(current, cell, activeTool);
@@ -248,6 +270,15 @@ export function DungeonStudioPreview({
         : closestOrthogonalDirection(point.localX, point.localY);
     const kind =
       activeTool === "door" ? "door" : activeTool === "cliff-edge" ? "cliff-edge" : "wall";
+    if (!canToggleEdgeFeature(document, point.cell, direction)) {
+      onDocumentChange((current) => current, {
+        type: "edge",
+        cell: point.cell,
+        direction,
+        kind: `Invalid ${kind}`,
+      });
+      return;
+    }
     const selection = {
       type: "edge",
       cell: point.cell,
@@ -375,6 +406,16 @@ export function DungeonStudioPreview({
         </svg>
       </div>
     </div>
+  );
+}
+
+function isBrushTool(tool: DungeonStudioTool) {
+  return (
+    tool === "floor" ||
+    tool === "erase" ||
+    tool === "delete" ||
+    tool === "erase-terrain" ||
+    isTerrainTool(tool)
   );
 }
 

@@ -472,7 +472,7 @@ Acceptance criteria:
 
 ### Phase 3B: Terrain And Cliffs
 
-Status: Completed. Dungeon Studio now supports terrain layer tools for water, chasm, and cliff cells; terrain erasing that preserves structure; cliff-edge features using the existing edge model; distinct SVG rendering for terrain and cliff edges; terrain/cliff inspector counts; save/reload persistence; and basic cave tileset floor styling.
+Status: Completed. Dungeon Studio now supports terrain layer tools for water, chasm, and cliff cells; terrain erasing that preserves structure; cliff-edge features using the existing edge model; distinct SVG rendering for terrain and cliff edges; terrain/cliff inspector counts; save/reload persistence; basic cave tileset floor styling; and a map-editor-style workflow with select/floor/terrain/delete modes, brush-like terrain/delete strokes, and wall placement validation.
 
 Deliverables:
 
@@ -481,6 +481,9 @@ Deliverables:
 - Chasm/cliff cells.
 - Cliff-edge feature support.
 - Basic cave tileset styling.
+- Map-editor-style mode workflow for Select, Floor, Terrain, and Delete.
+- Brush-like floor, terrain, and delete strokes with undoable drag operations.
+- Wall placement validation so walls are only created adjacent to existing floor or terrain geometry.
 
 Acceptance criteria:
 

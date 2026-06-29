@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createDungeonStudioDocument, edgeKey } from "./dungeonStudioDocument";
 import {
   addOuterWallsAroundFloorCells,
+  canToggleEdgeFeature,
   circleRoomCells,
   commitDungeonStudioChange,
+  deleteMapCells,
   ellipseRoomCells,
   eraseFloorCell,
   eraseTerrainCell,
@@ -84,6 +86,34 @@ describe("dungeonStudioEditing", () => {
     });
   });
 
+  it("validates edge placement against floor and terrain geometry", () => {
+    const empty = createDungeonStudioDocument();
+    const floor = paintFloorCell(empty, { x: 2, y: 2 });
+    const terrain = paintTerrainCell(empty, { x: 5, y: 5 }, "water");
+
+    expect(canToggleEdgeFeature(empty, { x: 2, y: 2 }, "n")).toBe(false);
+    expect(canToggleEdgeFeature(floor, { x: 2, y: 2 }, "n")).toBe(true);
+    expect(canToggleEdgeFeature(terrain, { x: 5, y: 5 }, "e")).toBe(true);
+  });
+
+  it("deletes floor, terrain, and touched edges with one brush cell", () => {
+    const document = toggleEdgeFeature(
+      paintTerrainCell(
+        paintFloorCell(createDungeonStudioDocument(), { x: 2, y: 2 }),
+        { x: 2, y: 2 },
+        "water",
+      ),
+      { x: 2, y: 2 },
+      "n",
+      "wall",
+    );
+    const deleted = deleteMapCells(document, [{ x: 2, y: 2 }]);
+
+    expect(floorCells(deleted)).toEqual([]);
+    expect(terrainCells(deleted, "water")).toEqual([]);
+    expect(deleted.edges).toEqual([]);
+  });
+
   it("generates grid-snapped rectangle and square floor cells", () => {
     const document = createDungeonStudioDocument();
 
@@ -156,6 +186,29 @@ describe("dungeonStudioEditing", () => {
     ]);
 
     expect(wrapped.edges.map((edge) => edgeKey(edge.cell, edge.direction))).not.toContain("8,8,n");
+  });
+
+  it("merges brush stroke commits into one undo entry", () => {
+    const document = createDungeonStudioDocument();
+    const first = commitDungeonStudioChange(
+      document,
+      (current) => paintFloorCell(current, { x: 1, y: 1 }),
+      { undoStack: [], redoStack: [] },
+    );
+    const second = commitDungeonStudioChange(
+      first.document,
+      (current) => paintFloorCell(current, { x: 2, y: 1 }),
+      { undoStack: first.undoStack, redoStack: first.redoStack },
+      50,
+      { mergeWithPrevious: true },
+    );
+    const undone = undoDungeonStudioChange(second.document, {
+      undoStack: second.undoStack,
+      redoStack: second.redoStack,
+    });
+
+    expect(second.undoStack).toHaveLength(1);
+    expect(floorCells(undone.document)).toEqual([]);
   });
 
   it("undoes and redoes terrain and cliff-edge commits", () => {

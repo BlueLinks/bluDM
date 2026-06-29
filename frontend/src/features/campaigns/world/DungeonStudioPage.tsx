@@ -15,6 +15,7 @@ import {
   redoDungeonStudioChange,
   studioDocumentSignature,
   undoDungeonStudioChange,
+  type DungeonStudioChangeOptions,
   type DungeonStudioSelection,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
@@ -39,7 +40,7 @@ export function DungeonStudioPage() {
   const [map, setMap] = useState<CampaignMap | null>(null);
   const [document, setDocument] = useState<DungeonStudioDocument | null>(null);
   const documentRef = useRef<DungeonStudioDocument | null>(null);
-  const [activeTool, setActiveTool] = useState<DungeonStudioTool>("floor");
+  const [activeTool, setActiveTool] = useState<DungeonStudioTool>("select");
   const [selected, setSelected] = useState<DungeonStudioSelection>(null);
   const [undoStack, setUndoStack] = useState<DungeonStudioDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DungeonStudioDocument[]>([]);
@@ -132,14 +133,21 @@ export function DungeonStudioPage() {
   function applyDocumentChange(
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
     selection: DungeonStudioSelection,
+    options?: DungeonStudioChangeOptions,
   ) {
     const current = documentRef.current;
     setSelected(selection);
     if (!current) return;
-    const result = commitDungeonStudioChange(current, update, {
-      undoStack: undoStackRef.current,
-      redoStack: redoStackRef.current,
-    });
+    const result = commitDungeonStudioChange(
+      current,
+      update,
+      {
+        undoStack: undoStackRef.current,
+        redoStack: redoStackRef.current,
+      },
+      50,
+      options,
+    );
     if (!result.changed) return;
     documentRef.current = result.document;
     undoStackRef.current = result.undoStack;
@@ -309,6 +317,7 @@ function DungeonStudioShell({
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
     selection: DungeonStudioSelection,
+    options?: DungeonStudioChangeOptions,
   ) => void;
   onRedo: () => void;
   onToolChange: (tool: DungeonStudioTool) => void;

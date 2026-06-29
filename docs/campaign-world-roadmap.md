@@ -110,7 +110,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Dungeon Studio Phase 3A shape drawing and auto-walls:
   - Studio maps now support grid-snapped rectangle/square rooms, round/oval room approximation from occupied floor cells, live shape previews with Escape cancellation, selected-region feedback, undo/redo, and undoable outer-wall generation that preserves door openings.
 - Dungeon Studio Phase 3B terrain and cliffs:
-  - Studio maps now support water, chasm, and cliff terrain cells; terrain erasing; cliff-edge features; distinct terrain rendering; cave floor styling; undo/redo; and save/reload persistence.
+  - Studio maps now support water, chasm, and cliff terrain cells; terrain erasing; cliff-edge features; distinct terrain rendering; cave floor styling; map-editor-style select/floor/terrain/delete modes; brush delete strokes; wall placement validation; undo/redo; and save/reload persistence.
 
 ## In Progress
 
