@@ -4,6 +4,7 @@ import {
   DraftingCompass,
   Eraser,
   Mountain,
+  PaintBucket,
   MousePointer2,
   Paintbrush,
   RectangleHorizontal,
@@ -16,8 +17,11 @@ import {
 import type { ElementType } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
 import { Button, EmptyMini } from "../../../components/ui";
+import { InspectorRow } from "./DungeonStudioInspectorRow";
+import { DungeonStudioRoomInspector } from "./DungeonStudioRoomInspector";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
-import type { DungeonStudioDocument } from "./dungeonStudioDocument";
+import type { DungeonStudioDocument, DungeonStudioRoomRegion } from "./dungeonStudioDocument";
+import { selectionLabel } from "./dungeonStudioPanelText";
 
 type ToolMode = "select" | "floor" | "terrain" | "room" | "delete";
 
@@ -127,6 +131,12 @@ const modeTools: Record<ToolMode, ToolDefinition[]> = {
       icon: Paintbrush,
     },
     {
+      tool: "room-fill",
+      label: "Room Fill",
+      copy: "Preview and fill an enclosed room.",
+      icon: PaintBucket,
+    },
+    {
       tool: "erase-room",
       label: "Room Eraser",
       copy: "Remove room coverage only.",
@@ -155,12 +165,12 @@ const modeTools: Record<ToolMode, ToolDefinition[]> = {
   ],
 };
 
-const modeDefaults: Record<ToolMode, DungeonStudioTool> = {
-  select: "select",
-  floor: "floor",
-  terrain: "water",
-  room: "room-select",
-  delete: "delete",
+const modeDefaults: Record<ToolMode, { tool: DungeonStudioTool; icon: ElementType }> = {
+  select: { tool: "select", icon: MousePointer2 },
+  floor: { tool: "floor", icon: Paintbrush },
+  terrain: { tool: "water", icon: Waves },
+  room: { tool: "room-select", icon: Square },
+  delete: { tool: "delete", icon: Trash2 },
 };
 
 export function DungeonStudioToolPanel({
@@ -179,8 +189,9 @@ export function DungeonStudioToolPanel({
           <ModeButton
             key={mode}
             active={activeMode === mode}
+            icon={modeDefaults[mode].icon}
             label={modeLabel(mode)}
-            onClick={() => onToolChange(modeDefaults[mode])}
+            onClick={() => onToolChange(modeDefaults[mode].tool)}
           />
         ))}
       </div>
@@ -212,16 +223,26 @@ export function DungeonStudioInspectorPanel({
   floorCellCount,
   mapName,
   selected,
+  selectedRoom,
   onAddOuterWalls,
   onCreateRoomFromSelection,
+  onDeleteRoom,
+  onDoneRoom,
+  onRenameRoom,
+  onStartNewRoom,
 }: {
   activeTool: DungeonStudioTool;
   document: DungeonStudioDocument;
   floorCellCount: number;
   mapName: string;
   selected: DungeonStudioSelection;
+  selectedRoom?: DungeonStudioRoomRegion;
   onAddOuterWalls: () => void;
   onCreateRoomFromSelection: () => void;
+  onDeleteRoom: (roomId: string) => void;
+  onDoneRoom: () => void;
+  onRenameRoom: (roomId: string, label: string) => void;
+  onStartNewRoom: () => void;
 }) {
   const terrainCount = document.layers
     .filter(
@@ -245,6 +266,13 @@ export function DungeonStudioInspectorPanel({
       <InspectorRow label="Cliff edges" value={String(cliffEdgeCount)} />
       <InspectorRow label="Room regions" value={String(document.rooms.length)} />
       <InspectorRow label="Room cells" value={String(roomCellCount)} />
+      <DungeonStudioRoomInspector
+        selectedRoom={selectedRoom}
+        onDeleteRoom={onDeleteRoom}
+        onDoneRoom={onDoneRoom}
+        onRenameRoom={onRenameRoom}
+        onStartNewRoom={onStartNewRoom}
+      />
       <div className="rounded-md border border-border bg-background px-3 py-2">
         <div className="text-xs font-bold uppercase text-muted-foreground">Quick action</div>
         <Button
@@ -283,10 +311,12 @@ export function DungeonStudioInspectorPanel({
 
 function ModeButton({
   active,
+  icon: Icon,
   label,
   onClick,
 }: {
   active: boolean;
+  icon: ElementType;
   label: string;
   onClick: () => void;
 }) {
@@ -302,7 +332,10 @@ function ModeButton({
       aria-pressed={active}
       onClick={onClick}
     >
-      {label}
+      <span className="inline-flex items-center justify-center gap-2">
+        <Icon className="h-4 w-4" />
+        <span>{label}</span>
+      </span>
     </button>
   );
 }
@@ -348,7 +381,13 @@ function modeForTool(tool: DungeonStudioTool): ToolMode {
   if (tool === "water" || tool === "chasm" || tool === "cliff" || tool === "cliff-edge") {
     return "terrain";
   }
-  if (tool === "room-select" || tool === "room-brush" || tool === "erase-room") return "room";
+  if (
+    tool === "room-select" ||
+    tool === "room-brush" ||
+    tool === "room-fill" ||
+    tool === "erase-room"
+  )
+    return "room";
   if (tool === "delete" || tool === "erase" || tool === "erase-terrain") return "delete";
   return "floor";
 }
@@ -382,6 +421,8 @@ function toolLabel(tool: DungeonStudioTool) {
       return "Room Select";
     case "room-brush":
       return "Room Brush";
+    case "room-fill":
+      return "Room Fill";
     case "erase-room":
       return "Room Eraser";
     case "rectangle-room":
@@ -425,6 +466,8 @@ function toolTip(tool: DungeonStudioTool) {
       return "Drag over existing floor cells to collect a room selection without changing the map. Use Create room region when the selection is ready.";
     case "room-brush":
       return "Drag over floor cells to paint them into the active room region. Select an existing room first to extend it.";
+    case "room-fill":
+      return "Hover over a floor cell to preview the bounded area, then click to assign that area to the active room.";
     case "erase-room":
       return "Drag over cells to remove only room-region coverage while keeping floor, terrain, and walls intact.";
     case "rectangle-room":
@@ -452,20 +495,4 @@ function toolTip(tool: DungeonStudioTool) {
     case "cliff-edge":
       return "Click near a valid floor or terrain edge to toggle an amber cliff boundary using the existing edge model.";
   }
-}
-
-function selectionLabel(selection: DungeonStudioSelection) {
-  if (!selection) return "Nothing selected";
-  if (selection.type === "cell") return `Cell ${selection.cell.x}, ${selection.cell.y}`;
-  if (selection.type === "region") return `${selection.label}: ${selection.cells.length} cells`;
-  return `${selection.kind} at ${selection.cell.x}, ${selection.cell.y} ${selection.direction}`;
-}
-
-function InspectorRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 min-w-0 font-semibold [overflow-wrap:anywhere]">{value}</div>
-    </div>
-  );
 }

@@ -8,6 +8,7 @@ import {
   eraseFloorCell,
   eraseRoomCells,
   eraseTerrainCell,
+  implicitBoundaryWalls,
   isShapeTool,
   isTerrainTool,
   nextRoomRegionId,
@@ -15,6 +16,7 @@ import {
   paintFloorCells,
   paintRoomCells,
   paintTerrainCell,
+  roomFillCells,
   roomRegionForCell,
   shapeRoomCells,
   toggleEdgeFeature,
@@ -24,12 +26,20 @@ import {
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
 import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
+import {
+  isBrushTool,
+  roomCellSelection,
+  safeSetPointerCapture,
+  selectedRoomId,
+  shapeToolLabel,
+} from "./dungeonStudioPreviewTools";
 import { cellLayerFill, clamp, clampPan } from "./dungeonStudioPreviewViewport";
 import {
   CellRect,
   DUNGEON_STUDIO_CELL_SIZE,
   EdgeLine,
   GridLines,
+  FillPreview,
   RoomOverlay,
   SelectionOverlay,
   ShapePreview,
@@ -98,6 +108,12 @@ export function DungeonStudioPreview({
     [document.layers],
   );
   const floorCellCount = floorCellKeys.size;
+  const implicitWalls = useMemo(() => implicitBoundaryWalls(document), [document]);
+  const [fillPreviewCells, setFillPreviewCells] = useState<GridCell[]>([]);
+
+  useEffect(() => {
+    if (activeTool !== "room-fill") setFillPreviewCells([]);
+  }, [activeTool]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -145,6 +161,10 @@ export function DungeonStudioPreview({
       selectCell(event);
       return;
     }
+    if (activeTool === "room-fill") {
+      applyRoomFill(event);
+      return;
+    }
     if (activeTool === "room-select") {
       drawing.current = true;
       roomSelectionCells.current = [];
@@ -177,6 +197,7 @@ export function DungeonStudioPreview({
       updateShapeDraft(event);
       return;
     }
+    if (activeTool === "room-fill") updateRoomFillPreview(event);
     if (!drawing.current) return;
     if (activeTool === "room-select") addRoomSelectionCell(event);
     else applyCellTool(event);
@@ -235,7 +256,7 @@ export function DungeonStudioPreview({
     const selection = {
       type: "region",
       cells: draft.cells,
-      label: toolLabel(draft.tool),
+      label: shapeToolLabel(draft.tool),
     } satisfies DungeonStudioSelection;
     onDocumentChange((current) => paintFloorCells(current, draft.cells), selection);
     shapeDraftRef.current = null;
@@ -269,6 +290,29 @@ export function DungeonStudioPreview({
       cells: roomSelectionCells.current,
       label: "Room selection",
     });
+  }
+
+  function applyRoomFill(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    if (!point) return;
+    const cells = roomFillCells(document, point.cell);
+    if (!cells.length) return;
+    const existingRoomId = selectedRoomId(selected);
+    const roomId = existingRoomId ?? nextRoomRegionId(document);
+    onDocumentChange((current) => paintRoomCells(current, cells, roomId), {
+      type: "region",
+      cells,
+      label:
+        existingRoomId && selected?.type === "region"
+          ? selected.label
+          : `Room ${document.rooms.length + 1}`,
+      roomId,
+    });
+  }
+
+  function updateRoomFillPreview(event: PointerEvent<HTMLDivElement>) {
+    const point = gridPointForEvent(event);
+    setFillPreviewCells(point ? roomFillCells(document, point.cell) : []);
   }
 
   function applyCellTool(event: PointerEvent<HTMLDivElement>) {
@@ -418,6 +462,7 @@ export function DungeonStudioPreview({
         onPointerMove={handlePointerMove}
         onPointerCancel={handlePointerCancel}
         onPointerUp={handlePointerEnd}
+        onPointerLeave={() => setFillPreviewCells([])}
         onClick={() => undefined}
       >
         <svg className="h-full w-full" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
@@ -436,8 +481,12 @@ export function DungeonStudioPreview({
             )}
           <GridLines width={document.grid.width} height={document.grid.height} />
           {shapeDraft ? <ShapePreview draft={shapeDraft} /> : null}
+          {fillPreviewCells.length ? <FillPreview cells={fillPreviewCells} /> : null}
           {document.rooms.map((room) => (
             <RoomOverlay key={room.id} room={room} />
+          ))}
+          {implicitWalls.map((edge) => (
+            <EdgeLine key={edge.id} edge={edge} implicit />
           ))}
           {document.edges.map((edge) => (
             <EdgeLine key={edge.id} edge={edge} />
@@ -447,52 +496,4 @@ export function DungeonStudioPreview({
       </div>
     </div>
   );
-}
-
-function isBrushTool(tool: DungeonStudioTool) {
-  return (
-    tool === "floor" ||
-    tool === "erase" ||
-    tool === "delete" ||
-    tool === "erase-room" ||
-    tool === "room-brush" ||
-    tool === "erase-terrain" ||
-    isTerrainTool(tool)
-  );
-}
-
-function roomCellSelection(
-  activeTool: DungeonStudioTool,
-  cell: GridCell,
-  roomId: string | null,
-): DungeonStudioSelection {
-  if (activeTool === "room-brush") {
-    return { type: "region", cells: [cell], label: "Room brush", roomId: roomId ?? undefined };
-  }
-  return { type: "cell", cell };
-}
-
-function selectedRoomId(selection: DungeonStudioSelection) {
-  return selection?.type === "region" ? selection.roomId : undefined;
-}
-
-function toolLabel(tool: DungeonStudioShapeTool) {
-  switch (tool) {
-    case "rectangle-room":
-      return "Rectangle room";
-    case "square-room":
-      return "Square room";
-    case "circle-room":
-      return "Round room";
-    case "ellipse-room":
-      return "Oval room";
-  }
-}
-
-function safeSetPointerCapture(event: PointerEvent<HTMLDivElement>) {
-  try {
-    event.currentTarget.setPointerCapture(event.pointerId);
-  } catch {
-    // Programmatic QA events do not always create an active pointer; real pointer input still captures.
-  }
 }

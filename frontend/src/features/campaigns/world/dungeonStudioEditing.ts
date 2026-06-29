@@ -7,11 +7,15 @@ import {
 } from "./dungeonStudioShapeGeometry";
 export {
   createRoomRegion,
+  deleteRoomRegion,
   eraseRoomCells,
   nextRoomRegionId,
   paintRoomCells,
+  renameRoomRegion,
+  roomFillCells,
   roomRegionForCell,
 } from "./dungeonStudioRoomEditing";
+export { implicitBoundaryWalls } from "./dungeonStudioWalls";
 import {
   cellKey,
   edgeKey,
@@ -31,6 +35,7 @@ export type DungeonStudioTool =
   | "delete"
   | "room-select"
   | "room-brush"
+  | "room-fill"
   | "erase-room"
   | "rectangle-room"
   | "square-room"

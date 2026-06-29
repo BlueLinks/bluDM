@@ -1,6 +1,13 @@
-import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
+import {
+  cellKey,
+  type DungeonStudioDocument,
+  type DungeonStudioEdgeDirection,
+  type GridCell,
+} from "./dungeonStudioDocument";
+import { hasBlockingWall, neighborCell } from "./dungeonStudioWalls";
 
 const ROOM_REGION_COLORS = ["#14b8a6", "#8b5cf6", "#f97316", "#22c55e", "#06b6d4"];
+const ORTHOGONAL_DIRECTIONS: DungeonStudioEdgeDirection[] = ["n", "e", "s", "w"];
 
 export function createRoomRegion(
   document: DungeonStudioDocument,
@@ -53,6 +60,43 @@ export function eraseRoomCells(document: DungeonStudioDocument, cells: GridCell[
   };
 }
 
+export function renameRoomRegion(document: DungeonStudioDocument, roomId: string, label: string) {
+  const nextLabel = label.trim();
+  if (!nextLabel) return document;
+  return {
+    ...document,
+    rooms: document.rooms.map((room) =>
+      room.id === roomId ? { ...room, label: nextLabel } : room,
+    ),
+  };
+}
+
+export function deleteRoomRegion(document: DungeonStudioDocument, roomId: string) {
+  return { ...document, rooms: document.rooms.filter((room) => room.id !== roomId) };
+}
+
+export function roomFillCells(document: DungeonStudioDocument, start: GridCell) {
+  const floorKeys = new Set(floorCells(document).map(cellKey));
+  if (!floorKeys.has(cellKey(start))) return [];
+  const visited = new Set<string>();
+  const queue = [start];
+
+  while (queue.length) {
+    const cell = queue.shift();
+    if (!cell) continue;
+    const key = cellKey(cell);
+    if (visited.has(key) || !floorKeys.has(key)) continue;
+    visited.add(key);
+    ORTHOGONAL_DIRECTIONS.forEach((direction) => {
+      if (hasBlockingWall(document, cell, direction)) return;
+      const neighbor = neighborCell(cell, direction);
+      if (floorKeys.has(cellKey(neighbor)) && !visited.has(cellKey(neighbor))) queue.push(neighbor);
+    });
+  }
+
+  return [...visited].map(cellFromKey).sort((left, right) => left.y - right.y || left.x - right.x);
+}
+
 export function roomRegionForCell(document: DungeonStudioDocument, cell: GridCell) {
   const key = cellKey(cell);
   return document.rooms.find((room) => room.cells.some((roomCell) => cellKey(roomCell) === key));
@@ -63,6 +107,11 @@ export function nextRoomRegionId(document: DungeonStudioDocument) {
   let index = document.rooms.length + 1;
   while (existingIds.has(`room-${index}`)) index += 1;
   return `room-${index}`;
+}
+
+function cellFromKey(key: string): GridCell {
+  const [x, y] = key.split(",").map(Number);
+  return { x, y };
 }
 
 function floorCells(document: DungeonStudioDocument) {

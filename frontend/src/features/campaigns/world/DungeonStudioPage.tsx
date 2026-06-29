@@ -12,8 +12,10 @@ import {
   addOuterWallsAroundFloorCells,
   commitDungeonStudioChange,
   createRoomRegion,
+  deleteRoomRegion,
   floorCells as studioFloorCells,
   nextRoomRegionId,
+  renameRoomRegion,
   redoDungeonStudioChange,
   studioDocumentSignature,
   undoDungeonStudioChange,
@@ -284,6 +286,7 @@ export function DungeonStudioPage() {
           selected={selected}
           onDocumentChange={applyDocumentChange}
           onRedo={redoStudioChange}
+          onSelectionChange={setSelected}
           onToolChange={setActiveTool}
           onUndo={undoStudioChange}
         />
@@ -304,6 +307,7 @@ function DungeonStudioShell({
   selected,
   onDocumentChange,
   onRedo,
+  onSelectionChange,
   onToolChange,
   onUndo,
 }: {
@@ -322,6 +326,7 @@ function DungeonStudioShell({
     options?: DungeonStudioChangeOptions,
   ) => void;
   onRedo: () => void;
+  onSelectionChange: (selection: DungeonStudioSelection) => void;
   onToolChange: (tool: DungeonStudioTool) => void;
   onUndo: () => void;
 }) {
@@ -338,6 +343,10 @@ function DungeonStudioShell({
   const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCells = document.rooms.reduce((total, room) => total + room.cells.length, 0);
   const unassignedFloorCells = Math.max(0, floorCellCount - roomCells);
+  const selectedRoom =
+    selected?.type === "region" && selected.roomId
+      ? document.rooms.find((room) => room.id === selected.roomId)
+      : undefined;
 
   function addOuterWalls() {
     const wrappedCells = selectedRegionCells?.length
@@ -354,12 +363,37 @@ function DungeonStudioShell({
   function createRoomFromSelection() {
     if (selected?.type !== "region" || selected.roomId) return;
     const roomId = nextRoomRegionId(document);
+    const label = `Room ${document.rooms.length + 1}`;
     onDocumentChange((current) => createRoomRegion(current, selected.cells, roomId), {
       type: "region",
       cells: selected.cells,
-      label: `Room ${document.rooms.length + 1}`,
+      label,
       roomId,
     });
+  }
+
+  function renameSelectedRoom(roomId: string, label: string) {
+    const room = document.rooms.find((item) => item.id === roomId);
+    if (!room) return;
+    onDocumentChange((current) => renameRoomRegion(current, roomId, label), {
+      type: "region",
+      cells: room.cells,
+      label: label.trim() || room.label,
+      roomId,
+    });
+  }
+
+  function deleteSelectedRoom(roomId: string) {
+    onDocumentChange((current) => deleteRoomRegion(current, roomId), null);
+  }
+
+  function finishRoomEditing() {
+    onSelectionChange(null);
+  }
+
+  function startNewRoom() {
+    onSelectionChange(null);
+    onToolChange("room-select");
   }
 
   return (
@@ -398,8 +432,13 @@ function DungeonStudioShell({
           floorCellCount={floorCellCount}
           mapName={map.name}
           selected={selected}
+          selectedRoom={selectedRoom}
           onAddOuterWalls={addOuterWalls}
           onCreateRoomFromSelection={createRoomFromSelection}
+          onDeleteRoom={deleteSelectedRoom}
+          onDoneRoom={finishRoomEditing}
+          onRenameRoom={renameSelectedRoom}
+          onStartNewRoom={startNewRoom}
         />
       </div>
       <CardSection tone="background">

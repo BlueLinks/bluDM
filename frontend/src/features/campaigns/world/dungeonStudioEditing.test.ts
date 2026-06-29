@@ -7,17 +7,21 @@ import {
   commitDungeonStudioChange,
   createRoomRegion,
   deleteMapCells,
+  deleteRoomRegion,
   ellipseRoomCells,
   eraseFloorCell,
   eraseRoomCells,
   eraseTerrainCell,
   floorCells,
+  implicitBoundaryWalls,
   paintFloorCell,
   paintFloorCells,
   paintRoomCells,
   paintTerrainCell,
+  renameRoomRegion,
   rectangleRoomCells,
   redoDungeonStudioChange,
+  roomFillCells,
   roomRegionForCell,
   squareRoomCells,
   terrainCells,
@@ -203,6 +207,18 @@ describe("dungeonStudioEditing", () => {
     expect(erased.rooms.find((room) => room.id === "room-b")?.cells).toEqual([{ x: 1, y: 1 }]);
   });
 
+  it("renames and deletes room regions", () => {
+    const document = createRoomRegion(
+      paintFloorCell(createDungeonStudioDocument(), { x: 3, y: 4 }),
+      [{ x: 3, y: 4 }],
+    );
+    const renamed = renameRoomRegion(document, "room-1", "Altar Room");
+    const deleted = deleteRoomRegion(renamed, "room-1");
+
+    expect(renamed.rooms[0].label).toBe("Altar Room");
+    expect(deleted.rooms).toEqual([]);
+  });
+
   it("finds the room region for a selected cell", () => {
     const document = createRoomRegion(
       paintFloorCell(createDungeonStudioDocument(), { x: 3, y: 4 }),
@@ -211,6 +227,69 @@ describe("dungeonStudioEditing", () => {
 
     expect(roomRegionForCell(document, { x: 3, y: 4 })?.label).toBe("Room 1");
     expect(roomRegionForCell(document, { x: 4, y: 4 })).toBeUndefined();
+  });
+
+  it("fills room cells until manual walls while treating doors as pass-throughs", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+    const withWall = toggleEdgeFeature(document, { x: 2, y: 1 }, "e", "wall");
+    const withDoor = toggleEdgeFeature(withWall, { x: 2, y: 1 }, "e", "door");
+
+    expect(roomFillCells(withWall, { x: 1, y: 1 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    expect(roomFillCells(withDoor, { x: 1, y: 1 })).toEqual([
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+  });
+
+  it("derives implicit boundary walls without duplicating manual edges", () => {
+    const document = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const withDoor = toggleEdgeFeature(document, { x: 1, y: 1 }, "n", "door");
+    const wallKeys = implicitBoundaryWalls(withDoor).map((edge) =>
+      edgeKey(edge.cell, edge.direction),
+    );
+
+    expect(wallKeys).not.toContain("1,1,n");
+    expect(wallKeys).not.toContain("2,1,w");
+    expect(wallKeys).toEqual(expect.arrayContaining(["1,1,w", "3,1,w"]));
+  });
+
+  it("undoes and redoes room rename and deletion", () => {
+    const document = createRoomRegion(
+      paintFloorCell(createDungeonStudioDocument(), { x: 1, y: 1 }),
+      [{ x: 1, y: 1 }],
+    );
+    const renameCommit = commitDungeonStudioChange(
+      document,
+      (current) => renameRoomRegion(current, "room-1", "Named Room"),
+      { undoStack: [], redoStack: [] },
+    );
+    const deleteCommit = commitDungeonStudioChange(
+      renameCommit.document,
+      (current) => deleteRoomRegion(current, "room-1"),
+      { undoStack: renameCommit.undoStack, redoStack: renameCommit.redoStack },
+    );
+    const undoneDelete = undoDungeonStudioChange(deleteCommit.document, {
+      undoStack: deleteCommit.undoStack,
+      redoStack: deleteCommit.redoStack,
+    });
+    const redoneDelete = redoDungeonStudioChange(undoneDelete.document, {
+      undoStack: undoneDelete.undoStack,
+      redoStack: undoneDelete.redoStack,
+    });
+
+    expect(undoneDelete.document.rooms[0].label).toBe("Named Room");
+    expect(redoneDelete.document.rooms).toEqual([]);
   });
 
   it("adds outer walls around floor cells without replacing door openings", () => {

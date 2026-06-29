@@ -36,6 +36,28 @@ export function CellRect({
   );
 }
 
+export function FillPreview({ cells }: { cells: GridCell[] }) {
+  return (
+    <g aria-label="Room fill preview">
+      {cells.map((cell) => (
+        <rect
+          key={`${cell.x}-${cell.y}`}
+          x={cell.x * DUNGEON_STUDIO_CELL_SIZE + 3}
+          y={cell.y * DUNGEON_STUDIO_CELL_SIZE + 3}
+          width={DUNGEON_STUDIO_CELL_SIZE - 6}
+          height={DUNGEON_STUDIO_CELL_SIZE - 6}
+          rx="5"
+          fill="hsl(var(--accent))"
+          opacity="0.20"
+          stroke="hsl(var(--accent))"
+          strokeDasharray="3 3"
+          strokeWidth="1.5"
+        />
+      ))}
+    </g>
+  );
+}
+
 export function ShapePreview({ draft }: { draft: DungeonStudioShapeDraft }) {
   return (
     <g aria-label={`${shapeToolLabel(draft.tool)} preview`}>
@@ -120,7 +142,13 @@ export function RoomOverlay({ room }: { room: DungeonStudioRoomRegion }) {
   );
 }
 
-export function EdgeLine({ edge }: { edge: DungeonStudioEdgeFeature }) {
+export function EdgeLine({
+  edge,
+  implicit = false,
+}: {
+  edge: DungeonStudioEdgeFeature;
+  implicit?: boolean;
+}) {
   const { x, y } = edge.cell;
   const startX = x * DUNGEON_STUDIO_CELL_SIZE;
   const startY = y * DUNGEON_STUDIO_CELL_SIZE;
@@ -131,9 +159,16 @@ export function EdgeLine({ edge }: { edge: DungeonStudioEdgeFeature }) {
       {...coordinates}
       stroke={stroke}
       strokeLinecap="round"
-      strokeWidth={edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
+      strokeWidth={implicit ? 2 : edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
+      opacity={implicit ? "0.55" : undefined}
       strokeDasharray={
-        edge.kind === "door" ? "8 4" : edge.kind === "cliff-edge" ? "3 5" : undefined
+        implicit
+          ? "4 5"
+          : edge.kind === "door"
+            ? "8 4"
+            : edge.kind === "cliff-edge"
+              ? "3 5"
+              : undefined
       }
     />
   );
