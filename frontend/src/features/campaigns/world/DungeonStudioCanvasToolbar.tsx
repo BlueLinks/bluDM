@@ -1,4 +1,4 @@
-import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Undo2 } from "lucide-react";
+import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Save, Undo2 } from "lucide-react";
 import { ActionRow } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 
@@ -9,8 +9,10 @@ export function DungeonStudioCanvasToolbar({
   maxZoom,
   minZoom,
   zoom,
+  saving,
   onRedo,
   onResetView,
+  onSave,
   onUndo,
   onZoomIn,
   onZoomOut,
@@ -20,15 +22,42 @@ export function DungeonStudioCanvasToolbar({
   dirty: boolean;
   maxZoom: number;
   minZoom: number;
+  saving: boolean;
   zoom: number;
   onRedo: () => void;
   onResetView: () => void;
+  onSave: () => void;
   onUndo: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2">
+      <ActionRow>
+        <Button type="button" icon={Save} size="sm" disabled={!dirty || saving} onClick={onSave}>
+          {saving ? "Saving…" : "Save"}
+        </Button>
+        <Button
+          type="button"
+          icon={Undo2}
+          size="sm"
+          variant="secondary"
+          disabled={!canUndo}
+          onClick={onUndo}
+        >
+          Undo
+        </Button>
+        <Button
+          type="button"
+          icon={Redo2}
+          size="sm"
+          variant="secondary"
+          disabled={!canRedo}
+          onClick={onRedo}
+        >
+          Redo
+        </Button>
+      </ActionRow>
       <ActionRow>
         <Button
           type="button"
@@ -55,28 +84,6 @@ export function DungeonStudioCanvasToolbar({
         </Button>
         <Button type="button" icon={RotateCcw} size="sm" variant="ghost" onClick={onResetView}>
           Reset
-        </Button>
-      </ActionRow>
-      <ActionRow>
-        <Button
-          type="button"
-          icon={Undo2}
-          size="sm"
-          variant="secondary"
-          disabled={!canUndo}
-          onClick={onUndo}
-        >
-          Undo
-        </Button>
-        <Button
-          type="button"
-          icon={Redo2}
-          size="sm"
-          variant="secondary"
-          disabled={!canRedo}
-          onClick={onRedo}
-        >
-          Redo
         </Button>
       </ActionRow>
       <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground">

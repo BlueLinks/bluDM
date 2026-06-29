@@ -4,17 +4,16 @@ import {
   DraftingCompass,
   Eraser,
   Mountain,
-  PaintBucket,
   MousePointer2,
+  PaintBucket,
   Paintbrush,
   Slash,
   Square,
   Trash2,
   Waves,
 } from "lucide-react";
-import type { ElementType } from "react";
+import type { ElementType, ReactNode } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
-import { EmptyMini } from "../../../components/ui";
 import {
   brushShapeLabel,
   brushShapeOptions,
@@ -29,182 +28,124 @@ import { DungeonStudioRoomInspector } from "./DungeonStudioRoomInspector";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
 import type { DungeonStudioDocument, DungeonStudioRoomRegion } from "./dungeonStudioDocument";
 import { selectionLabel } from "./dungeonStudioPanelText";
-import { modeForTool, modeLabel, toolLabel, toolTip, type ToolMode } from "./dungeonStudioToolText";
+import { modeForTool, modeLabel, toolLabel, toolTip } from "./dungeonStudioToolText";
 
-type ToolDefinition = {
+type ToolOption = {
   tool: DungeonStudioTool;
   label: string;
-  copy: string;
   icon: ElementType;
 };
 
-const modeTools: Record<ToolMode, ToolDefinition[]> = {
-  select: [
-    {
-      tool: "select",
-      label: "Select",
-      copy: "Inspect cells and edges without changing the map.",
-      icon: MousePointer2,
-    },
-  ],
-  floor: [
-    {
-      tool: "floor",
-      label: "Floor Brush",
-      copy: "Paint rooms and corridors.",
-      icon: Paintbrush,
-    },
-    {
-      tool: "wall",
-      label: "Wall",
-      copy: "Click or drag valid edges.",
-      icon: DraftingCompass,
-    },
-    {
-      tool: "diagonal-wall",
-      label: "Diagonal",
-      copy: "Click or drag valid diagonals.",
-      icon: Slash,
-    },
-    {
-      tool: "door",
-      label: "Door",
-      copy: "Click a valid edge.",
-      icon: DoorOpen,
-    },
-  ],
-  terrain: [
-    {
-      tool: "water",
-      label: "Water",
-      copy: "Brush water cells.",
-      icon: Waves,
-    },
-    {
-      tool: "chasm",
-      label: "Chasm",
-      copy: "Brush pits and voids.",
-      icon: Circle,
-    },
-    {
-      tool: "cliff",
-      label: "Cliff",
-      copy: "Brush cliff terrain.",
-      icon: Mountain,
-    },
-    {
-      tool: "cliff-edge",
-      label: "Cliff Edge",
-      copy: "Click a valid boundary.",
-      icon: Mountain,
-    },
-  ],
-  room: [
-    {
-      tool: "room-select",
-      label: "Room Select",
-      copy: "Drag floor cells for a room region.",
-      icon: Square,
-    },
-    {
-      tool: "room-brush",
-      label: "Room Brush",
-      copy: "Paint cells into the active room.",
-      icon: Paintbrush,
-    },
-    {
-      tool: "room-fill",
-      label: "Room Fill",
-      copy: "Preview and fill an enclosed room.",
-      icon: PaintBucket,
-    },
-    {
-      tool: "erase-room",
-      label: "Room Eraser",
-      copy: "Remove room coverage only.",
-      icon: Eraser,
-    },
-  ],
-  delete: [
-    {
-      tool: "delete",
-      label: "Delete Brush",
-      copy: "Drag to delete floor, terrain, and touched edges.",
-      icon: Trash2,
-    },
-    {
-      tool: "erase",
-      label: "Floor Eraser",
-      copy: "Drag to erase floor only.",
-      icon: Eraser,
-    },
-    {
-      tool: "erase-terrain",
-      label: "Terrain Eraser",
-      copy: "Drag to erase terrain only.",
-      icon: Eraser,
-    },
-  ],
-};
-
-const modeDefaults: Record<ToolMode, { tool: DungeonStudioTool; icon: ElementType }> = {
-  select: { tool: "select", icon: MousePointer2 },
-  floor: { tool: "floor", icon: Paintbrush },
-  terrain: { tool: "water", icon: Waves },
-  room: { tool: "room-select", icon: Square },
-  delete: { tool: "delete", icon: Trash2 },
-};
-
-export function DungeonStudioToolPanel({
-  activeTool,
-  brushShape,
-  deleteTarget,
-  onBrushShapeChange,
-  onDeleteTargetChange,
-  onToolChange,
-}: {
+type ToolPanelProps = {
   activeTool: DungeonStudioTool;
   brushShape: DungeonStudioBrushShape;
   deleteTarget: DungeonStudioDeleteTarget;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
   onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
   onToolChange: (tool: DungeonStudioTool) => void;
-}) {
-  const activeMode = modeForTool(activeTool);
+};
+
+const primaryTools: Array<ToolOption & { active: (tool: DungeonStudioTool) => boolean }> = [
+  { tool: "select", label: "Select", icon: MousePointer2, active: (tool) => tool === "select" },
+  { tool: "floor", label: "Floor", icon: Paintbrush, active: (tool) => tool === "floor" },
+  {
+    tool: "water",
+    label: "Terrain",
+    icon: Waves,
+    active: (tool) => modeForTool(tool) === "terrain",
+  },
+  {
+    tool: "room-select",
+    label: "Room",
+    icon: Square,
+    active: (tool) => modeForTool(tool) === "room",
+  },
+  {
+    tool: "wall",
+    label: "Wall",
+    icon: DraftingCompass,
+    active: (tool) => tool === "wall" || tool === "diagonal-wall",
+  },
+  { tool: "door", label: "Door", icon: DoorOpen, active: (tool) => tool === "door" },
+  {
+    tool: "delete",
+    label: "Delete",
+    icon: Trash2,
+    active: (tool) => modeForTool(tool) === "delete",
+  },
+];
+
+const terrainOptions: ToolOption[] = [
+  { tool: "water", label: "Water", icon: Waves },
+  { tool: "chasm", label: "Chasm", icon: Circle },
+  { tool: "cliff", label: "Cliff", icon: Mountain },
+  { tool: "cliff-edge", label: "Cliff edge", icon: Mountain },
+];
+
+const roomOptions: ToolOption[] = [
+  { tool: "room-select", label: "Select cells", icon: Square },
+  { tool: "room-brush", label: "Paint", icon: Paintbrush },
+  { tool: "room-fill", label: "Fill", icon: PaintBucket },
+  { tool: "erase-room", label: "Erase", icon: Eraser },
+];
+
+const wallOptions: ToolOption[] = [
+  { tool: "wall", label: "Straight wall", icon: DraftingCompass },
+  { tool: "diagonal-wall", label: "Diagonal wall", icon: Slash },
+];
+
+const deleteOptions: ToolOption[] = [
+  { tool: "delete", label: "Targeted delete", icon: Trash2 },
+  { tool: "erase", label: "Floor-only eraser", icon: Eraser },
+  { tool: "erase-terrain", label: "Terrain-only eraser", icon: Eraser },
+];
+
+export function DungeonStudioToolPanel({ activeTool, onToolChange }: ToolPanelProps) {
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
-      <SectionHeader title="Toolbox" meta={`${modeLabel(activeMode)} mode`} />
-      <ToolGroupLabel>What you're editing</ToolGroupLabel>
-      <div className="grid grid-cols-2 gap-2" aria-label="Dungeon Studio modes">
-        {(Object.keys(modeDefaults) as ToolMode[]).map((mode) => (
-          <ModeButton
-            key={mode}
-            active={activeMode === mode}
-            icon={modeDefaults[mode].icon}
-            label={modeLabel(mode)}
-            onClick={() => onToolChange(modeDefaults[mode].tool)}
-          />
-        ))}
-      </div>
-      <ToolGroupLabel>Brushes and tools</ToolGroupLabel>
-      <div className="grid grid-cols-2 gap-2" aria-label={`${modeLabel(activeMode)} tools`}>
-        {modeTools[activeMode].map((tool) => (
-          <ToolButton
-            key={tool.tool}
-            active={activeTool === tool.tool}
-            copy={tool.copy}
+      <SectionHeader title="Tools" meta="What am I editing?" />
+      <div className="grid gap-2" aria-label="Dungeon Studio primary tools">
+        {primaryTools.map((tool) => (
+          <PaletteButton
+            key={tool.label}
+            active={tool.active(activeTool)}
             icon={tool.icon}
             label={tool.label}
             onClick={() => onToolChange(tool.tool)}
           />
         ))}
       </div>
-      {supportsBrushShape(activeTool) ? (
-        <>
-          <ToolGroupLabel>How you're editing</ToolGroupLabel>
-          <div className="grid grid-cols-3 gap-2" aria-label="Brush shape">
+    </CardSection>
+  );
+}
+
+export function DungeonStudioToolOptionsBar({
+  activeTool,
+  brushShape,
+  deleteTarget,
+  onBrushShapeChange,
+  onDeleteTargetChange,
+  onToolChange,
+}: ToolPanelProps) {
+  return (
+    <div className="grid gap-2 rounded-md border border-border bg-card px-3 py-2">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-xs font-bold uppercase text-muted-foreground">Active tool</div>
+          <div className="text-sm font-semibold text-foreground">
+            {toolLabel(activeTool)}
+            {supportsBrushShape(activeTool) ? ` • ${brushShapeLabel(brushShape)}` : ""}
+            {activeTool === "delete" ? ` • ${deleteTargetLabel(deleteTarget)}` : ""}
+          </div>
+        </div>
+        <p className="max-w-prose text-xs text-muted-foreground">{toolTip(activeTool)}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2" aria-label="Active tool options">
+        <ActiveToolChoices activeTool={activeTool} onToolChange={onToolChange} />
+        {supportsBrushShape(activeTool) ? (
+          <OptionGroup label="Brush shape">
             {brushShapeOptions.map((option) => (
-              <ShapeButton
+              <CompactOptionButton
                 key={option.shape}
                 active={brushShape === option.shape}
                 icon={option.icon}
@@ -212,37 +153,25 @@ export function DungeonStudioToolPanel({
                 onClick={() => onBrushShapeChange(option.shape)}
               />
             ))}
-          </div>
-        </>
-      ) : null}
-      {activeMode === "delete" ? (
-        <>
-          <ToolGroupLabel>Delete target</ToolGroupLabel>
-          <div className="grid gap-2" aria-label="Delete target">
+          </OptionGroup>
+        ) : null}
+        {activeTool === "delete" ? (
+          <OptionGroup label="Delete target">
             {deleteTargetOptions.map((option) => (
-              <TargetButton
+              <TextOptionButton
                 key={option.target}
                 active={deleteTarget === option.target}
                 label={option.label}
                 onClick={() => onDeleteTargetChange(option.target)}
               />
             ))}
-          </div>
-        </>
-      ) : null}
-      <div className="rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
-        <div className="font-bold uppercase">Current brush</div>
-        <div className="mt-1 text-sm font-semibold text-foreground">
-          {toolLabel(activeTool)}
-          {supportsBrushShape(activeTool) ? ` • ${brushShapeLabel(brushShape)}` : ""}
-          {activeMode === "delete" ? ` • ${deleteTargetLabel(deleteTarget)}` : ""}
-        </div>
-        <p className="mt-1">{toolTip(activeTool)}</p>
-        <p className="mt-1">
-          Right-click on the canvas erases the matching safe target for the active tool.
-        </p>
+          </OptionGroup>
+        ) : null}
       </div>
-    </CardSection>
+      <div className="text-xs text-muted-foreground">
+        Right-click erases the safe matching target for the active tool. Alt-drag pans the canvas.
+      </div>
+    </div>
   );
 }
 
@@ -275,24 +204,21 @@ export function DungeonStudioInspectorPanel({
   onStartNewRoom: () => void;
   onToolChange: (tool: DungeonStudioTool) => void;
 }) {
-  const terrainCount = document.layers
-    .filter(
-      (layer) =>
-        layer.cellKind === "water" || layer.cellKind === "chasm" || layer.cellKind === "cliff",
-    )
-    .reduce((total, layer) => total + layer.cells.length, 0);
+  const terrainCount = terrainCellCount(document);
   const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCellCount = document.rooms.reduce((total, room) => total + room.cells.length, 0);
-  const activeMode = modeForTool(activeTool);
+  const showRoomWorkflow =
+    modeForTool(activeTool) === "room" || selectedRoom || selected?.type === "region";
   const canCreateRoom =
     selected?.type === "region" && !selected.roomId && selected.cells.length > 0;
+
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
       <SectionHeader
-        title={activeMode === "room" ? "Room workflow" : "Tool options"}
-        meta={toolLabel(activeTool)}
+        title={showRoomWorkflow ? "Room workflow" : "Inspector"}
+        meta={showRoomWorkflow ? "What room am I editing?" : selectionLabel(selected)}
       />
-      {activeMode === "room" ? (
+      {showRoomWorkflow ? (
         <DungeonStudioRoomInspector
           activeTool={activeTool}
           canCreateRoom={canCreateRoom}
@@ -308,19 +234,15 @@ export function DungeonStudioInspectorPanel({
           onToolChange={onToolChange}
         />
       ) : (
-        <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-          Use the canvas as the primary workspace. Left-click draws with the active tool;
-          right-click erases the matching safe target.
-        </div>
+        <SelectionSummary selected={selected} />
       )}
       <details className="rounded-md border border-border bg-background px-3 py-2 text-sm">
         <summary className="cursor-pointer text-xs font-bold uppercase text-muted-foreground">
-          More details
+          Map details
         </summary>
         <div className="mt-2 grid gap-2">
           <InspectorRow label="Mode" value={modeLabel(modeForTool(activeTool))} />
           <InspectorRow label="Map record" value={mapName} />
-          <InspectorRow label="Selection" value={selectionLabel(selected)} />
           <InspectorRow label="Floor cells" value={String(floorCellCount)} />
           <InspectorRow label="Terrain cells" value={String(terrainCount)} />
           <InspectorRow
@@ -332,12 +254,56 @@ export function DungeonStudioInspectorPanel({
           <InspectorRow label="Room cells" value={String(roomCellCount)} />
         </div>
       </details>
-      <EmptyMini copy={toolTip(activeTool)} />
     </CardSection>
   );
 }
 
-function ModeButton({
+function ActiveToolChoices({
+  activeTool,
+  onToolChange,
+}: {
+  activeTool: DungeonStudioTool;
+  onToolChange: (tool: DungeonStudioTool) => void;
+}) {
+  const options = toolOptionsFor(activeTool);
+  if (!options.length) return null;
+  return (
+    <OptionGroup label={toolOptionLabel(activeTool)}>
+      {options.map((option) => (
+        <CompactOptionButton
+          key={option.tool}
+          active={activeTool === option.tool}
+          icon={option.icon}
+          label={option.label}
+          onClick={() => onToolChange(option.tool)}
+        />
+      ))}
+    </OptionGroup>
+  );
+}
+
+function SelectionSummary({ selected }: { selected: DungeonStudioSelection }) {
+  return (
+    <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
+      <div className="text-xs font-bold uppercase">Selection</div>
+      <div className="mt-1 font-semibold text-foreground">{selectionLabel(selected)}</div>
+      <p className="mt-1 text-xs">
+        Use Select to inspect, or choose a drawing tool and work directly on the canvas.
+      </p>
+    </div>
+  );
+}
+
+function OptionGroup({ children, label }: { children: ReactNode; label: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
+      <span className="text-xs font-bold uppercase text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+function PaletteButton({
   active,
   icon: Icon,
   label,
@@ -360,7 +326,7 @@ function ModeButton({
       aria-pressed={active}
       onClick={onClick}
     >
-      <span className="inline-flex items-center justify-center gap-2">
+      <span className="inline-flex items-center gap-2">
         <Icon className="h-4 w-4" />
         <span>{label}</span>
       </span>
@@ -368,11 +334,7 @@ function ModeButton({
   );
 }
 
-function ToolGroupLabel({ children }: { children: string }) {
-  return <div className="pt-1 text-xs font-bold uppercase text-muted-foreground">{children}</div>;
-}
-
-function ShapeButton({
+function CompactOptionButton({
   active,
   icon: Icon,
   label,
@@ -386,22 +348,22 @@ function ShapeButton({
   return (
     <button
       className={[
-        "rounded-md border px-2 py-2 text-xs font-semibold transition hover:border-accent/50",
-        active ? "border-accent/40 bg-accent/10" : "border-border bg-background",
+        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-accent/50",
+        active
+          ? "border-accent/40 bg-accent/10 text-foreground"
+          : "border-border text-muted-foreground",
       ].join(" ")}
       type="button"
       aria-pressed={active}
       onClick={onClick}
     >
-      <span className="flex flex-col items-center gap-1">
-        <Icon className="h-4 w-4 text-accent" />
-        <span>{label}</span>
-      </span>
+      <Icon className="h-3.5 w-3.5" />
+      {label}
     </button>
   );
 }
 
-function TargetButton({
+function TextOptionButton({
   active,
   label,
   onClick,
@@ -413,8 +375,10 @@ function TargetButton({
   return (
     <button
       className={[
-        "rounded-md border px-2 py-2 text-xs font-semibold transition hover:border-accent/50",
-        active ? "border-accent/40 bg-accent/10" : "border-border bg-background",
+        "rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-accent/50",
+        active
+          ? "border-accent/40 bg-accent/10 text-foreground"
+          : "border-border text-muted-foreground",
       ].join(" ")}
       type="button"
       aria-pressed={active}
@@ -425,34 +389,27 @@ function TargetButton({
   );
 }
 
-function ToolButton({
-  active = false,
-  copy,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active?: boolean;
-  copy: string;
-  icon: ElementType;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={[
-        "min-w-0 rounded-md border px-3 py-2 text-left text-sm transition hover:border-accent/50",
-        active ? "border-accent/40 bg-accent/10" : "border-border bg-background",
-      ].join(" ")}
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      <span className="flex items-center gap-2 font-semibold">
-        <Icon className="h-4 w-4 shrink-0 text-accent" />
-        <span className="min-w-0 truncate">{label}</span>
-      </span>
-      <span className="mt-1 block text-xs text-muted-foreground">{copy}</span>
-    </button>
-  );
+function toolOptionsFor(tool: DungeonStudioTool) {
+  if (modeForTool(tool) === "terrain") return terrainOptions;
+  if (modeForTool(tool) === "room") return roomOptions;
+  if (tool === "wall" || tool === "diagonal-wall") return wallOptions;
+  if (modeForTool(tool) === "delete") return deleteOptions;
+  return [];
+}
+
+function toolOptionLabel(tool: DungeonStudioTool) {
+  if (modeForTool(tool) === "terrain") return "Terrain type";
+  if (modeForTool(tool) === "room") return "Room action";
+  if (tool === "wall" || tool === "diagonal-wall") return "Wall type";
+  if (modeForTool(tool) === "delete") return "Erase mode";
+  return "Options";
+}
+
+function terrainCellCount(document: DungeonStudioDocument) {
+  return document.layers
+    .filter(
+      (layer) =>
+        layer.cellKind === "water" || layer.cellKind === "chasm" || layer.cellKind === "cliff",
+    )
+    .reduce((total, layer) => total + layer.cells.length, 0);
 }

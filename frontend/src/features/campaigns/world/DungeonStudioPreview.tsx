@@ -28,9 +28,11 @@ export function DungeonStudioPreview({
   deleteTarget,
   dirty,
   document,
+  saving,
   selected,
   onDocumentChange,
   onRedo,
+  onSave,
   onUndo,
 }: {
   activeTool: DungeonStudioTool;
@@ -40,6 +42,7 @@ export function DungeonStudioPreview({
   deleteTarget: DungeonStudioDeleteTarget;
   dirty: boolean;
   document: DungeonStudioDocument;
+  saving: boolean;
   selected: DungeonStudioSelection;
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
@@ -47,6 +50,7 @@ export function DungeonStudioPreview({
     options?: DungeonStudioChangeOptions,
   ) => void;
   onRedo: () => void;
+  onSave: () => void;
   onUndo: () => void;
 }) {
   const implicitWalls = useMemo(() => implicitBoundaryWalls(document), [document]);
@@ -85,9 +89,11 @@ export function DungeonStudioPreview({
         dirty={dirty}
         maxZoom={maxZoom}
         minZoom={minZoom}
+        saving={saving}
         zoom={zoom}
         onRedo={onRedo}
         onResetView={resetView}
+        onSave={onSave}
         onUndo={onUndo}
         onZoomIn={() => changeZoom(zoomStep)}
         onZoomOut={() => changeZoom(-zoomStep)}

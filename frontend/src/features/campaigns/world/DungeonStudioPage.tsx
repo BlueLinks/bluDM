@@ -1,4 +1,4 @@
-import { ArrowLeft, DraftingCompass, Save } from "lucide-react";
+import { ArrowLeft, DraftingCompass } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../../app/shell";
@@ -6,7 +6,11 @@ import { ActionRow, CardSection, SectionHeader } from "../../../components/layou
 import { Badge, Button, Callout, MutedPanel, Page, PageHeader } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { mapInputFromMap } from "./campaignWorldMapScale";
-import { DungeonStudioInspectorPanel, DungeonStudioToolPanel } from "./DungeonStudioPanels";
+import {
+  DungeonStudioInspectorPanel,
+  DungeonStudioToolOptionsBar,
+  DungeonStudioToolPanel,
+} from "./DungeonStudioPanels";
 import { DungeonStudioPreview } from "./DungeonStudioPreview";
 import {
   commitDungeonStudioChange,
@@ -253,14 +257,6 @@ export function DungeonStudioPage() {
                 Return to World
               </Button>
             </Link>
-            <Button
-              type="button"
-              icon={Save}
-              disabled={!document || !map || saving || !dirty}
-              onClick={() => void saveStudioMetadata()}
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
           </ActionRow>
         }
       />
@@ -286,8 +282,10 @@ export function DungeonStudioPage() {
           locationName={location.name}
           map={map}
           maps={maps}
+          saving={saving}
           selected={selected}
           onDocumentChange={applyDocumentChange}
+          onSave={() => void saveStudioMetadata()}
           onBrushShapeChange={setBrushShape}
           onDeleteTargetChange={setDeleteTarget}
           onRedo={redoStudioChange}
@@ -311,11 +309,13 @@ function DungeonStudioShell({
   locationName,
   map,
   maps,
+  saving,
   selected,
   onBrushShapeChange,
   onDeleteTargetChange,
   onDocumentChange,
   onRedo,
+  onSave,
   onSelectionChange,
   onToolChange,
   onUndo,
@@ -330,6 +330,7 @@ function DungeonStudioShell({
   locationName: string;
   map: CampaignMap;
   maps: CampaignMap[];
+  saving: boolean;
   selected: DungeonStudioSelection;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
   onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
@@ -339,6 +340,7 @@ function DungeonStudioShell({
     options?: DungeonStudioChangeOptions,
   ) => void;
   onRedo: () => void;
+  onSave: () => void;
   onSelectionChange: (selection: DungeonStudioSelection) => void;
   onToolChange: (tool: DungeonStudioTool) => void;
   onUndo: () => void;
@@ -417,7 +419,7 @@ function DungeonStudioShell({
           }
         />
       </CardSection>
-      <div className="grid min-w-0 gap-4 xl:grid-cols-4">
+      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-5">
         <DungeonStudioToolPanel
           activeTool={activeTool}
           brushShape={brushShape}
@@ -426,8 +428,15 @@ function DungeonStudioShell({
           onDeleteTargetChange={onDeleteTargetChange}
           onToolChange={onToolChange}
         />
-        <CardSection className="grid min-w-0 gap-2 xl:col-span-2">
-          <SectionHeader title="Canvas" meta="Draw on the grid" />
+        <CardSection className="grid min-w-0 gap-3 xl:col-span-3">
+          <DungeonStudioToolOptionsBar
+            activeTool={activeTool}
+            brushShape={brushShape}
+            deleteTarget={deleteTarget}
+            onBrushShapeChange={onBrushShapeChange}
+            onDeleteTargetChange={onDeleteTargetChange}
+            onToolChange={onToolChange}
+          />
           <DungeonStudioPreview
             activeTool={activeTool}
             brushShape={brushShape}
@@ -436,9 +445,11 @@ function DungeonStudioShell({
             deleteTarget={deleteTarget}
             dirty={dirty}
             document={document}
+            saving={saving}
             selected={selected}
             onDocumentChange={onDocumentChange}
             onRedo={onRedo}
+            onSave={onSave}
             onUndo={onUndo}
           />
         </CardSection>

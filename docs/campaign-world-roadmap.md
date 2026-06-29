@@ -113,10 +113,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Studio maps now support water, chasm, and cliff terrain cells; terrain erasing; cliff-edge features; distinct terrain rendering; cave floor styling; map-editor-style select/floor/terrain/delete modes; brush delete strokes; wall placement validation; undo/redo; and save/reload persistence.
 - Dungeon Studio usability refinement bundle:
   - Wall tools now support drag strokes with one undo action, room fill treats doors as blockers, right-click erases contextually, delete targets are clearer, and Room mode has a compact workflow panel for naming, paint/fill, done/start-next, edit, and delete.
+- Dungeon Studio editor UI cleanup:
+  - Editor controls now follow a clearer tool layout with global save/undo/redo/zoom controls in the canvas toolbar, primary tools in the left palette, active tool options above the canvas, and contextual room/selection details in the inspector.
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 4 room layer editor is in progress with shared brush shapes, clearer delete targets, protected wall/door-bounded room fill, contextual room workflow controls, drag wall strokes, right-click erase, implicit boundary wall rendering, wheel zoom, and a denser canvas/tool layout now started.
+- Dungeon Studio implementation is underway. Phase 4 room layer editor is in progress with shared brush shapes, clearer delete targets, protected wall/door-bounded room fill, contextual room workflow controls, drag wall strokes, right-click erase, implicit boundary wall rendering, wheel zoom, and a cleaner editor-style toolbar/palette/options/inspector layout now started.
 
 ## Planned
 
