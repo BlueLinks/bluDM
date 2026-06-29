@@ -75,9 +75,14 @@ export function deleteRoomRegion(document: DungeonStudioDocument, roomId: string
   return { ...document, rooms: document.rooms.filter((room) => room.id !== roomId) };
 }
 
-export function roomFillCells(document: DungeonStudioDocument, start: GridCell) {
+export function roomFillCells(
+  document: DungeonStudioDocument,
+  start: GridCell,
+  options: { roomId?: string } = {},
+) {
   const floorKeys = new Set(floorCells(document).map(cellKey));
-  if (!floorKeys.has(cellKey(start))) return [];
+  const protectedRoomKeys = assignedRoomCellKeys(document, options.roomId);
+  if (!floorKeys.has(cellKey(start)) || protectedRoomKeys.has(cellKey(start))) return [];
   const visited = new Set<string>();
   const queue = [start];
 
@@ -85,12 +90,19 @@ export function roomFillCells(document: DungeonStudioDocument, start: GridCell) 
     const cell = queue.shift();
     if (!cell) continue;
     const key = cellKey(cell);
-    if (visited.has(key) || !floorKeys.has(key)) continue;
+    if (visited.has(key) || !floorKeys.has(key) || protectedRoomKeys.has(key)) continue;
     visited.add(key);
     ORTHOGONAL_DIRECTIONS.forEach((direction) => {
       if (hasBlockingWall(document, cell, direction)) return;
       const neighbor = neighborCell(cell, direction);
-      if (floorKeys.has(cellKey(neighbor)) && !visited.has(cellKey(neighbor))) queue.push(neighbor);
+      const neighborKey = cellKey(neighbor);
+      if (
+        floorKeys.has(neighborKey) &&
+        !visited.has(neighborKey) &&
+        !protectedRoomKeys.has(neighborKey)
+      ) {
+        queue.push(neighbor);
+      }
     });
   }
 
@@ -107,6 +119,14 @@ export function nextRoomRegionId(document: DungeonStudioDocument) {
   let index = document.rooms.length + 1;
   while (existingIds.has(`room-${index}`)) index += 1;
   return `room-${index}`;
+}
+
+function assignedRoomCellKeys(document: DungeonStudioDocument, activeRoomId?: string) {
+  return new Set(
+    document.rooms
+      .filter((room) => room.id !== activeRoomId)
+      .flatMap((room) => room.cells.map(cellKey)),
+  );
 }
 
 function cellFromKey(key: string): GridCell {

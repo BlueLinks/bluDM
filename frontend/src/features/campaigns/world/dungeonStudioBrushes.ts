@@ -8,6 +8,7 @@ import {
 import type { DungeonStudioDocument, GridCell } from "./dungeonStudioDocument";
 
 export type DungeonStudioBrushShape = "single" | "rectangle" | "circle";
+export type DungeonStudioDeleteTarget = "contents" | "walls";
 
 export type BrushShapeOption = {
   shape: DungeonStudioBrushShape;
@@ -21,6 +22,11 @@ export const brushShapeOptions: BrushShapeOption[] = [
   { shape: "circle", label: "Circle", icon: Circle },
 ];
 
+export const deleteTargetOptions: Array<{ target: DungeonStudioDeleteTarget; label: string }> = [
+  { target: "contents", label: "Cells + walls" },
+  { target: "walls", label: "Walls only" },
+];
+
 export function brushShapeCells(
   document: DungeonStudioDocument,
   shape: DungeonStudioBrushShape,
@@ -30,6 +36,10 @@ export function brushShapeCells(
   if (shape === "rectangle") return rectangleRoomCells(document, start, end);
   if (shape === "circle") return circleRoomCells(document, start, end);
   return [end];
+}
+
+export function deleteTargetLabel(target: DungeonStudioDeleteTarget) {
+  return deleteTargetOptions.find((option) => option.target === target)?.label ?? "Cells + walls";
 }
 
 export function brushShapeLabel(shape: DungeonStudioBrushShape) {

@@ -136,6 +136,17 @@ export function deleteMapCells(document: DungeonStudioDocument, cells: GridCell[
   return removeEdgeFeaturesByKeys(withoutFloors, edgeKeysTouchingCells(cells));
 }
 
+export function deleteWallFeaturesForCells(document: DungeonStudioDocument, cells: GridCell[]) {
+  const edgeKeys = edgeKeysTouchingCells(cells);
+  if (!edgeKeys.size) return document;
+  return {
+    ...document,
+    edges: document.edges.filter(
+      (edge) => !edgeKeys.has(edgeKey(edge.cell, edge.direction)) || edge.kind === "cliff-edge",
+    ),
+  };
+}
+
 export function toggleEdgeFeature(
   document: DungeonStudioDocument,
   cell: GridCell,

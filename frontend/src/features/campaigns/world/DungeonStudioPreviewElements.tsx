@@ -159,11 +159,11 @@ export function EdgeLine({
       {...coordinates}
       stroke={stroke}
       strokeLinecap="round"
-      strokeWidth={implicit ? 2 : edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
-      opacity={implicit ? "0.55" : undefined}
+      strokeWidth={implicit ? 2.75 : edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
+      opacity={implicit ? "0.78" : undefined}
       strokeDasharray={
         implicit
-          ? "4 5"
+          ? undefined
           : edge.kind === "door"
             ? "8 4"
             : edge.kind === "cliff-edge"

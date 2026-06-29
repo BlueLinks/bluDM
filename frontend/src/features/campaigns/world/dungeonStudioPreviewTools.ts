@@ -1,4 +1,5 @@
 import type { PointerEvent } from "react";
+import { supportsBrushShape, type DungeonStudioBrushShape } from "./dungeonStudioBrushes";
 import {
   isTerrainTool,
   type DungeonStudioSelection,
@@ -32,6 +33,35 @@ export function roomCellSelection(
 
 export function selectedRoomId(selection: DungeonStudioSelection) {
   return selection?.type === "region" ? selection.roomId : undefined;
+}
+
+export function shapeSelection({
+  activeTool,
+  cells,
+  fallbackLabel,
+  roomId,
+  selected,
+}: {
+  activeTool: DungeonStudioTool;
+  cells: GridCell[];
+  fallbackLabel: string;
+  roomId: string | null;
+  selected: DungeonStudioSelection;
+}): DungeonStudioSelection {
+  if (activeTool === "room-brush") {
+    return {
+      type: "region",
+      cells,
+      label: selected?.type === "region" && selected.roomId ? selected.label : "Room brush",
+      roomId: roomId ?? undefined,
+    };
+  }
+  if (activeTool === "room-select") return { type: "region", cells, label: "Room selection" };
+  return { type: "region", cells, label: fallbackLabel };
+}
+
+export function usesBrushShapeDraft(tool: DungeonStudioTool, brushShape: DungeonStudioBrushShape) {
+  return brushShape !== "single" && supportsBrushShape(tool);
 }
 
 export function shapeToolLabel(tool: DungeonStudioShapeTool) {

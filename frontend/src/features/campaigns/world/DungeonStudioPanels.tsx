@@ -18,8 +18,11 @@ import { Button, EmptyMini } from "../../../components/ui";
 import {
   brushShapeLabel,
   brushShapeOptions,
+  deleteTargetLabel,
+  deleteTargetOptions,
   supportsBrushShape,
   type DungeonStudioBrushShape,
+  type DungeonStudioDeleteTarget,
 } from "./dungeonStudioBrushes";
 import { InspectorRow } from "./DungeonStudioInspectorRow";
 import { DungeonStudioRoomInspector } from "./DungeonStudioRoomInspector";
@@ -155,12 +158,16 @@ const modeDefaults: Record<ToolMode, { tool: DungeonStudioTool; icon: ElementTyp
 export function DungeonStudioToolPanel({
   activeTool,
   brushShape,
+  deleteTarget,
   onBrushShapeChange,
+  onDeleteTargetChange,
   onToolChange,
 }: {
   activeTool: DungeonStudioTool;
   brushShape: DungeonStudioBrushShape;
+  deleteTarget: DungeonStudioDeleteTarget;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
+  onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
   onToolChange: (tool: DungeonStudioTool) => void;
 }) {
   const activeMode = modeForTool(activeTool);
@@ -207,11 +214,27 @@ export function DungeonStudioToolPanel({
           />
         ))}
       </div>
+      {activeMode === "delete" ? (
+        <>
+          <ToolGroupLabel>Delete target</ToolGroupLabel>
+          <div className="grid grid-cols-2 gap-2" aria-label="Delete target">
+            {deleteTargetOptions.map((option) => (
+              <TargetButton
+                key={option.target}
+                active={deleteTarget === option.target}
+                label={option.label}
+                onClick={() => onDeleteTargetChange(option.target)}
+              />
+            ))}
+          </div>
+        </>
+      ) : null}
       <div className="rounded-md border border-border bg-background px-3 py-2 text-xs text-muted-foreground">
         <div className="font-bold uppercase">Current brush</div>
         <div className="mt-1 text-sm font-semibold text-foreground">
           {toolLabel(activeTool)}
           {supportsBrushShape(activeTool) ? ` • ${brushShapeLabel(brushShape)}` : ""}
+          {activeMode === "delete" ? ` • ${deleteTargetLabel(deleteTarget)}` : ""}
         </div>
         <p className="mt-1">{toolTip(activeTool)}</p>
       </div>
@@ -365,6 +388,30 @@ function ShapeButton({
         <Icon className="h-4 w-4 text-accent" />
         <span>{label}</span>
       </span>
+    </button>
+  );
+}
+
+function TargetButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={[
+        "rounded-md border px-2 py-2 text-xs font-semibold transition hover:border-accent/50",
+        active ? "border-accent/40 bg-accent/10" : "border-border bg-background",
+      ].join(" ")}
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+    >
+      {label}
     </button>
   );
 }

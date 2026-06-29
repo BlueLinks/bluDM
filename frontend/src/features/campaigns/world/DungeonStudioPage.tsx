@@ -21,7 +21,7 @@ import {
   type DungeonStudioSelection,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import type { DungeonStudioBrushShape } from "./dungeonStudioBrushes";
+import type { DungeonStudioBrushShape, DungeonStudioDeleteTarget } from "./dungeonStudioBrushes";
 import {
   createDungeonStudioDocument,
   dungeonStudioMapInput,
@@ -45,6 +45,7 @@ export function DungeonStudioPage() {
   const documentRef = useRef<DungeonStudioDocument | null>(null);
   const [activeTool, setActiveTool] = useState<DungeonStudioTool>("select");
   const [brushShape, setBrushShape] = useState<DungeonStudioBrushShape>("single");
+  const [deleteTarget, setDeleteTarget] = useState<DungeonStudioDeleteTarget>("contents");
   const [selected, setSelected] = useState<DungeonStudioSelection>(null);
   const [undoStack, setUndoStack] = useState<DungeonStudioDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DungeonStudioDocument[]>([]);
@@ -279,6 +280,7 @@ export function DungeonStudioPage() {
           brushShape={brushShape}
           canRedo={redoStack.length > 0}
           canUndo={undoStack.length > 0}
+          deleteTarget={deleteTarget}
           dirty={dirty}
           document={document}
           locationName={location.name}
@@ -287,6 +289,7 @@ export function DungeonStudioPage() {
           selected={selected}
           onDocumentChange={applyDocumentChange}
           onBrushShapeChange={setBrushShape}
+          onDeleteTargetChange={setDeleteTarget}
           onRedo={redoStudioChange}
           onSelectionChange={setSelected}
           onToolChange={setActiveTool}
@@ -302,6 +305,7 @@ function DungeonStudioShell({
   brushShape,
   canRedo,
   canUndo,
+  deleteTarget,
   dirty,
   document,
   locationName,
@@ -309,6 +313,7 @@ function DungeonStudioShell({
   maps,
   selected,
   onBrushShapeChange,
+  onDeleteTargetChange,
   onDocumentChange,
   onRedo,
   onSelectionChange,
@@ -319,6 +324,7 @@ function DungeonStudioShell({
   brushShape: DungeonStudioBrushShape;
   canRedo: boolean;
   canUndo: boolean;
+  deleteTarget: DungeonStudioDeleteTarget;
   dirty: boolean;
   document: DungeonStudioDocument;
   locationName: string;
@@ -326,6 +332,7 @@ function DungeonStudioShell({
   maps: CampaignMap[];
   selected: DungeonStudioSelection;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
+  onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
     selection: DungeonStudioSelection,
@@ -407,7 +414,9 @@ function DungeonStudioShell({
         <DungeonStudioToolPanel
           activeTool={activeTool}
           brushShape={brushShape}
+          deleteTarget={deleteTarget}
           onBrushShapeChange={onBrushShapeChange}
+          onDeleteTargetChange={onDeleteTargetChange}
           onToolChange={onToolChange}
         />
         <CardSection className="grid min-w-0 gap-2 xl:col-span-2">
@@ -417,6 +426,7 @@ function DungeonStudioShell({
             brushShape={brushShape}
             canRedo={canRedo}
             canUndo={canUndo}
+            deleteTarget={deleteTarget}
             dirty={dirty}
             document={document}
             selected={selected}

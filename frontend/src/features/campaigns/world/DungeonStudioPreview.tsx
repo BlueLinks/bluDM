@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import {
   canToggleEdgeFeature,
   deleteMapCells,
+  deleteWallFeaturesForCells,
   eraseFloorCell,
   eraseRoomCells,
   eraseTerrainCell,
   implicitBoundaryWalls,
-  isShapeTool,
   isTerrainTool,
   nextRoomRegionId,
   paintFloorCells,
@@ -14,28 +14,28 @@ import {
   paintTerrainCells,
   roomFillCells,
   roomRegionForCell,
-  shapeRoomCells,
   toggleEdgeFeature,
   type DungeonStudioChangeOptions,
   type DungeonStudioSelection,
-  type DungeonStudioShapeTool,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
 import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
 import {
   brushShapeCells,
   brushShapePreviewTool,
-  supportsBrushShape,
   type DungeonStudioBrushShape,
+  type DungeonStudioDeleteTarget,
 } from "./dungeonStudioBrushes";
 import {
   isBrushTool,
   roomCellSelection,
   safeSetPointerCapture,
   selectedRoomId,
+  shapeSelection,
   shapeToolLabel,
+  usesBrushShapeDraft,
 } from "./dungeonStudioPreviewTools";
-import { cellLayerFill, clamp, clampPan } from "./dungeonStudioPreviewViewport";
+import { cellLayerFill, clamp, clampPan, wheelZoomPan } from "./dungeonStudioPreviewViewport";
 import { DungeonStudioCanvasToolbar } from "./DungeonStudioCanvasToolbar";
 import {
   CellRect,
@@ -63,6 +63,7 @@ export function DungeonStudioPreview({
   brushShape,
   canRedo,
   canUndo,
+  deleteTarget,
   dirty,
   document,
   selected,
@@ -74,6 +75,7 @@ export function DungeonStudioPreview({
   brushShape: DungeonStudioBrushShape;
   canRedo: boolean;
   canUndo: boolean;
+  deleteTarget: DungeonStudioDeleteTarget;
   dirty: boolean;
   document: DungeonStudioDocument;
   selected: DungeonStudioSelection;
@@ -135,6 +137,19 @@ export function DungeonStudioPreview({
     setZoom((current) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + delta)));
   }
 
+  function handleWheel(event: WheelEvent<HTMLDivElement>) {
+    event.preventDefault();
+    const rect = viewportRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const nextZoom = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, zoom - Math.sign(event.deltaY) * ZOOM_STEP),
+    );
+    if (nextZoom === zoom) return;
+    setPan(wheelZoomPan(event, rect, pan, dimensions, zoom, nextZoom));
+    setZoom(nextZoom);
+  }
+
   function resetView() {
     setZoom(MIN_ZOOM);
     setPan({ x: 0, y: 0 });
@@ -177,10 +192,6 @@ export function DungeonStudioPreview({
     }
     if (usesBrushShapeDraft(activeTool, brushShape)) {
       startBrushShapeDraft(event);
-      return;
-    }
-    if (isShapeTool(activeTool)) {
-      startShapeDraft(event, activeTool);
       return;
     }
     if (isBrushTool(activeTool)) {
@@ -247,19 +258,6 @@ export function DungeonStudioPreview({
     setShapeDraft(draft);
   }
 
-  function startShapeDraft(event: PointerEvent<HTMLDivElement>, tool: DungeonStudioShapeTool) {
-    const point = gridPointForEvent(event);
-    if (!point) return;
-    const draft = {
-      tool,
-      start: point.cell,
-      current: point.cell,
-      cells: shapeRoomCells(document, tool, point.cell, point.cell),
-    } satisfies ShapeDraft;
-    shapeDraftRef.current = draft;
-    setShapeDraft(draft);
-  }
-
   function updateShapeDraft(event: PointerEvent<HTMLDivElement>) {
     const currentDraft = shapeDraftRef.current;
     const point = gridPointForEvent(event);
@@ -267,9 +265,7 @@ export function DungeonStudioPreview({
     const draft = {
       ...currentDraft,
       current: point.cell,
-      cells: usesBrushShapeDraft(activeTool, brushShape)
-        ? brushShapeCells(document, brushShape, currentDraft.start, point.cell)
-        : shapeRoomCells(document, currentDraft.tool, currentDraft.start, point.cell),
+      cells: brushShapeCells(document, brushShape, currentDraft.start, point.cell),
     } satisfies ShapeDraft;
     shapeDraftRef.current = draft;
     setShapeDraft(draft);
@@ -279,7 +275,13 @@ export function DungeonStudioPreview({
     updateShapeDraft(event);
     const draft = shapeDraftRef.current;
     if (!draft) return;
-    const selection = shapeSelection(draft.cells, shapeToolLabel(draft.tool));
+    const selection = shapeSelection({
+      activeTool,
+      cells: draft.cells,
+      fallbackLabel: shapeToolLabel(draft.tool),
+      roomId: roomBrushTargetId.current,
+      selected,
+    });
     onDocumentChange((current) => applyCellUpdates(current, draft.cells), selection);
     shapeDraftRef.current = null;
     setShapeDraft(null);
@@ -317,9 +319,9 @@ export function DungeonStudioPreview({
   function applyRoomFill(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
     if (!point) return;
-    const cells = roomFillCells(document, point.cell);
-    if (!cells.length) return;
     const existingRoomId = selectedRoomId(selected);
+    const cells = roomFillCells(document, point.cell, { roomId: existingRoomId });
+    if (!cells.length) return;
     const roomId = existingRoomId ?? nextRoomRegionId(document);
     onDocumentChange((current) => paintRoomCells(current, cells, roomId), {
       type: "region",
@@ -334,20 +336,9 @@ export function DungeonStudioPreview({
 
   function updateRoomFillPreview(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
-    setFillPreviewCells(point ? roomFillCells(document, point.cell) : []);
-  }
-
-  function shapeSelection(cells: GridCell[], fallbackLabel: string): DungeonStudioSelection {
-    if (activeTool === "room-brush") {
-      return {
-        type: "region",
-        cells,
-        label: selected?.type === "region" && selected.roomId ? selected.label : "Room brush",
-        roomId: roomBrushTargetId.current ?? undefined,
-      };
-    }
-    if (activeTool === "room-select") return { type: "region", cells, label: "Room selection" };
-    return { type: "region", cells, label: fallbackLabel };
+    setFillPreviewCells(
+      point ? roomFillCells(document, point.cell, { roomId: selectedRoomId(selected) }) : [],
+    );
   }
 
   function applyCellTool(event: PointerEvent<HTMLDivElement>) {
@@ -369,7 +360,11 @@ export function DungeonStudioPreview({
   }
 
   function applyCellUpdates(current: DungeonStudioDocument, cells: GridCell[]) {
-    if (activeTool === "delete") return deleteMapCells(current, cells);
+    if (activeTool === "delete") {
+      return deleteTarget === "walls"
+        ? deleteWallFeaturesForCells(current, cells)
+        : deleteMapCells(current, cells);
+    }
     if (activeTool === "erase") {
       return cells.reduce((nextDocument, cell) => eraseFloorCell(nextDocument, cell), current);
     }
@@ -457,6 +452,7 @@ export function DungeonStudioPreview({
         onPointerCancel={handlePointerCancel}
         onPointerUp={handlePointerEnd}
         onPointerLeave={() => setFillPreviewCells([])}
+        onWheel={handleWheel}
         onClick={() => undefined}
       >
         <svg className="h-full w-full" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">
@@ -490,8 +486,4 @@ export function DungeonStudioPreview({
       </div>
     </div>
   );
-}
-
-function usesBrushShapeDraft(tool: DungeonStudioTool, brushShape: DungeonStudioBrushShape) {
-  return brushShape !== "single" && supportsBrushShape(tool);
 }
