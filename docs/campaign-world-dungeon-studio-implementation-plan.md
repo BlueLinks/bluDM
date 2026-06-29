@@ -493,13 +493,14 @@ Acceptance criteria:
 
 ### Phase 4: Room Layer Editor
 
-Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, room fill preview/fill for orthogonal wall-bounded areas, unlinked room-region creation from selections, selected-room naming/done/delete workflow, implicit rendered boundary walls around exposed floor edges, room overlays, room counts, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware room fill remains a follow-up.
+Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, shared single/rectangle/circle brush shapes across floor/room/terrain/delete where applicable, room fill preview/fill for orthogonal wall-bounded areas, unlinked room-region creation from selections, selected-room naming/done/delete workflow, implicit rendered boundary walls around exposed floor edges, room overlays, room counts, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware room fill remains a follow-up.
 
 Deliverables:
 
 - Room mode with cell selection.
 - Create room region from selected cells.
 - Contextual room naming, done/start-next, and delete controls.
+- Shared brush shape controls for single-cell, rectangle, and circle application.
 - Orthogonal room fill based on floor cells, manual walls, doors, and implicit floor boundaries.
 - Link region to existing Room location.
 - Create new Room location from selected cells.

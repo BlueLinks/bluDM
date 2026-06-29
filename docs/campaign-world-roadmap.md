@@ -114,7 +114,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 3B is complete; Phase 4 room layer editor is in progress with room mode selection, room brush/eraser/fill coverage, contextual room naming/delete controls, and implicit boundary wall rendering now started.
+- Dungeon Studio implementation is underway. Phase 3B is complete; Phase 4 room layer editor is in progress with room mode selection, shared brush shapes, room brush/eraser/fill coverage, contextual room naming/delete controls, implicit boundary wall rendering, and a denser canvas/tool layout now started.
 
 ## Planned
 

@@ -96,8 +96,8 @@ The goal is not to copy a VTT. The goal is a DM prep tool that feels like the re
 │ Structure                │
 │ Floor Brush              │
 │                          │
-│ Brush                    │
-│ [1 cell v]               │
+│ Brush shape              │
+│ [Single] [Rect] [Circle] │
 │                          │
 │ Operation                │
 │ (•) Paint floor          │
@@ -107,7 +107,6 @@ The goal is not to copy a VTT. The goal is a DM prep tool that feels like the re
 │ [✓] Snap to grid         │
 │                          │
 │ Quick actions            │
-│ [Add outer walls]        │
 │ [Fill enclosed room]     │
 │ [Trace wall outline]     │
 └──────────────────────────┘
@@ -119,6 +118,7 @@ The goal is not to copy a VTT. The goal is a DM prep tool that feels like the re
 - Tool settings appear in the inspector, not in a modal.
 - Erase exists both as a tool and modifier shortcut.
 - Advanced structure helpers are explicit actions, not hidden behaviors.
+- Exposed floor edges render as implicit boundary walls by default, so an outer-wall helper is no longer part of the primary workflow.
 
 ## Terrain Mode With Caverns, Cliffs, And Water
 
@@ -164,8 +164,8 @@ The Room Layer editor is the key workflow after the basic physical map exists.
 │ ● Rooms      │                                                               │ Linked room   │
 │   Select     │      ┌──────────── translucent teal overlay ────────────┐     │ [Guard Room v]│
 │   Paint      │      │ Guard Room                                      │     │               │
-│   Erase      │      │ 12 cells                                        │     │ Label         │
-│   Label      │      └─────────────────────────────────────────────────┘     │ [Guard Room]  │
+│   Fill       │      │ 12 cells                                        │     │ Label         │
+│   Erase      │      └─────────────────────────────────────────────────┘     │ [Guard Room]  │
 │              │                                                               │               │
 │ NPCs         │      Unassigned floor cells shown with dotted outline         │ Color         │
 │ Generator    │                                                               │ [ teal v ]    │

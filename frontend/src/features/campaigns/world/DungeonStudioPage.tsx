@@ -9,11 +9,9 @@ import { mapInputFromMap } from "./campaignWorldMapScale";
 import { DungeonStudioInspectorPanel, DungeonStudioToolPanel } from "./DungeonStudioPanels";
 import { DungeonStudioPreview } from "./DungeonStudioPreview";
 import {
-  addOuterWallsAroundFloorCells,
   commitDungeonStudioChange,
   createRoomRegion,
   deleteRoomRegion,
-  floorCells as studioFloorCells,
   nextRoomRegionId,
   renameRoomRegion,
   redoDungeonStudioChange,
@@ -23,6 +21,7 @@ import {
   type DungeonStudioSelection,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
+import type { DungeonStudioBrushShape } from "./dungeonStudioBrushes";
 import {
   createDungeonStudioDocument,
   dungeonStudioMapInput,
@@ -45,6 +44,7 @@ export function DungeonStudioPage() {
   const [document, setDocument] = useState<DungeonStudioDocument | null>(null);
   const documentRef = useRef<DungeonStudioDocument | null>(null);
   const [activeTool, setActiveTool] = useState<DungeonStudioTool>("select");
+  const [brushShape, setBrushShape] = useState<DungeonStudioBrushShape>("single");
   const [selected, setSelected] = useState<DungeonStudioSelection>(null);
   const [undoStack, setUndoStack] = useState<DungeonStudioDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DungeonStudioDocument[]>([]);
@@ -276,6 +276,7 @@ export function DungeonStudioPage() {
       ) : (
         <DungeonStudioShell
           activeTool={activeTool}
+          brushShape={brushShape}
           canRedo={redoStack.length > 0}
           canUndo={undoStack.length > 0}
           dirty={dirty}
@@ -285,6 +286,7 @@ export function DungeonStudioPage() {
           maps={maps}
           selected={selected}
           onDocumentChange={applyDocumentChange}
+          onBrushShapeChange={setBrushShape}
           onRedo={redoStudioChange}
           onSelectionChange={setSelected}
           onToolChange={setActiveTool}
@@ -297,6 +299,7 @@ export function DungeonStudioPage() {
 
 function DungeonStudioShell({
   activeTool,
+  brushShape,
   canRedo,
   canUndo,
   dirty,
@@ -305,6 +308,7 @@ function DungeonStudioShell({
   map,
   maps,
   selected,
+  onBrushShapeChange,
   onDocumentChange,
   onRedo,
   onSelectionChange,
@@ -312,6 +316,7 @@ function DungeonStudioShell({
   onUndo,
 }: {
   activeTool: DungeonStudioTool;
+  brushShape: DungeonStudioBrushShape;
   canRedo: boolean;
   canUndo: boolean;
   dirty: boolean;
@@ -320,6 +325,7 @@ function DungeonStudioShell({
   map: CampaignMap;
   maps: CampaignMap[];
   selected: DungeonStudioSelection;
+  onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
     selection: DungeonStudioSelection,
@@ -333,7 +339,6 @@ function DungeonStudioShell({
   const floorCellCount = document.layers
     .filter((layer) => layer.cellKind === "floor")
     .reduce((total, layer) => total + layer.cells.length, 0);
-  const selectedRegionCells = selected?.type === "region" ? selected.cells : undefined;
   const terrainCellCount = document.layers
     .filter(
       (layer) =>
@@ -347,18 +352,6 @@ function DungeonStudioShell({
     selected?.type === "region" && selected.roomId
       ? document.rooms.find((room) => room.id === selected.roomId)
       : undefined;
-
-  function addOuterWalls() {
-    const wrappedCells = selectedRegionCells?.length
-      ? selectedRegionCells
-      : studioFloorCells(document);
-    onDocumentChange(
-      (current) => addOuterWallsAroundFloorCells(current, selectedRegionCells),
-      wrappedCells.length
-        ? { type: "region", cells: wrappedCells, label: "Outer wall region" }
-        : selected,
-    );
-  }
 
   function createRoomFromSelection() {
     if (selected?.type !== "region" || selected.roomId) return;
@@ -411,11 +404,17 @@ function DungeonStudioShell({
         />
       </CardSection>
       <div className="grid min-w-0 gap-4 xl:grid-cols-4">
-        <DungeonStudioToolPanel activeTool={activeTool} onToolChange={onToolChange} />
-        <CardSection className="grid min-w-0 gap-3 xl:col-span-2">
-          <SectionHeader title="Canvas" meta="Paint cells, click edges, zoom, undo, and redo" />
+        <DungeonStudioToolPanel
+          activeTool={activeTool}
+          brushShape={brushShape}
+          onBrushShapeChange={onBrushShapeChange}
+          onToolChange={onToolChange}
+        />
+        <CardSection className="grid min-w-0 gap-2 xl:col-span-2">
+          <SectionHeader title="Canvas" meta="Draw on the grid" />
           <DungeonStudioPreview
             activeTool={activeTool}
+            brushShape={brushShape}
             canRedo={canRedo}
             canUndo={canUndo}
             dirty={dirty}
@@ -433,7 +432,6 @@ function DungeonStudioShell({
           mapName={map.name}
           selected={selected}
           selectedRoom={selectedRoom}
-          onAddOuterWalls={addOuterWalls}
           onCreateRoomFromSelection={createRoomFromSelection}
           onDeleteRoom={deleteSelectedRoom}
           onDoneRoom={finishRoomEditing}

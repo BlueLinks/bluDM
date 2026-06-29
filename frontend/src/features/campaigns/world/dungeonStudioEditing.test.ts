@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { brushShapeCells } from "./dungeonStudioBrushes";
 import { createDungeonStudioDocument, edgeKey } from "./dungeonStudioDocument";
 import {
   addOuterWallsAroundFloorCells,
@@ -18,6 +19,7 @@ import {
   paintFloorCells,
   paintRoomCells,
   paintTerrainCell,
+  paintTerrainCells,
   renameRoomRegion,
   rectangleRoomCells,
   redoDungeonStudioChange,
@@ -262,6 +264,37 @@ describe("dungeonStudioEditing", () => {
     expect(wallKeys).not.toContain("1,1,n");
     expect(wallKeys).not.toContain("2,1,w");
     expect(wallKeys).toEqual(expect.arrayContaining(["1,1,w", "3,1,w"]));
+  });
+
+  it("updates implicit exposed-edge walls after floor paint and erase", () => {
+    const painted = paintFloorCells(createDungeonStudioDocument(), [
+      { x: 1, y: 1 },
+      { x: 2, y: 1 },
+    ]);
+    const erased = eraseFloorCell(painted, { x: 2, y: 1 });
+
+    expect(
+      implicitBoundaryWalls(painted).map((edge) => edgeKey(edge.cell, edge.direction)),
+    ).not.toContain("2,1,w");
+    expect(
+      implicitBoundaryWalls(erased).map((edge) => edgeKey(edge.cell, edge.direction)),
+    ).toContain("2,1,w");
+  });
+
+  it("applies rectangle and circle brush shapes across floor room terrain and delete modes", () => {
+    const document = createDungeonStudioDocument();
+    const rectangle = brushShapeCells(document, "rectangle", { x: 1, y: 1 }, { x: 2, y: 2 });
+    const circle = brushShapeCells(document, "circle", { x: 5, y: 5 }, { x: 6, y: 5 });
+    const floor = paintFloorCells(document, rectangle);
+    const terrain = paintTerrainCells(floor, circle, "water");
+    const room = paintRoomCells(terrain, rectangle, "room-a");
+    const deleted = deleteMapCells(room, rectangle);
+
+    expect(floorCells(floor)).toEqual(rectangle);
+    expect(terrainCells(terrain, "water")).toEqual(circle);
+    expect(room.rooms[0].cells).toEqual(rectangle);
+    expect(floorCells(deleted)).toEqual([]);
+    expect(deleted.rooms[0].cells).toEqual([]);
   });
 
   it("undoes and redoes room rename and deletion", () => {
