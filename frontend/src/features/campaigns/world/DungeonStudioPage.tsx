@@ -1,9 +1,9 @@
-import { ArrowLeft, DraftingCompass } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../../app/shell";
-import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
-import { Badge, Button, Callout, MutedPanel, Page, PageHeader } from "../../../components/ui";
+import { CardSection } from "../../../components/layout";
+import { Button, Callout, MutedPanel, Page } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import { mapInputFromMap } from "./campaignWorldMapScale";
 import {
@@ -43,7 +43,6 @@ export function DungeonStudioPage() {
   const { campaignID, locationID } = useParams();
   const navigate = useNavigate();
   const { detail, error, loading, locations } = useCampaignWorkspaceData(campaignID);
-  const [maps, setMaps] = useState<CampaignMap[]>([]);
   const [map, setMap] = useState<CampaignMap | null>(null);
   const [document, setDocument] = useState<DungeonStudioDocument | null>(null);
   const documentRef = useRef<DungeonStudioDocument | null>(null);
@@ -93,7 +92,6 @@ export function DungeonStudioPage() {
       try {
         const { maps: nextMaps } = await api.campaignMaps(activeCampaignId);
         if (!active) return;
-        setMaps(nextMaps);
         const existingMap = studioMapForLocation(nextMaps, activeLocation.id);
         if (existingMap) {
           const parsed = parseDungeonStudioDocument(existingMap.metadata, {
@@ -116,7 +114,6 @@ export function DungeonStudioPage() {
           dungeonStudioMapInput(activeLocation, starterDocument),
         );
         if (!active) return;
-        setMaps([...nextMaps, createdMap]);
         setMap(createdMap);
         documentRef.current = starterDocument;
         setDocument(starterDocument);
@@ -212,7 +209,6 @@ export function DungeonStudioPage() {
         mapInputFromMap(map, { metadata }),
       );
       setMap(savedMap);
-      setMaps((current) => current.map((item) => (item.id === savedMap.id ? savedMap : item)));
       setSavedSignature(studioDocumentSignature(document));
     } catch (err) {
       setStudioError(err instanceof Error ? err.message : "Could not save Dungeon Studio map");
@@ -246,20 +242,19 @@ export function DungeonStudioPage() {
           { label: "Dungeon Studio" },
         ]}
       />
-      <PageHeader
-        eyebrow="Campaign World"
-        title="Dungeon Studio"
-        copy="Sketch grid-based dungeon structure from the location context, then bind rooms and prep back to Campaign World."
-        action={
-          <ActionRow justify="end">
-            <Link to={returnPath}>
-              <Button type="button" icon={ArrowLeft} variant="secondary">
-                Return to World
-              </Button>
-            </Link>
-          </ActionRow>
-        }
-      />
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-3xl font-semibold tracking-normal">Dungeon Studio</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Build the grid map for {location?.name ?? "this location"}.
+          </p>
+        </div>
+        <Link to={returnPath}>
+          <Button type="button" icon={ArrowLeft} variant="secondary">
+            Return to World
+          </Button>
+        </Link>
+      </div>
       {studioError ? <Callout tone="danger">{studioError}</Callout> : null}
       {!location ? (
         <Callout tone="danger">This World location could not be found.</Callout>
@@ -281,7 +276,6 @@ export function DungeonStudioPage() {
           document={document}
           locationName={location.name}
           map={map}
-          maps={maps}
           saving={saving}
           selected={selected}
           onDocumentChange={applyDocumentChange}
@@ -308,7 +302,6 @@ function DungeonStudioShell({
   document,
   locationName,
   map,
-  maps,
   saving,
   selected,
   onBrushShapeChange,
@@ -329,7 +322,6 @@ function DungeonStudioShell({
   document: DungeonStudioDocument;
   locationName: string;
   map: CampaignMap;
-  maps: CampaignMap[];
   saving: boolean;
   selected: DungeonStudioSelection;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
@@ -348,13 +340,6 @@ function DungeonStudioShell({
   const floorCellCount = document.layers
     .filter((layer) => layer.cellKind === "floor")
     .reduce((total, layer) => total + layer.cells.length, 0);
-  const terrainCellCount = document.layers
-    .filter(
-      (layer) =>
-        layer.cellKind === "water" || layer.cellKind === "chasm" || layer.cellKind === "cliff",
-    )
-    .reduce((total, layer) => total + layer.cells.length, 0);
-  const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCells = document.rooms.reduce((total, room) => total + room.cells.length, 0);
   const unassignedFloorCells = Math.max(0, floorCellCount - roomCells);
   const selectedRoom =
@@ -406,20 +391,17 @@ function DungeonStudioShell({
   }
 
   return (
-    <div className="grid min-w-0 gap-4">
-      <CardSection tone="background" className="p-4">
-        <SectionHeader
-          icon={DraftingCompass}
-          title={locationName}
-          meta={`${map.name} • ${document.tileset} tileset • ${document.grid.width}×${document.grid.height} • ${document.grid.cellSizeFeet} ft grid`}
-          action={
-            <Badge tone={dirty ? "default" : "friendly"}>
-              {dirty ? "Unsaved changes" : "Saved"}
-            </Badge>
-          }
-        />
-      </CardSection>
-      <div className="grid min-w-0 items-start gap-4 xl:grid-cols-5">
+    <div className="grid min-w-0 gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <div className="min-w-0">
+          <span className="font-semibold text-foreground">{locationName}</span>
+          <span className="text-muted-foreground">
+            {` · ${map.name} · ${document.grid.width}×${document.grid.height} · ${document.grid.cellSizeFeet} ft grid`}
+          </span>
+        </div>
+        <span className="text-muted-foreground">Unassigned floor: {unassignedFloorCells}</span>
+      </div>
+      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-5">
         <DungeonStudioToolPanel
           activeTool={activeTool}
           brushShape={brushShape}
@@ -469,19 +451,6 @@ function DungeonStudioShell({
           onToolChange={onToolChange}
         />
       </div>
-      <CardSection tone="background">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
-          <ActionRow>
-            <Badge>Floor layer ✓</Badge>
-            <Badge>Terrain {terrainCellCount ? `${terrainCellCount} cells` : "ready"}</Badge>
-            <Badge>Cliff edges {cliffEdgeCount ? cliffEdgeCount : "ready"}</Badge>
-            <Badge>Walls ✓</Badge>
-            <Badge>Rooms ✓</Badge>
-            <Badge>{maps.length} campaign maps loaded</Badge>
-          </ActionRow>
-          <span className="font-semibold">Unassigned floor: {unassignedFloorCells} cells</span>
-        </div>
-      </CardSection>
     </div>
   );
 }

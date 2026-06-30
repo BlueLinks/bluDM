@@ -1,11 +1,13 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   DungeonStudioInspectorPanel,
   DungeonStudioToolOptionsBar,
   DungeonStudioToolPanel,
 } from "./DungeonStudioPanels";
 import { createDungeonStudioDocument } from "./dungeonStudioDocument";
+
+afterEach(cleanup);
 
 describe("DungeonStudioPanels", () => {
   it("renders primary editor tools in the left palette", () => {
@@ -43,7 +45,7 @@ describe("DungeonStudioPanels", () => {
       />,
     );
 
-    expect(screen.getByText("Active tool")).toBeTruthy();
+    expect(screen.getByText(/Active tool:/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Targeted delete" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Rectangle" })).toBeTruthy();
     [
@@ -55,6 +57,25 @@ describe("DungeonStudioPanels", () => {
     ].forEach((name) => expect(screen.getByRole("button", { name })).toBeTruthy());
     fireEvent.click(screen.getByRole("button", { name: "Walls/doors only" }));
     expect(onDeleteTargetChange).toHaveBeenCalledWith("walls");
+  });
+
+  it("keeps room actions in the inspector instead of duplicating them in top options", () => {
+    render(
+      <DungeonStudioToolOptionsBar
+        activeTool="room-fill"
+        brushShape="single"
+        deleteTarget="all"
+        onBrushShapeChange={vi.fn()}
+        onDeleteTargetChange={vi.fn()}
+        onToolChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Active tool:/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Fill" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Select cells" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Paint" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Erase" })).toBeNull();
   });
 
   it("shows the room workflow only for room context", () => {
@@ -77,11 +98,11 @@ describe("DungeonStudioPanels", () => {
     );
 
     expect(screen.getByText("Inspector")).toBeTruthy();
-    expect(screen.queryByText("Active room")).toBeNull();
+    expect(screen.queryByText("Room")).toBeNull();
 
     rerender(<DungeonStudioInspectorPanel activeTool="room-fill" {...commonProps} />);
 
     expect(screen.getByText("Room workflow")).toBeTruthy();
-    expect(screen.getByText("Active room")).toBeTruthy();
+    expect(screen.getAllByText("Room").length).toBeGreaterThan(0);
   });
 });

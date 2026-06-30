@@ -111,6 +111,9 @@ export function DungeonStudioPreview({
         onPointerLeave={handlePointerLeave}
         onWheel={handleWheel}
         onContextMenu={(event) => event.preventDefault()}
+        onAuxClick={(event) => {
+          if (event.button === 1) event.preventDefault();
+        }}
         onClick={() => undefined}
       >
         <svg className="h-full w-full" viewBox={viewBox} preserveAspectRatio="xMidYMid meet">

@@ -14,7 +14,6 @@ import { ActionRow } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
 import type { DungeonStudioRoomRegion } from "./dungeonStudioDocument";
-import { toolLabel } from "./dungeonStudioToolText";
 
 export function DungeonStudioRoomInspector({
   activeTool,
@@ -54,6 +53,7 @@ export function DungeonStudioRoomInspector({
     <div className="grid gap-3">
       <ActiveRoomCard
         draftName={draftName}
+        selectedCells={selectedCells}
         selectedRoom={selectedRoom}
         onDeleteRoom={onDeleteRoom}
         onDoneRoom={onDoneRoom}
@@ -75,6 +75,7 @@ export function DungeonStudioRoomInspector({
 
 function ActiveRoomCard({
   draftName,
+  selectedCells,
   selectedRoom,
   onDeleteRoom,
   onDoneRoom,
@@ -83,6 +84,7 @@ function ActiveRoomCard({
   onStartNewRoom,
 }: {
   draftName: string;
+  selectedCells: number;
   selectedRoom?: DungeonStudioRoomRegion;
   onDeleteRoom: (roomId: string) => void;
   onDoneRoom: () => void;
@@ -92,14 +94,19 @@ function ActiveRoomCard({
 }) {
   return (
     <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">Active room</div>
+      <div className="text-sm font-semibold text-foreground">Room</div>
       {selectedRoom ? (
         <div className="mt-2 grid gap-2">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <RoomColor color={selectedRoom.color} />
-            Editing {selectedRoom.label}
+            Editing room: {selectedRoom.label}
           </div>
-          <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
+            {selectedRoom.cells.length
+              ? `${selectedRoom.cells.length} cells assigned.`
+              : "No cells assigned yet."}
+          </p>
+          <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
             Room name
             <input
               className="rounded-md border border-border bg-card px-2 py-1.5 text-sm font-semibold normal-case text-foreground"
@@ -119,12 +126,12 @@ function ActiveRoomCard({
               Save name
             </Button>
             <Button type="button" icon={Check} size="sm" variant="secondary" onClick={onDoneRoom}>
-              Done
+              Done editing
             </Button>
           </ActionRow>
           <ActionRow>
             <Button type="button" icon={Plus} size="sm" variant="ghost" onClick={onStartNewRoom}>
-              Start another
+              Start next room
             </Button>
             <Button
               type="button"
@@ -139,11 +146,14 @@ function ActiveRoomCard({
         </div>
       ) : (
         <div className="mt-2 grid gap-2">
+          <div className="text-sm font-semibold text-foreground">New room</div>
           <p className="text-xs text-muted-foreground">
-            No active room. Select cells, fill an enclosed area, or edit an existing room below.
+            {selectedCells
+              ? `${selectedCells} cells selected but not saved as a room yet.`
+              : "Select cells, fill an enclosed area, or choose a room below."}
           </p>
           <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onStartNewRoom}>
-            Start a room
+            Start selecting a room
           </Button>
         </div>
       )}
@@ -166,7 +176,7 @@ function RoomPaintActionsCard({
 }) {
   return (
     <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">Paint and fill</div>
+      <div className="text-sm font-semibold text-foreground">Assign room cells</div>
       <div className="mt-2 grid gap-2">
         <ActionRow>
           <RoomToolButton
@@ -215,10 +225,6 @@ function RoomPaintActionsCard({
         >
           Create room from selection{selectedCells ? ` (${selectedCells})` : ""}
         </Button>
-        <p className="text-xs text-muted-foreground">
-          {toolLabel(activeTool)} is active. Room Fill stops at walls and doors; right-click erases
-          room assignment in Room mode.
-        </p>
       </div>
     </div>
   );
@@ -235,7 +241,7 @@ function ExistingRoomsCard({
 }) {
   return (
     <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">Edit existing room</div>
+      <div className="text-sm font-semibold text-foreground">Rooms</div>
       {rooms.length ? (
         <div className="mt-2 grid gap-2">
           {rooms.map((room) => (

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
 import {
   applyEdgeFeatureStroke,
   canToggleEdgeFeature,
@@ -14,6 +14,11 @@ import {
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
 import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
+import {
+  edgeDragDirectionForAxis,
+  updateEdgeDragAxis,
+  type DungeonStudioEdgeDragState,
+} from "./dungeonStudioEdgeDrag";
 import {
   brushShapeCells,
   brushShapePreviewTool,
@@ -32,18 +37,16 @@ import {
   shapeToolLabel,
   usesBrushShapeDraft,
 } from "./dungeonStudioPreviewTools";
-import { clamp, clampPan, wheelZoomPan } from "./dungeonStudioPreviewViewport";
+import { clamp } from "./dungeonStudioPreviewViewport";
 import {
   closestDiagonalDirection,
   closestOrthogonalDirection,
   DUNGEON_STUDIO_CELL_SIZE,
   type DungeonStudioShapeDraft,
 } from "./DungeonStudioPreviewElements";
+import { useDungeonStudioViewport } from "./useDungeonStudioViewport";
 
 const CELL_SIZE = DUNGEON_STUDIO_CELL_SIZE;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 4;
-const ZOOM_STEP = 0.35;
 
 type ShapeDraft = DungeonStudioShapeDraft;
 
@@ -68,14 +71,14 @@ export function useDungeonStudioPreviewInteraction({
   selected,
   onDocumentChange,
 }: UseDungeonStudioPreviewInteractionArgs) {
-  const viewportRef = useRef<HTMLDivElement | null>(null);
-  const panStart = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const viewport = useDungeonStudioViewport(document);
   const drawing = useRef(false);
   const brushStrokeStarted = useRef(false);
   const erasingStroke = useRef(false);
   const edgeStrokeStarted = useRef(false);
   const edgeStrokeAction = useRef<DungeonStudioEdgeStrokeAction>("add");
   const edgeStrokeKind = useRef<"wall" | "cliff-edge">("wall");
+  const edgeDrag = useRef<DungeonStudioEdgeDragState | null>(null);
   const roomSelectionCells = useRef<GridCell[]>([]);
   const roomBrushTargetId = useRef<string | null>(null);
   const shapeDraftRef = useRef<ShapeDraft | null>(null);
@@ -83,16 +86,7 @@ export function useDungeonStudioPreviewInteraction({
   const lastPaintedCell = useRef("");
   const lastPaintedEdge = useRef("");
   const [shapeDraft, setShapeDraft] = useState<ShapeDraft | null>(null);
-  const [zoom, setZoom] = useState(MIN_ZOOM);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [fillPreviewCells, setFillPreviewCells] = useState<GridCell[]>([]);
-  const dimensions = useMemo(
-    () => ({ width: document.grid.width * CELL_SIZE, height: document.grid.height * CELL_SIZE }),
-    [document.grid.height, document.grid.width],
-  );
-  const viewWidth = dimensions.width / zoom;
-  const viewHeight = dimensions.height / zoom;
-  const viewBox = `${pan.x} ${pan.y} ${viewWidth} ${viewHeight}`;
   const floorCellKeys = useMemo(
     () =>
       new Set(
@@ -119,30 +113,11 @@ export function useDungeonStudioPreviewInteraction({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  function changeZoom(delta: number) {
-    setZoom((current) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + delta)));
-  }
-
-  function handleWheel(event: WheelEvent<HTMLDivElement>) {
-    event.preventDefault();
-    const rect = viewportRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const nextZoom = Math.min(
-      MAX_ZOOM,
-      Math.max(MIN_ZOOM, zoom - Math.sign(event.deltaY) * ZOOM_STEP),
-    );
-    if (nextZoom === zoom) return;
-    setPan(wheelZoomPan(event, rect, pan, dimensions, zoom, nextZoom));
-    setZoom(nextZoom);
-  }
-
-  function resetView() {
-    setZoom(MIN_ZOOM);
-    setPan({ x: 0, y: 0 });
-  }
-
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (event.altKey) return startPan(event);
+    if (event.altKey || event.button === 1) {
+      event.preventDefault();
+      return viewport.startPan(event);
+    }
     event.preventDefault();
     safeSetPointerCapture(event);
     if (event.button === 2) return startEraseStroke(event);
@@ -168,7 +143,7 @@ export function useDungeonStudioPreviewInteraction({
   }
 
   function handlePointerMove(event: PointerEvent<HTMLDivElement>) {
-    if (panStart.current) return movePan(event);
+    if (viewport.isPanning()) return viewport.movePan(event);
     if (shapeDraftRef.current) return updateShapeDraft(event);
     if (activeTool === "room-fill") updateRoomFillPreview(event);
     if (!drawing.current) return;
@@ -178,34 +153,19 @@ export function useDungeonStudioPreviewInteraction({
   }
 
   function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
-    panStart.current = null;
+    viewport.endPan();
     if (shapeDraftRef.current) applyShapeDraft(event);
     resetStrokeState();
   }
 
   function handlePointerCancel() {
-    panStart.current = null;
+    viewport.endPan();
     resetStrokeState();
     cancelShapeDraft();
   }
 
   function handlePointerLeave() {
     setFillPreviewCells([]);
-  }
-
-  function startPan(event: PointerEvent<HTMLDivElement>) {
-    panStart.current = { x: event.clientX, y: event.clientY, panX: pan.x, panY: pan.y };
-    safeSetPointerCapture(event);
-  }
-
-  function movePan(event: PointerEvent<HTMLDivElement>) {
-    if (!panStart.current || !viewportRef.current) return;
-    const rect = viewportRef.current.getBoundingClientRect();
-    const nextPan = {
-      x: panStart.current.panX - ((event.clientX - panStart.current.x) / rect.width) * viewWidth,
-      y: panStart.current.panY - ((event.clientY - panStart.current.y) / rect.height) * viewHeight,
-    };
-    setPan(clampPan(nextPan, dimensions, zoom));
   }
 
   function startEraseStroke(event: PointerEvent<HTMLDivElement>) {
@@ -226,6 +186,7 @@ export function useDungeonStudioPreviewInteraction({
     roomBrushTargetId.current = null;
     lastPaintedCell.current = "";
     lastPaintedEdge.current = "";
+    edgeDrag.current = null;
     eraseShapeDraft.current = false;
   }
 
@@ -371,6 +332,7 @@ export function useDungeonStudioPreviewInteraction({
   function startEdgeStroke(event: PointerEvent<HTMLDivElement>) {
     const point = edgePointForEvent(event);
     if (!point) return;
+    edgeDrag.current = edgeDragStateFromPoint(point);
     edgeStrokeKind.current = activeTool === "cliff-edge" ? "cliff-edge" : "wall";
     edgeStrokeAction.current =
       edgeFeatureAt(document, point.cell, point.direction)?.kind === edgeStrokeKind.current
@@ -385,6 +347,7 @@ export function useDungeonStudioPreviewInteraction({
   function startEdgeEraseStroke(event: PointerEvent<HTMLDivElement>) {
     const point = edgePointForEvent(event);
     if (!point) return;
+    edgeDrag.current = edgeDragStateFromPoint(point);
     edgeStrokeAction.current = "remove";
     edgeStrokeKind.current = activeTool === "cliff-edge" ? "cliff-edge" : "wall";
     drawing.current = true;
@@ -450,46 +413,66 @@ export function useDungeonStudioPreviewInteraction({
   }
 
   function gridPointForEvent(event: PointerEvent<HTMLDivElement>) {
-    const rect = viewportRef.current?.getBoundingClientRect();
+    const rect = viewport.viewportRef.current?.getBoundingClientRect();
     if (!rect) return null;
-    const svgX = pan.x + ((event.clientX - rect.left) / rect.width) * viewWidth;
-    const svgY = pan.y + ((event.clientY - rect.top) / rect.height) * viewHeight;
+    const svgX = viewport.pan.x + ((event.clientX - rect.left) / rect.width) * viewport.viewWidth;
+    const svgY = viewport.pan.y + ((event.clientY - rect.top) / rect.height) * viewport.viewHeight;
     const cell = {
       x: clamp(Math.floor(svgX / CELL_SIZE), 0, document.grid.width - 1),
       y: clamp(Math.floor(svgY / CELL_SIZE), 0, document.grid.height - 1),
     };
-    return { cell, localX: svgX - cell.x * CELL_SIZE, localY: svgY - cell.y * CELL_SIZE };
+    return {
+      cell,
+      localX: svgX - cell.x * CELL_SIZE,
+      localY: svgY - cell.y * CELL_SIZE,
+      svgX,
+      svgY,
+    };
   }
 
   function edgePointForEvent(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
     if (!point) return null;
+    if (activeTool === "diagonal-wall") {
+      return { ...point, direction: closestDiagonalDirection(point.localX, point.localY) };
+    }
+    if (edgeDrag.current) {
+      edgeDrag.current = updateEdgeDragAxis(edgeDrag.current, point.svgX, point.svgY);
+    }
     return {
       ...point,
       direction:
-        activeTool === "diagonal-wall"
-          ? closestDiagonalDirection(point.localX, point.localY)
-          : closestOrthogonalDirection(point.localX, point.localY),
+        (edgeDrag.current ? edgeDragDirectionForAxis(edgeDrag.current) : undefined) ??
+        closestOrthogonalDirection(point.localX, point.localY),
     };
   }
 
+  function edgeDragStateFromPoint(point: NonNullable<ReturnType<typeof gridPointForEvent>>) {
+    return {
+      startSvgX: point.svgX,
+      startSvgY: point.svgY,
+      startLocalX: point.localX,
+      startLocalY: point.localY,
+    } satisfies DungeonStudioEdgeDragState;
+  }
+
   return {
-    dimensions,
+    dimensions: viewport.dimensions,
     fillPreviewCells,
     handlePointerCancel,
     handlePointerDown,
     handlePointerEnd,
     handlePointerLeave,
     handlePointerMove,
-    handleWheel,
-    maxZoom: MAX_ZOOM,
-    minZoom: MIN_ZOOM,
-    resetView,
+    handleWheel: viewport.handleWheel,
+    maxZoom: viewport.maxZoom,
+    minZoom: viewport.minZoom,
+    resetView: viewport.resetView,
     shapeDraft,
-    viewBox,
-    viewportRef,
-    zoom,
-    zoomStep: ZOOM_STEP,
-    changeZoom,
+    viewBox: viewport.viewBox,
+    viewportRef: viewport.viewportRef,
+    zoom: viewport.zoom,
+    zoomStep: viewport.zoomStep,
+    changeZoom: viewport.changeZoom,
   };
 }

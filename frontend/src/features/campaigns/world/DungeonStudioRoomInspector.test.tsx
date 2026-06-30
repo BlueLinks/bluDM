@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DungeonStudioRoomInspector } from "./DungeonStudioRoomInspector";
 import type { DungeonStudioRoomRegion } from "./dungeonStudioDocument";
 
@@ -8,7 +8,32 @@ const rooms: DungeonStudioRoomRegion[] = [
   { id: "room-2", label: "Crypt", color: "#8b5cf6", cells: [{ x: 2, y: 1 }] },
 ];
 
+afterEach(cleanup);
+
 describe("DungeonStudioRoomInspector", () => {
+  it("shows clear new-room draft state", () => {
+    render(
+      <DungeonStudioRoomInspector
+        activeTool="room-select"
+        canCreateRoom
+        rooms={rooms}
+        selected={{ type: "region", cells: rooms[0].cells, label: "Selection" }}
+        onCreateRoomFromSelection={vi.fn()}
+        onDeleteRoom={vi.fn()}
+        onDoneRoom={vi.fn()}
+        onEditRoom={vi.fn()}
+        onRenameRoom={vi.fn()}
+        onStartNewRoom={vi.fn()}
+        onToolChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Room")).toBeTruthy();
+    expect(screen.getByText("New room")).toBeTruthy();
+    expect(screen.getByText(/cells selected but not saved as a room yet/i)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Create room from selection/i })).toBeTruthy();
+  });
+
   it("groups room naming, paint/fill actions, creation, editing, and deletion", () => {
     const onToolChange = vi.fn();
     const onEditRoom = vi.fn();
@@ -32,7 +57,8 @@ describe("DungeonStudioRoomInspector", () => {
       />,
     );
 
-    expect(screen.getByText("Active room")).toBeTruthy();
+    expect(screen.getByText("Room")).toBeTruthy();
+    expect(screen.getByText("Editing room: Guard Room")).toBeTruthy();
     expect(screen.getByDisplayValue("Guard Room")).toBeTruthy();
     expect(screen.getByRole("button", { name: /Fill bounded/i })).toBeTruthy();
     expect(

@@ -115,10 +115,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Wall tools now support drag strokes with one undo action, room fill treats doors as blockers, right-click erases contextually, delete targets are clearer, and Room mode has a compact workflow panel for naming, paint/fill, done/start-next, edit, and delete.
 - Dungeon Studio editor UI cleanup:
   - Editor controls now follow a clearer tool layout with global save/undo/redo/zoom controls in the canvas toolbar, primary tools in the left palette, active tool options above the canvas, and contextual room/selection details in the inspector.
+- Dungeon Studio interaction and UI cleanup:
+  - Room actions now live in the contextual room inspector instead of being duplicated in top options; room state copy distinguishes new-room drafts from existing-room editing; wall/cliff-edge drag strokes axis-lock to avoid wobble edges; middle mouse drag pans the canvas; and decorative status panels/badges around the editor were simplified.
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 4 room layer editor is in progress with shared brush shapes, clearer delete targets, protected wall/door-bounded room fill, contextual room workflow controls, drag wall strokes, right-click erase, implicit boundary wall rendering, wheel zoom, and a cleaner editor-style toolbar/palette/options/inspector layout now started.
+- Dungeon Studio implementation is underway. Phase 4 room layer editor is in progress with shared brush shapes, clearer delete targets, protected wall/door-bounded room fill, contextual room workflow controls, axis-locked drag wall/cliff-edge strokes, middle-mouse panning, right-click erase, implicit boundary wall rendering, wheel zoom, and a simpler editor-style toolbar/palette/options/inspector layout now started.
 
 ## Planned
 

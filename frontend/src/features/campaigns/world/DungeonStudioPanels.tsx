@@ -5,7 +5,6 @@ import {
   Eraser,
   Mountain,
   MousePointer2,
-  PaintBucket,
   Paintbrush,
   Slash,
   Square,
@@ -82,13 +81,6 @@ const terrainOptions: ToolOption[] = [
   { tool: "cliff-edge", label: "Cliff edge", icon: Mountain },
 ];
 
-const roomOptions: ToolOption[] = [
-  { tool: "room-select", label: "Select cells", icon: Square },
-  { tool: "room-brush", label: "Paint", icon: Paintbrush },
-  { tool: "room-fill", label: "Fill", icon: PaintBucket },
-  { tool: "erase-room", label: "Erase", icon: Eraser },
-];
-
 const wallOptions: ToolOption[] = [
   { tool: "wall", label: "Straight wall", icon: DraftingCompass },
   { tool: "diagonal-wall", label: "Diagonal wall", icon: Slash },
@@ -103,7 +95,7 @@ const deleteOptions: ToolOption[] = [
 export function DungeonStudioToolPanel({ activeTool, onToolChange }: ToolPanelProps) {
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
-      <SectionHeader title="Tools" meta="What am I editing?" />
+      <SectionHeader title="Tools" />
       <div className="grid gap-2" aria-label="Dungeon Studio primary tools">
         {primaryTools.map((tool) => (
           <PaletteButton
@@ -129,14 +121,11 @@ export function DungeonStudioToolOptionsBar({
 }: ToolPanelProps) {
   return (
     <div className="grid gap-2 rounded-md border border-border bg-card px-3 py-2">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="text-xs font-bold uppercase text-muted-foreground">Active tool</div>
-          <div className="text-sm font-semibold text-foreground">
-            {toolLabel(activeTool)}
-            {supportsBrushShape(activeTool) ? ` • ${brushShapeLabel(brushShape)}` : ""}
-            {activeTool === "delete" ? ` • ${deleteTargetLabel(deleteTarget)}` : ""}
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm font-semibold text-foreground">
+          <span className="text-muted-foreground">Active tool:</span> {toolLabel(activeTool)}
+          {supportsBrushShape(activeTool) ? ` · ${brushShapeLabel(brushShape)}` : ""}
+          {activeTool === "delete" ? ` · ${deleteTargetLabel(deleteTarget)}` : ""}
         </div>
         <p className="max-w-prose text-xs text-muted-foreground">{toolTip(activeTool)}</p>
       </div>
@@ -169,7 +158,7 @@ export function DungeonStudioToolOptionsBar({
         ) : null}
       </div>
       <div className="text-xs text-muted-foreground">
-        Right-click erases the safe matching target for the active tool. Alt-drag pans the canvas.
+        Right-click erase · Middle-drag or Alt-drag pan
       </div>
     </div>
   );
@@ -214,10 +203,7 @@ export function DungeonStudioInspectorPanel({
 
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
-      <SectionHeader
-        title={showRoomWorkflow ? "Room workflow" : "Inspector"}
-        meta={showRoomWorkflow ? "What room am I editing?" : selectionLabel(selected)}
-      />
+      <SectionHeader title={showRoomWorkflow ? "Room workflow" : "Inspector"} />
       {showRoomWorkflow ? (
         <DungeonStudioRoomInspector
           activeTool={activeTool}
@@ -237,7 +223,7 @@ export function DungeonStudioInspectorPanel({
         <SelectionSummary selected={selected} />
       )}
       <details className="rounded-md border border-border bg-background px-3 py-2 text-sm">
-        <summary className="cursor-pointer text-xs font-bold uppercase text-muted-foreground">
+        <summary className="cursor-pointer text-sm font-semibold text-foreground">
           Map details
         </summary>
         <div className="mt-2 grid gap-2">
@@ -284,12 +270,9 @@ function ActiveToolChoices({
 
 function SelectionSummary({ selected }: { selected: DungeonStudioSelection }) {
   return (
-    <div className="rounded-md border border-border bg-background px-3 py-2 text-sm text-muted-foreground">
-      <div className="text-xs font-bold uppercase">Selection</div>
-      <div className="mt-1 font-semibold text-foreground">{selectionLabel(selected)}</div>
-      <p className="mt-1 text-xs">
-        Use Select to inspect, or choose a drawing tool and work directly on the canvas.
-      </p>
+    <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
+      <div className="font-semibold text-foreground">Selection</div>
+      <div className="mt-1 text-muted-foreground">{selectionLabel(selected)}</div>
     </div>
   );
 }
@@ -297,7 +280,7 @@ function SelectionSummary({ selected }: { selected: DungeonStudioSelection }) {
 function OptionGroup({ children, label }: { children: ReactNode; label: string }) {
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
-      <span className="text-xs font-bold uppercase text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
       {children}
     </div>
   );
@@ -391,7 +374,6 @@ function TextOptionButton({
 
 function toolOptionsFor(tool: DungeonStudioTool) {
   if (modeForTool(tool) === "terrain") return terrainOptions;
-  if (modeForTool(tool) === "room") return roomOptions;
   if (tool === "wall" || tool === "diagonal-wall") return wallOptions;
   if (modeForTool(tool) === "delete") return deleteOptions;
   return [];
@@ -399,7 +381,6 @@ function toolOptionsFor(tool: DungeonStudioTool) {
 
 function toolOptionLabel(tool: DungeonStudioTool) {
   if (modeForTool(tool) === "terrain") return "Terrain type";
-  if (modeForTool(tool) === "room") return "Room action";
   if (tool === "wall" || tool === "diagonal-wall") return "Wall type";
   if (modeForTool(tool) === "delete") return "Erase mode";
   return "Options";
