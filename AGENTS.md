@@ -60,6 +60,14 @@ Do not create abstractions solely to reduce line count.
 
 ## Frontend Architecture And Layout
 
+### UI Guidance
+
+For UI work, consult the Uncodixify guidance at https://raw.githubusercontent.com/cyxzdev/Uncodixfy/refs/heads/main/Uncodixfy.md. Treat it as guidance, not a strict design system.
+
+- Avoid generic AI-looking UI: unnecessary panels, badges, filler copy, decorative containers, excessive rounding/padding, and dashboard-style clutter.
+- Prefer functional, clear, restrained UI that uses the existing project design language and shared components.
+- Do not perform broad UI rewrites just because of this guidance; apply it to the specific task at hand.
+
 ### Rule Of Three
 
 Before creating a new shared component:
@@ -254,6 +262,16 @@ cd backend && GOTOOLCHAIN=go1.25.11 go run github.com/securego/gosec/v2/cmd/gose
 ```
 
 If a check cannot be run locally, say so in the PR and explain why.
+
+### Browser QA
+
+Use browser automation selectively to conserve context and avoid brittle sweeps.
+
+- Do not run broad multi-page browser QA by default.
+- Prefer code review, tests, and targeted checks.
+- Use browser QA for new interactive UI behavior, layout changes that cannot be checked by tests, regression reproduction, or final smoke testing.
+- When browser QA is needed, keep it to 1–3 targeted routes unless explicitly asked for a broader sweep.
+- Avoid repeated snapshots and long optional text assertion chains unless debugging a specific visible issue.
 
 ## Git And GitHub
 
