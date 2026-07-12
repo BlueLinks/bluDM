@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { AvatarDialogBody } from "./AvatarCropDialog";
+import { InitialsAvatar } from "./shared/displayPrimitives";
 import { Button, Modal } from "./ui";
 
 const avatarCropStageSize = 280;
@@ -369,15 +370,7 @@ function AvatarPickerShell({
 }
 
 function AvatarThumb({ name, src }: { name: string; src: string }) {
-  return (
-    <figure className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-lg font-bold text-muted-foreground">
-      {src ? (
-        <img className="h-full w-full object-cover" src={src} alt="" />
-      ) : (
-        name.slice(0, 2).toUpperCase() || "AV"
-      )}
-    </figure>
-  );
+  return <InitialsAvatar name={name || "Avatar"} size="lg" src={src} />;
 }
 
 function clampAvatarPan(

@@ -1,34 +1,38 @@
 import { ClipboardList, Route, Swords, UsersRound } from "lucide-react";
 import { ResponsiveGrid } from "../../components/layout";
-import { DashboardCard } from "../../components/ui";
+import { MetricCard } from "../../components/layout";
 import type { CampaignDetail } from "../../types";
 
 export function CampaignOverviewCards({ detail }: { detail: CampaignDetail }) {
   return (
     <ResponsiveGrid variant="cards4">
-      <DashboardCard
+      <MetricCard
         icon={UsersRound}
-        title="Player Characters"
+        label="Player Characters"
+        tone="primary"
         value={detail.playerCount}
-        copy="Character cards show portrait, AC, current HP, temporary HP, and key passives."
+        detail="Character cards show portrait, AC, current HP, temporary HP, and key passives."
       />
-      <DashboardCard
+      <MetricCard
         icon={ClipboardList}
-        title="Encounters"
+        label="Encounters"
+        tone="secondary"
         value={detail.encounterCount}
-        copy="Prepared encounters appear here with start and duplicate actions."
+        detail="Prepared encounters appear here with start and duplicate actions."
       />
-      <DashboardCard
+      <MetricCard
         icon={Swords}
-        title="Campaign NPCs"
+        label="Campaign NPCs"
+        tone="tertiary"
         value={detail.npcs.length}
-        copy="Friendly NPCs, rivals, and recurring monsters linked to this campaign."
+        detail="Friendly NPCs, rivals, and recurring monsters linked to this campaign."
       />
-      <DashboardCard
+      <MetricCard
         icon={Route}
-        title="Travel"
+        label="Travel"
+        tone="accent"
         value={detail.locationCount}
-        copy="Saved campaign locations plus a pop-up travel time and weather calculator."
+        detail="Saved campaign locations plus a pop-up travel time and weather calculator."
       />
     </ResponsiveGrid>
   );

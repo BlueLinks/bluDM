@@ -1,6 +1,7 @@
 import { HeartPulse, ScrollText, Shield, Zap } from "lucide-react";
 import React from "react";
 import { useRollLog } from "../../components/RollLogProvider";
+import { VitalStatCard } from "../../components/shared/displayPrimitives";
 import { Badge, SectionPanel } from "../../components/ui";
 import { api } from "../../lib/api";
 import {
@@ -101,7 +102,9 @@ export function CombatSheet({
           {activeEffects.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
               {activeEffects.map((effect) => (
-                <Badge key={effect.id}>{sheetEffectLabel(effect)}</Badge>
+                <Badge key={effect.id} tone="info">
+                  {sheetEffectLabel(effect)}
+                </Badge>
               ))}
             </div>
           )}
@@ -266,26 +269,11 @@ function IconStat({
   tone: "shield" | "heart" | "speed";
 }) {
   const tones = {
-    shield: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-200",
-    heart: "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-200",
-    speed: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-200",
-  };
-  return (
-    <div
-      className={[
-        "grid justify-items-center gap-0.5 rounded-md border px-1 py-1 text-center xl:px-1.5 xl:py-1.5",
-        tones[tone],
-      ].join(" ")}
-    >
-      <div className="relative grid h-7 min-w-10 place-items-center px-0.5 xl:h-8 xl:min-w-12">
-        <Icon className="absolute h-7 w-7 opacity-20 xl:h-8 xl:w-8" />
-        <div className="min-w-0 text-center text-xs font-black leading-none tabular-nums sm:text-sm">
-          {value}
-        </div>
-      </div>
-      <div className="text-[0.56rem] font-bold uppercase xl:text-[0.6rem]">{label}</div>
-    </div>
-  );
+    shield: "primary",
+    heart: "tertiary",
+    speed: "secondary",
+  } as const;
+  return <VitalStatCard icon={Icon} label={label} size="sm" tone={tones[tone]} value={value} />;
 }
 
 function AbilityRollButton({

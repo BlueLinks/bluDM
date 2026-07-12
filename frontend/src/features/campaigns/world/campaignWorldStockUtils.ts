@@ -9,6 +9,14 @@ export function stockPriceLabel(entry: Pick<CampaignLocationStock, "priceAmount"
   return entry.priceAmount ? `${entry.priceAmount} ${entry.priceUnit || "gp"}` : "Market";
 }
 
+export function stockMarkupLabel(entry: CampaignLocationStock, item?: Item) {
+  if (!item?.valueAmount || !entry.priceAmount || item.valueUnit !== entry.priceUnit)
+    return "Rule —";
+  const percent = Math.round(((entry.priceAmount - item.valueAmount) / item.valueAmount) * 100);
+  if (percent === 0) return "At value";
+  return percent > 0 ? `+${percent}%` : `${percent}%`;
+}
+
 export function stockItemKey(item?: Item) {
   return item ? `${item.librarySource}:${item.id}` : "";
 }

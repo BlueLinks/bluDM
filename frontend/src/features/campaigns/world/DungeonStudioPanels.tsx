@@ -3,15 +3,17 @@ import {
   DoorOpen,
   DraftingCompass,
   Eraser,
+  ListChecks,
   Mountain,
-  MousePointer2,
+  Package,
   Paintbrush,
+  Plus,
   Slash,
   Square,
   Trash2,
   Waves,
 } from "lucide-react";
-import type { ElementType, ReactNode } from "react";
+import type { ElementType } from "react";
 import { CardSection, SectionHeader } from "../../../components/layout";
 import {
   brushShapeLabel,
@@ -23,10 +25,24 @@ import {
   type DungeonStudioDeleteTarget,
 } from "./dungeonStudioBrushes";
 import { InspectorRow } from "./DungeonStudioInspectorRow";
+import { DungeonStudioObjectPanel } from "./DungeonStudioObjectPanel";
 import { DungeonStudioRoomInspector } from "./DungeonStudioRoomInspector";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
-import type { DungeonStudioDocument, DungeonStudioRoomRegion } from "./dungeonStudioDocument";
+import type { CampaignLocation } from "./travelTypes";
+import type {
+  DungeonStudioDocument,
+  DungeonStudioEntity,
+  DungeonStudioRoomRegion,
+  DungeonStudioTilesetKey,
+} from "./dungeonStudioDocument";
 import { selectionLabel } from "./dungeonStudioPanelText";
+import { dungeonStudioThemeOptions } from "./dungeonStudioThemes";
+import {
+  CompactOptionButton,
+  OptionGroup,
+  PaletteButton,
+  TextOptionButton,
+} from "./DungeonStudioToolButtons";
 import { modeForTool, modeLabel, toolLabel, toolTip } from "./dungeonStudioToolText";
 
 type ToolOption = {
@@ -41,12 +57,25 @@ type ToolPanelProps = {
   deleteTarget: DungeonStudioDeleteTarget;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
   onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
+  onStartNewRoom?: () => void;
   onToolChange: (tool: DungeonStudioTool) => void;
 };
 
 const primaryTools: Array<ToolOption & { active: (tool: DungeonStudioTool) => boolean }> = [
-  { tool: "select", label: "Select", icon: MousePointer2, active: (tool) => tool === "select" },
   { tool: "floor", label: "Floor", icon: Paintbrush, active: (tool) => tool === "floor" },
+  {
+    tool: "room-select",
+    label: "Room",
+    icon: Square,
+    active: (tool) => modeForTool(tool) === "room",
+  },
+  { tool: "door", label: "Door", icon: DoorOpen, active: (tool) => tool === "door" },
+  {
+    tool: "wall",
+    label: "Wall",
+    icon: DraftingCompass,
+    active: (tool) => tool === "wall" || tool === "diagonal-wall",
+  },
   {
     tool: "water",
     label: "Terrain",
@@ -54,18 +83,11 @@ const primaryTools: Array<ToolOption & { active: (tool: DungeonStudioTool) => bo
     active: (tool) => modeForTool(tool) === "terrain",
   },
   {
-    tool: "room-select",
-    label: "Room",
-    icon: Square,
-    active: (tool) => modeForTool(tool) === "room",
+    tool: "object",
+    label: "Objects",
+    icon: Package,
+    active: (tool) => modeForTool(tool) === "object",
   },
-  {
-    tool: "wall",
-    label: "Wall",
-    icon: DraftingCompass,
-    active: (tool) => tool === "wall" || tool === "diagonal-wall",
-  },
-  { tool: "door", label: "Door", icon: DoorOpen, active: (tool) => tool === "door" },
   {
     tool: "delete",
     label: "Delete",
@@ -117,10 +139,11 @@ export function DungeonStudioToolOptionsBar({
   deleteTarget,
   onBrushShapeChange,
   onDeleteTargetChange,
+  onStartNewRoom,
   onToolChange,
 }: ToolPanelProps) {
   return (
-    <div className="grid gap-2 rounded-md border border-border bg-card px-3 py-2">
+    <div className="grid gap-2 rounded-md border border-border bg-card px-2.5 py-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm font-semibold text-foreground">
           <span className="text-muted-foreground">Active tool:</span> {toolLabel(activeTool)}
@@ -130,8 +153,17 @@ export function DungeonStudioToolOptionsBar({
         <p className="max-w-prose text-xs text-muted-foreground">{toolTip(activeTool)}</p>
       </div>
       <div className="flex flex-wrap items-center gap-2" aria-label="Active tool options">
+        {modeForTool(activeTool) === "room" ? (
+          <RoomTopBarActions
+            activeTool={activeTool}
+            brushShape={brushShape}
+            onBrushShapeChange={onBrushShapeChange}
+            onStartNewRoom={onStartNewRoom}
+            onToolChange={onToolChange}
+          />
+        ) : null}
         <ActiveToolChoices activeTool={activeTool} onToolChange={onToolChange} />
-        {supportsBrushShape(activeTool) ? (
+        {supportsBrushShape(activeTool) && modeForTool(activeTool) !== "room" ? (
           <OptionGroup label="Brush shape">
             {brushShapeOptions.map((option) => (
               <CompactOptionButton
@@ -168,38 +200,64 @@ export function DungeonStudioInspectorPanel({
   activeTool,
   document,
   floorCellCount,
+  floorLocations,
   mapName,
+  roomLocations,
   selected,
+  selectedEntity,
+  selectedObjectAssetKey,
   selectedRoom,
-  onCreateRoomFromSelection,
+  selectedRoomConnections,
+  onDeleteEntity,
   onDeleteRoom,
-  onDoneRoom,
+  onDuplicateEntity,
   onEditRoom,
+  onGlobalThemeChange,
+  onMoveEntityToSelection,
+  onObjectAssetChange,
+  onObjectLinkChange,
   onRenameRoom,
-  onStartNewRoom,
+  onRoomColorChange,
+  onRoomThemeChange,
+  onRotateEntity,
   onToolChange,
+  onUploadAsset,
 }: {
   activeTool: DungeonStudioTool;
   document: DungeonStudioDocument;
   floorCellCount: number;
+  floorLocations: CampaignLocation[];
   mapName: string;
+  roomLocations: CampaignLocation[];
   selected: DungeonStudioSelection;
+  selectedEntity?: DungeonStudioEntity;
+  selectedObjectAssetKey: string;
   selectedRoom?: DungeonStudioRoomRegion;
-  onCreateRoomFromSelection: () => void;
+  selectedRoomConnections?: Array<{
+    connectionType: string;
+    room: DungeonStudioRoomRegion;
+  }>;
+  onDeleteEntity: (entityId: string) => void;
   onDeleteRoom: (roomId: string) => void;
-  onDoneRoom: () => void;
+  onDuplicateEntity: (entityId: string) => void;
   onEditRoom: (roomId: string) => void;
+  onGlobalThemeChange: (theme: DungeonStudioTilesetKey) => void;
+  onMoveEntityToSelection: (entityId: string) => void;
+  onObjectAssetChange: (assetKey: string) => void;
+  onObjectLinkChange: (entityId: string, linkedId: string) => void;
   onRenameRoom: (roomId: string, label: string) => void;
-  onStartNewRoom: () => void;
+  onRoomColorChange: (roomId: string, color: string) => void;
+  onRoomThemeChange: (roomId: string, theme: DungeonStudioTilesetKey | "") => void;
+  onRotateEntity: (entityId: string) => void;
   onToolChange: (tool: DungeonStudioTool) => void;
+  onUploadAsset: (file: File) => void;
 }) {
   const terrainCount = terrainCellCount(document);
   const cliffEdgeCount = document.edges.filter((edge) => edge.kind === "cliff-edge").length;
   const roomCellCount = document.rooms.reduce((total, room) => total + room.cells.length, 0);
   const showRoomWorkflow =
     modeForTool(activeTool) === "room" || selectedRoom || selected?.type === "region";
-  const canCreateRoom =
-    selected?.type === "region" && !selected.roomId && selected.cells.length > 0;
+  const showObjects = modeForTool(activeTool) === "object" || selected?.type === "entity";
 
   return (
     <CardSection className="grid content-start gap-3 xl:col-span-1">
@@ -207,17 +265,31 @@ export function DungeonStudioInspectorPanel({
       {showRoomWorkflow ? (
         <DungeonStudioRoomInspector
           activeTool={activeTool}
-          canCreateRoom={canCreateRoom}
           rooms={document.rooms}
+          roomLocations={roomLocations}
           selected={selected}
           selectedRoom={selectedRoom}
-          onCreateRoomFromSelection={onCreateRoomFromSelection}
+          selectedRoomConnections={selectedRoomConnections ?? []}
           onDeleteRoom={onDeleteRoom}
-          onDoneRoom={onDoneRoom}
           onEditRoom={onEditRoom}
           onRenameRoom={onRenameRoom}
-          onStartNewRoom={onStartNewRoom}
+          onRoomColorChange={onRoomColorChange}
+          onRoomThemeChange={onRoomThemeChange}
+        />
+      ) : showObjects ? (
+        <DungeonStudioObjectPanel
+          customAssets={document.customAssets ?? []}
+          floorLocations={floorLocations}
+          selectedEntity={selectedEntity}
+          selectedObjectAssetKey={selectedObjectAssetKey}
+          onDeleteEntity={onDeleteEntity}
+          onDuplicateEntity={onDuplicateEntity}
+          onMoveEntityToSelection={onMoveEntityToSelection}
+          onObjectAssetChange={onObjectAssetChange}
+          onObjectLinkChange={onObjectLinkChange}
+          onRotateEntity={onRotateEntity}
           onToolChange={onToolChange}
+          onUploadAsset={onUploadAsset}
         />
       ) : (
         <SelectionSummary selected={selected} />
@@ -229,6 +301,22 @@ export function DungeonStudioInspectorPanel({
         <div className="mt-2 grid gap-2">
           <InspectorRow label="Mode" value={modeLabel(modeForTool(activeTool))} />
           <InspectorRow label="Map record" value={mapName} />
+          <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+            Theme
+            <select
+              className="rounded-md border border-border bg-card px-2 py-1.5 text-sm font-semibold text-foreground"
+              value={document.tileset}
+              onChange={(event) =>
+                onGlobalThemeChange(event.target.value as DungeonStudioTilesetKey)
+              }
+            >
+              {dungeonStudioThemeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <InspectorRow label="Floor cells" value={String(floorCellCount)} />
           <InspectorRow label="Terrain cells" value={String(terrainCount)} />
           <InspectorRow
@@ -238,6 +326,7 @@ export function DungeonStudioInspectorPanel({
           <InspectorRow label="Cliff edges" value={String(cliffEdgeCount)} />
           <InspectorRow label="Room regions" value={String(document.rooms.length)} />
           <InspectorRow label="Room cells" value={String(roomCellCount)} />
+          <InspectorRow label="Objects" value={String(document.entities.length)} />
         </div>
       </details>
     </CardSection>
@@ -268,107 +357,77 @@ function ActiveToolChoices({
   );
 }
 
+function RoomTopBarActions({
+  activeTool,
+  brushShape,
+  onBrushShapeChange,
+  onStartNewRoom,
+  onToolChange,
+}: {
+  activeTool: DungeonStudioTool;
+  brushShape: DungeonStudioBrushShape;
+  onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
+  onStartNewRoom?: () => void;
+  onToolChange: (tool: DungeonStudioTool) => void;
+}) {
+  const addingRoom = activeTool === "room-brush" || activeTool === "room-fill";
+  if (!addingRoom) {
+    return (
+      <OptionGroup label="Room">
+        <TextOptionButton active={false} label="Add room" onClick={() => onStartNewRoom?.()} />
+      </OptionGroup>
+    );
+  }
+  return (
+    <>
+      <OptionGroup label="Room">
+        <TextOptionButton active label="Adding room" onClick={() => undefined} />
+      </OptionGroup>
+      <OptionGroup label="Brush">
+        <CompactOptionButton
+          active={activeTool === "room-brush" && brushShape === "single"}
+          icon={Square}
+          label="Single"
+          onClick={() => {
+            onBrushShapeChange("single");
+            onToolChange("room-brush");
+          }}
+        />
+        <CompactOptionButton
+          active={activeTool === "room-brush" && brushShape === "rectangle"}
+          icon={ListChecks}
+          label="Rectangle"
+          onClick={() => {
+            onBrushShapeChange("rectangle");
+            onToolChange("room-brush");
+          }}
+        />
+        <CompactOptionButton
+          active={activeTool === "room-brush" && brushShape === "circle"}
+          icon={Circle}
+          label="Circle"
+          onClick={() => {
+            onBrushShapeChange("circle");
+            onToolChange("room-brush");
+          }}
+        />
+        <CompactOptionButton
+          active={activeTool === "room-fill"}
+          icon={Plus}
+          label="Fill"
+          onClick={() => onToolChange("room-fill")}
+        />
+      </OptionGroup>
+    </>
+  );
+}
+
 function SelectionSummary({ selected }: { selected: DungeonStudioSelection }) {
   return (
     <div className="rounded-md border border-border bg-background px-3 py-2 text-sm">
       <div className="font-semibold text-foreground">Selection</div>
       <div className="mt-1 text-muted-foreground">{selectionLabel(selected)}</div>
     </div>
-  );
-}
-
-function OptionGroup({ children, label }: { children: ReactNode; label: string }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5">
-      <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-      {children}
-    </div>
-  );
-}
-
-function PaletteButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: ElementType;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={[
-        "rounded-md border px-3 py-2 text-sm font-semibold transition hover:border-accent/50",
-        active
-          ? "border-accent/40 bg-accent/10 text-foreground"
-          : "border-border bg-background text-muted-foreground",
-      ].join(" ")}
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      <span className="inline-flex items-center gap-2">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </span>
-    </button>
-  );
-}
-
-function CompactOptionButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: ElementType;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={[
-        "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-accent/50",
-        active
-          ? "border-accent/40 bg-accent/10 text-foreground"
-          : "border-border text-muted-foreground",
-      ].join(" ")}
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {label}
-    </button>
-  );
-}
-
-function TextOptionButton({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      className={[
-        "rounded-md border px-2 py-1 text-xs font-semibold transition hover:border-accent/50",
-        active
-          ? "border-accent/40 bg-accent/10 text-foreground"
-          : "border-border text-muted-foreground",
-      ].join(" ")}
-      type="button"
-      aria-pressed={active}
-      onClick={onClick}
-    >
-      {label}
-    </button>
   );
 }
 

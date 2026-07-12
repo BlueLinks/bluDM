@@ -2,7 +2,9 @@ import { BookOpen, Eye, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
-import { Badge, Button, EmptyMini, Modal, StatPill } from "../../components/ui";
+import { InitialsAvatar, PropertyCard, StatChip } from "../../components/shared/displayPrimitives";
+import { sourceBadgeClass, sourceToneClass } from "../../components/shared/sourceTones";
+import { Badge, Button, EmptyMini, Modal } from "../../components/ui";
 import { creatureDefaultDisposition } from "../../lib/domain/forms";
 import type { Creature } from "../../types";
 
@@ -81,24 +83,12 @@ function CreatureLibraryCard({
     <div
       className={[
         "rounded-lg border bg-background p-4 transition",
-        creature.readOnly ? "border-sky-300/80 shadow-sm dark:border-sky-800" : "border-border",
+        creature.readOnly ? "border-companion-official/50 shadow-sm" : "border-border",
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md bg-muted text-sm font-bold text-muted-foreground">
-            {avatarSrc ? (
-              <img
-                className="h-full w-full object-cover"
-                src={avatarSrc}
-                alt=""
-                loading="lazy"
-                decoding="async"
-              />
-            ) : (
-              creature.name.slice(0, 2).toUpperCase()
-            )}
-          </div>
+          <InitialsAvatar name={creature.name} src={avatarSrc} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate font-semibold">{creature.name}</h3>
@@ -151,12 +141,14 @@ function CreatureLibraryCardActions({
 function CreatureStatBadges({ creature }: { creature: Creature }) {
   return (
     <div className="mt-3 flex flex-wrap gap-2 text-xs">
-      <Badge>AC {creature.armorClass}</Badge>
-      <Badge>HP {creature.hitPoints}</Badge>
-      <Badge>CR {creature.challengeRating || "-"}</Badge>
-      <Badge tone={creatureDefaultDisposition(creature) === "friendly" ? "friendly" : "default"}>
-        Default: {creatureDefaultDisposition(creature)}
-      </Badge>
+      <StatChip label="AC" value={creature.armorClass} tone="primary" />
+      <StatChip label="HP" value={creature.hitPoints} tone="tertiary" />
+      <StatChip label="CR" value={creature.challengeRating || "-"} tone="custom" />
+      <StatChip
+        label="Default:"
+        value={creatureDefaultDisposition(creature)}
+        tone={creatureDefaultDisposition(creature) === "friendly" ? "shared" : "danger"}
+      />
     </div>
   );
 }
@@ -166,7 +158,7 @@ function CreaturePreviewSheet({ creature }: { creature: Creature }) {
   const avatarSrc = avatarImageSrc(creature.imageAssetId, creature.avatarUrl);
   return (
     <div className="grid gap-5">
-      <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
+      <div className={["rounded-lg border p-4", sourceToneClass("official")].join(" ")}>
         <div className="mb-2 flex flex-wrap items-center gap-2">
           <SrdBadge label={creature.sourceLabel} />
           <span className="text-sm font-semibold">
@@ -179,19 +171,7 @@ function CreaturePreviewSheet({ creature }: { creature: Creature }) {
         </p>
       </div>
       <div className="flex flex-wrap items-start gap-4">
-        <div className="grid h-28 w-28 shrink-0 place-items-center overflow-hidden rounded-lg border border-border bg-muted text-2xl font-bold text-muted-foreground">
-          {avatarSrc ? (
-            <img
-              className="h-full w-full object-cover"
-              src={avatarSrc}
-              alt=""
-              loading="eager"
-              decoding="async"
-            />
-          ) : (
-            creature.name.slice(0, 2).toUpperCase()
-          )}
-        </div>
+        <InitialsAvatar className="rounded-lg" name={creature.name} size="xl" src={avatarSrc} />
         <div className="min-w-0 flex-1">
           <h3 className="text-2xl font-bold">{creature.name}</h3>
           <p className="mt-1 italic text-muted-foreground">
@@ -205,21 +185,26 @@ function CreaturePreviewSheet({ creature }: { creature: Creature }) {
         </p>
       )}
       <div className="grid gap-3 sm:grid-cols-4">
-        <StatPill label="Armor Class" value={creature.armorClass} />
-        <StatPill label="Hit Points" value={creature.hitPoints} />
-        <StatPill label="Hit Dice" value={creature.hitDice || "-"} />
-        <StatPill label="XP" value={creature.xp} />
+        <PropertyCard label="Armor Class" value={creature.armorClass} tone="primary" />
+        <PropertyCard label="Hit Points" value={creature.hitPoints} tone="tertiary" />
+        <PropertyCard label="Hit Dice" value={creature.hitDice || "-"} tone="metadata" />
+        <PropertyCard label="XP" value={creature.xp} tone="custom" />
       </div>
       <div className="grid gap-2 sm:grid-cols-6">
         {abilities.map((ability) => (
-          <div
-            className="rounded-md border border-border bg-background p-3 text-center"
+          <PropertyCard
             key={ability.label}
-          >
-            <div className="text-xs font-bold uppercase text-muted-foreground">{ability.label}</div>
-            <div className="text-xl font-bold">{ability.value}</div>
-            <div className="text-sm text-muted-foreground">{signedModifier(ability.value)}</div>
-          </div>
+            label={ability.label}
+            tone="secondary"
+            value={
+              <span className="grid gap-0.5">
+                <span className="text-xl font-bold">{ability.value}</span>
+                <span className="text-sm text-muted-foreground">
+                  {signedModifier(ability.value)}
+                </span>
+              </span>
+            }
+          />
         ))}
       </div>
       <div className="grid gap-3 md:grid-cols-2">
@@ -294,7 +279,9 @@ function PreviewFeatureItem({ item }: { item: unknown }) {
       {damage.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-2">
           {damage.map((part, index) => (
-            <Badge key={featureKey(part, index)}>{formatPreviewValue(part)}</Badge>
+            <Badge key={featureKey(part, index)} tone="warning">
+              {formatPreviewValue(part)}
+            </Badge>
           ))}
         </div>
       )}
@@ -304,7 +291,12 @@ function PreviewFeatureItem({ item }: { item: unknown }) {
 
 function SrdBadge({ label }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-sky-900 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200">
+    <span
+      className={[
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
+        sourceBadgeClass("official"),
+      ].join(" ")}
+    >
       <BookOpen className="h-3 w-3" />
       {label || "SRD"}
     </span>

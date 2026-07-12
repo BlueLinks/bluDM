@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { Encounter } from "../../../types";
 import { childPrepChipsFor, childPrepIssueSummariesFor } from "./CampaignWorldChildPrepChips";
-import type { CampaignLocation, CampaignLocationLink, CampaignMap } from "./travelTypes";
+import type {
+  CampaignLocation,
+  CampaignLocationLink,
+  CampaignMap,
+  CampaignNpcLocationLink,
+} from "./travelTypes";
 
 describe("childPrepChipsFor", () => {
   it("summarizes floor prep from descendant room data", () => {
@@ -15,12 +20,13 @@ describe("childPrepChipsFor", () => {
         location({ id: "room-1", locationType: "room", parentLocationId: "floor-1" }),
       ],
       maps: [],
+      npcLinks: [npcLink({ locationId: "room-1" })],
     });
 
-    expect(chips.map((chip) => chip.label)).toEqual(["1 room", "1 encounter", "Unmapped"]);
+    expect(chips.map((chip) => chip.label)).toEqual(["1 room", "1 encounter", "1 NPC"]);
   });
 
-  it("summarizes incomplete child prep across child rows", () => {
+  it("summarizes useful child prep counts without low-value warning badges", () => {
     const chips = childPrepIssueSummariesFor({
       childLocations: [
         location({ id: "room-1", locationType: "room", notes: "", publicNotes: "" }),
@@ -33,26 +39,23 @@ describe("childPrepChipsFor", () => {
         location({ id: "room-2", locationType: "room", notes: "Prepared." }),
       ],
       maps: [map({ parentLocationId: "room-2" })],
+      npcLinks: [npcLink({ locationId: "room-2" })],
     });
 
-    expect(chips.map((chip) => chip.label)).toEqual([
-      "1 room has no encounters",
-      "1 room has no exits",
-      "1 room needs notes",
-      "1 room is unmapped",
-    ]);
+    expect(chips.map((chip) => chip.label)).toEqual(["1 encounter", "1 NPC"]);
   });
 
-  it("prioritizes room encounter, exit, notes, and map status", () => {
+  it("prioritizes room encounter, NPC, and connection counts", () => {
     const chips = childPrepChipsFor({
       child: location({ id: "room-1", locationType: "room", parentLocationId: "floor-1" }),
       encounters: [encounter({ locationId: "room-1" })],
       links: [link({ sourceLocationId: "room-1", targetLocationId: "floor-1" })],
       locations: [location({ id: "room-1", locationType: "room", parentLocationId: "floor-1" })],
       maps: [map({ parentLocationId: "room-1" })],
+      npcLinks: [npcLink({ locationId: "room-1" })],
     });
 
-    expect(chips.map((chip) => chip.label)).toEqual(["1 encounter", "1 exit", "Notes", "Mapped"]);
+    expect(chips.map((chip) => chip.label)).toEqual(["1 encounter", "1 NPC", "1 connection"]);
   });
 });
 
@@ -125,6 +128,21 @@ function map(overrides: Partial<CampaignMap> = {}): CampaignMap {
     scaleDistanceUnit: "feet",
     calibrationPixelLength: 0,
     calibrationDistance: 0,
+    createdAt: "",
+    updatedAt: "",
+    ...overrides,
+  };
+}
+
+function npcLink(overrides: Partial<CampaignNpcLocationLink> = {}): CampaignNpcLocationLink {
+  return {
+    id: "npc-link-1",
+    campaignId: "campaign-1",
+    creatureId: "npc-1",
+    locationId: "location-1",
+    linkType: "present",
+    visibility: "dm",
+    notes: "",
     createdAt: "",
     updatedAt: "",
     ...overrides,

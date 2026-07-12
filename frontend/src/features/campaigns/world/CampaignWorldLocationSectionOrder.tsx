@@ -1,72 +1,15 @@
 import type React from "react";
+import type { LocationDetailTab } from "./CampaignWorldLocationModeTabs";
 import type { LocationProfileInfo } from "./locationProfiles";
 
 export function sectionOrder(
   profile: LocationProfileInfo,
   sections: Record<string, React.ReactNode>,
+  activeTab: LocationDetailTab = "overview",
 ) {
-  const orders: Record<string, string[]> = {
-    region: [
-      "mapCard",
-      "childCard",
-      "travelCard",
-      "linksCard",
-      "notesCard",
-      "encountersCard",
-      "npcsCard",
-    ],
-    town: [
-      "mapCard",
-      "childCard",
-      "npcsCard",
-      "travelCard",
-      "notesCard",
-      "encountersCard",
-      "linksCard",
-    ],
-    dungeon: [
-      "structureCard",
-      "childCard",
-      "prepCard",
-      "mapCard",
-      "encountersCard",
-      "linksCard",
-      "notesCard",
-      "npcsCard",
-      "travelCard",
-    ],
-    floor: [
-      "mapCard",
-      "childCard",
-      "prepCard",
-      "encountersCard",
-      "linksCard",
-      "notesCard",
-      "npcsCard",
-    ],
-    shop: [
-      "stockCard",
-      "npcsCard",
-      "notesCard",
-      "mapCard",
-      "parentCard",
-      "encountersCard",
-      "linksCard",
-      "childCard",
-    ],
-    room: [
-      "notesCard",
-      "prepCard",
-      "encountersCard",
-      "linksCard",
-      "npcsCard",
-      "mapCard",
-      "parentCard",
-      "childCard",
-    ],
-  };
   const key = profile.profile === "container" ? (profile.variant ?? "region") : profile.profile;
-  return orders[key].flatMap((name) => {
+  const order = ordersForTab(key, activeTab);
+  return order.flatMap((name) => {
     const section = sections[name];
     return section
       ? [
@@ -76,6 +19,66 @@ export function sectionOrder(
         ]
       : [];
   });
+}
+
+function ordersForTab(profileKey: string, activeTab: LocationDetailTab) {
+  const orders: Record<string, Record<LocationDetailTab, string[]>> = {
+    region: {
+      overview: ["mapCard", "childCard", "travelCard", "notesCard"],
+      places: ["childCard", "mapCard", "travelCard", "linksCard"],
+      inventory: ["childCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["linksCard", "travelCard"],
+    },
+    town: {
+      overview: ["mapCard", "childCard", "npcsCard", "travelCard", "notesCard"],
+      places: ["childCard", "mapCard", "linksCard"],
+      inventory: ["childCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["travelCard", "linksCard"],
+    },
+    dungeon: {
+      overview: ["mapCard", "childCard", "prepCard", "encountersCard"],
+      places: ["childCard", "mapCard"],
+      inventory: ["childCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["linksCard", "travelCard"],
+    },
+    floor: {
+      overview: ["mapCard", "childCard", "prepCard", "encountersCard"],
+      places: ["childCard", "mapCard"],
+      inventory: ["childCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["linksCard"],
+    },
+    shop: {
+      overview: ["npcsCard", "notesCard", "mapCard", "parentCard"],
+      places: ["childCard", "parentCard", "mapCard"],
+      inventory: ["stockCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["linksCard", "parentCard", "mapCard"],
+    },
+    room: {
+      overview: ["mapCard", "prepCard", "encountersCard", "npcsCard", "notesCard"],
+      places: ["mapCard", "parentCard", "childCard"],
+      inventory: ["childCard"],
+      people: ["npcsCard"],
+      encounters: ["encountersCard"],
+      notes: ["notesCard"],
+      connections: ["linksCard", "mapCard", "parentCard"],
+    },
+  };
+  return orders[profileKey]?.[activeTab] ?? orders[profileKey]?.overview ?? [];
 }
 
 function sectionSpanClass(profileKey: string, sectionName: string) {

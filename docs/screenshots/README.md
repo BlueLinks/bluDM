@@ -9,6 +9,8 @@ Store GitHub README screenshots in this folder and reference them from the root
 
 ## Suggested Files
 
+- `campaign-world-shop.png` - Campaign World location browser focused on a shop profile.
+- `import-export-workspace.png` - portable bundle export and import overview.
 - `campaign-dashboard.png` - signed-in campaign or dashboard view.
 - `encounter-tracker.png` - active encounter with initiative, combatants, HP or status controls, and combat log if visible.
 - `spell-library-prismatic.png` - spell library search for `prismatic` with SRD source labels visible.

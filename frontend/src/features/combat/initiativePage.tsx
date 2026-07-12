@@ -244,10 +244,10 @@ function SortableInitiativeRow({
   const style = { transform: CSS.Transform.toString(transform), transition };
   const tone =
     combatant.side === "enemy"
-      ? "border-red-500/30 bg-red-500/10"
+      ? "border-destructive/30 bg-destructive/10"
       : combatant.side === "friendly"
-        ? "border-emerald-500/30 bg-emerald-500/10"
-        : "border-sky-500/25 bg-sky-500/10";
+        ? "border-companion-shared/30 bg-companion-shared/10"
+        : "border-info/25 bg-info/10";
   return (
     <div
       ref={setNodeRef}

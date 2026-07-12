@@ -1,5 +1,7 @@
 import { Copy, Edit3, Eye, Trash2 } from "lucide-react";
 import type React from "react";
+import { MetricCard } from "../../components/layout";
+import { sourceBadgeClass } from "../../components/shared/sourceTones";
 import { Button } from "../../components/ui";
 import type { Item } from "../../types";
 import { buildItemDisplay, type ItemChip, type ItemChipTone } from "./itemCatalogDisplay";
@@ -35,10 +37,10 @@ export function ItemCatalogCard({
         </div>
         <span
           className={[
-            "rounded-full px-2 py-1 text-[0.68rem] font-extrabold",
+            "rounded-full border px-2 py-1 text-[0.68rem] font-extrabold",
             item.librarySource === "user"
-              ? "bg-primary/15 text-primary"
-              : "bg-muted text-muted-foreground",
+              ? sourceBadgeClass("personal")
+              : sourceBadgeClass("official"),
           ].join(" ")}
         >
           {display.sourceLabel}
@@ -46,8 +48,8 @@ export function ItemCatalogCard({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <CatalogStat label="Value" value={display.value} />
-        <CatalogStat label="Weight" value={display.weight} />
+        <CatalogStat label="Value" tone="secondary" value={display.value} />
+        <CatalogStat label="Weight" tone="tertiary" value={display.weight} />
       </div>
 
       <div className="flex max-h-[4.35rem] flex-wrap content-start gap-1.5 overflow-hidden">
@@ -118,24 +120,25 @@ export function ItemChipView({ chip }: { chip: ItemChip }) {
   );
 }
 
-function CatalogStat({ label, value }: { label: string; value: string }) {
-  return (
-    <span className="grid min-w-20 gap-0.5 rounded-md border border-border bg-background px-2 py-1.5">
-      <span className="text-[0.62rem] font-extrabold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </span>
-      <strong className="text-sm leading-tight">{value}</strong>
-    </span>
-  );
+function CatalogStat({
+  label,
+  tone = "neutral",
+  value,
+}: {
+  label: string;
+  tone?: "accent" | "neutral" | "primary" | "secondary" | "tertiary";
+  value: string;
+}) {
+  return <MetricCard className="min-w-24" label={label} tone={tone} value={value} />;
 }
 
 function chipToneClass(tone: ItemChipTone = "default") {
   const tones = {
-    blue: "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-200",
+    accent: "border-primary/25 bg-primary/10 text-primary",
+    custom: "border-companion-custom/25 bg-companion-custom/10 text-companion-custom",
     default: "border-border bg-background text-muted-foreground",
-    purple: "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-200",
-    strong: "border-primary/25 bg-primary/10 text-primary",
-    warn: "border-accent/25 bg-accent/10 text-accent",
+    info: "border-info/25 bg-info/10 text-info",
+    warning: "border-warning/25 bg-warning/10 text-warning",
   };
   return tones[tone];
 }

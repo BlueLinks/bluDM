@@ -45,8 +45,10 @@ export function CampaignWorldLocationWorkspace({
   onCreateNpcLink,
   onCreateStock,
   onCustomStockItemCreated,
+  onClearNotes,
   onDeleteLink,
   onDeleteLocation,
+  onDeleteEncounter,
   onDeleteNpcLink,
   onDeleteStock,
   onEdit,
@@ -107,6 +109,7 @@ export function CampaignWorldLocationWorkspace({
         onCreateNpcLink={onCreateNpcLink}
         onCreateStock={onCreateStock}
         onCustomStockItemCreated={onCustomStockItemCreated}
+        onClearNotes={onClearNotes}
         onDeleteLocation={onDeleteLocation}
         onDeleteLink={onDeleteLink}
         onDeleteNpcLink={onDeleteNpcLink}
@@ -114,6 +117,7 @@ export function CampaignWorldLocationWorkspace({
         onEdit={onEdit}
         onGenerateEncounter={onGenerateEncounter}
         onCloneEncounter={onCloneEncounter}
+        onDeleteEncounter={onDeleteEncounter}
         onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
         onPlanTravel={onPlanTravel}
@@ -192,8 +196,10 @@ type CampaignWorldLocationWorkspaceProps = {
   onCreateNpcLink: (input: NpcLocationFormInput) => Promise<void>;
   onCreateStock: (input: LocationStockFormInput) => Promise<void>;
   onCustomStockItemCreated: (item: Item) => void;
+  onClearNotes: (location: CampaignLocation) => Promise<void>;
   onDeleteLink: (linkID: string) => Promise<void>;
   onDeleteLocation: () => void;
+  onDeleteEncounter: (encounter: Encounter) => void;
   onDeleteNpcLink: (linkID: string) => Promise<void>;
   onDeleteStock: (stockID: string) => Promise<void>;
   onEdit: () => void;

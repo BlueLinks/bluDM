@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { Button, Modal } from "../../components/ui";
+import { Button, Callout, Modal } from "../../components/ui";
 import { normalizeSpellACFormulas, validateSpellACFormulas } from "../../lib/domain/acFormula";
 import type { Spell, SpellFormState } from "../../types";
 import { SpellActionsSection } from "./SpellActionsSection";
@@ -61,11 +61,7 @@ export function SpellDialog({
       trigger={<span />}
     >
       <form className="grid gap-5" onSubmit={handleSubmit}>
-        {copiedSourceNote && (
-          <div className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm font-medium text-sky-900 dark:text-sky-100">
-            {copiedSourceNote}
-          </div>
-        )}
+        {copiedSourceNote && <Callout tone="info">{copiedSourceNote}</Callout>}
         <SpellCoreFields form={form} setForm={setForm} />
         <ProjectileSection form={form} setForm={setForm} />
         <SpellActionsSection form={form} setForm={setForm} />

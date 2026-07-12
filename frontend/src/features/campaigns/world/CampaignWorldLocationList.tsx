@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, MapPin, Search, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Button, Input } from "../../../components/ui";
 import { LocationIcon } from "./CampaignWorldLocationIcon";
@@ -13,7 +13,6 @@ type LocationNode = {
 export function WorldLocationList({
   locations,
   query,
-  resultCount,
   selectedID,
   totalCount,
   onCreate,
@@ -22,14 +21,21 @@ export function WorldLocationList({
 }: {
   locations: CampaignLocation[];
   query: string;
-  resultCount: number;
   selectedID: string;
   totalCount: number;
   onCreate: () => void;
   onQueryChange: (value: string) => void;
   onSelect: (locationID: string) => void;
 }) {
-  const { nodes, parentByID } = useMemo(() => buildLocationTree(locations), [locations]);
+  const displayLocations = useMemo(
+    () =>
+      query ? locations : locations.filter((location) => includeInOverview(location, selectedID)),
+    [locations, query, selectedID],
+  );
+  const { nodes, parentByID } = useMemo(
+    () => buildLocationTree(displayLocations),
+    [displayLocations],
+  );
   const [expandedIDs, setExpandedIDs] = useState<Set<string>>(() => new Set(rootIDs(nodes)));
 
   useEffect(() => {
@@ -85,73 +91,68 @@ export function WorldLocationList({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2">
-      <div className="grid content-start gap-2 rounded-md border border-border bg-card p-2">
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <div className="min-w-0">
-            <h4 className="text-sm font-semibold">Locations</h4>
-            <p className="text-xs font-semibold text-muted-foreground">
-              Showing {resultCount} of {totalCount}.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            <Button
-              aria-label="Add world location"
-              className="h-8 w-8 p-0"
-              icon={MapPin}
-              title="Add world location"
-              type="button"
-              size="sm"
-              onClick={onCreate}
-            />
-            <Button
-              aria-label="Expand all locations"
-              className="h-8 w-8 p-0"
-              icon={ChevronDown}
-              title="Expand all locations"
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={!canExpandAll}
-              onClick={expandAll}
-            />
-            <Button
-              aria-label="Collapse all locations"
-              className="h-8 w-8 p-0"
-              icon={ChevronRight}
-              title="Collapse all locations"
-              type="button"
-              size="sm"
-              variant="secondary"
-              disabled={!canCollapseAll}
-              onClick={collapseAll}
-            />
-          </div>
+    <aside className="campaign-world-nav flex h-full min-h-0 flex-col gap-2 overflow-hidden rounded-lg border border-border bg-card p-3">
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold">World</h4>
+          <p className="text-xs text-muted-foreground">
+            {displayLocations.length} of {totalCount} shown
+          </p>
         </div>
-        <div className="relative min-w-0">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label="Search locations"
-            className={query ? "w-full pl-9 pr-9" : "w-full pl-9"}
-            placeholder="Search locations"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+        <Button icon={Plus} size="sm" type="button" onClick={onCreate}>
+          New location
+        </Button>
+      </div>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">Location tree</span>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            aria-label="Expand all locations"
+            className="h-8 w-8 p-0"
+            icon={ChevronDown}
+            title="Expand all locations"
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={!canExpandAll}
+            onClick={expandAll}
           />
-          {query ? (
-            <button
-              aria-label="Clear location search"
-              className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
-              type="button"
-              onClick={() => onQueryChange("")}
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          ) : null}
+          <Button
+            aria-label="Collapse all locations"
+            className="h-8 w-8 p-0"
+            icon={ChevronRight}
+            title="Collapse all locations"
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={!canCollapseAll}
+            onClick={collapseAll}
+          />
         </div>
+      </div>
+      <div className="relative min-w-0">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          aria-label="Search locations"
+          className={query ? "w-full pl-9 pr-9" : "w-full pl-9"}
+          placeholder="Search locations"
+          value={query}
+          onChange={(event) => onQueryChange(event.target.value)}
+        />
+        {query ? (
+          <button
+            aria-label="Clear location search"
+            className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+            type="button"
+            onClick={() => onQueryChange("")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
       </div>
       <nav
         aria-label="Location results"
-        className="grid min-h-0 flex-1 content-start gap-1 overflow-auto pr-1"
+        className="grid min-h-0 flex-1 content-start gap-1 overflow-auto pr-0.5"
       >
         {nodes.map((node) => (
           <LocationTreeNode
@@ -166,7 +167,7 @@ export function WorldLocationList({
           />
         ))}
       </nav>
-    </div>
+    </aside>
   );
 }
 
@@ -198,7 +199,7 @@ function LocationTreeNode({
         {hasChildren ? (
           <button
             aria-label={`${expanded ? "Collapse" : "Expand"} ${node.location.name}`}
-            className="grid h-7 w-6 shrink-0 place-items-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="grid h-7 w-6 shrink-0 place-items-center rounded text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
             type="button"
             onClick={() => onToggleExpanded(node.location.id)}
           >
@@ -217,8 +218,8 @@ function LocationTreeNode({
           className={[
             "flex min-h-8 w-full min-w-0 items-start gap-2 rounded-md border px-2 py-1 text-left text-sm transition",
             active
-              ? "border-primary bg-primary/10"
-              : "border-border bg-background hover:border-primary/60",
+              ? "border-primary/40 bg-primary/10"
+              : "border-transparent bg-transparent hover:border-border/70 hover:bg-card/70",
           ].join(" ")}
           title={locationPathLabel(node.location)}
           type="button"
@@ -230,14 +231,14 @@ function LocationTreeNode({
             locationType={node.location.locationType}
           />
           <div className="min-w-0 flex-1 grid gap-0.5">
-            <div className="truncate font-semibold">{node.location.name}</div>
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
+            <div className="truncate font-medium">{node.location.name}</div>
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.68rem] font-semibold text-muted-foreground">
               {root && node.location.path && node.location.path.length > 1 ? (
                 <span className="min-w-0 [overflow-wrap:anywhere]">
                   {locationPathLabel(node.location)}
                 </span>
               ) : null}
-              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
+              <span className="shrink-0 text-[0.68rem] font-semibold text-muted-foreground">
                 {typeLabel}
               </span>
             </div>
@@ -261,6 +262,10 @@ function LocationTreeNode({
       ) : null}
     </div>
   );
+}
+
+function includeInOverview(location: CampaignLocation, selectedID: string) {
+  return location.locationType !== "room" || location.id === selectedID;
 }
 
 function buildLocationTree(locations: CampaignLocation[]) {

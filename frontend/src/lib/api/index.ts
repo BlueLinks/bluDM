@@ -26,6 +26,7 @@ import type {
 import { actionTemplateApi } from "./actionTemplates";
 import { campaignWorldApi } from "./campaignWorld";
 import { encounterRunApi } from "./encounterRuns";
+import { importExportApi } from "./importExport";
 import { journeyApi } from "./journeys";
 import { rollTableApi } from "./rollTables";
 import {
@@ -40,6 +41,7 @@ export const api = {
   ...actionTemplateApi,
   ...campaignWorldApi,
   ...encounterRunApi,
+  ...importExportApi,
   ...journeyApi,
   ...rollTableApi,
   status: () => request<AuthStatus>("/api/auth/status"),

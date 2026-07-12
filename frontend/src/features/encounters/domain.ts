@@ -90,7 +90,7 @@ export function encounterMetaChanged(encounter: Encounter | null, meta: Encounte
     encounter.description !== meta.description ||
     encounter.status !== meta.status ||
     encounter.location !== meta.location ||
-    encounter.locationId !== meta.locationId ||
+    (encounter.locationId ?? "") !== meta.locationId ||
     encounter.roomNumber !== meta.roomNumber
   );
 }

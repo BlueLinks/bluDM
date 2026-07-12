@@ -172,7 +172,7 @@ export function ItemsPage() {
           </div>
         )}
         <SidebarDetailLayout variant="catalog">
-          <aside className="grid content-start gap-4 border-b border-border bg-muted/35 p-3 lg:border-b-0 lg:border-r">
+          <aside className="grid content-start gap-4 border-b border-border bg-surface p-3 lg:border-b-0 lg:border-r">
             <FilterGroup title="Category">
               <FilterButton
                 active={category === ""}
@@ -269,7 +269,7 @@ function FilterButton({
         "flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left text-sm font-semibold transition",
         active
           ? "border-primary/25 bg-primary/10 text-primary"
-          : "border-transparent text-muted-foreground hover:border-border hover:bg-card",
+          : "border-transparent text-muted-foreground hover:border-border hover:bg-background",
       ].join(" ")}
       type="button"
       onClick={onClick}

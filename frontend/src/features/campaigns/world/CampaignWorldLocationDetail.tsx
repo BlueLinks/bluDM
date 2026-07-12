@@ -1,11 +1,16 @@
-import { Plus } from "lucide-react";
 import type React from "react";
-import { useMemo, useState } from "react";
-import { ActionRow } from "../../../components/layout";
-import { Button } from "../../../components/ui";
+import { useEffect, useMemo, useState } from "react";
 import type { Creature, Encounter, Item } from "../../../types";
+import { ChildLocationActions } from "./CampaignWorldChildLocationActions";
 import { childPrepChipsFor, childPrepIssueSummariesFor } from "./CampaignWorldChildPrepChips";
 import { CampaignWorldLocationEncounters } from "./CampaignWorldLocationEncounters";
+import { connectedRoomsForLocation } from "./campaignWorldConnectedRooms";
+import { ProfileScene } from "./CampaignWorldLocationScenes";
+import {
+  CampaignWorldLocationModeTabs,
+  tabsForLocationProfile,
+  type LocationDetailTab,
+} from "./CampaignWorldLocationModeTabs";
 import { CampaignWorldLocationLinks, type LinkFormInput } from "./CampaignWorldLocationLinks";
 import { CampaignWorldLocationNpcs, type NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
 import {
@@ -17,20 +22,13 @@ import { ParentContextCard, parentFor } from "./CampaignWorldLocationContextCard
 import {
   ChildLocationsCard,
   CompactTravelCard,
-  journeyInvolvesLocation,
   LocationMapCard,
   LocationNotesCard,
-  StructureSummaryCard,
-  travelLikeLinks,
 } from "./CampaignWorldLocationProfileCards";
+import { journeyInvolvesLocation, travelLikeLinks } from "./CampaignWorldLocationTravelUtils";
 import { PrepOverviewCard } from "./CampaignWorldPrepOverviewCard";
-import { sectionOrder } from "./CampaignWorldLocationSectionOrder";
-import {
-  defaultTypeForProfileAction,
-  labelForProfileAction,
-  locationProfile,
-  type LocationProfileInfo,
-} from "./locationProfiles";
+import { explorationProfile, studioPathForLocation } from "./CampaignWorldLocationProfileUtils";
+import { locationProfile, type LocationProfileInfo } from "./locationProfiles";
 import type {
   CampaignJourney,
   CampaignLocation,
@@ -68,6 +66,7 @@ export function CampaignWorldLocationDetail({
   onCreateNpc,
   onCreateStock,
   onCustomStockItemCreated,
+  onClearNotes,
   onDeleteLocation,
   onDeleteLink,
   onDeleteNpcLink,
@@ -75,6 +74,7 @@ export function CampaignWorldLocationDetail({
   onEdit,
   onGenerateEncounter,
   onCloneEncounter,
+  onDeleteEncounter,
   onCloseMaps,
   onOpenMaps,
   onPlanTravel,
@@ -85,10 +85,16 @@ export function CampaignWorldLocationDetail({
   const [stockOpen, setStockOpen] = useState(false);
   const [pricingOpen, setPricingOpen] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<LocationDetailTab>("overview");
   const parentLocation = parentFor(location, locations);
   const selectedLinks = links.filter(
     (link) => link.sourceLocationId === location.id || link.targetLocationId === location.id,
   );
+  const tabs = useMemo(() => tabsForLocationProfile(profile), [profile]);
+
+  useEffect(() => {
+    setActiveTab("overview");
+  }, [location.id]);
   const relevantJourneys = useMemo(
     () => journeys.filter((journey) => journeyInvolvesLocation(journey, location, childLocations)),
     [childLocations, journeys, location],
@@ -130,6 +136,7 @@ export function CampaignWorldLocationDetail({
     onCreateNpcLink,
     onCreateStock,
     onCustomStockItemCreated,
+    onClearNotes,
     onDeleteLink,
     onDeleteLocation,
     onDeleteNpcLink,
@@ -138,6 +145,7 @@ export function CampaignWorldLocationDetail({
     onGenerateEncounter,
     onCloneEncounter,
     onCloseMaps,
+    onDeleteEncounter,
     onOpenMaps,
     onPlanTravel,
     onSelectLocation,
@@ -154,13 +162,21 @@ export function CampaignWorldLocationDetail({
         onAddChild={onAddChild}
         onDeleteLocation={onDeleteLocation}
         onEdit={onEdit}
-        onGenerateEncounter={onGenerateEncounter}
-        onLinkExit={() => setLinkOpen(true)}
         onOpenMaps={onOpenMaps}
         onSelectLocation={onSelectLocation}
-        onStockOpen={() => setStockOpen(true)}
       />
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">{sectionOrder(profile, sections)}</div>
+      <ProfileScene
+        activeTab={activeTab}
+        profile={profile}
+        sections={sections}
+        tabBar={
+          <CampaignWorldLocationModeTabs
+            activeTab={activeTab}
+            tabs={tabs}
+            onChange={setActiveTab}
+          />
+        }
+      />
     </article>
   );
 }
@@ -204,8 +220,10 @@ function buildProfileSections(props: ProfileSectionProps) {
     onDeleteLink,
     onDeleteNpcLink,
     onDeleteStock,
+    onClearNotes,
     onCloneEncounter,
     onCloseMaps,
+    onDeleteEncounter,
     onOpenMaps,
     onPlanTravel,
     onSelectLocation,
@@ -220,18 +238,16 @@ function buildProfileSections(props: ProfileSectionProps) {
     profile.profile === "shop" ||
     profile.profile === "room" ||
     npcLinks.length > 0;
-  const shouldShowEncounters =
-    profile.variant === "dungeon" ||
-    profile.variant === "floor" ||
-    profile.profile === "room" ||
-    encounters.length > 0;
+  const shouldShowEncounters = true;
   const shouldShowLinks = profile.profile !== "shop" || links.length > 0 || linkOpen;
+  const inferredRoomConnections =
+    profile.profile === "room" ? connectedRoomsForLocation({ location, locations, maps }) : [];
   const showChildPrep = profile.variant === "dungeon" || profile.variant === "floor";
   const prepChipsByLocationId = showChildPrep
     ? Object.fromEntries(
         childLocations.map((child) => [
           child.id,
-          childPrepChipsFor({ child, encounters, links: allLinks, locations, maps }),
+          childPrepChipsFor({ child, encounters, links: allLinks, locations, maps, npcLinks }),
         ]),
       )
     : undefined;
@@ -242,14 +258,30 @@ function buildProfileSections(props: ProfileSectionProps) {
         links: allLinks,
         locations,
         maps,
+        npcLinks,
       })
     : undefined;
+  const nestedLocationsByParentId =
+    profile.variant === "dungeon"
+      ? Object.fromEntries(
+          childLocations
+            .filter((child) => child.locationType === "floor")
+            .map((floor) => [
+              floor.id,
+              locations.filter(
+                (candidate) =>
+                  candidate.parentLocationId === floor.id && candidate.locationType === "room",
+              ),
+            ]),
+        )
+      : undefined;
 
   return {
     childCard: shouldShowChildren ? (
       <ChildLocationsCard
         childLocations={childLocations}
         emptyCopy={profile.childEmpty}
+        nestedLocationsByParentId={nestedLocationsByParentId}
         prepChipsByLocationId={prepChipsByLocationId}
         prepSummaryChips={prepSummaryChips}
         title={profile.childTitle}
@@ -259,15 +291,11 @@ function buildProfileSections(props: ProfileSectionProps) {
     ) : null,
     encountersCard: shouldShowEncounters ? (
       <CampaignWorldLocationEncounters
-        actionLabel={explorationProfile(profile) ? "Add encounter" : undefined}
         campaignId={campaignId}
         encounters={encounters}
-        onAddEncounter={
-          explorationProfile(profile) && profile.profile !== "room"
-            ? props.onGenerateEncounter
-            : undefined
-        }
+        onAddEncounter={props.onGenerateEncounter}
         onCloneEncounter={onCloneEncounter}
+        onDeleteEncounter={onDeleteEncounter}
         onStartEncounter={props.onStartEncounter}
       />
     ) : null,
@@ -275,19 +303,34 @@ function buildProfileSections(props: ProfileSectionProps) {
       <>
         {linksError ? <p className="text-sm font-semibold text-destructive">{linksError}</p> : null}
         <CampaignWorldLocationLinks
-          actionLabel={explorationProfile(profile) ? "Link exit" : undefined}
-          defaultLinkType={explorationProfile(profile) ? "passage" : undefined}
+          actionLabel={
+            profile.profile === "room"
+              ? "Link room"
+              : explorationProfile(profile)
+                ? "Link exit"
+                : undefined
+          }
+          defaultLinkType={profile.profile === "room" ? "door" : "passage"}
           emptyCopy={
-            explorationProfile(profile)
-              ? "No exits, doors, stairs, or linked rooms yet."
-              : undefined
+            profile.profile === "room"
+              ? "No connected rooms found on the map or in manual links yet."
+              : explorationProfile(profile)
+                ? "No connected routes or linked rooms yet."
+                : undefined
+          }
+          inferredConnections={inferredRoomConnections}
+          title={
+            profile.profile === "room"
+              ? "Connected rooms"
+              : explorationProfile(profile)
+                ? "Exits and linked locations"
+                : undefined
           }
           links={links}
           loading={linksLoading}
           location={location}
           locations={locations}
           open={linkOpen}
-          title={explorationProfile(profile) ? "Exits and linked locations" : undefined}
           onCreate={onCreateLink}
           onDelete={onDeleteLink}
           onOpenChange={setLinkOpen}
@@ -301,18 +344,23 @@ function buildProfileSections(props: ProfileSectionProps) {
         location={location}
         maps={maps}
         toolsOpen={mapsMode}
-        studioPath={
-          profile.variant === "dungeon" || profile.variant === "floor"
-            ? `/campaigns/${campaignId}/world/location/${location.id}/studio`
-            : undefined
-        }
+        locations={locations}
+        studioPath={studioPathForLocation(campaignId, location, parentLocation, profile)}
         onCloseMaps={onCloseMaps}
         onOpenMaps={onOpenMaps}
+        onSelectLocation={onSelectLocation}
       >
         {mapWorkspace}
       </LocationMapCard>
     ),
-    notesCard: <LocationNotesCard location={location} title={profile.notesTitle} />,
+    notesCard: (
+      <LocationNotesCard
+        location={location}
+        title={profile.notesTitle}
+        onClearNotes={onClearNotes}
+        onEditNotes={props.onEdit}
+      />
+    ),
     npcsCard: shouldShowNpcs ? (
       <>
         {npcLinksError ? (
@@ -333,13 +381,12 @@ function buildProfileSections(props: ProfileSectionProps) {
     prepCard: explorationProfile(profile) ? (
       <PrepOverviewCard
         childLocations={childLocations}
+        connectedRoomCount={inferredRoomConnections.length}
         encounters={encounters}
         links={links}
         location={location}
         maps={maps}
-        showEncounterAction={profile.profile !== "room"}
         showRoomNextSteps={profile.profile === "room"}
-        onAddEncounter={props.onGenerateEncounter}
         onEditNotes={profile.profile === "room" ? props.onEdit : undefined}
         onLinkExit={profile.profile === "room" ? () => setLinkOpen(true) : undefined}
         onOpenMaps={profile.profile === "room" ? onOpenMaps : undefined}
@@ -371,15 +418,6 @@ function buildProfileSections(props: ProfileSectionProps) {
           />
         </>
       ) : null,
-    structureCard:
-      profile.variant === "dungeon" ? (
-        <StructureSummaryCard
-          childLocations={childLocations}
-          encounters={encounters}
-          links={links}
-          onSelectLocation={onSelectLocation}
-        />
-      ) : null,
     travelCard: showTravel ? (
       <CompactTravelCard
         journeys={journeys}
@@ -390,41 +428,6 @@ function buildProfileSections(props: ProfileSectionProps) {
       />
     ) : null,
   };
-}
-
-function ChildLocationActions({
-  profile,
-  onAddChild,
-}: {
-  profile: LocationProfileInfo;
-  onAddChild: (locationType?: string) => void;
-}) {
-  const childActions = profile.primaryActions.filter((action) =>
-    ["add-town", "add-landmark", "add-building", "add-shop", "add-floor", "add-room"].includes(
-      action,
-    ),
-  );
-  if (!childActions.length) return null;
-  return (
-    <ActionRow justify="end">
-      {childActions.map((action) => (
-        <Button
-          key={action}
-          type="button"
-          icon={Plus}
-          size="sm"
-          variant="secondary"
-          onClick={() => onAddChild(defaultTypeForProfileAction(action))}
-        >
-          {labelForProfileAction(action)}
-        </Button>
-      ))}
-    </ActionRow>
-  );
-}
-
-function explorationProfile(profile: LocationProfileInfo) {
-  return profile.profile === "room" || profile.variant === "dungeon" || profile.variant === "floor";
 }
 
 type CampaignWorldLocationDetailProps = {
@@ -459,9 +462,11 @@ type CampaignWorldLocationDetailProps = {
   onDeleteLink: (linkID: string) => Promise<void>;
   onDeleteNpcLink: (linkID: string) => Promise<void>;
   onDeleteStock: (stockID: string) => Promise<void>;
+  onClearNotes: (location: CampaignLocation) => Promise<void>;
   onEdit: () => void;
   onGenerateEncounter: () => void;
   onCloneEncounter: (encounter: Encounter) => void;
+  onDeleteEncounter: (encounter: Encounter) => void;
   onCloseMaps: () => void;
   onStartEncounter: (encounter: Encounter, test: boolean) => void;
   onOpenMaps: () => void;

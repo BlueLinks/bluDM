@@ -1,6 +1,7 @@
 import { ClipboardList, Map, Route, Swords, UsersRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ResponsiveGrid } from "../../components/layout";
+import { FeatureCard } from "../../components/layout";
 import { Button, SectionPanel } from "../../components/ui";
 import type { CampaignDetail } from "../../types";
 import type { CampaignJourney } from "./world/travelTypes";
@@ -60,24 +61,28 @@ export function CampaignWorkspaceHub({
   return (
     <SectionPanel title="Workspace" icon={Map}>
       <ResponsiveGrid variant="cards3">
-        {cards.map((card) => (
-          <article className="rounded-md border border-border bg-background p-4" key={card.title}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-xs font-bold uppercase text-accent">{card.value}</div>
-                <h4 className="mt-1 font-semibold">{card.title}</h4>
-              </div>
-              <card.icon className="h-5 w-5 text-accent" />
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{card.copy}</p>
-            <div className="mt-4">
+        {cards.map((card, index) => (
+          <FeatureCard
+            action={
               <Link to={card.to}>
                 <Button type="button" size="sm" variant="secondary">
                   {card.cta}
                 </Button>
               </Link>
-            </div>
-          </article>
+            }
+            copy={card.copy}
+            icon={card.icon}
+            key={card.title}
+            tone={
+              ["primary", "secondary", "tertiary", "accent", "secondary"][index] as
+                | "primary"
+                | "secondary"
+                | "tertiary"
+                | "accent"
+            }
+            title={card.title}
+            value={card.value}
+          />
         ))}
       </ResponsiveGrid>
     </SectionPanel>

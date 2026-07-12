@@ -1,15 +1,12 @@
 import type { CampaignLocation, CampaignMap, CampaignMapInput } from "./travelTypes";
+import type { DungeonStudioCustomAsset } from "./dungeonStudioObjectCatalog";
+
+export type { DungeonStudioCustomAsset } from "./dungeonStudioObjectCatalog";
 
 export type GridCell = { x: number; y: number };
 export type DungeonStudioScope = "dungeon" | "floor" | "shop" | "home" | "town" | "custom";
-export type DungeonStudioTilesetKey =
-  | "dungeon"
-  | "cave"
-  | "castle"
-  | "sewer"
-  | "shop"
-  | "home"
-  | "town";
+// prettier-ignore
+export type DungeonStudioTilesetKey = "dungeon" | "stone" | "cave" | "castle" | "cellar" | "forest" | "sewer" | "house" | "ruins" | "temple" | "crypt" | "shop" | "home" | "town";
 
 export type DungeonStudioGrid = {
   width: number;
@@ -34,6 +31,7 @@ export type DungeonStudioCellLayer = {
   visible: boolean;
   opacity: number;
   cellKind: DungeonStudioCellKind;
+  themeKey?: DungeonStudioTilesetKey;
   cells: GridCell[];
 };
 
@@ -52,16 +50,19 @@ export type DungeonStudioRoomRegion = {
   locationId?: string;
   label: string;
   color: string;
+  themeKey?: DungeonStudioTilesetKey;
   cells: GridCell[];
 };
 
 export type DungeonStudioEntity = {
   id: string;
-  kind: "npc" | "stairs" | "label" | "marker" | "light" | "prop";
+  kind: "npc" | "stairs" | "label" | "marker" | "light" | "prop" | "trap";
   cell: GridCell;
   xOffset?: number;
   yOffset?: number;
+  rotation?: 0 | 90 | 180 | 270;
   linkedId?: string;
+  assetKey?: string;
   label?: string;
   metadata?: Record<string, unknown>;
 };
@@ -82,6 +83,7 @@ export type DungeonStudioDocument = {
   edges: DungeonStudioEdgeFeature[];
   rooms: DungeonStudioRoomRegion[];
   entities: DungeonStudioEntity[];
+  customAssets?: DungeonStudioCustomAsset[];
   generation?: DungeonStudioGenerationMetadata;
 };
 
@@ -123,6 +125,7 @@ export function createDungeonStudioDocument({
     edges: [],
     rooms: [],
     entities: [],
+    customAssets: [],
   };
 }
 
@@ -146,6 +149,7 @@ export function parseDungeonStudioDocument(
     edges: normalizeEdges(studio.edges, grid),
     rooms: normalizeRooms(studio.rooms, grid),
     entities: normalizeEntities(studio.entities, grid),
+    customAssets: normalizeCustomAssets(studio.customAssets),
     generation: isRecord(studio.generation)
       ? {
           generator: stringValue(studio.generation.generator, "unknown"),
@@ -180,6 +184,7 @@ export function serializeDungeonStudioDocument(
     edges: normalizeEdges(document.edges, grid),
     rooms: normalizeRooms(document.rooms, grid),
     entities: normalizeEntities(document.entities, grid),
+    customAssets: normalizeCustomAssets(document.customAssets),
     generation: document.generation,
   };
 }
@@ -198,7 +203,14 @@ export function studioScopeForLocation(
 ): DungeonStudioScope {
   const type = (location.locationType ?? "").toLowerCase();
   if (type === "floor" || type === "level" || type === "dungeon-level") return "floor";
-  if (type === "dungeon" || type === "lair" || type === "cave" || type === "crypt")
+  if (
+    type === "dungeon" ||
+    type === "lair" ||
+    type === "cave" ||
+    type === "crypt" ||
+    type === "ruins" ||
+    type === "temple"
+  )
     return "dungeon";
   return "custom";
 }
@@ -267,6 +279,7 @@ function normalizeCellLayers(value: unknown, grid: DungeonStudioGrid): DungeonSt
         visible: typeof layer.visible === "boolean" ? layer.visible : true,
         opacity: boundedNumber(layer.opacity, 1, 0, 1),
         cellKind,
+        themeKey: parseTileset(layer.themeKey),
         cells: normalizeCells(layer.cells, grid),
       },
     ];
@@ -304,6 +317,7 @@ function normalizeRooms(value: unknown, grid: DungeonStudioGrid): DungeonStudioR
         locationId: optionalString(room.locationId),
         label: stringValue(room.label, `Room ${index + 1}`),
         color: stringValue(room.color, "#14b8a6"),
+        themeKey: parseTileset(room.themeKey),
         cells: normalizeCells(room.cells, grid),
       },
     ];
@@ -324,9 +338,31 @@ function normalizeEntities(value: unknown, grid: DungeonStudioGrid): DungeonStud
         cell,
         xOffset: optionalNumber(entity.xOffset),
         yOffset: optionalNumber(entity.yOffset),
+        rotation: parseRotation(entity.rotation),
         linkedId: optionalString(entity.linkedId),
+        assetKey: optionalString(entity.assetKey),
         label: optionalString(entity.label),
         metadata: isRecord(entity.metadata) ? entity.metadata : undefined,
+      },
+    ];
+  });
+}
+
+function normalizeCustomAssets(value: unknown): DungeonStudioCustomAsset[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((asset, index): DungeonStudioCustomAsset[] => {
+    if (!isRecord(asset)) return [];
+    const dataUrl = optionalString(asset.dataUrl);
+    if (!dataUrl?.startsWith("data:image/")) return [];
+    return [
+      {
+        key: stringValue(asset.key, `custom-asset-${index + 1}`),
+        label: stringValue(asset.label, `Custom asset ${index + 1}`),
+        category: stringValue(asset.category, "custom"),
+        dataUrl,
+        defaultScale: optionalNumber(asset.defaultScale),
+        sourceNotes: optionalString(asset.sourceNotes),
+        licenseNotes: optionalString(asset.licenseNotes),
       },
     ];
   });
@@ -383,46 +419,64 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function parseScope(value: unknown): DungeonStudioScope | undefined {
-  return ["dungeon", "floor", "shop", "home", "town", "custom"].includes(String(value))
-    ? (value as DungeonStudioScope)
-    : undefined;
+  return parseEnum(value, ["dungeon", "floor", "shop", "home", "town", "custom"] as const);
 }
 
 function parseTileset(value: unknown): DungeonStudioTilesetKey | undefined {
-  return ["dungeon", "cave", "castle", "sewer", "shop", "home", "town"].includes(String(value))
-    ? (value as DungeonStudioTilesetKey)
-    : undefined;
+  return parseEnum(value, [
+    "dungeon",
+    "stone",
+    "cave",
+    "castle",
+    "cellar",
+    "forest",
+    "sewer",
+    "house",
+    "ruins",
+    "temple",
+    "crypt",
+    "shop",
+    "home",
+    "town",
+  ] as const);
 }
 
 function parseCellKind(value: unknown): DungeonStudioCellKind | undefined {
-  return ["floor", "water", "cliff", "chasm", "rubble", "hazard", "road", "grass"].includes(
-    String(value),
-  )
-    ? (value as DungeonStudioCellKind)
-    : undefined;
+  return parseEnum(value, [
+    "floor",
+    "water",
+    "cliff",
+    "chasm",
+    "rubble",
+    "hazard",
+    "road",
+    "grass",
+  ] as const);
 }
 
 function parseDirection(value: unknown): DungeonStudioEdgeDirection | undefined {
-  return ["n", "e", "s", "w", "ne", "nw", "se", "sw"].includes(String(value))
-    ? (value as DungeonStudioEdgeDirection)
-    : undefined;
+  return parseEnum(value, ["n", "e", "s", "w", "ne", "nw", "se", "sw"] as const);
 }
 
 function parseEdgeKind(value: unknown): DungeonStudioEdgeFeature["kind"] | undefined {
-  return ["wall", "door", "secret-door", "window", "gate", "cliff-edge"].includes(String(value))
-    ? (value as DungeonStudioEdgeFeature["kind"])
-    : undefined;
+  return parseEnum(value, ["wall", "door", "secret-door", "window", "gate", "cliff-edge"] as const);
 }
 
 function parseEdgeState(value: unknown): DungeonStudioEdgeFeature["state"] | undefined {
-  return ["open", "closed", "locked", "barred", "hidden"].includes(String(value))
-    ? (value as DungeonStudioEdgeFeature["state"])
-    : undefined;
+  return parseEnum(value, ["open", "closed", "locked", "barred", "hidden"] as const);
 }
 
 function parseEntityKind(value: unknown): DungeonStudioEntity["kind"] | undefined {
-  return ["npc", "stairs", "label", "marker", "light", "prop"].includes(String(value))
-    ? (value as DungeonStudioEntity["kind"])
+  return parseEnum(value, ["npc", "stairs", "label", "marker", "light", "prop", "trap"] as const);
+}
+
+function parseEnum<const T extends string>(value: unknown, options: readonly T[]) {
+  return options.includes(String(value) as T) ? (String(value) as T) : undefined;
+}
+
+function parseRotation(value: unknown): DungeonStudioEntity["rotation"] | undefined {
+  return [0, 90, 180, 270].includes(Number(value))
+    ? (Number(value) as DungeonStudioEntity["rotation"])
     : undefined;
 }
 

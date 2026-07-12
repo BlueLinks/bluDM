@@ -1,4 +1,12 @@
-import { Coins, PackageCheck, PackagePlus, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Coins,
+  MoreHorizontal,
+  PackageCheck,
+  PackagePlus,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
 import { Button, Field, Input, Modal } from "../../../components/ui";
@@ -6,6 +14,9 @@ import type { Item } from "../../../types";
 import { ItemChipView } from "../../items/ItemCatalogCard";
 import { buildItemDisplay } from "../../items/itemCatalogDisplay";
 import { iconForItem, itemIconRegistry, ItemGlyph } from "../../items/itemIcons";
+import { CampaignWorldEmptyState } from "./CampaignWorldEmptyState";
+import { StockSummaryStrip } from "./CampaignWorldStockSummaryStrip";
+import { groupStockByCategory } from "./campaignWorldStockGrouping";
 import { AddStockModal } from "./CampaignWorldLocationStockDialog";
 import { AvailabilitySelect, CurrencySelect } from "./CampaignWorldStockFields";
 import {
@@ -13,6 +24,7 @@ import {
   itemCatalogMeta,
   stockEntryItemKey,
   stockItemKey,
+  stockMarkupLabel,
   stockPriceLabel,
 } from "./campaignWorldStockUtils";
 import type { CampaignLocation, CampaignLocationStock } from "./travelTypes";
@@ -64,7 +76,7 @@ export function CampaignWorldLocationStock({
   const soldOutCount = stock.filter((entry) => entry.availability === "sold-out").length;
 
   return (
-    <CardSection className={dominant ? "border-primary/40 bg-primary/5 p-4" : undefined}>
+    <CardSection className={dominant ? "campaign-world-stock-card" : undefined}>
       <SectionHeader
         action={
           <ActionRow justify="end">
@@ -102,26 +114,44 @@ export function CampaignWorldLocationStock({
           marketPriceCount={marketPriceCount}
           pricedCount={pricedCount}
           soldOutCount={soldOutCount}
-          stockedCount={stock.length}
         />
       ) : null}
 
       {stock.length ? (
-        <div className={dominant ? "mt-4 grid gap-2" : "mt-3 grid gap-2"}>
-          {stock.map((entry) => (
-            <StockRow
-              entry={entry}
-              item={itemByKey.get(stockEntryItemKey(entry))}
-              key={entry.id}
-              onDelete={onDelete}
-              onEdit={setEditingStock}
-            />
+        <div className={dominant ? "mt-4 grid gap-4" : "mt-3 grid gap-4"}>
+          {groupStockByCategory(stock, itemByKey).map((group) => (
+            <div
+              className="overflow-hidden rounded-md border border-border bg-background"
+              key={group.label}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-card/70 px-3 py-2">
+                <h4 className="font-semibold">{group.label}</h4>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {group.entries.length} {group.entries.length === 1 ? "item" : "items"}
+                </span>
+              </div>
+              <div className="grid divide-y divide-border/70">
+                {group.entries.map((entry) => (
+                  <StockRow
+                    entry={entry}
+                    item={itemByKey.get(stockEntryItemKey(entry))}
+                    key={entry.id}
+                    onDelete={onDelete}
+                    onEdit={setEditingStock}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No stock attached to this shop yet.
-        </p>
+        <div className="mt-3">
+          <CampaignWorldEmptyState
+            icon={PackagePlus}
+            title="No inventory yet"
+            copy="Add the items players can buy here, including stock, availability, price, and notes."
+          />
+        </div>
       )}
 
       <AddStockModal
@@ -147,67 +177,6 @@ export function CampaignWorldLocationStock({
   );
 }
 
-function StockSummaryStrip({
-  inventoryTotal,
-  limitedCount,
-  marketPriceCount,
-  pricedCount,
-  soldOutCount,
-  stockedCount,
-}: {
-  inventoryTotal: number;
-  limitedCount: number;
-  marketPriceCount: number;
-  pricedCount: number;
-  soldOutCount: number;
-  stockedCount: number;
-}) {
-  const stats = [
-    { label: "Stocked", value: stockedCount, tone: "strong" as const },
-    { label: "Inventory", value: inventoryTotal, tone: "strong" as const },
-    ...(pricedCount ? [{ label: "Priced", value: pricedCount }] : []),
-    ...(marketPriceCount ? [{ label: "Market price", value: marketPriceCount }] : []),
-    ...(limitedCount
-      ? [{ label: "Limited/hidden", value: limitedCount, tone: "warn" as const }]
-      : []),
-    ...(soldOutCount ? [{ label: "Sold out", value: soldOutCount, tone: "warn" as const }] : []),
-  ];
-
-  return (
-    <div className="mt-3 flex flex-wrap gap-2 rounded-md border border-border bg-background/70 p-2">
-      {stats.map((stat) => (
-        <StockSummaryPill key={stat.label} {...stat} />
-      ))}
-    </div>
-  );
-}
-
-function StockSummaryPill({
-  label,
-  tone = "default",
-  value,
-}: {
-  label: string;
-  tone?: "default" | "strong" | "warn";
-  value: number;
-}) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-bold uppercase leading-none",
-        tone === "strong"
-          ? "border-primary/25 bg-primary/10 text-primary"
-          : tone === "warn"
-            ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
-            : "border-border bg-card text-muted-foreground",
-      ].join(" ")}
-    >
-      <strong className="text-sm leading-none text-foreground">{value}</strong>
-      {label}
-    </span>
-  );
-}
-
 function StockRow({
   entry,
   item,
@@ -223,54 +192,103 @@ function StockRow({
   const chips = display?.chips.slice(0, 2) ?? [];
 
   return (
-    <article className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
-      <div className="flex min-w-0 flex-1 items-start gap-2.5">
-        <ItemGlyph
-          className="h-8 w-8 rounded-md [&_img]:h-4 [&_img]:w-4 [&_svg]:h-4 [&_svg]:w-4"
-          entry={item ? iconForItem(item) : itemIconRegistry.unknown}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <h4 className="font-semibold leading-tight [overflow-wrap:anywhere]">
-              {item?.name ?? "Unknown item"}
-            </h4>
-            <AvailabilityChip availability={entry.availability} />
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="font-bold uppercase tracking-wide [overflow-wrap:anywhere]">
-              {display?.subtitle ?? itemCatalogMeta(item)}
-            </span>
-            <StockMetric label="Price" value={stockPriceLabel(entry)} tone="price" />
-            <StockMetric label="Qty" value={String(entry.quantity)} />
-            {display && display.value !== "n/a" ? (
-              <StockMetric label="Catalog" value={display.value} />
+    <article className="grid gap-3 px-3 py-3">
+      <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <ItemGlyph
+            className="h-16 w-16 rounded-md border border-secondary/25 bg-secondary/10 [&_img]:h-10 [&_img]:w-10 [&_svg]:h-8 [&_svg]:w-8"
+            entry={item ? iconForItem(item) : itemIconRegistry.unknown}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-start gap-2">
+              <h4 className="text-base font-semibold leading-tight [overflow-wrap:anywhere]">
+                {item?.name ?? "Unknown item"}
+              </h4>
+              <AvailabilityChip availability={entry.availability} />
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-bold uppercase tracking-wide [overflow-wrap:anywhere]">
+                {display?.subtitle ?? itemCatalogMeta(item)}
+              </span>
+              <StockMetric label="Qty" value={String(entry.quantity)} />
+              {display && display.value !== "n/a" ? (
+                <StockMetric label="Catalog" value={display.value} />
+              ) : null}
+              <StockMetric label="Markup" value={stockMarkupLabel(entry, item)} />
+              {chips.map((chip) => (
+                <ItemChipView chip={chip} key={chip.label} />
+              ))}
+            </div>
+            {entry.notes ? (
+              <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                {entry.notes}
+              </p>
             ) : null}
-            {chips.map((chip) => (
-              <ItemChipView chip={chip} key={chip.label} />
-            ))}
           </div>
-          {entry.notes ? (
-            <p className="mt-1 text-xs text-muted-foreground [overflow-wrap:anywhere]">
-              {entry.notes}
-            </p>
-          ) : null}
         </div>
+        <StockPriceBlock entry={entry} />
+        <StockActionsMenu
+          entry={entry}
+          label={item?.name ?? "stock item"}
+          onDelete={onDelete}
+          onEdit={onEdit}
+        />
       </div>
-      <ActionRow justify="end" className="w-full sm:w-auto">
-        <Button type="button" icon={Pencil} size="sm" variant="ghost" onClick={() => onEdit(entry)}>
-          Adjust
-        </Button>
-        <Button
+    </article>
+  );
+}
+
+function StockPriceBlock({ entry }: { entry: CampaignLocationStock }) {
+  return (
+    <div className="min-w-24 justify-self-start rounded-md border border-border bg-card px-3 py-2 text-left sm:justify-self-end sm:text-right">
+      <div className="text-[0.68rem] font-extrabold uppercase tracking-wide text-muted-foreground">
+        Price
+      </div>
+      <div className="mt-0.5 text-lg font-extrabold leading-tight text-foreground">
+        {stockPriceLabel(entry)}
+      </div>
+    </div>
+  );
+}
+
+function StockActionsMenu({
+  entry,
+  label,
+  onDelete,
+  onEdit,
+}: {
+  entry: CampaignLocationStock;
+  label: string;
+  onDelete: (stockID: string) => Promise<void>;
+  onEdit: (entry: CampaignLocationStock) => void;
+}) {
+  return (
+    <details className="relative justify-self-start sm:justify-self-end">
+      <summary
+        aria-label={`Manage ${label} stock`}
+        className="inline-flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-md border border-border bg-surface text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 [&::-webkit-details-marker]:hidden"
+      >
+        <MoreHorizontal className="h-4 w-4" />
+      </summary>
+      <div className="absolute right-0 z-20 mt-1 grid min-w-32 gap-1 rounded-md border border-border bg-card p-1 shadow-md">
+        <button
+          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
-          icon={Trash2}
-          size="sm"
-          variant="ghost"
+          onClick={() => onEdit(entry)}
+        >
+          <Pencil className="h-4 w-4" />
+          Adjust
+        </button>
+        <button
+          className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-destructive transition hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+          type="button"
           onClick={() => onDelete(entry.id)}
         >
+          <Trash2 className="h-4 w-4" />
           Remove
-        </Button>
-      </ActionRow>
-    </article>
+        </button>
+      </div>
+    </details>
   );
 }
 
@@ -283,8 +301,8 @@ function AvailabilityChip({ availability }: { availability: string }) {
         normalized === "sold-out"
           ? "border-destructive/25 bg-destructive/10 text-destructive"
           : ["limited", "special-order", "hidden"].includes(normalized)
-            ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-200"
-            : "border-emerald-500/25 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200",
+            ? "border-warning/25 bg-warning/10 text-warning"
+            : "border-success/25 bg-success/10 text-success",
       ].join(" ")}
     >
       {availabilityLabel(normalized)}
@@ -292,36 +310,11 @@ function AvailabilityChip({ availability }: { availability: string }) {
   );
 }
 
-function StockMetric({
-  label,
-  tone = "default",
-  value,
-}: {
-  label: string;
-  tone?: "default" | "price";
-  value: string;
-}) {
-  const isPrice = tone === "price";
+function StockMetric({ label, value }: { label: string; value: string }) {
   return (
-    <span
-      className={[
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 leading-tight",
-        isPrice
-          ? "border-amber-500/35 bg-amber-500/15 text-xs shadow-sm shadow-amber-500/10"
-          : "border-border bg-card text-[0.7rem]",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "font-extrabold uppercase tracking-wide",
-          isPrice ? "text-amber-700 dark:text-amber-200" : "text-muted-foreground",
-        ].join(" ")}
-      >
-        {label}
-      </span>
-      <strong className={isPrice ? "text-sm text-amber-800 dark:text-amber-100" : undefined}>
-        {value}
-      </strong>
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-0.5 text-[0.7rem] leading-tight">
+      <span className="font-extrabold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <strong>{value}</strong>
     </span>
   );
 }
@@ -371,9 +364,11 @@ function StockPricingList({
           );
         })
       ) : (
-        <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No stock attached to this shop yet.
-        </p>
+        <CampaignWorldEmptyState
+          icon={PackagePlus}
+          title="No inventory yet"
+          copy="Add shop items before reviewing prices."
+        />
       )}
     </div>
   );

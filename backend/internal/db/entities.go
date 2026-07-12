@@ -61,6 +61,7 @@ type CampaignEntity struct {
 	Name                   string         `gorm:"not null"`
 	Description            string         `gorm:"not null;default:''"`
 	AllowedStandardSources pq.StringArray `gorm:"type:text[];not null;default:array['srd-2014']::text[]"`
+	Metadata               JSONMap        `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	ArchivedAt             *time.Time
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
@@ -69,12 +70,13 @@ type CampaignEntity struct {
 func (CampaignEntity) TableName() string { return "campaigns" }
 
 type UploadedAssetEntity struct {
-	ID          string `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	OwnerUserID string `gorm:"type:uuid;not null;index:uploaded_assets_owner_user_id_idx,sort:desc"`
-	Filename    string `gorm:"not null"`
-	ContentType string `gorm:"not null"`
-	ByteSize    int64  `gorm:"not null"`
-	Data        []byte `gorm:"not null"`
+	ID          string  `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
+	OwnerUserID string  `gorm:"type:uuid;not null;index:uploaded_assets_owner_user_id_idx,sort:desc"`
+	Filename    string  `gorm:"not null"`
+	ContentType string  `gorm:"not null"`
+	ByteSize    int64   `gorm:"not null"`
+	Data        []byte  `gorm:"not null"`
+	Metadata    JSONMap `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	CreatedAt   time.Time
 }
 
@@ -346,6 +348,7 @@ type EncounterEntity struct {
 	RoomNumber        string  `gorm:"not null;default:''"`
 	LootNotes         string  `gorm:"not null;default:''"`
 	BackgroundAssetID *string `gorm:"type:uuid"`
+	Metadata          JSONMap `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

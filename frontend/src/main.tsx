@@ -14,7 +14,7 @@ function App() {
   const [auth, setAuth] = useState<AuthStatus | null>(null);
   const [providers, setProviders] = useState<AuthProvider[]>([]);
   const [error, setError] = useState("");
-  const { theme, setTheme, resolvedTheme } = useThemeMode();
+  const { accent, setAccent, theme, setTheme, resolvedTheme } = useThemeMode();
   const authError = authErrorFromURL();
 
   async function refreshAuth() {
@@ -87,9 +87,11 @@ function App() {
   return (
     <BrowserRouter>
       <WorkspaceShell
+        accent={accent}
         resolvedTheme={resolvedTheme}
         theme={theme}
         user={auth.user ?? undefined}
+        onAccentChange={setAccent}
         onThemeChange={setTheme}
         onLogout={async () => {
           await api.logout();

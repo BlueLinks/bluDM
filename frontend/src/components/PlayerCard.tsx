@@ -1,7 +1,12 @@
 import type { Player } from "../types";
-import { Badge, CharacterVitals } from "./ui";
+import {
+  AbilityScoreCard,
+  CharacterMetadataChip,
+  InitialsAvatar,
+} from "./shared/displayPrimitives";
+import { CharacterVitals } from "./ui";
 import { abilities } from "../lib/domain/options";
-import { abilityModifier, modifierTone, signedModifier } from "../lib/domain/forms";
+import { signedModifier } from "../lib/domain/forms";
 
 export function PlayerCard({
   player,
@@ -22,17 +27,13 @@ export function PlayerCard({
   return (
     <div className="rounded-lg border border-border bg-background p-4">
       <div className="flex items-start gap-3">
-        <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-md bg-muted text-sm font-bold text-muted-foreground">
-          {avatarSrc ? (
-            <img className="h-full w-full object-cover" src={avatarSrc} alt="" />
-          ) : (
-            player.characterName.slice(0, 2).toUpperCase()
-          )}
-        </div>
+        <InitialsAvatar name={player.characterName} src={avatarSrc} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{player.characterName}</h3>
-            {showCampaign && player.campaignName && <Badge>{player.campaignName}</Badge>}
+            {showCampaign && player.campaignName && (
+              <CharacterMetadataChip tone="shared">{player.campaignName}</CharacterMetadataChip>
+            )}
           </div>
           <p className="text-sm text-muted-foreground">
             {[player.playerName, className && `${className}${level ? ` ${level}` : ""}`]
@@ -52,17 +53,12 @@ export function PlayerCard({
       {Object.keys(abilityScores).length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1">
           {abilities.map((ability) => (
-            <Badge key={ability.key}>
-              {ability.label} {abilityScores[ability.key] ?? 10}{" "}
-              <span
-                className={[
-                  "ml-1 font-bold",
-                  modifierTone(abilityModifier(abilityScores[ability.key] ?? 10)),
-                ].join(" ")}
-              >
-                ({signedModifier(abilityScores[ability.key] ?? 10)})
-              </span>
-            </Badge>
+            <AbilityScoreCard
+              key={ability.key}
+              label={ability.label}
+              score={abilityScores[ability.key] ?? 10}
+              modifier={`(${signedModifier(abilityScores[ability.key] ?? 10)})`}
+            />
           ))}
         </div>
       )}

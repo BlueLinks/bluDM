@@ -209,7 +209,6 @@ export function CreatureActionsSection({
           <Button
             type="button"
             icon={Plus}
-            variant="success"
             onClick={() => setActions((current) => [...current, blankAction()])}
           >
             Add custom action
@@ -319,7 +318,7 @@ function ActionBankModal({
         <div className="grid max-h-[55vh] gap-2 overflow-y-auto pr-1">
           {templates.map((template) => (
             <button
-              className="rounded-md border border-border bg-background p-2 text-left text-sm transition hover:bg-muted"
+              className="rounded-md border border-border bg-surface p-2 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
               key={template.id}
               type="button"
               onClick={() => onCopyTemplate(template)}
@@ -387,7 +386,7 @@ function SaveActionDialog({
                 Overwrite
               </Button>
             ) : (
-              <Button type="button" variant="success" disabled={saving} onClick={onSubmit}>
+              <Button type="button" disabled={saving} onClick={onSubmit}>
                 Save action
               </Button>
             )}

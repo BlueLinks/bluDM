@@ -42,7 +42,8 @@ describe("CampaignWorldSection refocus", () => {
     const onChanged = vi.fn().mockResolvedValue(undefined);
     renderWorld({ onChanged });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    fireEvent.click(await screen.findByText("More"));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete location" }));
     fireEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
         name: "Delete location",

@@ -85,9 +85,9 @@ function StepperNumber({
   return (
     <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">
       {label}
-      <div className="inline-flex min-w-0 overflow-hidden rounded-md border border-border bg-card">
+      <div className="inline-flex min-w-0 overflow-hidden rounded-md border border-border bg-surface">
         <button
-          className="grid h-10 w-8 shrink-0 place-items-center border-r border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 w-8 shrink-0 place-items-center border-r border-border text-base text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => onStep(-1)}
         >
@@ -102,7 +102,7 @@ function StepperNumber({
           onChange={(event) => onChange(sanitizeInteger(event.target.value, min < 0))}
         />
         <button
-          className="grid h-10 w-8 shrink-0 place-items-center border-l border-border text-base text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 w-8 shrink-0 place-items-center border-l border-border text-base text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => onStep(1)}
         >
@@ -156,7 +156,7 @@ export function AbilityInput({
 }) {
   const modifier = abilityModifier(value);
   return (
-    <div className="rounded-lg border border-border bg-background p-3">
+    <div className="rounded-lg border border-border bg-surface p-3">
       <div className="mb-2 flex items-center justify-between gap-3">
         <span className="text-sm font-semibold">{label}</span>
         <label className="flex items-center gap-2">
@@ -169,7 +169,7 @@ export function AbilityInput({
           />
           <span
             className={[
-              "grid h-10 min-w-12 place-items-center rounded-md border border-border bg-muted px-2 text-sm font-bold",
+              "grid h-10 min-w-12 place-items-center rounded-md border border-border bg-card px-2 text-sm font-bold text-card-foreground",
               modifierTone(modifier),
             ].join(" ")}
           >
@@ -177,7 +177,7 @@ export function AbilityInput({
           </span>
         </label>
       </div>
-      <label className="flex items-center justify-between gap-3 rounded-md bg-muted/60 px-2 py-2 text-xs text-muted-foreground">
+      <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-2 py-2 text-xs text-muted-foreground">
         Saving throw proficiency
         <input
           className="h-4 w-4 accent-primary"
@@ -204,9 +204,7 @@ export function SenseControl({
     <div
       className={[
         "rounded-lg border p-3 transition",
-        disabled
-          ? "border-border bg-muted/35 text-muted-foreground"
-          : "border-border bg-background",
+        disabled ? "border-border bg-surface text-muted-foreground" : "border-border bg-background",
       ].join(" ")}
     >
       <Checkbox
@@ -216,7 +214,7 @@ export function SenseControl({
       />
       <label className="mt-3 grid gap-2 text-sm font-medium">
         <span className="text-xs font-semibold uppercase">Range</span>
-        <span className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-md border border-border bg-card">
+        <span className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-md border border-border bg-surface">
           <Input
             className="rounded-none border-0 text-center font-semibold disabled:bg-muted/60 disabled:text-muted-foreground"
             type="number"
@@ -350,21 +348,21 @@ function damageDefenseTone(
   switch (field) {
     case "damageVulnerabilities":
       return {
-        panel: "border-red-500/25 bg-red-500/5",
-        marker: "bg-red-500/15 text-red-700 dark:text-red-300",
-        item: "border-red-500/20 bg-background/70",
+        panel: "border-destructive/25 bg-destructive/5",
+        marker: "bg-destructive/15 text-destructive",
+        item: "border-destructive/20 bg-background/70",
       };
     case "damageResistances":
       return {
-        panel: "border-amber-500/25 bg-amber-500/5",
-        marker: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-        item: "border-amber-500/20 bg-background/70",
+        panel: "border-warning/25 bg-warning/5",
+        marker: "bg-warning/15 text-warning",
+        item: "border-warning/20 bg-background/70",
       };
     case "damageImmunities":
       return {
-        panel: "border-sky-500/25 bg-sky-500/5",
-        marker: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-        item: "border-sky-500/20 bg-background/70",
+        panel: "border-success/25 bg-success/5",
+        marker: "bg-success/15 text-success",
+        item: "border-success/20 bg-background/70",
       };
   }
 }

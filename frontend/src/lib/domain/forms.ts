@@ -21,10 +21,8 @@ export function signedModifier(score: number) {
 }
 
 export function modifierTone(modifier: number) {
-  if (modifier >= 4) return "text-emerald-800 dark:text-emerald-300";
-  if (modifier > 0) return "text-emerald-700 dark:text-emerald-400";
-  if (modifier <= -4) return "text-red-800 dark:text-red-300";
-  if (modifier < 0) return "text-red-700 dark:text-red-400";
+  if (modifier > 0) return "text-success";
+  if (modifier < 0) return "text-destructive";
   return "text-muted-foreground";
 }
 

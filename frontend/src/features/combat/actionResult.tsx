@@ -252,14 +252,14 @@ function AttackRollCard({
       className={[
         "action-roll-card rounded-lg border bg-background p-4 transition",
         critical
-          ? "crit-roll-card border-amber-400/70 bg-amber-500/10 shadow-lg shadow-amber-500/20"
+          ? "crit-roll-card border-warning/70 bg-warning/10 shadow-lg shadow-warning/20"
           : "border-border",
       ].join(" ")}
     >
       <div
         className={[
           "text-xs font-bold uppercase",
-          critical ? "text-amber-700 dark:text-amber-200" : "text-muted-foreground",
+          critical ? "text-warning" : "text-muted-foreground",
         ].join(" ")}
       >
         Roll To Hit
@@ -268,18 +268,18 @@ function AttackRollCard({
         <div
           className={
             critical
-              ? "crit-roll-value text-5xl font-black leading-none text-amber-600 drop-shadow-sm dark:text-amber-200"
+              ? "crit-roll-value text-5xl font-black leading-none text-warning drop-shadow-sm"
               : "action-roll-value text-2xl font-black"
           }
         >
           {attack.attackTotal}
         </div>
         <div className="text-sm text-muted-foreground">{detail}</div>
-        <Badge tone={calculatedHit ? "friendly" : "default"}>
+        <Badge tone={calculatedHit ? "success" : "default"}>
           {calculatedHit ? "Calculated hit" : "Calculated miss"}
         </Badge>
         {critical && (
-          <span className="crit-roll-badge rounded-md border border-amber-400/70 bg-amber-400/20 px-3 py-1 text-sm font-black uppercase text-amber-700 dark:text-amber-100">
+          <span className="crit-roll-badge rounded-md border border-warning/70 bg-warning/20 px-3 py-1 text-sm font-black uppercase text-warning">
             Critical hit
           </span>
         )}
@@ -300,9 +300,7 @@ function HitToggle({ hit, onChange }: { hit: boolean; onChange: (hit: boolean) =
         type="button"
         className={[
           "rounded-md px-3 py-2 text-sm font-bold transition",
-          hit
-            ? "bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950"
-            : "text-muted-foreground hover:bg-muted",
+          hit ? "bg-success text-success-foreground" : "text-muted-foreground hover:bg-muted",
         ].join(" ")}
         onClick={() => onChange(true)}
       >
@@ -312,7 +310,9 @@ function HitToggle({ hit, onChange }: { hit: boolean; onChange: (hit: boolean) =
         type="button"
         className={[
           "rounded-md px-3 py-2 text-sm font-bold transition",
-          !hit ? "bg-red-600 text-white" : "text-muted-foreground hover:bg-muted",
+          !hit
+            ? "bg-destructive text-destructive-foreground"
+            : "text-muted-foreground hover:bg-muted",
         ].join(" ")}
         onClick={() => onChange(false)}
       >

@@ -9,22 +9,23 @@ import (
 var ErrNotFound = errors.New("not found")
 
 type Stores struct {
-	db         *gorm.DB
-	Auth       AuthStore
-	Assets     AssetStore
-	Campaigns  CampaignStore
-	Creatures  CreatureStore
-	Players    PlayerStore
-	Items      ItemStore
-	Library    LibraryStore
-	RollTables RollTableStore
-	Travel     TravelStore
-	Spells     SpellStore
-	Actions    ActionStore
-	Spellcasts SpellcastingStore
-	Encounters EncounterStore
-	Runs       RunStore
-	Demo       DemoStore
+	db           *gorm.DB
+	Auth         AuthStore
+	Assets       AssetStore
+	Campaigns    CampaignStore
+	Creatures    CreatureStore
+	Players      PlayerStore
+	Items        ItemStore
+	Library      LibraryStore
+	RollTables   RollTableStore
+	Travel       TravelStore
+	Spells       SpellStore
+	Actions      ActionStore
+	Spellcasts   SpellcastingStore
+	Encounters   EncounterStore
+	Runs         RunStore
+	Demo         DemoStore
+	ImportExport ImportExportStore
 }
 
 func New(db *gorm.DB) *Stores {
@@ -44,6 +45,7 @@ func New(db *gorm.DB) *Stores {
 	stores.Encounters = EncounterStore{db: db}
 	stores.Runs = RunStore{db: db}
 	stores.Demo = DemoStore{db: db}
+	stores.ImportExport = ImportExportStore{db: db}
 	return stores
 }
 

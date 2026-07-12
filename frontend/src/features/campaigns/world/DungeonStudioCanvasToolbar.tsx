@@ -1,4 +1,4 @@
-import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Save, Undo2 } from "lucide-react";
+import { Grid2X2, Minus, Plus, Redo2, RotateCcw, Undo2 } from "lucide-react";
 import { ActionRow } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 
@@ -9,10 +9,8 @@ export function DungeonStudioCanvasToolbar({
   maxZoom,
   minZoom,
   zoom,
-  saving,
   onRedo,
   onResetView,
-  onSave,
   onUndo,
   onZoomIn,
   onZoomOut,
@@ -22,11 +20,9 @@ export function DungeonStudioCanvasToolbar({
   dirty: boolean;
   maxZoom: number;
   minZoom: number;
-  saving: boolean;
   zoom: number;
   onRedo: () => void;
   onResetView: () => void;
-  onSave: () => void;
   onUndo: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -34,9 +30,6 @@ export function DungeonStudioCanvasToolbar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2">
       <ActionRow>
-        <Button type="button" icon={Save} size="sm" disabled={!dirty || saving} onClick={onSave}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
         <Button
           type="button"
           icon={Undo2}

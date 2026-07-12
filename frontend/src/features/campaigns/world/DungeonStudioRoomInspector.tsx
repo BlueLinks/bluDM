@@ -1,46 +1,39 @@
-import {
-  Check,
-  Eraser,
-  ListChecks,
-  PaintBucket,
-  Paintbrush,
-  Pencil,
-  Plus,
-  Square,
-  Trash2,
-} from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionRow } from "../../../components/layout";
 import { Button } from "../../../components/ui";
+import type { CampaignLocation } from "./travelTypes";
 import type { DungeonStudioSelection, DungeonStudioTool } from "./dungeonStudioEditing";
-import type { DungeonStudioRoomRegion } from "./dungeonStudioDocument";
+import type { DungeonStudioRoomRegion, DungeonStudioTilesetKey } from "./dungeonStudioDocument";
+import { dungeonStudioThemeOptions } from "./dungeonStudioThemes";
 
 export function DungeonStudioRoomInspector({
   activeTool,
-  canCreateRoom,
   rooms,
+  roomLocations,
   selected,
   selectedRoom,
-  onCreateRoomFromSelection,
+  selectedRoomConnections,
   onDeleteRoom,
-  onDoneRoom,
   onEditRoom,
   onRenameRoom,
-  onStartNewRoom,
-  onToolChange,
+  onRoomColorChange,
+  onRoomThemeChange,
 }: {
   activeTool: DungeonStudioTool;
-  canCreateRoom: boolean;
   rooms: DungeonStudioRoomRegion[];
+  roomLocations: CampaignLocation[];
   selected: DungeonStudioSelection;
   selectedRoom?: DungeonStudioRoomRegion;
-  onCreateRoomFromSelection: () => void;
+  selectedRoomConnections: Array<{
+    connectionType: string;
+    room: DungeonStudioRoomRegion;
+  }>;
   onDeleteRoom: (roomId: string) => void;
-  onDoneRoom: () => void;
   onEditRoom: (roomId: string) => void;
   onRenameRoom: (roomId: string, label: string) => void;
-  onStartNewRoom: () => void;
-  onToolChange: (tool: DungeonStudioTool) => void;
+  onRoomColorChange: (roomId: string, color: string) => void;
+  onRoomThemeChange: (roomId: string, theme: DungeonStudioTilesetKey | "") => void;
 }) {
   const [draftName, setDraftName] = useState(selectedRoom?.label ?? "");
   const selectedCells = selected?.type === "region" ? selected.cells.length : 0;
@@ -52,21 +45,18 @@ export function DungeonStudioRoomInspector({
   return (
     <div className="grid gap-3">
       <ActiveRoomCard
+        activeTool={activeTool}
         draftName={draftName}
         selectedCells={selectedCells}
         selectedRoom={selectedRoom}
+        selectedRoomConnections={selectedRoomConnections}
+        roomLocations={roomLocations}
         onDeleteRoom={onDeleteRoom}
-        onDoneRoom={onDoneRoom}
         onDraftNameChange={setDraftName}
+        onEditRoom={onEditRoom}
         onRenameRoom={onRenameRoom}
-        onStartNewRoom={onStartNewRoom}
-      />
-      <RoomPaintActionsCard
-        activeTool={activeTool}
-        canCreateRoom={canCreateRoom}
-        selectedCells={selectedCells}
-        onCreateRoomFromSelection={onCreateRoomFromSelection}
-        onToolChange={onToolChange}
+        onRoomColorChange={onRoomColorChange}
+        onRoomThemeChange={onRoomThemeChange}
       />
       <ExistingRoomsCard rooms={rooms} selectedRoom={selectedRoom} onEditRoom={onEditRoom} />
     </div>
@@ -74,23 +64,34 @@ export function DungeonStudioRoomInspector({
 }
 
 function ActiveRoomCard({
+  activeTool,
   draftName,
   selectedCells,
+  roomLocations,
   selectedRoom,
+  selectedRoomConnections,
   onDeleteRoom,
-  onDoneRoom,
   onDraftNameChange,
+  onEditRoom,
   onRenameRoom,
-  onStartNewRoom,
+  onRoomColorChange,
+  onRoomThemeChange,
 }: {
+  activeTool: DungeonStudioTool;
   draftName: string;
   selectedCells: number;
+  roomLocations: CampaignLocation[];
   selectedRoom?: DungeonStudioRoomRegion;
+  selectedRoomConnections: Array<{
+    connectionType: string;
+    room: DungeonStudioRoomRegion;
+  }>;
   onDeleteRoom: (roomId: string) => void;
-  onDoneRoom: () => void;
   onDraftNameChange: (name: string) => void;
+  onEditRoom: (roomId: string) => void;
   onRenameRoom: (roomId: string, label: string) => void;
-  onStartNewRoom: () => void;
+  onRoomColorChange: (roomId: string, color: string) => void;
+  onRoomThemeChange: (roomId: string, theme: DungeonStudioTilesetKey | "") => void;
 }) {
   return (
     <div className="rounded-md border border-border bg-background px-3 py-2">
@@ -114,24 +115,66 @@ function ActiveRoomCard({
               onChange={(event) => onDraftNameChange(event.target.value)}
             />
           </label>
+          <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+            Color
+            <input
+              className="h-9 w-20 rounded-md border border-border bg-card px-1"
+              type="color"
+              value={selectedRoom.color}
+              onChange={(event) => onRoomColorChange(selectedRoom.id, event.target.value)}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+            Room theme override
+            <select
+              className="rounded-md border border-border bg-card px-2 py-1.5 text-sm font-semibold text-foreground"
+              value={selectedRoom.themeKey ?? ""}
+              onChange={(event) =>
+                onRoomThemeChange(
+                  selectedRoom.id,
+                  event.target.value as DungeonStudioTilesetKey | "",
+                )
+              }
+            >
+              <option value="">Use map theme</option>
+              {dungeonStudioThemeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="text-xs text-muted-foreground">
+            {linkedRoomName(selectedRoom, roomLocations)}
+          </p>
+          {selectedRoomConnections.length ? (
+            <div className="grid gap-1">
+              <div className="text-xs font-semibold text-muted-foreground">Connected rooms</div>
+              {selectedRoomConnections.map((connection) => (
+                <button
+                  className="flex items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-left text-sm transition hover:border-accent/50"
+                  key={connection.room.id}
+                  type="button"
+                  onClick={() => onEditRoom(connection.room.id)}
+                >
+                  <span className="min-w-0 truncate font-semibold">{connection.room.label}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {connection.connectionType}
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
           <ActionRow>
             <Button
               type="button"
-              icon={Pencil}
+              icon={Save}
               size="sm"
               variant="secondary"
-              disabled={!draftName.trim() || draftName.trim() === selectedRoom.label}
+              disabled={!draftName.trim()}
               onClick={() => onRenameRoom(selectedRoom.id, draftName)}
             >
-              Save name
-            </Button>
-            <Button type="button" icon={Check} size="sm" variant="secondary" onClick={onDoneRoom}>
-              Done editing
-            </Button>
-          </ActionRow>
-          <ActionRow>
-            <Button type="button" icon={Plus} size="sm" variant="ghost" onClick={onStartNewRoom}>
-              Start next room
+              Save
             </Button>
             <Button
               type="button"
@@ -146,86 +189,20 @@ function ActiveRoomCard({
         </div>
       ) : (
         <div className="mt-2 grid gap-2">
-          <div className="text-sm font-semibold text-foreground">New room</div>
+          <div className="text-sm font-semibold text-foreground">
+            {activeTool === "room-brush" || activeTool === "room-fill"
+              ? "Adding room"
+              : "Select a room"}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {selectedCells
-              ? `${selectedCells} cells selected but not saved as a room yet.`
-              : "Select cells, fill an enclosed area, or choose a room below."}
+            {activeTool === "room-brush" || activeTool === "room-fill"
+              ? selectedCells
+                ? `${selectedCells} cells in the current room draft. Use Save in the top bar when finished.`
+                : "Choose a brush in the top bar, then place the room on the map."
+              : "Click an existing room on the map or choose one below. Use Add room in the top bar to create a new room."}
           </p>
-          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onStartNewRoom}>
-            Start selecting a room
-          </Button>
         </div>
       )}
-    </div>
-  );
-}
-
-function RoomPaintActionsCard({
-  activeTool,
-  canCreateRoom,
-  selectedCells,
-  onCreateRoomFromSelection,
-  onToolChange,
-}: {
-  activeTool: DungeonStudioTool;
-  canCreateRoom: boolean;
-  selectedCells: number;
-  onCreateRoomFromSelection: () => void;
-  onToolChange: (tool: DungeonStudioTool) => void;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-sm font-semibold text-foreground">Assign room cells</div>
-      <div className="mt-2 grid gap-2">
-        <ActionRow>
-          <RoomToolButton
-            activeTool={activeTool}
-            icon={Square}
-            tool="room-select"
-            onToolChange={onToolChange}
-          >
-            Select cells
-          </RoomToolButton>
-          <RoomToolButton
-            activeTool={activeTool}
-            icon={Paintbrush}
-            tool="room-brush"
-            onToolChange={onToolChange}
-          >
-            Paint room
-          </RoomToolButton>
-        </ActionRow>
-        <ActionRow>
-          <RoomToolButton
-            activeTool={activeTool}
-            icon={PaintBucket}
-            tool="room-fill"
-            onToolChange={onToolChange}
-          >
-            Fill bounded
-          </RoomToolButton>
-          <RoomToolButton
-            activeTool={activeTool}
-            icon={Eraser}
-            tool="erase-room"
-            onToolChange={onToolChange}
-          >
-            Erase room
-          </RoomToolButton>
-        </ActionRow>
-        <Button
-          type="button"
-          className="w-full"
-          disabled={!canCreateRoom}
-          icon={ListChecks}
-          size="sm"
-          variant="secondary"
-          onClick={onCreateRoomFromSelection}
-        >
-          Create room from selection{selectedCells ? ` (${selectedCells})` : ""}
-        </Button>
-      </div>
     </div>
   );
 }
@@ -275,32 +252,6 @@ function ExistingRoomsCard({
   );
 }
 
-function RoomToolButton({
-  activeTool,
-  children,
-  icon,
-  tool,
-  onToolChange,
-}: {
-  activeTool: DungeonStudioTool;
-  children: string;
-  icon: typeof Square;
-  tool: Extract<DungeonStudioTool, "room-select" | "room-brush" | "room-fill" | "erase-room">;
-  onToolChange: (tool: DungeonStudioTool) => void;
-}) {
-  return (
-    <Button
-      type="button"
-      icon={icon}
-      size="sm"
-      variant={activeTool === tool ? "primary" : "secondary"}
-      onClick={() => onToolChange(tool)}
-    >
-      {children}
-    </Button>
-  );
-}
-
 function RoomColor({ color }: { color: string }) {
   return (
     <span
@@ -309,4 +260,13 @@ function RoomColor({ color }: { color: string }) {
       aria-hidden="true"
     />
   );
+}
+
+function linkedRoomName(room: DungeonStudioRoomRegion, roomLocations: CampaignLocation[]) {
+  const location = room.locationId
+    ? roomLocations.find((candidate) => candidate.id === room.locationId)
+    : undefined;
+  return location
+    ? `Campaign World room: ${location.name}`
+    : "Campaign World room will sync on save.";
 }

@@ -24,12 +24,16 @@ describe("CampaignWorld commerce polish", () => {
     );
 
     expect(screen.getByText("Limited/hidden")).toBeTruthy();
-    expect(screen.getByText("Inventory")).toBeTruthy();
+    expect(screen.getByText("Units")).toBeTruthy();
     expect(screen.getByText("Potion / Consumable")).toBeTruthy();
     expect(screen.getByText("common")).toBeTruthy();
     expect(screen.getByText("Behind the counter.")).toBeTruthy();
+    const stockRow = screen.getByText("Healing Draught").closest("article") as HTMLElement;
+    expect(within(stockRow).getByText("Price").closest("span")).toBeNull();
+    expect(within(stockRow).getByText("75 sp")).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Adjust" }));
+    fireEvent.click(within(stockRow).getByLabelText("Manage Healing Draught stock"));
+    fireEvent.click(within(stockRow).getByRole("button", { name: "Adjust" }));
     const dialog = await screen.findByRole("dialog", { name: "Adjust shop stock" });
     fireEvent.change(within(dialog).getByLabelText("Qty"), { target: { value: "2" } });
     fireEvent.change(within(dialog).getByLabelText("Price"), { target: { value: "90" } });

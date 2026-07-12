@@ -200,7 +200,7 @@ function OutcomePreview({ row }: { row: Record<string, unknown> }) {
           {effects.map((effect, index) => (
             <span
               key={index}
-              className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
+              className="rounded-full border border-info/25 bg-info/10 px-2 py-1 text-xs font-semibold text-info"
             >
               {nestedEffectSummary(effect)}
             </span>

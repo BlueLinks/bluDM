@@ -25,6 +25,7 @@ import {
   type DungeonStudioDocument,
   type DungeonStudioEdgeDirection,
   type DungeonStudioEdgeFeature,
+  type DungeonStudioTilesetKey,
   type GridCell,
 } from "./dungeonStudioDocument";
 
@@ -48,7 +49,8 @@ export type DungeonStudioTool =
   | "wall"
   | "diagonal-wall"
   | "door"
-  | "cliff-edge";
+  | "cliff-edge"
+  | "object";
 
 export type DungeonStudioShapeTool = Extract<
   DungeonStudioTool,
@@ -60,6 +62,7 @@ export type DungeonStudioSelection =
   | { type: "cell"; cell: GridCell }
   | { type: "edge"; cell: GridCell; direction: DungeonStudioEdgeDirection; kind: string }
   | { type: "region"; cells: GridCell[]; label: string; roomId?: string }
+  | { type: "entity"; entityId: string }
   | null;
 
 export type DungeonStudioHistoryStacks = {
@@ -206,6 +209,61 @@ export function floorCells(document: DungeonStudioDocument) {
 export function terrainCells(document: DungeonStudioDocument, kind: DungeonStudioTerrainTool) {
   return layerCells(document, kind);
 }
+
+export function updateDocumentTileset(
+  document: DungeonStudioDocument,
+  tileset: DungeonStudioTilesetKey,
+) {
+  return { ...document, tileset };
+}
+
+export function updateRoomRegionColor(
+  document: DungeonStudioDocument,
+  roomId: string,
+  color: string,
+) {
+  return {
+    ...document,
+    rooms: document.rooms.map((room) => (room.id === roomId ? { ...room, color } : room)),
+  };
+}
+
+export function updateRoomRegionTheme(
+  document: DungeonStudioDocument,
+  roomId: string,
+  themeKey: DungeonStudioTilesetKey | "",
+) {
+  return {
+    ...document,
+    rooms: document.rooms.map((room) =>
+      room.id === roomId ? { ...room, themeKey: themeKey || undefined } : room,
+    ),
+  };
+}
+
+export function linkRoomRegionLocation(
+  document: DungeonStudioDocument,
+  roomId: string,
+  locationId: string | undefined,
+) {
+  return {
+    ...document,
+    rooms: document.rooms.map((room) =>
+      room.id === roomId ? { ...room, locationId: locationId || undefined } : room,
+    ),
+  };
+}
+
+export {
+  addCustomAsset,
+  deleteObjectEntity,
+  duplicateObjectEntity,
+  entityAtCell,
+  moveObjectEntity,
+  placeObjectEntity,
+  rotateObjectEntity,
+  updateObjectEntityLink,
+} from "./dungeonStudioEntityEditing";
 
 export function layerCells(document: DungeonStudioDocument, kind: DungeonStudioCellKind) {
   return document.layers

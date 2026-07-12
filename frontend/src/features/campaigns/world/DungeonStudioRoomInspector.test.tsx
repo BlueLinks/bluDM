@@ -11,68 +11,63 @@ const rooms: DungeonStudioRoomRegion[] = [
 afterEach(cleanup);
 
 describe("DungeonStudioRoomInspector", () => {
-  it("shows clear new-room draft state", () => {
-    render(
-      <DungeonStudioRoomInspector
-        activeTool="room-select"
-        canCreateRoom
-        rooms={rooms}
-        selected={{ type: "region", cells: rooms[0].cells, label: "Selection" }}
-        onCreateRoomFromSelection={vi.fn()}
-        onDeleteRoom={vi.fn()}
-        onDoneRoom={vi.fn()}
-        onEditRoom={vi.fn()}
-        onRenameRoom={vi.fn()}
-        onStartNewRoom={vi.fn()}
-        onToolChange={vi.fn()}
-      />,
-    );
+  it("defaults to selecting rooms without duplicate creation controls", () => {
+    renderRoomInspector();
 
-    expect(screen.getByText("Room")).toBeTruthy();
-    expect(screen.getByText("New room")).toBeTruthy();
-    expect(screen.getByText(/cells selected but not saved as a room yet/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Create room from selection/i })).toBeTruthy();
+    expect(screen.getByText("Select a room")).toBeTruthy();
+    expect(screen.getByText(/Use Add room in the top bar/i)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Create room from selection/i })).toBeNull();
+    expect(screen.queryByText("Assign room cells")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Create world link/i })).toBeNull();
   });
 
-  it("groups room naming, paint/fill actions, creation, editing, and deletion", () => {
-    const onToolChange = vi.fn();
-    const onEditRoom = vi.fn();
+  it("saves selected room details and returns through one Save action", () => {
     const onDeleteRoom = vi.fn();
+    const onEditRoom = vi.fn();
     const onRenameRoom = vi.fn();
 
-    render(
-      <DungeonStudioRoomInspector
-        activeTool="room-fill"
-        canCreateRoom
-        rooms={rooms}
-        selected={{ type: "region", cells: rooms[0].cells, label: "Selection" }}
-        selectedRoom={rooms[0]}
-        onCreateRoomFromSelection={vi.fn()}
-        onDeleteRoom={onDeleteRoom}
-        onDoneRoom={vi.fn()}
-        onEditRoom={onEditRoom}
-        onRenameRoom={onRenameRoom}
-        onStartNewRoom={vi.fn()}
-        onToolChange={onToolChange}
-      />,
-    );
+    renderRoomInspector({
+      activeTool: "room-brush",
+      onDeleteRoom,
+      onEditRoom,
+      onRenameRoom,
+      selected: { type: "region", cells: rooms[0].cells, label: "Guard Room", roomId: "room-1" },
+      selectedRoom: rooms[0],
+      selectedRoomConnections: [{ connectionType: "door", room: rooms[1] }],
+    });
 
-    expect(screen.getByText("Room")).toBeTruthy();
     expect(screen.getByText("Editing room: Guard Room")).toBeTruthy();
     expect(screen.getByDisplayValue("Guard Room")).toBeTruthy();
-    expect(screen.getByRole("button", { name: /Fill bounded/i })).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: /Create room from selection/i }).hasAttribute("disabled"),
-    ).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: /Paint room/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Crypt/i }));
+    expect(screen.queryByRole("button", { name: /Done editing/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Start next room/i })).toBeNull();
+
+    fireEvent.click(screen.getAllByRole("button", { name: /Crypt/i })[0]);
     fireEvent.change(screen.getByDisplayValue("Guard Room"), { target: { value: "Barracks" } });
-    fireEvent.click(screen.getByRole("button", { name: /Save name/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
     fireEvent.click(screen.getByRole("button", { name: /Delete room/i }));
 
-    expect(onToolChange).toHaveBeenCalledWith("room-brush");
     expect(onEditRoom).toHaveBeenCalledWith("room-2");
     expect(onRenameRoom).toHaveBeenCalledWith("room-1", "Barracks");
     expect(onDeleteRoom).toHaveBeenCalledWith("room-1");
   });
 });
+
+function renderRoomInspector(
+  overrides: Partial<Parameters<typeof DungeonStudioRoomInspector>[0]> = {},
+) {
+  render(
+    <DungeonStudioRoomInspector
+      activeTool="room-select"
+      rooms={rooms}
+      roomLocations={[]}
+      selected={null}
+      selectedRoomConnections={[]}
+      onDeleteRoom={vi.fn()}
+      onEditRoom={vi.fn()}
+      onRenameRoom={vi.fn()}
+      onRoomColorChange={vi.fn()}
+      onRoomThemeChange={vi.fn()}
+      {...overrides}
+    />,
+  );
+}

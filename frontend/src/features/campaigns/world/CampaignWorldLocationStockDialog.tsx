@@ -1,12 +1,19 @@
-import { PackagePlus, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, PackagePlus } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
-import { Button, Field, Input, Modal } from "../../../components/ui";
+import { Button, Modal } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import type { Item } from "../../../types";
-import { ItemCatalogCompactCard } from "../../items/ItemCatalogCard";
 import { blankItemForm } from "../../items/itemFormState";
-import { AvailabilitySelect, CurrencySelect } from "./CampaignWorldStockFields";
 import { stockItemKey } from "./campaignWorldStockUtils";
+import {
+  ChooseStockStep,
+  ConfigureStockStep,
+  SelectedStockStrip,
+  StepTabs,
+  StockReview,
+  type StockDraft,
+  type StockStep,
+} from "./CampaignWorldLocationStockDialogSteps";
 import type { CampaignLocation } from "./travelTypes";
 
 type LocationStockFormInput = {
@@ -15,17 +22,6 @@ type LocationStockFormInput = {
   librarySource: "user" | "standard";
   quantity: number;
   priceAmount: number;
-  priceUnit: string;
-  availability: string;
-  notes: string;
-};
-
-type StockDraft = {
-  key: string;
-  item?: Item;
-  customName?: string;
-  quantity: string;
-  priceAmount: string;
   priceUnit: string;
   availability: string;
   notes: string;
@@ -49,21 +45,48 @@ export function AddStockModal({
   const [itemSearch, setItemSearch] = useState("");
   const [customName, setCustomName] = useState("");
   const [drafts, setDrafts] = useState<StockDraft[]>([]);
+  const [activeDraftKey, setActiveDraftKey] = useState("");
+  const [step, setStep] = useState<StockStep>("choose");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const filteredItems = useMemo(() => filterStockItems(items, itemSearch), [itemSearch, items]);
   const draftKeys = useMemo(() => new Set(drafts.map((draft) => draft.key)), [drafts]);
+  const activeDraft = drafts.find((draft) => draft.key === activeDraftKey) ?? drafts[0];
+  const currentStep = drafts.length === 0 && step !== "choose" ? "choose" : step;
+
+  function resetWorkflow() {
+    setDrafts([]);
+    setItemSearch("");
+    setCustomName("");
+    setActiveDraftKey("");
+    setStep("choose");
+    setError("");
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) resetWorkflow();
+    onOpenChange(nextOpen);
+  }
 
   function addCatalogItem(item: Item) {
     const key = stockItemKey(item);
-    if (draftKeys.has(key)) return;
+    if (draftKeys.has(key)) {
+      setActiveDraftKey(key);
+      setStep("configure");
+      return;
+    }
     setDrafts((current) => [...current, draftFromItem(item)]);
+    setActiveDraftKey(key);
+    setStep("configure");
   }
 
   function addCustomItem() {
     const name = customName.trim();
     if (!name) return;
-    setDrafts((current) => [...current, draftFromCustomName(name)]);
+    const draft = draftFromCustomName(name);
+    setDrafts((current) => [...current, draft]);
+    setActiveDraftKey(draft.key);
+    setStep("configure");
     setCustomName("");
   }
 
@@ -93,9 +116,7 @@ export function AddStockModal({
           notes: draft.notes.trim(),
         });
       }
-      setDrafts([]);
-      setItemSearch("");
-      setCustomName("");
+      resetWorkflow();
       onOpenChange(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save shop stock");
@@ -105,162 +126,99 @@ export function AddStockModal({
   }
 
   return (
-    <Modal open={open} onOpenChange={onOpenChange} title="Add shop stock">
-      <form className="grid gap-4" onSubmit={submitStock}>
-        <div className="grid gap-3 rounded-md border border-border bg-card p-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Search items" className="min-w-0 flex-1">
-              <Input
-                placeholder="Search by item, type, rarity, or source..."
-                value={itemSearch}
-                onChange={(event) => setItemSearch(event.target.value)}
-              />
-            </Field>
-          </div>
-          <div className="grid max-h-72 gap-2 overflow-auto pr-1">
-            {filteredItems.length ? (
-              filteredItems.map((item) => {
-                const key = stockItemKey(item);
-                const added = draftKeys.has(key);
-                return (
-                  <ItemCatalogCompactCard
-                    item={item}
-                    key={key}
-                    action={
-                      <Button
-                        type="button"
-                        icon={Plus}
-                        size="sm"
-                        variant={added ? "ghost" : "secondary"}
-                        disabled={added}
-                        onClick={() => addCatalogItem(item)}
-                      >
-                        {added ? "Added" : "Add"}
-                      </Button>
-                    }
-                  />
-                );
-              })
+    <Modal
+      className="max-w-3xl p-4 sm:p-5"
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Add shop stock"
+    >
+      <form className="flex max-h-[calc(90vh-7rem)] min-h-0 flex-col gap-3" onSubmit={submitStock}>
+        <StepTabs drafts={drafts} step={currentStep} onStepChange={setStep} />
+        {drafts.length ? (
+          <SelectedStockStrip
+            activeDraftKey={activeDraft?.key ?? ""}
+            drafts={drafts}
+            onSelect={(key) => {
+              setActiveDraftKey(key);
+              setStep("configure");
+            }}
+          />
+        ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+          {currentStep === "choose" ? (
+            <ChooseStockStep
+              customName={customName}
+              draftKeys={draftKeys}
+              filteredItems={filteredItems}
+              itemSearch={itemSearch}
+              onAddCustomItem={addCustomItem}
+              onAddItem={addCatalogItem}
+              onCustomNameChange={setCustomName}
+              onItemSearchChange={setItemSearch}
+            />
+          ) : null}
+          {currentStep === "configure" ? (
+            <ConfigureStockStep
+              activeDraft={activeDraft}
+              drafts={drafts}
+              onBack={() => setStep("choose")}
+              onRemove={(key) => {
+                const nextDrafts = drafts.filter((entry) => entry.key !== key);
+                setDrafts(nextDrafts);
+                setActiveDraftKey(nextDrafts[0]?.key ?? "");
+                if (nextDrafts.length === 0) setStep("choose");
+              }}
+              onSelectDraft={setActiveDraftKey}
+              onUpdateDraft={updateDraft}
+            />
+          ) : null}
+          {currentStep === "review" ? <StockReview drafts={drafts} /> : null}
+        </div>
+        {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+        <div className="-mx-1 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border bg-card/95 px-1 pt-3">
+          <Button
+            type="button"
+            icon={ChevronLeft}
+            size="sm"
+            variant="ghost"
+            disabled={currentStep === "choose"}
+            onClick={() => setStep(previousStep(currentStep))}
+          >
+            Back
+          </Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => handleOpenChange(false)}>
+              Cancel
+            </Button>
+            {currentStep === "review" ? (
+              <Button type="submit" icon={PackagePlus} disabled={saving || !drafts.length}>
+                Add {drafts.length || ""} stock {drafts.length === 1 ? "item" : "items"}
+              </Button>
             ) : (
-              <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-                No matching catalog items.
-              </p>
+              <Button
+                type="button"
+                disabled={!drafts.length}
+                onClick={() => setStep(nextStep(currentStep, drafts.length))}
+              >
+                {currentStep === "choose" ? "Continue" : "Review"}
+              </Button>
             )}
           </div>
-        </div>
-
-        <div className="grid gap-3 rounded-md border border-border bg-card p-3">
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Custom item name" className="min-w-0 flex-1">
-              <Input
-                placeholder="e.g. Brass key, local map, suspicious tonic..."
-                value={customName}
-                onChange={(event) => setCustomName(event.target.value)}
-              />
-            </Field>
-            <Button type="button" icon={Plus} variant="secondary" onClick={addCustomItem}>
-              Add custom item
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <div>
-            <h4 className="font-semibold">Stock to add</h4>
-            <p className="text-sm text-muted-foreground">
-              Add one or more items, then adjust quantity, price, and availability before saving.
-            </p>
-          </div>
-          {drafts.length ? (
-            drafts.map((draft) => (
-              <StockDraftEditor
-                draft={draft}
-                key={draft.key}
-                onRemove={() =>
-                  setDrafts((current) => current.filter((entry) => entry.key !== draft.key))
-                }
-                onUpdate={(patch) => updateDraft(draft.key, patch)}
-              />
-            ))
-          ) : (
-            <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-              No items selected yet. Use Add beside a catalog item, or create a custom item above.
-            </p>
-          )}
-        </div>
-
-        {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button type="submit" icon={PackagePlus} disabled={saving || !drafts.length}>
-            Add {drafts.length || ""} stock {drafts.length === 1 ? "item" : "items"}
-          </Button>
         </div>
       </form>
     </Modal>
   );
 }
 
-function StockDraftEditor({
-  draft,
-  onRemove,
-  onUpdate,
-}: {
-  draft: StockDraft;
-  onRemove: () => void;
-  onUpdate: (patch: Partial<StockDraft>) => void;
-}) {
-  return (
-    <div className="grid gap-3 rounded-md border border-border bg-background p-3">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h5 className="font-semibold">{draft.item?.name ?? draft.customName}</h5>
-          <p className="text-xs text-muted-foreground">
-            {draft.item ? "Catalog item" : "Custom shop item"}
-          </p>
-        </div>
-        <Button type="button" icon={Trash2} size="sm" variant="ghost" onClick={onRemove}>
-          Remove
-        </Button>
-      </div>
-      {!draft.item ? (
-        <Field label="Name">
-          <Input
-            value={draft.customName ?? ""}
-            onChange={(event) => onUpdate({ customName: event.target.value })}
-          />
-        </Field>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-[5rem_7rem_7rem_1fr]">
-        <Field label="Qty">
-          <Input
-            value={draft.quantity}
-            onChange={(event) => onUpdate({ quantity: event.target.value })}
-          />
-        </Field>
-        <Field label="Price">
-          <Input
-            value={draft.priceAmount}
-            onChange={(event) => onUpdate({ priceAmount: event.target.value })}
-          />
-        </Field>
-        <CurrencySelect value={draft.priceUnit} onChange={(priceUnit) => onUpdate({ priceUnit })} />
-        <AvailabilitySelect
-          value={draft.availability}
-          onChange={(availability) => onUpdate({ availability })}
-        />
-      </div>
-      <Field label="Stock notes">
-        <Input
-          placeholder="Behind the counter, illegal, restocks weekly..."
-          value={draft.notes}
-          onChange={(event) => onUpdate({ notes: event.target.value })}
-        />
-      </Field>
-    </div>
-  );
+function previousStep(step: StockStep): StockStep {
+  if (step === "review") return "configure";
+  return "choose";
+}
+
+function nextStep(step: StockStep, draftCount: number): StockStep {
+  if (step === "choose") return draftCount > 0 ? "configure" : "choose";
+  if (step === "configure") return "review";
+  return "review";
 }
 
 function filterStockItems(items: Item[], search: string) {

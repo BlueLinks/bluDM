@@ -171,7 +171,7 @@ function TargetScalingModeTabs({
   onChange: (mode: "traditional" | "cantrip") => void;
 }) {
   return (
-    <div className="grid w-full grid-cols-2 rounded-md border border-border bg-muted p-1">
+    <div className="grid w-full grid-cols-2 rounded-md border border-border bg-card p-1">
       {[
         { value: "traditional", label: "Traditional" },
         { value: "cantrip", label: "Cantrip" },
@@ -182,8 +182,8 @@ function TargetScalingModeTabs({
           className={[
             "rounded px-3 py-2 text-sm font-semibold transition",
             mode === option.value
-              ? "bg-background text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:bg-background hover:text-foreground",
           ].join(" ")}
           onClick={() => onChange(option.value as "traditional" | "cantrip")}
         >

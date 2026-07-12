@@ -64,7 +64,7 @@ export function ActionIconPicker({
             <div className="grid max-h-[52vh] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
               {filteredIcons.map((icon) => (
                 <button
-                  className="grid gap-2 rounded-md border border-border bg-background p-3 text-left transition hover:bg-muted"
+                  className="grid gap-2 rounded-md border border-border bg-surface p-3 text-left text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
                   key={icon.key}
                   type="button"
                   onClick={() => {
@@ -95,7 +95,7 @@ export function ActionIconPicker({
             Clear
           </Button>
         )}
-        {value.iconAttribution && <Badge>{value.iconAttribution}</Badge>}
+        {value.iconAttribution && <Badge tone="official">{value.iconAttribution}</Badge>}
       </div>
     </div>
   );

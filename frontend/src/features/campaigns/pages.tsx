@@ -1,8 +1,8 @@
 import { Castle, ChevronRight, Map, Plus, ScrollText } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { ResponsiveGrid, SidebarDetailLayout } from "../../components/layout";
+import { ResponsiveGrid, SidebarDetailLayout, WorkspaceBanner } from "../../components/layout";
 import {
   Button,
   Callout,
@@ -138,12 +138,6 @@ export function CampaignDetailPage() {
   const [partyOpen, setPartyOpen] = useState(false);
   const [npcOpen, setNpcOpen] = useState(false);
   const [encounterOpen, setEncounterOpen] = useState(false);
-  const [encounterName, setEncounterName] = useState("");
-  const [encounterDescription, setEncounterDescription] = useState("");
-  const [encounterStatus, setEncounterStatus] = useState("planned");
-  const [encounterLocation, setEncounterLocation] = useState("");
-  const [encounterLocationID, setEncounterLocationID] = useState("");
-  const [encounterRoomNumber, setEncounterRoomNumber] = useState("");
   const [removePlayer, setRemovePlayer] = useState<Player | null>(null);
   const [removeNpc, setRemoveNpc] = useState<Creature | null>(null);
   const [removeEncounter, setRemoveEncounter] = useState<Encounter | null>(null);
@@ -208,33 +202,6 @@ export function CampaignDetailPage() {
     await loadCampaign();
   }
 
-  async function createEncounter(event: FormEvent) {
-    event.preventDefault();
-    if (!detail || !encounterName.trim()) return;
-    setError("");
-    try {
-      const payload = await api.createEncounter(detail.campaign.id, {
-        name: encounterName,
-        description: encounterDescription,
-        status: encounterStatus,
-        location: encounterLocation,
-        locationId: encounterLocationID || undefined,
-        roomNumber: encounterRoomNumber,
-      });
-      toast.push(`${payload.encounter.name} created`);
-      setEncounterName("");
-      setEncounterDescription("");
-      setEncounterStatus("planned");
-      setEncounterLocation("");
-      setEncounterLocationID("");
-      setEncounterRoomNumber("");
-      setEncounterOpen(false);
-      await loadCampaign();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create encounter");
-    }
-  }
-
   async function cloneEncounter(encounter: Encounter) {
     setError("");
     try {
@@ -292,7 +259,7 @@ export function CampaignDetailPage() {
       <Breadcrumbs
         items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name }]}
       />
-      <PageHeader
+      <WorkspaceBanner
         eyebrow="Campaign"
         title={detail.campaign.name}
         copy={
@@ -306,6 +273,7 @@ export function CampaignDetailPage() {
             </Button>
           </Link>
         }
+        tone="secondary"
       />
       <CampaignWorkspaceTabs campaignId={detail.campaign.id} />
       {error && <Callout tone="danger">{error}</Callout>}
@@ -330,26 +298,16 @@ export function CampaignDetailPage() {
         <div id="campaign-encounters">
           <CampaignEncountersSection
             campaignID={detail.campaign.id}
-            description={encounterDescription}
             encounterOpen={encounterOpen}
             encounters={detail.encounters}
-            locationID={encounterLocationID}
-            location={encounterLocation}
             locations={locations}
-            name={encounterName}
-            roomNumber={encounterRoomNumber}
-            status={encounterStatus}
+            npcs={detail.npcs}
+            players={detail.players}
             onClone={(encounter) => void cloneEncounter(encounter)}
-            onCreate={(event) => void createEncounter(event)}
-            onDescriptionChange={setEncounterDescription}
-            onLocationChange={setEncounterLocation}
-            onLocationIDChange={setEncounterLocationID}
-            onNameChange={setEncounterName}
+            onCreated={loadCampaign}
             onOpenChange={setEncounterOpen}
             onRemove={setRemoveEncounter}
-            onRoomNumberChange={setEncounterRoomNumber}
             onStart={(encounter, test) => void startEncounter(encounter, test)}
-            onStatusChange={setEncounterStatus}
           />
         </div>
         <div id="campaign-party">

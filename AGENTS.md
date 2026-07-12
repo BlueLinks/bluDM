@@ -67,6 +67,29 @@ For UI work, consult the Uncodixify guidance at https://raw.githubusercontent.co
 - Avoid generic AI-looking UI: unnecessary panels, badges, filler copy, decorative containers, excessive rounding/padding, and dashboard-style clutter.
 - Prefer functional, clear, restrained UI that uses the existing project design language and shared components.
 - Do not perform broad UI rewrites just because of this guidance; apply it to the specific task at hand.
+- Build new UI from semantic design tokens first, not page-specific palette classes.
+- Route-specific themes should be exceptional and require a clear product reason; prefer shared tokens, shared primitives, and shared accent variables.
+- Accent colors must come from the shared theme system, and new components should support all light/dark and accent combinations without bespoke styling forks.
+- Treat each accent option as a complete theme palette with `primary`, `secondary`, `tertiary`, `accent`, `neutral`, and `surface` tokens; do not assume a single accent color is enough for a component.
+- Every interactive background token should have an explicit foreground partner, and shared controls should use those pairs directly instead of inheriting text color.
+- Use `flat`, `raised`, `interactive`, `featured`, and `hero` depth levels to keep cards, buttons, and banners tactically distinct without overdoing shadows.
+- Never use green, blue, red, or another named palette color as shorthand for selected, active, mine, friendly, primary, warning, or success.
+- Keep accent colors separate from semantic status colors. The selected accent must not recolor success, warning, danger, or information states.
+- Use `surface` for quiet filter rails and nested interiors when a region should be neutral; avoid relying on `muted` as a catch-all background.
+- Use companion tokens for stable secondary categories such as personal content, official/SRD content, imported content, shared/friendly content, custom variants, metadata, draft, and published states.
+- Source chips, badges, pills, tabs, navigation states, stat displays, and status indicators should use shared components or shared token helpers rather than local feature color maps.
+- Button variants, segmented controls, and selectable rows should explicitly set default, hover, active, selected, disabled, and focus-visible states with semantic foreground tokens.
+- Primary and secondary buttons must remain filled, theme-coloured controls using their matching foreground tokens; do not downgrade them to neutral surface buttons.
+- Use the filled tertiary button role for distinct alternate actions such as encounter Test controls when primary and secondary already identify Run and supporting management actions.
+- Coloured buttons should own their button-specific shadow/elevation and should not reuse card or panel depth classes that define neutral backgrounds.
+- Outline and ghost buttons may stay lightweight, but they must still set explicit foregrounds and visible hover/focus states instead of inheriting body text colors.
+- Do not use `bg-muted` as the default for chips, badges, selected pills, stat chips, initials avatars, icon placeholders, or status indicators; use `Badge`, `StatChip`, `InitialsAvatar`, source-tone helpers, semantic tokens, or companion tokens instead.
+- Character ability displays should use `AbilityScoreCard`; AC/HP/temp/speed displays should use `VitalStatCard`; stat chips, property/value cards, count chips, and initials avatars should reuse `frontend/src/components/shared/displayPrimitives.tsx` before creating local display markup.
+- Character and NPC initials/avatar placeholders should default to theme-backed identity tones, not fixed metadata grey-blue.
+- Hero, banner, workspace summary, and dashboard treatments should prefer shared layout primitives such as `WorkspaceBanner`, `FeatureCard`, and `MetricCard` over bespoke page chrome.
+- Shared depth should be introduced through those primitives and the shared button/card base styles, not with one-off shadow recipes inside feature screens.
+- Literal hex/RGB/HSL values are allowed only for provider brand marks, user-selected custom colors, map/canvas artwork, or documented data visualizations.
+- Reuse existing shared components before inventing new visual patterns, and keep design-system docs in sync when introducing meaningful UI behavior or styling rules.
 
 ### Rule Of Three
 
@@ -132,6 +155,10 @@ Examples include:
 - action rows
 
 Feature code should compose these primitives rather than reimplementing them.
+
+Shared layout primitives should include hero and summary treatments where appropriate. Use `WorkspaceBanner` for page heroes/workspace headers, `FeatureCard` for richer dashboard or action cards, and `MetricCard` for compact count/stat blocks. Keep gradients subtle, theme-aware, and limited to hero-like surfaces.
+Prefer stronger borders and measured shadows over flat tinting when a surface needs hierarchy. In dark mode, combine shadow with border contrast and surface layering so depth remains readable.
+When a control is interactive, make its hover and active states visibly distinct without washing out the foreground token.
 
 ### Grid And Flex Safety Rules
 

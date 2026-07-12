@@ -1,0 +1,109 @@
+:root {
+  color-scheme: light;
+  --background: 40 35% 95%;
+  --foreground: 132 14% 11%;
+  --card: 40 40% 98%;
+  --card-foreground: 132 14% 11%;
+  --muted: 38 16% 90%;
+  --muted-foreground: 215 10% 42%;
+  --border: 34 20% 81%;
+  --primary: 148 48% 26%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 102 24% 35%;
+  --secondary-foreground: 0 0% 100%;
+  --tertiary: 30 34% 34%;
+  --tertiary-foreground: 0 0% 100%;
+  --neutral: 32 12% 42%;
+  --neutral-foreground: 0 0% 100%;
+  --surface: 40 35% 93%;
+  --surface-foreground: 132 14% 11%;
+  --accent: 146 48% 31%;
+  --accent-foreground: 0 0% 100%;
+  --info: 204 70% 36%;
+  --info-foreground: 0 0% 100%;
+  --success: 149 63% 31%;
+  --success-foreground: 0 0% 100%;
+  --warning: 35 92% 42%;
+  --warning-foreground: 0 0% 100%;
+  --destructive: 7 61% 40%;
+  --destructive-foreground: 0 0% 100%;
+  --companion-personal: 242 38% 42%;
+  --companion-personal-foreground: 0 0% 100%;
+  --companion-official: 217 58% 42%;
+  --companion-official-foreground: 0 0% 100%;
+  --companion-imported: 28 78% 39%;
+  --companion-imported-foreground: 0 0% 100%;
+  --companion-shared: 265 44% 46%;
+  --companion-shared-foreground: 0 0% 100%;
+  --companion-custom: 326 52% 42%;
+  --companion-custom-foreground: 0 0% 100%;
+  --companion-metadata: 215 16% 43%;
+  --companion-metadata-foreground: 0 0% 100%;
+  --companion-draft: 35 82% 40%;
+  --companion-draft-foreground: 0 0% 100%;
+  --companion-published: 149 54% 32%;
+  --companion-published-foreground: 0 0% 100%;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 220 14% 12%;
+  --foreground: 204 36% 94%;
+  --card: 220 13% 16%;
+  --card-foreground: 204 36% 94%;
+  --muted: 218 12% 22%;
+  --muted-foreground: 207 20% 72%;
+  --border: 218 12% 27%;
+  --primary: 144 52% 61%;
+  --primary-foreground: 220 30% 8%;
+  --secondary: 95 35% 62%;
+  --secondary-foreground: 220 30% 8%;
+  --tertiary: 34 44% 64%;
+  --tertiary-foreground: 220 30% 8%;
+  --neutral: 214 16% 66%;
+  --neutral-foreground: 220 30% 8%;
+  --surface: 220 12% 18%;
+  --surface-foreground: 204 36% 94%;
+  --accent: 150 68% 68%;
+  --accent-foreground: 220 30% 8%;
+  --info: 204 82% 70%;
+  --info-foreground: 220 20% 10%;
+  --success: 149 58% 60%;
+  --success-foreground: 220 20% 10%;
+  --warning: 36 96% 58%;
+  --warning-foreground: 220 20% 10%;
+  --destructive: 4 74% 66%;
+  --destructive-foreground: 220 20% 10%;
+  --companion-personal: 242 62% 74%;
+  --companion-personal-foreground: 220 20% 10%;
+  --companion-official: 217 78% 70%;
+  --companion-official-foreground: 220 20% 10%;
+  --companion-imported: 28 88% 66%;
+  --companion-imported-foreground: 220 20% 10%;
+  --companion-shared: 265 64% 74%;
+  --companion-shared-foreground: 220 20% 10%;
+  --companion-custom: 326 68% 72%;
+  --companion-custom-foreground: 220 20% 10%;
+  --companion-metadata: 215 22% 72%;
+  --companion-metadata-foreground: 220 20% 10%;
+  --companion-draft: 36 90% 66%;
+  --companion-draft-foreground: 220 20% 10%;
+  --companion-published: 149 58% 60%;
+  --companion-published-foreground: 220 20% 10%;
+}
+
+html:not(.dark) .app-brand-tile {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--primary) / 0.14);
+  color: hsl(var(--foreground));
+}

@@ -4,13 +4,9 @@ A self-hosted D&D 5e encounter tracker built with a Go backend, React frontend, 
 
 ## Screenshots
 
-| Campaign dashboard                                             | Encounter tracker                                            |
-| -------------------------------------------------------------- | ------------------------------------------------------------ |
-| ![Campaign dashboard](docs/screenshots/campaign-dashboard.png) | ![Encounter tracker](docs/screenshots/encounter-tracker.png) |
-
-| Spell preview                                                          | Combat casting                                                |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------- |
-| ![Fireball spell preview](docs/screenshots/spell-preview-fireball.png) | ![Spell cast dialog](docs/screenshots/combat-cast-dialog.png) |
+| Campaign World                                                   | Import / Export                                                              |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| ![Campaign World shop](docs/screenshots/campaign-world-shop.png) | ![Import and export workspace](docs/screenshots/import-export-workspace.png) |
 
 More screenshots are available in [docs/screenshots](docs/screenshots/README.md).
 

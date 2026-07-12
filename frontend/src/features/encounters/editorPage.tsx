@@ -1,17 +1,9 @@
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, MapPin, Play, ScrollText, Swords, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
-import {
-  Button,
-  Callout,
-  MutedPanel,
-  Page,
-  PageHeader,
-  ToastViewport,
-  useToasts,
-} from "../../components/ui";
+import { Button, Callout, MutedPanel, Page, ToastViewport, useToasts } from "../../components/ui";
 import { api } from "../../lib/api";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
 import type {
@@ -23,9 +15,16 @@ import type {
   Player,
 } from "../../types";
 import { CombatantEditSheet } from "./editorComponents";
-import { EncounterDetailsSection, EncounterRosterSections } from "./EncounterEditorSections";
-import { EncounterCreatureAddPanel } from "./EncounterCreatureAddPanel";
+import { EncounterAddCombatantDialog } from "./EncounterAddCombatantDialog";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
+import {
+  EncounterDetailsSection,
+  EncounterEditNav,
+  EncounterNotesSection,
+  EncounterRosterSections,
+  EncounterRunningSection,
+  EncounterSummaryPanel,
+} from "./EncounterEditorSections";
 import {
   combatantChanged,
   draftFromCreature,
@@ -33,6 +32,7 @@ import {
   encounterDirty,
   encounterMetaChanged,
 } from "./domain";
+import "../campaigns/world/campaignWorldExperience.scss";
 
 export function EncounterEditPage() {
   const { campaignID, encounterID } = useParams();
@@ -51,13 +51,11 @@ export function EncounterEditPage() {
   const [savedCombatants, setSavedCombatants] = useState<EncounterCombatant[]>([]);
   const [draftCombatants, setDraftCombatants] = useState<DraftCombatant[]>([]);
   const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [showUserCreatures, setShowUserCreatures] = useState(true);
-  const [showStandardCreatures, setShowStandardCreatures] = useState(true);
   const [creatureSources, setCreatureSources] = useState(["srd-2014"]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<DraftCombatant | null>(null);
+  const [addMode, setAddMode] = useState<"ally" | "enemy" | null>(null);
   const [saving, setSaving] = useState(false);
   const combatants = draftCombatants;
   const playerCombatants = combatants.filter((combatant) => combatant.side === "player");
@@ -75,17 +73,6 @@ export function EncounterEditPage() {
     : ["srd-2014"];
   const hasCreatureSourceMismatch =
     Boolean(detail) && creatureSources.some((source) => !campaignSources.includes(source));
-  const filteredCreatures = creatures.filter((creature) => {
-    const query = search.trim().toLowerCase();
-    if (creature.librarySource === "standard" && !showStandardCreatures) return false;
-    if (creature.librarySource !== "standard" && !showUserCreatures) return false;
-    return (
-      !query ||
-      creature.name.toLowerCase().includes(query) ||
-      creature.creatureType.toLowerCase().includes(query) ||
-      creature.challengeRating.toLowerCase().includes(query)
-    );
-  });
   const difficulty = useMemo(
     () => calculateEncounterDifficulty(detail?.players ?? [], enemyCombatants),
     [detail?.players, enemyCombatants],
@@ -256,13 +243,13 @@ export function EncounterEditPage() {
     }
   }
 
-  async function saveAndTest() {
+  async function saveAndStart(test: boolean) {
     if (!encounter) return;
     const saved = dirty ? await saveEncounterChanges() : true;
     if (!saved) return;
     try {
-      const payload = await api.startEncounter(encounter.id, true);
-      toast.push("Test run snapshot created");
+      const payload = await api.startEncounter(encounter.id, test);
+      toast.push(test ? "Test run snapshot created" : "Encounter run snapshot created");
       setError("");
       void navigate(`/encounter-runs/${payload.run.id}/initiative`);
     } catch (err) {
@@ -294,7 +281,7 @@ export function EncounterEditPage() {
 
   return (
     <div className={dirty ? "pb-28" : ""}>
-      <Page>
+      <Page className="campaign-world-experience px-3 py-3 md:px-4 md:py-4 2xl:px-5" size="full">
         <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
         <BackButton to={`/campaigns/${detail.campaign.id}`}>Back to campaign</BackButton>
         <Breadcrumbs
@@ -305,57 +292,100 @@ export function EncounterEditPage() {
             { label: "Edit" },
           ]}
         />
-        <PageHeader
-          eyebrow={detail.campaign.name}
-          title={encounterMeta.name || encounter.name}
-          copy={
-            encounterMeta.description ||
-            "Build the encounter roster, split sides, and tune difficulty before running combat."
-          }
-          action={
-            <div className="flex flex-wrap gap-2">
+        <section className="rounded-md border border-border bg-card p-4">
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(28rem,0.9fr)] xl:items-start">
+            <div className="flex min-w-0 items-start gap-4">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-destructive/25 bg-destructive/10 text-destructive">
+                <Swords className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
+                  {encounterMeta.name || encounter.name}
+                </h1>
+                <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {encounterMeta.location || "No location"}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <UsersRound className="h-4 w-4" />
+                    {playerCombatants.length} party
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <ScrollText className="h-4 w-4" />
+                    {encounterMeta.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
+              <Button
+                type="button"
+                icon={Play}
+                disabled={saving}
+                onClick={() => void saveAndStart(false)}
+              >
+                {saving ? "Saving..." : "Run encounter"}
+              </Button>
               <Button
                 type="button"
                 icon={FlaskConical}
-                variant="success"
+                variant="tertiary"
                 disabled={saving}
-                onClick={() => void saveAndTest()}
+                onClick={() => void saveAndStart(true)}
               >
-                {saving ? "Saving..." : "Save and test"}
+                Test
               </Button>
             </div>
-          }
-        />
+          </div>
+        </section>
         {error && <Callout tone="danger">{error}</Callout>}
-        <EncounterDetailsSection meta={encounterMeta} onChange={setEncounterMeta} />
+        {hasCreatureSourceMismatch ? (
+          <Callout>
+            This encounter belongs to {detail.campaign.name}, but your current creature browse
+            filters include sources outside the campaign set.
+          </Callout>
+        ) : null}
         <EncounterDifficultyPanel difficulty={difficulty} />
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(360px,0.85fr)]">
-          <EncounterCreatureAddPanel
-            campaignCreatureIds={campaignCreatureIds}
-            campaignName={detail?.campaign.name}
-            creatureSources={creatureSources}
-            filteredCreatures={filteredCreatures}
-            hasCreatureSourceMismatch={hasCreatureSourceMismatch}
-            search={search}
-            setCreatureSources={setCreatureSources}
-            setSearch={setSearch}
-            setShowStandardCreatures={setShowStandardCreatures}
-            setShowUserCreatures={setShowUserCreatures}
-            showStandardCreatures={showStandardCreatures}
-            showUserCreatures={showUserCreatures}
-            onAddCreature={addCreature}
-          />
+        <EncounterEditNav />
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)]">
           <EncounterRosterSections
             availablePlayers={availablePlayers}
             enemyCombatants={enemyCombatants}
             friendlyCombatants={friendlyCombatants}
             playerCombatants={playerCombatants}
             onAddAllPlayers={() => void addAllPlayers()}
+            onAddAlly={() => setAddMode("ally")}
+            onAddEnemy={() => setAddMode("enemy")}
             onAddPlayer={(player) => void addPlayer(player)}
             onEdit={setEditing}
             onRemove={removeCombatant}
           />
+          <div className="grid content-start gap-4">
+            <EncounterSummaryPanel
+              createdAt={encounter.createdAt}
+              enemyCount={enemyCombatants.length}
+              meta={encounterMeta}
+              partyCount={playerCombatants.length}
+            />
+            <EncounterDetailsSection meta={encounterMeta} onChange={setEncounterMeta} />
+            <EncounterNotesSection meta={encounterMeta} onChange={setEncounterMeta} />
+            <EncounterRunningSection
+              saving={saving}
+              onSaveAndRun={() => void saveAndStart(false)}
+              onSaveAndTest={() => void saveAndStart(true)}
+            />
+          </div>
         </div>
+        <EncounterAddCombatantDialog
+          campaignCreatureIds={campaignCreatureIds}
+          creatures={creatures}
+          mode={addMode ?? "enemy"}
+          npcs={detail.npcs}
+          open={Boolean(addMode)}
+          onAddCreature={addCreature}
+          onOpenChange={(open) => !open && setAddMode(null)}
+        />
         <CombatantEditSheet
           combatant={editing}
           onOpenChange={(open) => !open && setEditing(null)}

@@ -1,6 +1,8 @@
-import { Check, HeartPulse, Pencil, Plus, Shield, Sparkles, Trash2, X } from "lucide-react";
+import { Check, HeartPulse, Plus, Shield, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
+import { InitialsAvatar } from "../../components/shared/displayPrimitives";
+import { sourceBadgeClass } from "../../components/shared/sourceTones";
 import {
   Button,
   Checkbox,
@@ -14,7 +16,8 @@ import {
 import { creatureDefaultDisposition } from "../../lib/domain/forms";
 import { combatantColors, defaultCombatantColor } from "../../lib/domain/options";
 import type { Creature, DraftCombatant, EncounterCombatant } from "../../types";
-import { combatantPlayerClassLevel, creatureSummary } from "./domain";
+import { EncounterCombatantCard } from "./EncounterCombatantCard";
+import { creatureSummary } from "./domain";
 
 export function CreatureEncounterAddRow({
   creature,
@@ -45,7 +48,12 @@ export function CreatureEncounterAddRow({
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>{creatureSummary(creature, campaignLinked)}</span>
               {creature.readOnly && (
-                <span className="rounded-full border border-sky-300 bg-sky-50 px-2 py-0.5 font-semibold text-sky-800 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                <span
+                  className={[
+                    "rounded-full border px-2 py-0.5 font-semibold",
+                    sourceBadgeClass("official"),
+                  ].join(" ")}
+                >
                   Read-only
                 </span>
               )}
@@ -85,14 +93,13 @@ export function CreatureEncounterAddRow({
             className="whitespace-nowrap"
             type="button"
             icon={Plus}
-            variant="success"
             size="sm"
             onClick={() => onAdd(side, count, false)}
           >
             Add
           </Button>
           <Button
-            className="whitespace-nowrap bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-400 dark:text-slate-950 dark:hover:bg-teal-300"
+            className="whitespace-nowrap"
             type="button"
             icon={Sparkles}
             variant="secondary"
@@ -107,17 +114,9 @@ export function CreatureEncounterAddRow({
   );
 }
 
-function CreatureAvatar({ creature }: { creature: Creature }) {
+export function CreatureAvatar({ creature }: { creature: Creature }) {
   const src = avatarImageSrc(creature.imageAssetId, creature.avatarUrl);
-  return (
-    <div className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md border border-border bg-muted text-sm font-bold text-muted-foreground">
-      {src ? (
-        <img className="h-full w-full object-cover" src={src} alt="" />
-      ) : (
-        creature.name.slice(0, 2).toUpperCase()
-      )}
-    </div>
-  );
+  return <InitialsAvatar name={creature.name} src={src} />;
 }
 
 export function CombatantList({
@@ -136,85 +135,38 @@ export function CombatantList({
   if (combatants.length === 0) {
     return <EmptyMini copy={empty} />;
   }
-  const nameTone =
-    sideTone === "friendly"
-      ? "text-emerald-700 dark:text-emerald-300"
-      : sideTone === "enemy"
-        ? "text-red-700 dark:text-red-300"
-        : "";
   return (
     <div className="grid gap-3">
       {combatants.map((combatant) => (
-        <div
-          className="combatant-row rounded-md border border-border bg-background p-3"
+        <EncounterCombatantCard
           key={combatant.id}
-        >
-          <div className="flex items-center gap-3">
-            <CombatantAvatar combatant={combatant} />
-            <div className="min-w-0 flex-1">
-              <div className={["truncate font-semibold", nameTone].filter(Boolean).join(" ")}>
-                {combatant.displayName}
-              </div>
-              {sideTone === "player" && (
-                <div className="text-xs text-muted-foreground">
-                  {combatantPlayerClassLevel(combatant)}
-                </div>
-              )}
-              <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <Shield className="h-3.5 w-3.5 text-accent" /> AC {combatant.armorClass}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <HeartPulse className="h-3.5 w-3.5 text-accent" /> HP {combatant.currentHitPoints}
-                  /{combatant.maxHitPoints}
-                </span>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              {onEdit && (
-                <Button
-                  type="button"
-                  icon={Pencil}
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onEdit(combatant)}
-                >
-                  Edit
-                </Button>
-              )}
-              <Button
-                type="button"
-                icon={Trash2}
-                size="sm"
-                variant="danger"
-                onClick={() => onRemove(combatant)}
-              >
-                Remove
-              </Button>
-            </div>
-          </div>
-        </div>
+          combatant={combatant}
+          sideTone={sideTone}
+          onEdit={onEdit}
+          onRemove={onRemove}
+        />
       ))}
     </div>
   );
 }
 
-function CombatantAvatar({ combatant }: { combatant: EncounterCombatant }) {
+export function CombatantAvatar({ combatant }: { combatant: EncounterCombatant }) {
   const color = combatant.colorLabel.trim();
   const defaultAvatar = color === defaultCombatantColor;
+  if (!color || defaultAvatar) {
+    return (
+      <InitialsAvatar
+        className="rounded-md"
+        name={combatant.displayName}
+        size="md"
+        src={combatant.avatarUrl}
+      />
+    );
+  }
   return (
     <div
-      className={[
-        "grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md text-sm font-bold",
-        color && !defaultAvatar
-          ? "border-2"
-          : "border border-border bg-muted text-muted-foreground",
-      ].join(" ")}
-      style={
-        color && !defaultAvatar
-          ? { backgroundColor: `${color}22`, borderColor: color, color }
-          : undefined
-      }
+      className="grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-md border-2 text-sm font-bold"
+      style={{ backgroundColor: `${color}22`, borderColor: color, color }}
     >
       {combatant.avatarUrl ? (
         <img className="h-full w-full object-cover" src={combatant.avatarUrl} alt="" />

@@ -78,7 +78,7 @@ export function ActionHitResult({
           <span className="font-semibold">On miss:</span> {missEffect}
         </div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/25 bg-primary/5 p-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/25 bg-destructive/5 p-3">
         <div>
           <div className="text-xs font-bold uppercase text-muted-foreground">Total Damage</div>
           {editingDamage ? (
@@ -90,7 +90,7 @@ export function ActionHitResult({
               onChange={(event) => onDamageChange(event.target.value)}
             />
           ) : (
-            <div className="text-3xl font-black text-primary">{totalDamage}</div>
+            <div className="text-3xl font-black text-destructive">{totalDamage}</div>
           )}
         </div>
         <div className="flex gap-2">
@@ -117,7 +117,7 @@ export function ActionHitResult({
       <div className="grid overflow-hidden rounded-lg border border-border sm:grid-cols-4">
         <Button
           className="rounded-none py-3"
-          variant="success"
+          variant="primary"
           onClick={() => onResolve("full", totalDamage)}
         >
           Full
@@ -177,7 +177,7 @@ function DamageRollLine({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {Icon && <Icon className="h-4 w-4 text-accent" />}
+          {Icon && <Icon className="h-4 w-4 text-companion-metadata" />}
           <span className="font-semibold">{damage?.label ?? roll.damageType}</span>
           <span className="text-xs text-muted-foreground">
             {roll.diceCount}d{roll.dieSize}
@@ -242,7 +242,7 @@ function DamageSegment({
     <div
       className={[
         "rounded-md border px-3 py-2",
-        critical ? "border-amber-400/50 bg-amber-400/10" : "border-border bg-background",
+        critical ? "border-warning/50 bg-warning/10" : "border-border bg-background",
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-2">
@@ -250,17 +250,12 @@ function DamageSegment({
           <div
             className={[
               "text-xs font-bold uppercase",
-              critical ? "text-amber-700 dark:text-amber-200" : "text-muted-foreground",
+              critical ? "text-warning" : "text-muted-foreground",
             ].join(" ")}
           >
             {label}
           </div>
-          <div
-            className={[
-              "text-lg font-black",
-              critical ? "text-amber-700 dark:text-amber-200" : "",
-            ].join(" ")}
-          >
+          <div className={["text-lg font-black", critical ? "text-warning" : ""].join(" ")}>
             {total}
           </div>
           <div className="text-xs text-muted-foreground">
@@ -284,16 +279,16 @@ function damageAdjustment(
   immunities: string[],
 ) {
   if (immunities.some((item) => item.toLowerCase() === damageType)) {
-    return { label: "Immune", total: 0, tone: "text-sky-700 dark:text-sky-300" };
+    return { label: "Immune", total: 0, tone: "text-info" };
   }
   if (vulnerabilities.some((item) => item.toLowerCase() === damageType)) {
-    return { label: "Vulnerable", total: total * 2, tone: "text-red-700 dark:text-red-300" };
+    return { label: "Vulnerable", total: total * 2, tone: "text-destructive" };
   }
   if (resistances.some((item) => item.toLowerCase() === damageType)) {
     return {
       label: "Resistant",
       total: Math.floor(total / 2),
-      tone: "text-amber-700 dark:text-amber-300",
+      tone: "text-warning",
     };
   }
   return { label: "Normal", total, tone: "text-muted-foreground" };

@@ -1,12 +1,17 @@
-import { Eye, Plus, Trash2, UserRound } from "lucide-react";
-import type React from "react";
+import { Eye, Pencil, Plus, Trash2, UserRound } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { avatarImageSrc } from "../../../components/AvatarImagePicker";
 import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
+import { InitialsAvatar, PropertyCard } from "../../../components/shared/displayPrimitives";
 import { Button, Field, Input, Modal } from "../../../components/ui";
 import type { Creature } from "../../../types";
-import { filterSearchableOptions, SearchableOptionPicker } from "./SearchableOptionPicker";
+import { CampaignWorldEmptyState } from "./CampaignWorldEmptyState";
+import {
+  filterSearchableOptions,
+  SearchableOptionPicker,
+  type SearchableOption,
+} from "./SearchableOptionPicker";
 import type { CampaignLocation, CampaignNpcLocationLink } from "./travelTypes";
 
 export function CampaignWorldLocationNpcs({
@@ -32,7 +37,11 @@ export function CampaignWorldLocationNpcs({
   const [selectedNpc, setSelectedNpc] = useState<Creature | null>(null);
   const [creatureID, setCreatureID] = useState("");
   const [npcSearch, setNpcSearch] = useState("");
+  const [linkType, setLinkType] = useState(commerceMode ? "merchant" : "associated");
   const [notes, setNotes] = useState("");
+  const [editingLink, setEditingLink] = useState<CampaignNpcLocationLink | null>(null);
+  const [editLinkType, setEditLinkType] = useState("");
+  const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const connectedIDs = useMemo(() => new Set(links.map((link) => link.creatureId)), [links]);
@@ -56,12 +65,13 @@ export function CampaignWorldLocationNpcs({
       await onCreate({
         creatureId: selectedCreatureID,
         locationId: location.id,
-        linkType: commerceMode ? "merchant" : "associated",
+        linkType: linkType.trim() || (commerceMode ? "merchant" : "associated"),
         visibility: "dm",
         notes: notes.trim(),
       });
       setCreatureID("");
       setNpcSearch("");
+      setLinkType(commerceMode ? "merchant" : "associated");
       setNotes("");
       setLinkOpen(false);
     } catch (err) {
@@ -69,6 +79,35 @@ export function CampaignWorldLocationNpcs({
     } finally {
       setSaving(false);
     }
+  }
+
+  async function submitEdit(event: FormEvent) {
+    event.preventDefault();
+    if (!editingLink) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onDelete(editingLink.id);
+      await onCreate({
+        creatureId: editingLink.creatureId,
+        locationId: location.id,
+        linkType: editLinkType.trim() || editingLink.linkType || "associated",
+        visibility: editingLink.visibility || "dm",
+        notes: editNotes.trim(),
+      });
+      setEditingLink(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update NPC role");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEditLink(link: CampaignNpcLocationLink) {
+    setEditingLink(link);
+    setEditLinkType(link.linkType || (commerceMode ? "merchant" : "associated"));
+    setEditNotes(link.notes || "");
+    setError("");
   }
 
   return (
@@ -104,16 +143,23 @@ export function CampaignWorldLocationNpcs({
               link={link}
               npcs={npcs}
               onDelete={onDelete}
+              onEdit={openEditLink}
               onOpenNpc={setSelectedNpc}
             />
           ))}
         </div>
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          {commerceMode
-            ? "No merchants or staff are connected to this shop yet."
-            : "No NPCs connected to this location yet."}
-        </p>
+        <div className="mt-3">
+          <CampaignWorldEmptyState
+            icon={UserRound}
+            title={commerceMode ? "No staff linked yet" : "No NPCs here yet"}
+            copy={
+              commerceMode
+                ? "Link an owner, clerk, or regular employee so shop prep starts with people."
+                : "Link residents, visitors, enemies, or witnesses who matter in this place."
+            }
+          />
+        </div>
       )}
 
       {!options.length ? (
@@ -127,48 +173,36 @@ export function CampaignWorldLocationNpcs({
         </div>
       ) : null}
 
-      <Modal
+      <NpcLinkModal
+        commerceMode={commerceMode}
+        creatureID={selectedCreatureID}
+        error={error}
+        linkType={linkType}
+        notes={notes}
+        npcSearch={npcSearch}
         open={linkOpen}
+        options={filteredNpcOptions}
+        saving={saving}
+        onCreatureChange={setCreatureID}
+        onLinkTypeChange={setLinkType}
+        onNotesChange={setNotes}
         onOpenChange={setLinkOpen}
-        title={commerceMode ? "Add merchant to shop" : "Add NPC to location"}
-      >
-        <form className="grid gap-4" onSubmit={submitLink}>
-          <SearchableOptionPicker
-            emptyMessage={commerceMode ? "No matching merchants." : "No matching NPCs."}
-            label={commerceMode ? "Merchant" : "NPC"}
-            options={filteredNpcOptions}
-            placeholder={
-              commerceMode
-                ? "Search by merchant name, type, alignment, or challenge..."
-                : "Search by NPC name, type, alignment, or challenge..."
-            }
-            search={npcSearch}
-            selectedID={selectedCreatureID}
-            onSearchChange={setNpcSearch}
-            onSelect={setCreatureID}
-          />
-          <Field label={commerceMode ? "Merchant notes" : "NPC notes"}>
-            <Input
-              placeholder={
-                commerceMode
-                  ? "Owner, clerk, prices, opening hours, secret stock..."
-                  : "Why they are here, mood, secret, schedule..."
-              }
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-            />
-          </Field>
-          {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
-          <ActionRow justify="end">
-            <Button type="button" variant="secondary" onClick={() => setLinkOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" icon={UserRound} disabled={saving}>
-              {commerceMode ? "Add merchant" : "Add NPC"}
-            </Button>
-          </ActionRow>
-        </form>
-      </Modal>
+        onSearchChange={setNpcSearch}
+        onSubmit={submitLink}
+      />
+
+      <NpcRoleModal
+        commerceMode={commerceMode}
+        editingLink={editingLink}
+        error={error}
+        linkType={editLinkType}
+        notes={editNotes}
+        saving={saving}
+        onClose={() => setEditingLink(null)}
+        onLinkTypeChange={setEditLinkType}
+        onNotesChange={setEditNotes}
+        onSubmit={submitEdit}
+      />
 
       <Modal
         open={Boolean(selectedNpc)}
@@ -178,6 +212,132 @@ export function CampaignWorldLocationNpcs({
         {selectedNpc ? <NpcSheet npc={selectedNpc} /> : null}
       </Modal>
     </CardSection>
+  );
+}
+
+function NpcLinkModal({
+  commerceMode,
+  creatureID,
+  error,
+  linkType,
+  notes,
+  npcSearch,
+  open,
+  options,
+  saving,
+  onCreatureChange,
+  onLinkTypeChange,
+  onNotesChange,
+  onOpenChange,
+  onSearchChange,
+  onSubmit,
+}: {
+  commerceMode: boolean;
+  creatureID: string;
+  error: string;
+  linkType: string;
+  notes: string;
+  npcSearch: string;
+  open: boolean;
+  options: SearchableOption[];
+  saving: boolean;
+  onCreatureChange: (value: string) => void;
+  onLinkTypeChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onOpenChange: (open: boolean) => void;
+  onSearchChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => Promise<void>;
+}) {
+  return (
+    <Modal
+      open={open}
+      onOpenChange={onOpenChange}
+      title={commerceMode ? "Add merchant to shop" : "Add NPC to location"}
+    >
+      <form className="grid gap-4" onSubmit={onSubmit}>
+        <SearchableOptionPicker
+          emptyMessage={commerceMode ? "No matching merchants." : "No matching NPCs."}
+          label={commerceMode ? "Merchant" : "NPC"}
+          options={options}
+          placeholder={commerceMode ? "Search merchant roster..." : "Search campaign NPCs..."}
+          search={npcSearch}
+          selectedID={creatureID}
+          onSearchChange={onSearchChange}
+          onSelect={onCreatureChange}
+        />
+        <Field label={commerceMode ? "Role in shop" : "Role in location"}>
+          <Input
+            placeholder={commerceMode ? "owner, clerk, fence" : "resident, visitor, guard"}
+            value={linkType}
+            onChange={(event) => onLinkTypeChange(event.target.value)}
+          />
+        </Field>
+        <Field label={commerceMode ? "Merchant notes" : "NPC notes"}>
+          <Input value={notes} onChange={(event) => onNotesChange(event.target.value)} />
+        </Field>
+        {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+        <ActionRow justify="end">
+          <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button type="submit" icon={UserRound} disabled={saving}>
+            {commerceMode ? "Add merchant" : "Add NPC"}
+          </Button>
+        </ActionRow>
+      </form>
+    </Modal>
+  );
+}
+
+function NpcRoleModal({
+  commerceMode,
+  editingLink,
+  error,
+  linkType,
+  notes,
+  saving,
+  onClose,
+  onLinkTypeChange,
+  onNotesChange,
+  onSubmit,
+}: {
+  commerceMode: boolean;
+  editingLink: CampaignNpcLocationLink | null;
+  error: string;
+  linkType: string;
+  notes: string;
+  saving: boolean;
+  onClose: () => void;
+  onLinkTypeChange: (value: string) => void;
+  onNotesChange: (value: string) => void;
+  onSubmit: (event: FormEvent) => Promise<void>;
+}) {
+  return (
+    <Modal
+      open={Boolean(editingLink)}
+      onOpenChange={(open) => !open && onClose()}
+      title="Edit NPC role here"
+    >
+      {editingLink ? (
+        <form className="grid gap-4" onSubmit={onSubmit}>
+          <Field label={commerceMode ? "Role in shop" : "Role in location"}>
+            <Input value={linkType} onChange={(event) => onLinkTypeChange(event.target.value)} />
+          </Field>
+          <Field label={commerceMode ? "Merchant notes" : "NPC notes"}>
+            <Input value={notes} onChange={(event) => onNotesChange(event.target.value)} />
+          </Field>
+          {error ? <p className="text-sm font-semibold text-destructive">{error}</p> : null}
+          <ActionRow justify="end">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" icon={UserRound} disabled={saving}>
+              Save role
+            </Button>
+          </ActionRow>
+        </form>
+      ) : null}
+    </Modal>
   );
 }
 
@@ -199,16 +359,18 @@ function ConnectedNpcRow({
   link,
   npcs,
   onDelete,
+  onEdit,
   onOpenNpc,
 }: {
   link: CampaignNpcLocationLink;
   npcs: Creature[];
   onDelete: (linkID: string) => Promise<void>;
+  onEdit: (link: CampaignNpcLocationLink) => void;
   onOpenNpc: (npc: Creature) => void;
 }) {
   const npc = npcs.find((candidate) => candidate.id === link.creatureId);
   return (
-    <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
+    <div className="grid min-w-0 gap-3 rounded-md border border-border bg-background px-3 py-2.5">
       <div className="flex min-w-0 flex-1 items-start gap-2.5">
         <NpcAvatar npc={npc} />
         <div className="min-w-0 flex-1">
@@ -216,7 +378,7 @@ function ConnectedNpcRow({
             <span className="[overflow-wrap:anywhere] font-semibold">
               {npc?.name ?? "Unknown NPC"}
             </span>
-            <span className="rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
+            <span className="rounded-md border border-border px-2 py-0.5 text-[0.68rem] font-semibold text-muted-foreground">
               {link.linkType.replaceAll("-", " ")}
             </span>
           </div>
@@ -225,12 +387,15 @@ function ConnectedNpcRow({
           </p>
         </div>
       </div>
-      <div className="flex shrink-0 gap-1">
+      <div className="flex min-w-0 flex-wrap gap-1">
         {npc ? (
           <Button type="button" icon={Eye} size="sm" variant="ghost" onClick={() => onOpenNpc(npc)}>
             Open
           </Button>
         ) : null}
+        <Button type="button" icon={Pencil} size="sm" variant="ghost" onClick={() => onEdit(link)}>
+          Edit
+        </Button>
         <Button
           type="button"
           icon={Trash2}
@@ -247,23 +412,7 @@ function ConnectedNpcRow({
 
 function NpcAvatar({ npc }: { npc?: Creature }) {
   const src = avatarImageSrc(npc?.imageAssetId, npc?.avatarUrl);
-  const initials = npc?.name
-    ?.split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  return (
-    <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-muted text-xs font-bold text-muted-foreground">
-      {src ? (
-        <img alt="" className="h-full w-full object-cover" src={src} />
-      ) : initials ? (
-        initials
-      ) : (
-        <UserRound className="h-4 w-4" />
-      )}
-    </span>
-  );
+  return <InitialsAvatar name={npc?.name || "NPC"} size="sm" src={src} />;
 }
 
 function NpcSheet({ npc }: { npc: Creature }) {
@@ -271,23 +420,14 @@ function NpcSheet({ npc }: { npc: Creature }) {
     <div className="grid gap-4">
       {npc.description ? <p className="text-sm text-muted-foreground">{npc.description}</p> : null}
       <div className="grid gap-2 sm:grid-cols-3">
-        <NpcStat label="Type" value={npc.creatureType || "Unknown"} />
-        <NpcStat label="AC" value={npc.armorClass || "-"} />
-        <NpcStat label="HP" value={npc.hitPoints || "-"} />
+        <PropertyCard label="Type" value={npc.creatureType || "Unknown"} />
+        <PropertyCard label="AC" value={npc.armorClass || "-"} tone="primary" />
+        <PropertyCard label="HP" value={npc.hitPoints || "-"} tone="tertiary" />
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <NpcStat label="Alignment" value={npc.alignment || "Unknown"} />
-        <NpcStat label="Challenge" value={npc.challengeRating || "0"} />
+        <PropertyCard label="Alignment" value={npc.alignment || "Unknown"} />
+        <PropertyCard label="Challenge" value={npc.challengeRating || "0"} tone="custom" />
       </div>
-    </div>
-  );
-}
-
-function NpcStat({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 font-semibold">{value}</div>
     </div>
   );
 }

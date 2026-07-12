@@ -104,8 +104,10 @@ describe("Campaign page world navigation", () => {
       "/campaigns/campaign-1/world",
     );
 
-    expect(await screen.findByRole("heading", { name: "The Verdant March World" })).toBeTruthy();
-    expect(screen.getByText("World summary")).toBeTruthy();
+    const heading = await screen.findByRole("heading", { name: "The Verdant March world" });
+    expect(heading.closest(".campaign-world-experience")?.classList.contains("content-start")).toBe(
+      true,
+    );
     expect(screen.getByRole("navigation", { name: "Campaign workspace sections" })).toBeTruthy();
   });
 });
@@ -114,8 +116,10 @@ function renderWithShell(children: ReactNode, initialEntry: string) {
   render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <WorkspaceShell
+        accent="green"
         resolvedTheme="light"
         theme="light"
+        onAccentChange={() => undefined}
         onLoadAccount={() => Promise.resolve(accountInfo())}
         onLogout={() => Promise.resolve()}
         onSetPassword={() => Promise.resolve(accountInfo())}

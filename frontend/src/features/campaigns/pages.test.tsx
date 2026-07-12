@@ -361,8 +361,10 @@ function renderCampaign() {
   render(
     <MemoryRouter initialEntries={["/campaigns/campaign-1"]}>
       <WorkspaceShell
+        accent="green"
         resolvedTheme="light"
         theme="light"
+        onAccentChange={() => undefined}
         onLoadAccount={() => Promise.resolve(accountInfo())}
         onLogout={() => Promise.resolve()}
         onSetPassword={() => Promise.resolve(accountInfo())}

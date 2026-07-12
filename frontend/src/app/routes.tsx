@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { StatusPanel } from "../components/ui";
-import { api } from "../lib/api";
 
 const ImportPage = lazy(() =>
   import("../pages/ImportPage").then((module) => ({ default: module.ImportPage })),
@@ -115,7 +114,7 @@ export function AppRoutes() {
         <Route path="/spells" element={<SpellsPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/rules" element={<RulesPage />} />
-        <Route path="/import" element={<ImportPage seedTestData={api.seedTestData} />} />
+        <Route path="/import" element={<ImportPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate replace to="/campaigns" />} />

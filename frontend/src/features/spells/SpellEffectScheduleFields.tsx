@@ -17,10 +17,10 @@ export function FlatNumberInput({
 }) {
   const current = Number(value) || 0;
   return (
-    <div className="inline-grid max-w-[11rem] grid-cols-[2.25rem_5.5rem_2.25rem] overflow-hidden rounded-md border border-border bg-card">
+    <div className="inline-grid max-w-[11rem] grid-cols-[2.25rem_5.5rem_2.25rem] overflow-hidden rounded-md border border-border bg-surface">
       <button
         aria-label="Decrease amount"
-        className="grid h-10 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-10 place-items-center border-r border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => onChange(String(current - 1))}
       >
@@ -35,7 +35,7 @@ export function FlatNumberInput({
       />
       <button
         aria-label="Increase amount"
-        className="grid h-10 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-10 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => onChange(String(current + 1))}
       >
@@ -106,7 +106,7 @@ export function EffectScheduleFields({
                   updateEffectConfig(rolls, roll.id, "durationValue", durationValue, onChange)
                 }
               />
-              <div className="rounded-md border border-border bg-muted px-3 py-2 text-sm font-medium text-muted-foreground">
+              <div className="rounded-md border border-tertiary/25 bg-tertiary/10 px-3 py-2 text-sm font-medium text-tertiary">
                 {durationUnitLabel(durationValue(roll))}
               </div>
             </div>

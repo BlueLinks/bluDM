@@ -2,9 +2,13 @@ import type { DungeonStudioSelection, DungeonStudioShapeTool } from "./dungeonSt
 import type {
   DungeonStudioEdgeDirection,
   DungeonStudioEdgeFeature,
+  DungeonStudioCustomAsset,
+  DungeonStudioEntity,
   DungeonStudioRoomRegion,
   GridCell,
 } from "./dungeonStudioDocument";
+import { dungeonStudioAssetByKey } from "./dungeonStudioObjectCatalog";
+import { DungeonStudioObjectGlyph } from "./DungeonStudioObjectGlyph";
 
 export const DUNGEON_STUDIO_CELL_SIZE = 24;
 
@@ -142,12 +146,85 @@ export function RoomOverlay({ room }: { room: DungeonStudioRoomRegion }) {
   );
 }
 
+export function EntityMarker({
+  customAssets = [],
+  entity,
+}: {
+  customAssets?: DungeonStudioCustomAsset[];
+  entity: DungeonStudioEntity;
+}) {
+  const asset = dungeonStudioAssetByKey(entity.assetKey, customAssets);
+  const x = entity.cell.x * DUNGEON_STUDIO_CELL_SIZE;
+  const y = entity.cell.y * DUNGEON_STUDIO_CELL_SIZE;
+  const cx = x + DUNGEON_STUDIO_CELL_SIZE / 2 + (entity.xOffset ?? 0);
+  const cy = y + DUNGEON_STUDIO_CELL_SIZE / 2 + (entity.yOffset ?? 0);
+  const custom = customAssets.find((item) => item.key === entity.assetKey);
+  return (
+    <g
+      aria-label={entity.label ?? asset?.label ?? entity.kind}
+      transform={`rotate(${entity.rotation ?? 0} ${cx} ${cy})`}
+    >
+      <rect
+        x={x + 3}
+        y={y + 3}
+        width={DUNGEON_STUDIO_CELL_SIZE - 6}
+        height={DUNGEON_STUDIO_CELL_SIZE - 6}
+        rx="5"
+        fill={entityFill(entity.kind)}
+        stroke="hsl(var(--foreground))"
+        strokeWidth="1"
+        opacity="0.92"
+      />
+      {custom ? (
+        <image
+          href={custom.dataUrl}
+          x={x + 5}
+          y={y + 5}
+          width={DUNGEON_STUDIO_CELL_SIZE - 10}
+          height={DUNGEON_STUDIO_CELL_SIZE - 10}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      ) : (
+        <DungeonStudioObjectGlyph
+          assetKey={entity.assetKey}
+          fallback={asset?.glyph ?? entity.label?.slice(0, 1) ?? "•"}
+          x={x}
+          y={y}
+        />
+      )}
+    </g>
+  );
+}
+
+export function EdgePathPreview({
+  edges,
+  kind = "wall",
+}: {
+  edges: Array<{ cell: GridCell; direction: DungeonStudioEdgeDirection }>;
+  kind?: DungeonStudioEdgeFeature["kind"];
+}) {
+  if (!edges.length) return null;
+  return (
+    <g aria-label="Wall placement preview" opacity="0.72">
+      {edges.map((edge, index) => (
+        <EdgeLine
+          key={`${edge.cell.x}-${edge.cell.y}-${edge.direction}-${index}`}
+          edge={{ id: `preview-${index}`, cell: edge.cell, direction: edge.direction, kind }}
+          preview
+        />
+      ))}
+    </g>
+  );
+}
+
 export function EdgeLine({
   edge,
   implicit = false,
+  preview = false,
 }: {
   edge: DungeonStudioEdgeFeature;
   implicit?: boolean;
+  preview?: boolean;
 }) {
   const { x, y } = edge.cell;
   const startX = x * DUNGEON_STUDIO_CELL_SIZE;
@@ -159,16 +236,28 @@ export function EdgeLine({
       {...coordinates}
       stroke={stroke}
       strokeLinecap="round"
-      strokeWidth={implicit ? 2.75 : edge.kind === "door" ? 4 : edge.kind === "cliff-edge" ? 5 : 3}
+      strokeWidth={
+        preview
+          ? 6
+          : implicit
+            ? 2.75
+            : edge.kind === "door"
+              ? 4
+              : edge.kind === "cliff-edge"
+                ? 5
+                : 3
+      }
       opacity={implicit ? "0.78" : undefined}
       strokeDasharray={
-        implicit
-          ? undefined
-          : edge.kind === "door"
-            ? "8 4"
-            : edge.kind === "cliff-edge"
-              ? "3 5"
-              : undefined
+        preview
+          ? "5 3"
+          : implicit
+            ? undefined
+            : edge.kind === "door"
+              ? "8 4"
+              : edge.kind === "cliff-edge"
+                ? "3 5"
+                : undefined
       }
     />
   );
@@ -179,6 +268,7 @@ export function SelectionOverlay({
 }: {
   selection: NonNullable<DungeonStudioSelection>;
 }) {
+  if (selection.type === "entity") return null;
   if (selection.type === "cell") {
     return (
       <rect
@@ -251,8 +341,16 @@ export function closestDiagonalDirection(
   return fallingDistance <= risingDistance ? "ne" : "nw";
 }
 
+function entityFill(kind: DungeonStudioEntity["kind"]) {
+  if (kind === "stairs") return "rgb(59 130 246)";
+  if (kind === "trap") return "rgb(220 38 38)";
+  if (kind === "light") return "rgb(245 158 11)";
+  return "rgb(71 85 105)";
+}
+
 function edgeStroke(kind: DungeonStudioEdgeFeature["kind"]) {
   if (kind === "door") return "rgb(245 158 11)";
+  if (kind === "gate") return "rgb(100 116 139)";
   if (kind === "cliff-edge") return "rgb(217 119 6)";
   return "hsl(var(--foreground))";
 }

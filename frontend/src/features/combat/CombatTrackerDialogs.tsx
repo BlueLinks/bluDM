@@ -71,7 +71,7 @@ export function LeaveCombatDialog({
       This encounter has not been finished. Save the encounter from the summary screen to award XP
       and mark it completed, or cancel leaving to continue combat.
       <div className="mt-4 flex justify-end">
-        <Button type="button" variant="success" onClick={onSave}>
+        <Button type="button" onClick={onSave}>
           Save encounter
         </Button>
       </div>

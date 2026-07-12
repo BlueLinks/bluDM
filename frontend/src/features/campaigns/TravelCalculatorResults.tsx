@@ -67,12 +67,12 @@ function TravelDurationSummary({ calculation }: { calculation: TravelCalculation
   const capped =
     calculation && calculation.effectivePace !== "" && calculation.effectivePace !== undefined;
   return (
-    <div className="action-roll-card rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-4">
-      <div className="flex items-center gap-2 text-xs font-bold uppercase text-emerald-700 dark:text-emerald-200">
+    <div className="action-roll-card rounded-lg border border-success/25 bg-success/10 p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase text-success">
         <CalendarDays className="h-4 w-4" />
         Travel time
       </div>
-      <div className="action-roll-value mt-2 text-3xl font-semibold text-emerald-800 dark:text-emerald-100">
+      <div className="action-roll-value mt-2 text-3xl font-semibold text-success">
         {calculation?.durationLabel || "Enter a distance"}
       </div>
       <p className="mt-2 text-sm text-muted-foreground">
@@ -82,8 +82,12 @@ function TravelDurationSummary({ calculation }: { calculation: TravelCalculation
       </p>
       {capped && (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Badge>Terrain max: {labelFor(paceOptions, calculation.terrainMaximumPace)}</Badge>
-          <Badge>Road max: {labelFor(paceOptions, calculation.goodRoadsMaximumPace)}</Badge>
+          <Badge tone="warning">
+            Terrain max: {labelFor(paceOptions, calculation.terrainMaximumPace)}
+          </Badge>
+          <Badge tone="info">
+            Road max: {labelFor(paceOptions, calculation.goodRoadsMaximumPace)}
+          </Badge>
         </div>
       )}
     </div>
@@ -109,13 +113,13 @@ function EncounterSummary({
 }) {
   const distanceOptions = encounterDistanceOptionsForTerrain(terrain);
   return (
-    <div className="action-roll-card grid gap-4 rounded-lg border border-amber-500/25 bg-amber-500/10 p-4">
+    <div className="action-roll-card grid gap-4 rounded-lg border border-warning/25 bg-warning/10 p-4">
       <div>
-        <div className="flex items-center gap-2 text-xs font-bold uppercase text-amber-700 dark:text-amber-200">
+        <div className="flex items-center gap-2 text-xs font-bold uppercase text-warning">
           <Route className="h-4 w-4" />
           Encounter distance
         </div>
-        <div className="action-roll-value mt-2 text-xl font-semibold text-amber-800 dark:text-amber-100">
+        <div className="action-roll-value mt-2 text-xl font-semibold text-warning">
           {calculation
             ? `Awareness distance: ${calculation.encounterDistance.rolledFeet.toLocaleString()} ft`
             : "Choose a route"}
@@ -167,8 +171,8 @@ function EncounterSummary({
 
 function TravelWeatherSummary({ weather }: { weather: TravelWeather }) {
   return (
-    <div className="action-roll-card rounded-lg border border-sky-500/25 bg-sky-500/10 p-4">
-      <div className="flex items-center gap-2 text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
+    <div className="action-roll-card rounded-lg border border-info/25 bg-info/10 p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase text-info">
         <CloudSun className="h-4 w-4" />
         Weather
       </div>
@@ -206,7 +210,7 @@ function WeatherSummaryRow({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-sky-700 dark:text-sky-200" />
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-info" />
       <span>
         <span className="font-semibold text-foreground">{label}:</span> {value}
       </span>

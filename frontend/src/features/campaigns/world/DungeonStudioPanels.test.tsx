@@ -15,8 +15,8 @@ describe("DungeonStudioPanels", () => {
 
     render(
       <DungeonStudioToolPanel
-        activeTool="select"
-        brushShape="single"
+        activeTool="room-select"
+        brushShape="rectangle"
         deleteTarget="all"
         onBrushShapeChange={vi.fn()}
         onDeleteTargetChange={vi.fn()}
@@ -24,7 +24,9 @@ describe("DungeonStudioPanels", () => {
       />,
     );
 
-    ["Select", "Floor", "Terrain", "Room", "Wall", "Door", "Delete"].forEach((name) => {
+    const buttons = screen.getAllByRole("button").map((button) => button.textContent);
+    expect(buttons).toEqual(["Floor", "Room", "Door", "Wall", "Terrain", "Objects", "Delete"]);
+    ["Floor", "Room", "Door", "Wall", "Terrain", "Objects", "Delete"].forEach((name) => {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     });
     fireEvent.click(screen.getByRole("button", { name: "Wall" }));
@@ -59,23 +61,29 @@ describe("DungeonStudioPanels", () => {
     expect(onDeleteTargetChange).toHaveBeenCalledWith("walls");
   });
 
-  it("keeps room actions in the inspector instead of duplicating them in top options", () => {
+  it("shows room add and brush controls in the top options bar", () => {
+    const onStartNewRoom = vi.fn();
+    const onToolChange = vi.fn();
+    const onBrushShapeChange = vi.fn();
+
     render(
       <DungeonStudioToolOptionsBar
-        activeTool="room-fill"
-        brushShape="single"
+        activeTool="room-brush"
+        brushShape="rectangle"
         deleteTarget="all"
-        onBrushShapeChange={vi.fn()}
+        onBrushShapeChange={onBrushShapeChange}
         onDeleteTargetChange={vi.fn()}
-        onToolChange={vi.fn()}
+        onStartNewRoom={onStartNewRoom}
+        onToolChange={onToolChange}
       />,
     );
 
     expect(screen.getByText(/Active tool:/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Fill" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Select cells" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Paint" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Erase" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Single" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Rectangle" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Circle" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Fill" }));
+    expect(onToolChange).toHaveBeenCalledWith("room-fill");
   });
 
   it("shows the room workflow only for room context", () => {
@@ -85,13 +93,24 @@ describe("DungeonStudioPanels", () => {
       floorCellCount: 0,
       mapName: "Test map",
       selected: null,
-      onCreateRoomFromSelection: vi.fn(),
+      selectedObjectAssetKey: "table",
+      floorLocations: [],
+      roomLocations: [],
+      onCreateRoomLocation: vi.fn(),
+      onDeleteEntity: vi.fn(),
       onDeleteRoom: vi.fn(),
-      onDoneRoom: vi.fn(),
+      onDuplicateEntity: vi.fn(),
       onEditRoom: vi.fn(),
+      onGlobalThemeChange: vi.fn(),
+      onMoveEntityToSelection: vi.fn(),
+      onObjectAssetChange: vi.fn(),
+      onObjectLinkChange: vi.fn(),
       onRenameRoom: vi.fn(),
-      onStartNewRoom: vi.fn(),
+      onRoomColorChange: vi.fn(),
+      onRoomThemeChange: vi.fn(),
+      onRotateEntity: vi.fn(),
       onToolChange: vi.fn(),
+      onUploadAsset: vi.fn(),
     };
     const { rerender } = render(
       <DungeonStudioInspectorPanel activeTool="delete" {...commonProps} />,

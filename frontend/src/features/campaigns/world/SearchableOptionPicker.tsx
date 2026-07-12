@@ -38,7 +38,7 @@ export function SearchableOptionPicker({
       </Field>
       <div
         aria-label={label}
-        className="grid max-h-48 gap-1 overflow-auto rounded-md border border-border bg-background p-1"
+        className="grid max-h-48 gap-1 overflow-auto rounded-md border border-border bg-surface p-1"
         role="listbox"
       >
         {options.length ? (
@@ -46,8 +46,10 @@ export function SearchableOptionPicker({
             <button
               aria-selected={option.id === selectedID}
               className={[
-                "rounded px-2 py-1.5 text-left text-sm transition",
-                option.id === selectedID ? "bg-primary/10 font-semibold" : "hover:bg-muted",
+                "rounded px-2 py-1.5 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+                option.id === selectedID
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-surface-foreground hover:bg-card hover:text-foreground",
               ].join(" ")}
               key={option.id}
               role="option"

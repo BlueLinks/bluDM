@@ -50,7 +50,7 @@ export function DeleteLocationConfirm({
 
 export function FilterHiddenNotice({ onClear }: { onClear: () => void }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-100">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
       <span>The selected location is hidden by the active filters.</span>
       <Button type="button" size="sm" variant="secondary" onClick={onClear}>
         Clear filters

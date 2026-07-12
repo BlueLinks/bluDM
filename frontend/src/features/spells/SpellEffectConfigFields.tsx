@@ -409,7 +409,7 @@ export function EffectConfigMultiCheck({
           <>
             <button
               type="button"
-              className="min-h-9 rounded-md border border-border bg-muted px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-primary/10 hover:text-primary"
+              className="min-h-9 rounded-md border border-primary bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/95 hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
               onClick={() =>
                 updateEffectConfig(
                   rolls,
@@ -424,7 +424,7 @@ export function EffectConfigMultiCheck({
             </button>
             <button
               type="button"
-              className="min-h-9 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-semibold text-muted-foreground transition hover:bg-muted hover:text-foreground"
+              className="min-h-9 rounded-md border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
               onClick={() => updateEffectConfig(rolls, roll.id, configKey, [], onChange)}
             >
               Clear
@@ -437,10 +437,10 @@ export function EffectConfigMultiCheck({
             <label
               key={option.value}
               className={[
-                "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-semibold transition",
+                "inline-flex min-h-9 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
                 checked
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-surface text-surface-foreground hover:bg-card hover:text-foreground",
               ].join(" ")}
             >
               <input

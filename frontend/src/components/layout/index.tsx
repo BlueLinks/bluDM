@@ -143,8 +143,8 @@ export function ContentStack({
 }
 
 const cardSectionTones = {
-  background: "bg-background",
-  card: "bg-card",
+  background: "depth-flat",
+  card: "depth-raised",
 };
 
 export function CardSection({
@@ -157,9 +157,7 @@ export function CardSection({
   tone?: keyof typeof cardSectionTones;
 }) {
   return (
-    <section
-      className={cx("rounded-md border border-border p-3", cardSectionTones[tone], className)}
-    >
+    <section className={cx("rounded-lg p-3", cardSectionTones[tone], className)}>
       {children}
     </section>
   );
@@ -182,7 +180,7 @@ export function SectionHeader({
     <div className={cx("flex flex-wrap items-start justify-between gap-3", className)}>
       <div className="flex min-w-0 items-start gap-2">
         {Icon ? (
-          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10 text-accent">
+          <span className="mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-primary/20 bg-primary/10 text-primary shadow-sm">
             <Icon className="h-4 w-4" />
           </span>
         ) : null}
@@ -197,3 +195,5 @@ export function SectionHeader({
     </div>
   );
 }
+
+export * from "./surfaces";

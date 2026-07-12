@@ -1,26 +1,24 @@
-import { ArrowLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { BackButton, Breadcrumbs } from "../../../app/shell";
-import { CardSection } from "../../../components/layout";
-import { Button, Callout, MutedPanel, Page } from "../../../components/ui";
+import { useNavigate, useParams } from "react-router-dom";
 import { api } from "../../../lib/api";
 import { mapInputFromMap } from "./campaignWorldMapScale";
+import { syncStudioRoomConnectionLinks } from "./dungeonStudioConnectionSave";
+import { DungeonStudioPageView } from "./DungeonStudioPageView";
 import {
-  DungeonStudioInspectorPanel,
-  DungeonStudioToolOptionsBar,
-  DungeonStudioToolPanel,
-} from "./DungeonStudioPanels";
-import { DungeonStudioPreview } from "./DungeonStudioPreview";
-import {
+  addCustomAsset,
   commitDungeonStudioChange,
-  createRoomRegion,
-  deleteRoomRegion,
-  nextRoomRegionId,
-  renameRoomRegion,
+  deleteObjectEntity,
+  duplicateObjectEntity,
+  linkRoomRegionLocation,
+  moveObjectEntity,
   redoDungeonStudioChange,
+  rotateObjectEntity,
   studioDocumentSignature,
   undoDungeonStudioChange,
+  updateDocumentTileset,
+  updateObjectEntityLink,
+  updateRoomRegionColor,
+  updateRoomRegionTheme,
   type DungeonStudioChangeOptions,
   type DungeonStudioSelection,
   type DungeonStudioTool,
@@ -35,6 +33,13 @@ import {
   studioScopeForLocation,
   type DungeonStudioDocument,
 } from "./dungeonStudioDocument";
+import { isBlankDungeonStudioDocument } from "./dungeonStudioDocumentState";
+import { generateDungeonStudioDocument } from "./dungeonStudioGenerator";
+import {
+  planStudioRoomLocationSync,
+  studioRoomAnchor,
+  studioRoomLocationInput,
+} from "./dungeonStudioLocationSync";
 import { locationProfile } from "./locationProfiles";
 import { useCampaignWorkspaceData } from "./useCampaignWorkspaceData";
 import type { CampaignMap } from "./travelTypes";
@@ -42,14 +47,18 @@ import type { CampaignMap } from "./travelTypes";
 export function DungeonStudioPage() {
   const { campaignID, locationID } = useParams();
   const navigate = useNavigate();
-  const { detail, error, loading, locations } = useCampaignWorkspaceData(campaignID);
+  const { detail, error, loading, locations, loadCampaign } = useCampaignWorkspaceData(campaignID);
   const [map, setMap] = useState<CampaignMap | null>(null);
   const [document, setDocument] = useState<DungeonStudioDocument | null>(null);
   const documentRef = useRef<DungeonStudioDocument | null>(null);
-  const [activeTool, setActiveTool] = useState<DungeonStudioTool>("select");
-  const [brushShape, setBrushShape] = useState<DungeonStudioBrushShape>("single");
+  const syncingRoomLocationIds = useRef(new Set<string>());
+  const [activeTool, setActiveTool] = useState<DungeonStudioTool>("room-select");
+  const [brushShape, setBrushShape] = useState<DungeonStudioBrushShape>("rectangle");
   const [deleteTarget, setDeleteTarget] = useState<DungeonStudioDeleteTarget>("all");
   const [selected, setSelected] = useState<DungeonStudioSelection>(null);
+  const [selectedObjectAssetKey, setSelectedObjectAssetKey] = useState("table");
+  const [exitPromptOpen, setExitPromptOpen] = useState(false);
+  const [studioStarted, setStudioStarted] = useState(false);
   const [undoStack, setUndoStack] = useState<DungeonStudioDocument[]>([]);
   const [redoStack, setRedoStack] = useState<DungeonStudioDocument[]>([]);
   const undoStackRef = useRef<DungeonStudioDocument[]>([]);
@@ -68,15 +77,12 @@ export function DungeonStudioPage() {
     campaignID && locationID
       ? `/campaigns/${campaignID}/world/location/${locationID}`
       : "/campaigns";
-
   useEffect(() => {
     documentRef.current = document;
   }, [document]);
-
   useEffect(() => {
     undoStackRef.current = undoStack;
   }, [undoStack]);
-
   useEffect(() => {
     redoStackRef.current = redoStack;
   }, [redoStack]);
@@ -104,6 +110,7 @@ export function DungeonStudioPage() {
           setUndoStack([]);
           setRedoStack([]);
           setSelected(null);
+          setStudioStarted(!isBlankDungeonStudioDocument(parsed));
           return;
         }
         const starterDocument = createDungeonStudioDocument({
@@ -121,6 +128,7 @@ export function DungeonStudioPage() {
         setUndoStack([]);
         setRedoStack([]);
         setSelected(null);
+        setStudioStarted(false);
       } catch (err) {
         if (active)
           setStudioError(err instanceof Error ? err.message : "Could not open Dungeon Studio");
@@ -132,7 +140,16 @@ export function DungeonStudioPage() {
     return () => {
       active = false;
     };
-  }, [campaignID, location, studioAllowed]);
+  }, [campaignID, location?.id, location?.locationType, studioAllowed]);
+
+  useEffect(() => {
+    if (!document || !map || !campaignID || !location || !studioStarted) return;
+    document.rooms
+      .filter((room) => !room.locationId && !syncingRoomLocationIds.current.has(room.id))
+      .forEach((room) => {
+        void createOrLinkRoomLocation(room.id);
+      });
+  }, [campaignID, document, location?.id, map?.id, studioStarted]);
 
   const dirty = document ? studioDocumentSignature(document) !== savedSignature : false;
 
@@ -198,259 +215,285 @@ export function DungeonStudioPage() {
   }
 
   async function saveStudioMetadata() {
-    if (!campaignID || !map || !document) return;
+    if (!campaignID || !map || !document) return false;
     setSaving(true);
     setStudioError("");
     try {
-      const metadata = serializeDungeonStudioMetadata(map.metadata, document);
+      const syncedDocument = await syncStudioRoomLocations(document);
+      await syncStudioRoomConnections(syncedDocument);
+      const metadata = serializeDungeonStudioMetadata(map.metadata, syncedDocument);
       const { map: savedMap } = await api.updateCampaignMap(
         campaignID,
         map.id,
         mapInputFromMap(map, { metadata }),
       );
       setMap(savedMap);
-      setSavedSignature(studioDocumentSignature(document));
+      documentRef.current = syncedDocument;
+      setDocument(syncedDocument);
+      setSavedSignature(studioDocumentSignature(syncedDocument));
+      return true;
     } catch (err) {
       setStudioError(err instanceof Error ? err.message : "Could not save Dungeon Studio map");
+      return false;
     } finally {
       setSaving(false);
     }
   }
 
-  if (loading) return <MutedPanel>Loading Dungeon Studio...</MutedPanel>;
-  if (error && !detail) {
-    return (
-      <Page>
-        <Callout tone="danger">{error}</Callout>
-        <Button variant="secondary" onClick={() => void navigate("/campaigns")}>
-          Back to campaigns
-        </Button>
-      </Page>
-    );
+  async function syncStudioRoomConnections(currentDocument: DungeonStudioDocument) {
+    if (!campaignID || !map) return;
+    await syncStudioRoomConnectionLinks({
+      campaignId: campaignID,
+      document: currentDocument,
+      mapId: map.id,
+      onChanged: loadCampaign,
+    });
   }
-  if (!detail) return null;
 
-  return (
-    <Page className="2xl:px-2">
-      <BackButton to={returnPath}>Back to World</BackButton>
-      <Breadcrumbs
-        items={[
-          { label: "Campaigns", to: "/campaigns" },
-          { label: detail.campaign.name, to: `/campaigns/${detail.campaign.id}` },
-          { label: "World", to: `/campaigns/${detail.campaign.id}/world` },
-          location ? { label: location.name, to: returnPath } : { label: "Location" },
-          { label: "Dungeon Studio" },
-        ]}
-      />
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-3xl font-semibold tracking-normal">Dungeon Studio</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Build the grid map for {location?.name ?? "this location"}.
-          </p>
-        </div>
-        <Link to={returnPath}>
-          <Button type="button" icon={ArrowLeft} variant="secondary">
-            Return to World
-          </Button>
-        </Link>
-      </div>
-      {studioError ? <Callout tone="danger">{studioError}</Callout> : null}
-      {!location ? (
-        <Callout tone="danger">This World location could not be found.</Callout>
-      ) : !studioAllowed ? (
-        <Callout>
-          Dungeon Studio is available for Dungeon and Floor locations. Return to World and choose a
-          dungeon or floor profile.
-        </Callout>
-      ) : loadingStudio || !document || !map ? (
-        <MutedPanel>Preparing the studio map…</MutedPanel>
-      ) : (
-        <DungeonStudioShell
-          activeTool={activeTool}
-          brushShape={brushShape}
-          canRedo={redoStack.length > 0}
-          canUndo={undoStack.length > 0}
-          deleteTarget={deleteTarget}
-          dirty={dirty}
-          document={document}
-          locationName={location.name}
-          map={map}
-          saving={saving}
-          selected={selected}
-          onDocumentChange={applyDocumentChange}
-          onSave={() => void saveStudioMetadata()}
-          onBrushShapeChange={setBrushShape}
-          onDeleteTargetChange={setDeleteTarget}
-          onRedo={redoStudioChange}
-          onSelectionChange={setSelected}
-          onToolChange={setActiveTool}
-          onUndo={undoStudioChange}
-        />
-      )}
-    </Page>
-  );
-}
+  async function syncStudioRoomLocations(currentDocument: DungeonStudioDocument) {
+    if (!campaignID || !location || !map) return currentDocument;
+    const plan = planStudioRoomLocationSync({
+      document: currentDocument,
+      locations,
+      mapId: map.id,
+      parentLocationId: location.id,
+    });
+    let nextDocument = currentDocument;
 
-function DungeonStudioShell({
-  activeTool,
-  brushShape,
-  canRedo,
-  canUndo,
-  deleteTarget,
-  dirty,
-  document,
-  locationName,
-  map,
-  saving,
-  selected,
-  onBrushShapeChange,
-  onDeleteTargetChange,
-  onDocumentChange,
-  onRedo,
-  onSave,
-  onSelectionChange,
-  onToolChange,
-  onUndo,
-}: {
-  activeTool: DungeonStudioTool;
-  brushShape: DungeonStudioBrushShape;
-  canRedo: boolean;
-  canUndo: boolean;
-  deleteTarget: DungeonStudioDeleteTarget;
-  dirty: boolean;
-  document: DungeonStudioDocument;
-  locationName: string;
-  map: CampaignMap;
-  saving: boolean;
-  selected: DungeonStudioSelection;
-  onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
-  onDeleteTargetChange: (target: DungeonStudioDeleteTarget) => void;
-  onDocumentChange: (
-    update: (current: DungeonStudioDocument) => DungeonStudioDocument,
-    selection: DungeonStudioSelection,
-    options?: DungeonStudioChangeOptions,
-  ) => void;
-  onRedo: () => void;
-  onSave: () => void;
-  onSelectionChange: (selection: DungeonStudioSelection) => void;
-  onToolChange: (tool: DungeonStudioTool) => void;
-  onUndo: () => void;
-}) {
-  const floorCellCount = document.layers
-    .filter((layer) => layer.cellKind === "floor")
-    .reduce((total, layer) => total + layer.cells.length, 0);
-  const roomCells = document.rooms.reduce((total, room) => total + room.cells.length, 0);
-  const unassignedFloorCells = Math.max(0, floorCellCount - roomCells);
-  const selectedRoom =
-    selected?.type === "region" && selected.roomId
-      ? document.rooms.find((room) => room.id === selected.roomId)
+    for (const { location: roomLocation, payload } of plan.updateLocations) {
+      await api.updateCampaignLocation(campaignID, roomLocation.id, payload);
+    }
+    for (const room of plan.createRooms) {
+      const { location: createdLocation } = await api.createCampaignLocation(
+        campaignID,
+        studioRoomLocationInput({
+          mapId: map.id,
+          parentLocationId: location.id,
+          room,
+        }),
+      );
+      nextDocument = linkRoomRegionLocation(nextDocument, room.id, createdLocation.id);
+    }
+    for (const [roomId, locationId] of Object.entries(plan.linkRoomLocationIds)) {
+      nextDocument = linkRoomRegionLocation(nextDocument, roomId, locationId);
+    }
+    for (const roomLocation of plan.deleteLocations) {
+      await api.deleteCampaignLocation(campaignID, roomLocation.id);
+    }
+
+    if (
+      plan.createRooms.length ||
+      plan.updateLocations.length ||
+      plan.deleteLocations.length ||
+      Object.keys(plan.linkRoomLocationIds).length
+    ) {
+      await loadCampaign();
+    }
+    return nextDocument;
+  }
+
+  async function createOrLinkRoomLocation(roomId: string) {
+    if (!campaignID || !location || !map) return;
+    const currentDocument = documentRef.current;
+    const room = currentDocument?.rooms.find((item) => item.id === roomId);
+    if (!currentDocument || !room || room.locationId) return;
+    syncingRoomLocationIds.current.add(roomId);
+    setStudioError("");
+    try {
+      const managedLocation = locations.find(
+        (item) =>
+          item.parentLocationId === location.id &&
+          item.locationType === "room" &&
+          studioRoomAnchor(item, map.id)?.roomId === roomId,
+      );
+      if (managedLocation) {
+        await api.updateCampaignLocation(
+          campaignID,
+          managedLocation.id,
+          studioRoomLocationInput({
+            existingLocation: managedLocation,
+            mapId: map.id,
+            parentLocationId: location.id,
+            room,
+          }),
+        );
+        await loadCampaign();
+        applyDocumentChange(
+          (current) => linkRoomRegionLocation(current, roomId, managedLocation.id),
+          { type: "region", cells: room.cells, label: room.label, roomId },
+        );
+        return;
+      }
+      const { location: createdRoom } = await api.createCampaignLocation(
+        campaignID,
+        studioRoomLocationInput({
+          mapId: map.id,
+          parentLocationId: location.id,
+          room,
+        }),
+      );
+      await loadCampaign();
+      applyDocumentChange((current) => linkRoomRegionLocation(current, roomId, createdRoom.id), {
+        type: "region",
+        cells: room.cells,
+        label: room.label,
+        roomId,
+      });
+    } catch (err) {
+      setStudioError(err instanceof Error ? err.message : "Could not create room location");
+    } finally {
+      syncingRoomLocationIds.current.delete(roomId);
+    }
+  }
+
+  async function renameLinkedRoomLocation(roomId: string, label: string) {
+    if (!campaignID || !location || !map) return;
+    const room = documentRef.current?.rooms.find((item) => item.id === roomId);
+    const linkedLocation = room?.locationId
+      ? locations.find((item) => item.id === room.locationId)
       : undefined;
-
-  function createRoomFromSelection() {
-    if (selected?.type !== "region" || selected.roomId) return;
-    const roomId = nextRoomRegionId(document);
-    const label = `Room ${document.rooms.length + 1}`;
-    onDocumentChange((current) => createRoomRegion(current, selected.cells, roomId), {
-      type: "region",
-      cells: selected.cells,
-      label,
-      roomId,
-    });
+    if (!room || !linkedLocation) return;
+    try {
+      await api.updateCampaignLocation(
+        campaignID,
+        linkedLocation.id,
+        studioRoomLocationInput({
+          existingLocation: linkedLocation,
+          mapId: map.id,
+          parentLocationId: location.id,
+          room: { ...room, label: label.trim() || room.label },
+        }),
+      );
+      await loadCampaign();
+    } catch (err) {
+      setStudioError(err instanceof Error ? err.message : "Could not rename room location");
+    }
   }
 
-  function renameSelectedRoom(roomId: string, label: string) {
-    const room = document.rooms.find((item) => item.id === roomId);
-    if (!room) return;
-    onDocumentChange((current) => renameRoomRegion(current, roomId, label), {
-      type: "region",
-      cells: room.cells,
-      label: label.trim() || room.label,
-      roomId,
-    });
+  async function deleteLinkedRoomLocation(roomId: string, locationId?: string) {
+    if (!campaignID) return;
+    const linkedLocationId =
+      locationId ?? documentRef.current?.rooms.find((item) => item.id === roomId)?.locationId;
+    if (!linkedLocationId) return;
+    try {
+      await api.deleteCampaignLocation(campaignID, linkedLocationId);
+      await loadCampaign();
+    } catch (err) {
+      setStudioError(err instanceof Error ? err.message : "Could not delete room location");
+    }
   }
 
-  function deleteSelectedRoom(roomId: string) {
-    onDocumentChange((current) => deleteRoomRegion(current, roomId), null);
+  function requestReturnToWorld() {
+    if (dirty) {
+      setExitPromptOpen(true);
+      return;
+    }
+    void navigate(returnPath);
   }
 
-  function finishRoomEditing() {
-    onSelectionChange(null);
-  }
-
-  function startNewRoom() {
-    onSelectionChange(null);
-    onToolChange("room-select");
-  }
-
-  function editRoom(roomId: string) {
-    const room = document.rooms.find((item) => item.id === roomId);
-    if (!room) return;
-    onSelectionChange({ type: "region", cells: room.cells, label: room.label, roomId: room.id });
-    onToolChange("room-brush");
+  async function saveAndExit() {
+    const saved = await saveStudioMetadata();
+    if (saved) void navigate(returnPath);
   }
 
   return (
-    <div className="grid min-w-0 gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <div className="min-w-0">
-          <span className="font-semibold text-foreground">{locationName}</span>
-          <span className="text-muted-foreground">
-            {` · ${map.name} · ${document.grid.width}×${document.grid.height} · ${document.grid.cellSizeFeet} ft grid`}
-          </span>
-        </div>
-        <span className="text-muted-foreground">Unassigned floor: {unassignedFloorCells}</span>
-      </div>
-      <div className="grid min-w-0 items-start gap-3 xl:grid-cols-5">
-        <DungeonStudioToolPanel
-          activeTool={activeTool}
-          brushShape={brushShape}
-          deleteTarget={deleteTarget}
-          onBrushShapeChange={onBrushShapeChange}
-          onDeleteTargetChange={onDeleteTargetChange}
-          onToolChange={onToolChange}
-        />
-        <CardSection className="grid min-w-0 gap-3 xl:col-span-3">
-          <DungeonStudioToolOptionsBar
-            activeTool={activeTool}
-            brushShape={brushShape}
-            deleteTarget={deleteTarget}
-            onBrushShapeChange={onBrushShapeChange}
-            onDeleteTargetChange={onDeleteTargetChange}
-            onToolChange={onToolChange}
-          />
-          <DungeonStudioPreview
-            activeTool={activeTool}
-            brushShape={brushShape}
-            canRedo={canRedo}
-            canUndo={canUndo}
-            deleteTarget={deleteTarget}
-            dirty={dirty}
-            document={document}
-            saving={saving}
-            selected={selected}
-            onDocumentChange={onDocumentChange}
-            onRedo={onRedo}
-            onSave={onSave}
-            onUndo={onUndo}
-          />
-        </CardSection>
-        <DungeonStudioInspectorPanel
-          activeTool={activeTool}
-          document={document}
-          floorCellCount={floorCellCount}
-          mapName={map.name}
-          selected={selected}
-          selectedRoom={selectedRoom}
-          onCreateRoomFromSelection={createRoomFromSelection}
-          onDeleteRoom={deleteSelectedRoom}
-          onDoneRoom={finishRoomEditing}
-          onEditRoom={editRoom}
-          onRenameRoom={renameSelectedRoom}
-          onStartNewRoom={startNewRoom}
-          onToolChange={onToolChange}
-        />
-      </div>
-    </div>
+    <DungeonStudioPageView
+      activeTool={activeTool}
+      brushShape={brushShape}
+      deleteTarget={deleteTarget}
+      detail={detail}
+      dirty={dirty}
+      document={document}
+      error={error}
+      exitPromptOpen={exitPromptOpen}
+      loading={loading}
+      loadingStudio={loadingStudio}
+      location={location}
+      locations={locations}
+      map={map}
+      redoCount={redoStack.length}
+      returnPath={returnPath}
+      saving={saving}
+      selected={selected}
+      selectedObjectAssetKey={selectedObjectAssetKey}
+      studioAllowed={studioAllowed}
+      studioError={studioError}
+      studioStarted={studioStarted}
+      undoCount={undoStack.length}
+      onAcceptGenerated={(settings) => {
+        applyDocumentChange(() => generateDungeonStudioDocument(settings), null);
+        setStudioStarted(true);
+      }}
+      onBackToCampaigns={() => void navigate("/campaigns")}
+      onBrushShapeChange={setBrushShape}
+      onCancelExit={() => setExitPromptOpen(false)}
+      onCreateRoomLocation={createOrLinkRoomLocation}
+      onDeleteEntity={(entityId) =>
+        applyDocumentChange((current) => deleteObjectEntity(current, entityId), null)
+      }
+      onDeleteRoomLocation={(roomId, locationId) =>
+        void deleteLinkedRoomLocation(roomId, locationId)
+      }
+      onDeleteTargetChange={setDeleteTarget}
+      onDiscardExit={() => void navigate(returnPath)}
+      onDocumentChange={applyDocumentChange}
+      onDuplicateEntity={(entityId) =>
+        applyDocumentChange((current) => duplicateObjectEntity(current, entityId), {
+          type: "entity",
+          entityId,
+        })
+      }
+      onGlobalThemeChange={(theme) =>
+        applyDocumentChange((current) => updateDocumentTileset(current, theme), selected)
+      }
+      onMoveEntityToSelection={(entityId) => {
+        if (selected?.type !== "cell") return;
+        applyDocumentChange((current) => moveObjectEntity(current, entityId, selected.cell), {
+          type: "entity",
+          entityId,
+        });
+      }}
+      onObjectAssetChange={setSelectedObjectAssetKey}
+      onObjectLinkChange={(entityId, linkedId) =>
+        applyDocumentChange((current) => updateObjectEntityLink(current, entityId, linkedId), {
+          type: "entity",
+          entityId,
+        })
+      }
+      onRedo={redoStudioChange}
+      onRenameRoomLocation={(roomId, label) => void renameLinkedRoomLocation(roomId, label)}
+      onRequestReturnToWorld={requestReturnToWorld}
+      onRoomColorChange={(roomId, color) => {
+        const room = document?.rooms.find((item) => item.id === roomId);
+        applyDocumentChange(
+          (current) => updateRoomRegionColor(current, roomId, color),
+          room ? { type: "region", cells: room.cells, label: room.label, roomId } : selected,
+        );
+      }}
+      onRoomThemeChange={(roomId, theme) => {
+        const room = document?.rooms.find((item) => item.id === roomId);
+        applyDocumentChange(
+          (current) => updateRoomRegionTheme(current, roomId, theme),
+          room ? { type: "region", cells: room.cells, label: room.label, roomId } : selected,
+        );
+      }}
+      onRotateEntity={(entityId) =>
+        applyDocumentChange((current) => rotateObjectEntity(current, entityId), {
+          type: "entity",
+          entityId,
+        })
+      }
+      onSave={() => void saveStudioMetadata()}
+      onSaveAndExit={() => void saveAndExit()}
+      onSelectionChange={setSelected}
+      onStartStudio={() => setStudioStarted(true)}
+      onToolChange={setActiveTool}
+      onUndo={undoStudioChange}
+      onUploadAsset={(asset) => {
+        applyDocumentChange((current) => addCustomAsset(current, asset), selected);
+        setSelectedObjectAssetKey(asset.key);
+        setActiveTool("object");
+      }}
+    />
   );
 }

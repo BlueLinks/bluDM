@@ -39,7 +39,9 @@ export function CharacterProgressFields({
             type="button"
             className={[
               "px-3 py-2 transition",
-              !overrideActive ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+              !overrideActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "hover:bg-card hover:text-foreground",
             ].join(" ")}
             onClick={() => setLevelMode("xp")}
           >
@@ -49,14 +51,16 @@ export function CharacterProgressFields({
             type="button"
             className={[
               "border-l border-border px-3 py-2 transition",
-              overrideActive ? "bg-primary text-primary-foreground" : "hover:bg-muted",
+              overrideActive
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "hover:bg-card hover:text-foreground",
             ].join(" ")}
             onClick={() => setLevelMode("level")}
           >
             Set level
           </button>
         </div>
-        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-muted/60 px-3 py-2 text-sm">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
           <span className="text-muted-foreground">{overrideActive ? "Set level" : "XP level"}</span>
           <span className="text-2xl font-black leading-none text-foreground">{effectiveLevel}</span>
         </div>
@@ -131,7 +135,7 @@ function LevelOverrideField({
       </span>
       <div className="grid max-w-[136px] grid-cols-[2.25rem_4rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
         <button
-          className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-r border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-r border-border p-0 leading-none text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => setLevel(effectiveLevel - 1)}
           aria-label="Decrease level"
@@ -154,7 +158,7 @@ function LevelOverrideField({
           }}
         />
         <button
-          className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex h-10 w-9 shrink-0 appearance-none items-center justify-center border-l border-border p-0 leading-none text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => setLevel(effectiveLevel + 1)}
           aria-label="Increase level"

@@ -39,7 +39,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Dungeon/Floor/Room prep overview card with ready-to-run signals.
 - Dungeon structure card now surfaces child floor/room navigation.
 - Dungeon/Floor encounter lists include descendant location encounters.
-- World encounter cards reuse the main campaign encounter actions for Run, Test, Edit, and Clone from location context.
+- World encounter cards reuse the main campaign encounter actions for Run, Edit, Clone, and Delete from location context, while leaving test/session-specific combat details out of compact management cards.
 - Encounter creation from Room/Floor pages now carries clearer room context.
 - Maps workspace polish slice:
   - clearer map selection/list cards in the existing Maps workspace.
@@ -102,6 +102,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - World NPC rows now show NPC avatars or initials beside their location role and notes.
 - Dungeon Studio planning document added:
   - documents a grid-based dungeon/floor editor concept with tilesets, diagonal walls, doors, terrain layers, and room-region assignment back to Campaign World locations.
+- Dungeon Studio forward plan clarified:
+  - Documents the flexible dungeon-building workflow, save/exit prompt, tile/theme model, furniture/object catalog, vetted asset candidates, Campaign World dungeon presentation, multi-floor stairs, random generation, and user-uploaded asset phases.
   - recommends starting with studio metadata on existing CampaignMap records before considering backend schema expansion.
 - Dungeon Studio Phase 1 shell:
   - Dungeon/Floor profiles open a location-scoped Studio route that creates or reuses a studio map, stores versioned metadata on `CampaignMap.metadata.studio`, and renders the read-only SVG grid shell.
@@ -117,14 +119,145 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Editor controls now follow a clearer tool layout with global save/undo/redo/zoom controls in the canvas toolbar, primary tools in the left palette, active tool options above the canvas, and contextual room/selection details in the inspector.
 - Dungeon Studio interaction and UI cleanup:
   - Room actions now live in the contextual room inspector instead of being duplicated in top options; room state copy distinguishes new-room drafts from existing-room editing; wall/cliff-edge drag strokes axis-lock to avoid wobble edges; middle mouse drag pans the canvas; and decorative status panels/badges around the editor were simplified.
+- Dungeon Studio Forward Phase 1-7 completion bundle:
+  - Save moved beside Return to World with a three-choice unsaved-exit prompt, while the canvas toolbar now focuses on undo/redo/zoom/reset.
+  - Room regions can be recolored, theme-overridden, linked to existing Campaign World Rooms, or used to create/link new Room locations.
+  - Theme keys now cover cave, castle, cellar, forest, sewer, house, dungeon/stone, ruins, temple, crypt, shop, home, and town with lightweight SVG rendering and safe metadata parsing.
+  - Object mode adds a reusable built-in glyph catalog for furniture, storage, decor, lighting, gates, traps, and stairs without bundling third-party assets.
+  - Placed objects are normal `DungeonStudioEntity` records and can be inspected, rotated, duplicated, moved, deleted, saved, and reloaded.
+  - Stairs can remain unresolved or link to existing Floor locations.
+  - A deterministic local generator creates editable classic-room and cave maps with walls, optional room regions, stairs, and furniture from seed/settings.
+  - User-uploaded image props are stored as private studio metadata and appear in the same catalog as built-in objects.
+- Dungeon Studio refinement bundle:
+  - Wall/cliff dragging now commits one locked continuous segment instead of painting parallel walls when pointer drift crosses grid rows or columns, including snapped diagonal wall strokes.
+  - Wall tools show hover and drag previews for the exact segment/path that will be committed.
+  - Blank studio maps now start with a choice between custom drawing and random generation; random generation previews the result before entering the full editor.
+  - Object placeholders now use clearer in-repo vector shapes for common furniture, traps, lights, gates, and stairs while preserving the user-uploaded asset path.
+  - Campaign World map cards now render tightly framed actual Dungeon Studio thumbnails, and Room profiles focus the preview around the linked room and adjacent rooms where available.
+  - Dungeon/floor/room map cards hide older map tools when Dungeon Studio is the relevant map workflow, keeping Campaign World as preview/navigation/context rather than a duplicate editor.
+  - The global location tree keeps rooms out of the broad overview unless selected or searched; floors remain nested under dungeons, and dungeon profiles show floor-first room navigation.
+- Campaign World visual design refactor:
+  - Location profiles now use clearer overview/detail tabs for map, places/floors, inventory, people, encounters, notes, and connections.
+  - Region, town, dungeon, floor, room, and shop profiles are preview-first where map or Studio context exists.
+  - Shop inventory rows surface price, quantity, availability, catalog value, notes, actions, and derived markup hints.
+  - NPC-in-location workflows support role/notes entry and role editing using existing link records.
+  - Create-location flow starts with location type selection and shows dungeon custom/random generation modes with a local preview before opening Dungeon Studio.
+  - Location encounter actions now open a contextual local random encounter generator before saving to the campaign.
+  - Map, NPC, stock, encounter, notes, travel, and dungeon-structure empty states are more compact and action-oriented.
+  - Follow-up visual pass moved the page closer to the saved mockups: compact command bar, quieter location tree, removed always-on bottom World Summary/Travel panels, compact hero header with primary action, larger preview-first map cards, grouped child-place tiles, and category-grouped shop stock.
+  - `docs/campaign-world-layout-model.md` records the current layout model, presentation rules, inventory metadata, generator flows, and map placeholders.
+- Campaign World context-first redesign follow-up:
+  - Replaced the generic equal-weight location detail grid with profile-specific scene layouts for regions, towns, dungeons/floors, rooms, and shops.
+  - Region and town pages now prioritize map and place context, while support panels stack around travel, NPCs, encounters, and notes.
+  - Shop pages now put inventory first, with merchant, notes, map position, and parent context as supporting content.
+  - Dungeon and room pages now keep Dungeon Studio/map context, structure, encounters, exits, and prep cues in dedicated running surfaces.
+  - Encounter cards on location pages now expose a more table-facing run panel with initiative, combatant summary, rewards, and run/test/edit actions.
+  - Map placeholders were polished into intentional canvas previews rather than large empty boxes.
+  - Narrow Campaign World routes now open on the selected place before the location tree, and app-shell route changes reset the internal scroll container.
+- Campaign World and Dungeon Studio refinement pass:
+  - Profile-specific scene layouts were tightened for Region, Settlement, Shop, Dungeon, Floor, Room, NPC, and Encounter contexts with wider support columns, safer wrapping, and less empty map/support imbalance.
+  - Dungeon overview composition now keeps the map as the primary surface while structure and prep cards use the side column more consistently.
+  - Dungeon Studio room-location sync now treats Studio-managed room anchors as authoritative: generated rooms create/link Room locations, renames update linked rooms, deleted rooms remove linked managed locations, duplicates are pruned, and save reconciliation repairs missing/stale links.
+  - Generic Campaign World creation paths no longer offer free-standing Floor/Room creation for dungeon contexts; those records should come from Dungeon Studio map structure.
+  - Light-mode Campaign World colors were brought closer to the dark-mode styling language using semantic tokens for cards, heroes, maps, chips, placeholders, and sidebar brand contrast.
+  - Targeted browser QA covered Region, Settlement, Shop, Dungeon, Floor, Room mobile, NPC list, Encounter edit, and Dungeon Studio generated-room synchronisation.
+- Campaign World contextual action and map navigation refinement:
+  - Encounter creation now lives in the Encounter card for towns, dungeons, floors, and rooms instead of Prep Overview/header surfaces.
+  - Notes cards expose add, edit, and delete controls in the note section, with note-clearing routed through the existing location update API.
+  - Dungeon overview maps can render a child floor's Dungeon Studio map, and linked room hit targets navigate directly to the matching Campaign World Room.
+  - Room map previews focus around the linked room with nearby connected rooms visible and fall back cleanly when a stale room focus ID is encountered.
+  - Dungeon overview composition now places Prep Overview beneath the map and delays two-column dungeon/room scenes until the page content has enough width for the map to remain dominant.
+  - Browser QA caught an SVG clickability edge case, so map room hit targets now use concrete rectangular SVG buttons instead of group-only hit areas.
+  - Focused regression tests cover room click navigation, keyboard room navigation, preview padding/zoom behavior, town encounter tab actions, and notes tab controls.
+- Campaign World persistent spatial layout refinement:
+  - Region, town, dungeon, floor, and room profiles now keep map/spatial context above the detail tab bar so switching tabs does not bury the map.
+  - Focused tab scenes no longer reinsert the map as a generic support card; tabs render only the changing detail surface and immediate supporting context.
+  - Region and town overview scenes hide secondary empty encounter surfaces unless the Encounters tab is selected.
+  - Dungeon, floor, and room scenes delay asymmetric grids until very wide viewports, preventing support panels from being squeezed inside a narrow detail pane.
+  - Child-place tiles now use content-aware wrapping instead of viewport-only two-column breakpoints.
+  - Room and floor map cards can use ancestor Dungeon Studio maps when direct parent maps do not provide the usable spatial preview.
+  - `docs/campaign-world-layout-model.md` now records persistent spatial context, location-specific primary/secondary content, and responsive stacking rules.
+  - Browser QA screenshots covered Region, Settlement, Shop, Dungeon, Floor, Room, NPC/People, Encounter, tablet dungeon/room, mobile room, and a light-mode room encounter pass.
+- Campaign World layout consistency and component simplification pass:
+  - Shop and room overview scenes now use a balanced wide-pane card flow instead of fixed primary/support buckets that left stock or prep cards stranded beside cramped columns.
+  - Room connection language now uses Connected rooms where map topology is the source of truth, with inferred adjacent room links and connection types from Dungeon Studio map edges.
+  - Compact encounter cards were simplified to name, status, short description, Run, and a More menu for Clone, Edit, and Delete; initiative/order details were removed from management cards.
+  - Regression tests cover inferred room connections, connected-room rendering, balanced shop/room scene flow, and compact encounter management actions.
+- Shop stock row presentation tweak:
+  - Item prices now render as larger right-aligned row values instead of inline metadata pills, keeping quantity, catalog value, markup, rarity, and tags in the compact chip line.
+- Shop inventory mockup-alignment pass:
+  - Shop stock rows now prioritize product imagery, item name, and price over management metadata.
+  - Adjust and Remove moved into a compact row overflow menu so inventory scans as merchandise rather than controls.
+  - Add Stock now follows choose items, configure selected items, and review sections with searchable item cards and inline configuration.
+  - `docs/campaign-world-layout-model.md` records the product-shelf inventory hierarchy and guided Add Stock flow.
+- Shop Add Stock simplification pass:
+  - Add Stock now behaves as a focused Choose, Configure, Review stepper instead of showing catalogue, configuration, and review content at the same time.
+  - Catalogue choices, selected-item summaries, and configure controls were reduced in density and recolored with existing Campaign World surface tokens.
+  - Shop row price blocks now use semantic card/border tokens while retaining price hierarchy through placement and type scale.
+- Dungeon Studio workflow refinement pass:
+  - Add Location no longer duplicates the custom-vs-random dungeon decision; new dungeons open Dungeon Studio, where the blank-map start screen owns the single custom/generated choice.
+  - Studio tools now default to Room select with Rectangle as the default brush, and the palette follows the main map-building order: Floor, Room, Door, Wall, Terrain, Objects, Delete.
+  - Room creation now starts from Add room in the top options bar, exposes single/rectangle/circle/fill brush choices there, and returns to Room select after the single room Save action.
+  - Removed duplicate side-panel room creation/link controls; standard room connections are reconciled from Dungeon Studio topology into generated Campaign World links on save.
+- Encounter Builder unification first pass:
+  - Main campaign encounter creation and Campaign World location encounter actions now open the same Encounter Builder.
+  - The first step is a single Custom Encounter or Random Encounter choice.
+  - Campaign World launches preselect the originating location and save the encounter back to that location.
+  - Custom and random flows share party/allies/enemies, details, review, save, and the existing full encounter editor after creation.
+  - Random encounters now use archetype-style presets, challenge, enemy count, terrain, location theme/notes, boss, and minion options with a regenerate/accept preview loop.
+  - Focused regression tests cover the single first decision, Add All Party Members, random regenerate/accept, location preselection, save payloads, and opening the normal editor.
+- Encounter edit polish pass:
+  - Encounter Edit now follows the unified builder visual language with a compact hero, primary difficulty summary, section navigation, grouped Party/Allies/Enemies rosters, and overview/details/notes/running support panels.
+  - Add Enemy and Add Ally now use searchable portrait-led catalogue dialogs with filters, preview cards, quantity steppers, roles, and ally tabs for NPCs, creatures, summons, and custom allies.
+  - Generated random previews now show portrait-first enemy cards with AC, HP, CR, roles, and quantities while preserving settings across repeated Regenerate actions.
+  - Combatant rows now prioritize portrait, name, AC, HP, CR, role, quantity, and contextual row actions.
+  - Focused regression tests cover edit layout sections, add dialogs, richer rows, difficulty summaries, portrait rendering, quantity behavior, contextual actions, regenerate preservation, and clean initial dirty-state handling.
+  - Browser QA contact sheet covers create, random, generated preview after repeated regenerations, edit, Add Enemy, Add Ally, desktop, tablet, dark mode, and light mode.
+- Encounter Builder random refinement pass:
+  - Random archetype options now use attributed Game-icons.net SVG masks with semantic theme colors.
+  - Number of enemies uses a bounded keyboard-accessible stepper instead of a select.
+  - The generated preview reuses the edit-screen difficulty summary and shows party avatars plus portrait-led enemy combat stats.
+  - Regenerate preserves selected party and random options while rerolling the generated enemy preview.
+  - Focused regression tests cover icon metadata/rendering, stepper behavior, preview AC/HP/CR/quantity, party avatars, difficulty reuse, regenerate persistence, and theme-token rendering.
+  - Browser QA contact sheet covers Random setup, archetype icons, stepper, generated preview after regenerations, accepted preview transition, desktop/tablet, and light/dark modes.
+- Campaign World dungeon information-density cleanup:
+  - Dungeon overview now uses the floor/room navigation card as the single dungeon hierarchy surface instead of repeating a separate Dungeon structure card.
+  - Prep Overview stays on overview scenes while encounters, people, notes, and connections tabs render only their relevant detail cards.
+  - Room/floor navigation chips now keep useful encounter, NPC, and connection counts while hiding map/notes/no-exit status badges and generated cell-count summaries.
+  - Connected-room rows use route-first readable text such as Door to Guard Room, with safe fallbacks for unnamed or stale linked rooms instead of UUIDs/internal IDs.
+  - Focused regression tests cover duplicate dungeon hierarchy removal, cell-count hiding, useful prep counts, overview-only prep, tab-specific connections, connected-room fallback text, and Dungeon Studio room sync summaries.
+- Campaign World page alignment cleanup:
+  - The command banner, workspace tabs, location browser, and detail pane now share the same workspace-width container instead of mixing a full-width hero with a separately centered detail area.
+- Campaign World usability audit follow-up:
+  - Replaced the icon-only create affordance with a labelled New location action in the location-browser header.
+  - Removed campaign-level encounter creation from the World header so encounters begin from the location where they occur.
+  - Shop inventory and encounters now live in dedicated tabs instead of expanding the overview into a long management page.
+  - Location edit/delete actions moved into a secondary More menu, keeping the profile's context action prominent.
+  - Removed non-functional town starter checkboxes and reduced route-specific gradients, shadows, and nested surface effects.
+  - Shared location headers now use the semantic hero gradient, render entity type once, filter duplicate type tags, and leave map placement to map context.
+  - Campaign World page rows remain content-sized so headers and navigation do not stretch across unused viewport height.
+  - Focused tabs render a single available section at full width without a repeated tab heading, empty second column, or duplicate outer padding.
+  - The location browser is one rounded, clipped surface, and tablet shell breadcrumbs no longer wrap inside the fixed-height top bar.
 
 ## In Progress
 
-- Dungeon Studio implementation is underway. Phase 4 room layer editor is in progress with shared brush shapes, clearer delete targets, protected wall/door-bounded room fill, contextual room workflow controls, axis-locked drag wall/cliff-edge strokes, middle-mouse panning, right-click erase, implicit boundary wall rendering, wheel zoom, and a simpler editor-style toolbar/palette/options/inspector layout now started.
+- Campaign World mockup-alignment redesign.
+  - Acceptance is visual and structural alignment with `docs/design/campaign-world-refactor/`, not feature presence alone.
+  - Current focus: close remaining mockup fidelity gaps after the layout-consistency pass, especially authored placeholder/map art, clean seeded map coverage, and final light-theme nuance.
+  - Active iteration areas: browser screenshot comparison against the saved mockups, light/dark parity review, and preserving Dungeon Studio as the source of truth for generated dungeon floors and rooms.
+- Campaign World styling consolidation.
+  - Route-scoped blue palette overrides are being replaced with shared semantic tokens and the global accent selector so Campaign World reads as a workspace, not a separate product.
+  - Shared status, chip, and surface styling should continue to converge on the same design language used by campaign overview and import/export pages.
 
 ## Planned
 
-- Continue Dungeon Studio phase-by-phase from `docs/campaign-world-dungeon-studio-implementation-plan.md` without duplicating detailed task lists here.
+- Monitor Dungeon Studio use for concrete follow-ups around per-tile theme painting, generator add-to-current-layer UX, backend-backed reusable asset storage, generated/artist-made asset policy, and create-floor-from-stair convenience.
+- Add backend-backed shop price rules/markup, restock cadence, and transaction history if real shop play needs richer stock modelling.
+- Add backend/AI generation for town starter content and random encounters if local deterministic placeholders prove too limited.
+- Continue mockup-comparison passes until the major Campaign World screens are recognisably in the same design language as the saved refactor mockups, with special attention to authored map/placeholder visuals and any remaining light-theme rough edges.
+- Normalize demo/seed map coverage so region, town, floor, and room examples consistently exercise the intended Studio or image preview paths rather than fallback placeholders.
+- After the mockup-alignment pass is structurally accepted, continue real-table polish around richer authored/generated map art for locations without uploaded maps and stronger NPC portrait-first profile routes if NPC-heavy play needs them.
+- Continue Encounter Builder polish against `docs/encounter-creation/`, especially richer creature matching, temporary custom allies/summons as first-class records, tighter mockup fidelity, and targeted browser QA across desktop/tablet/light/dark.
 
 ## Deferred
 
@@ -146,6 +279,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Rationale: Saved-route filtering and stronger journey naming prompts should wait for travel-heavy campaign use to show concrete friction.
 - Additional Commerce improvements beyond the completed shop-profile bundle.
   - Rationale: Campaign-wide shop review, restock reminders, and richer merchant pricing rules should wait for shop-heavy play needs instead of expanding scope in this PR.
+- Dungeon Studio per-tile theme painting, generator add-to-current-layer UX, backend-backed reusable asset storage, generated/artist-made asset policy, and create-floor-from-stair convenience.
+  - Rationale: The implemented metadata-backed foundations cover current actionable phases; these are workflow expansions that should be driven by observed editor use, licensing policy, and metadata-size limits.
 
 ## Rejected
 
@@ -160,4 +295,4 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Next Recommended Task
 
-Continue with Dungeon Studio Phase 4: room-region linking to Campaign World locations, room color controls, diagonal-aware fill follow-up, and unassigned floor-cell coverage refinement.
+Continue Campaign World mockup-alignment redesign with browser screenshots for Region, Settlement, Shop, Dungeon, Floor, Room, NPC, and Encounter contexts. Do not treat the issue as complete until those screens are visually and structurally close enough to be mistaken for the saved mockup direction.

@@ -278,6 +278,7 @@ func newIntegrationStores(t *testing.T) *Stores {
 	})
 	requireNoError(t, err)
 	requireNoError(t, db.AutoMigrate(testSchemaEntities()...))
+	requireNoError(t, ensureTestStandardReferenceTables(db))
 	return New(db)
 }
 
@@ -322,10 +323,131 @@ func testSchemaEntities() []any {
 		&dbmodels.CombatLogEventEntity{},
 		&dbmodels.ItemEntity{},
 		&dbmodels.CampaignLocationEntity{},
+		&dbmodels.CampaignLocationLinkEntity{},
+		&dbmodels.CampaignNpcLocationLinkEntity{},
+		&dbmodels.CampaignLocationStockEntity{},
+		&dbmodels.CampaignMapEntity{},
+		&dbmodels.CampaignMapPinEntity{},
 		&dbmodels.CampaignJourneyEntity{},
 		&dbmodels.RollTableEntity{},
 		&dbmodels.RollTableRowEntity{},
+		&dbmodels.ImportExportHistoryEntity{},
 	}
+}
+
+func ensureTestStandardReferenceTables(db *gorm.DB) error {
+	statements := []string{
+		`create table if not exists standard_sources (
+			source_key text primary key,
+			label text not null default '',
+			ruleset text not null default '',
+			license_name text not null default '',
+			source_url text not null default '',
+			attribution text not null default '',
+			created_at timestamptz not null default now(),
+			updated_at timestamptz not null default now()
+		)`,
+		`create table if not exists standard_library_entries (
+			id uuid primary key default gen_random_uuid(),
+			source_key text not null,
+			category text not null,
+			slug text not null,
+			name text not null,
+			summary text not null default '',
+			description text not null default '',
+			data jsonb not null default '{}'::jsonb,
+			created_at timestamptz not null default now(),
+			updated_at timestamptz not null default now()
+		)`,
+		`create table if not exists standard_creatures (
+			id uuid primary key default gen_random_uuid(),
+			source_key text not null default '',
+			slug text not null default '',
+			name text not null default '',
+			description text not null default '',
+			size text not null default '',
+			creature_type text not null default '',
+			alignment text not null default '',
+			armor_class integer not null default 10,
+			hit_points integer not null default 1,
+			hit_dice text not null default '',
+			challenge_rating text not null default '',
+			xp integer not null default 0,
+			avatar_url text not null default '',
+			source_label text not null default '',
+			source_url text not null default '',
+			license_name text not null default '',
+			stat_block jsonb not null default '{}'::jsonb,
+			created_at timestamptz not null default now(),
+			updated_at timestamptz not null default now()
+		)`,
+		`create table if not exists standard_spells (
+			id uuid primary key default gen_random_uuid(),
+			source_key text not null default '',
+			slug text not null default '',
+			name text not null default '',
+			level integer not null default 0,
+			school text not null default '',
+			casting_time text not null default '',
+			spell_range text not null default '',
+			components jsonb not null default '{}'::jsonb,
+			duration text not null default '',
+			ritual boolean not null default false,
+			concentration boolean not null default false,
+			description text not null default '',
+			higher_level text not null default '',
+			source_note text not null default '',
+			source_label text not null default '',
+			source_url text not null default '',
+			license_name text not null default '',
+			mechanics jsonb not null default '{}'::jsonb,
+			created_at timestamptz not null default now(),
+			updated_at timestamptz not null default now()
+		)`,
+		`create table if not exists standard_spell_projectile_scaling (
+			standard_spell_id uuid primary key,
+			base_projectiles integer not null default 1,
+			scaling_type text not null default 'none',
+			scale_from_level integer not null default 0,
+			additional_projectiles integer not null default 0,
+			step_size integer not null default 1,
+			description text not null default '',
+			cantrip_scaling jsonb not null default '{}'::jsonb
+		)`,
+		`create table if not exists standard_spell_actions (
+			id uuid primary key default gen_random_uuid(),
+			standard_spell_id uuid not null,
+			name text not null default '',
+			sort_order integer not null default 0,
+			action_type text not null default 'damage',
+			save_ability text not null default '',
+			successful_save_effect text not null default 'none',
+			attack_modifier integer not null default 0,
+			hit_special_event text not null default 'none',
+			weapon_source text not null default '',
+			attack_ability_override text not null default '',
+			damage_ability_override text not null default '',
+			damage_type_choice text not null default '',
+			damage_type_options text[] not null default '{}'::text[]
+		)`,
+		`create table if not exists standard_spell_action_roll_parts (
+			id uuid primary key default gen_random_uuid(),
+			standard_spell_action_id uuid not null,
+			sort_order integer not null default 0,
+			roll_kind text not null default 'damage',
+			damage_type text not null default '',
+			magical boolean not null default false,
+			dice_count integer not null default 1,
+			die_size integer not null default 6,
+			fixed_value integer not null default 0
+		)`,
+	}
+	for _, statement := range statements {
+		if err := db.Exec(statement).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func uniqueEmail(prefix string) string {

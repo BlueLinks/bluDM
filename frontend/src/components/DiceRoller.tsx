@@ -209,7 +209,7 @@ function Stepper({
   return (
     <div className="inline-flex overflow-hidden rounded-md border border-border bg-card">
       <button
-        className="grid h-10 w-8 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-10 w-8 place-items-center border-r border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => step(-1)}
       >
@@ -226,7 +226,7 @@ function Stepper({
         onChange={(event) => onChange(event.target.value)}
       />
       <button
-        className="grid h-10 w-8 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="grid h-10 w-8 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => step(1)}
       >

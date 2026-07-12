@@ -1,5 +1,6 @@
 import type { WheelEvent } from "react";
 import type { DungeonStudioCellKind, DungeonStudioDocument } from "./dungeonStudioDocument";
+import { dungeonStudioTheme } from "./dungeonStudioThemes";
 
 const cellLayerFills: Record<DungeonStudioCellKind, string> = {
   floor: "hsl(var(--muted))",
@@ -12,9 +13,14 @@ const cellLayerFills: Record<DungeonStudioCellKind, string> = {
   grass: "rgb(34 197 94 / 0.24)",
 };
 
+export function dungeonStudioDimensions(document: DungeonStudioDocument) {
+  return { width: document.grid.width * 24, height: document.grid.height * 24 };
+}
+
 export function cellLayerFill(kind: DungeonStudioCellKind, document: DungeonStudioDocument) {
-  if (kind === "floor" && document.tileset === "cave") return "rgb(87 83 78 / 0.42)";
-  return cellLayerFills[kind];
+  const theme = dungeonStudioTheme(document.tileset);
+  if (kind === "floor") return theme.floor;
+  return theme.terrain[kind] ?? cellLayerFills[kind];
 }
 
 export function clampPan(

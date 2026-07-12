@@ -156,7 +156,7 @@ export function SpellCastDialog({
               </div>
             </div>
             {needsSlot && (
-              <div className="rounded-md border border-border bg-muted px-2 py-1 text-xs font-semibold">
+              <div className="rounded-md border border-warning/25 bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
                 Level {actualCastLevel}: {slot?.remainingSlots ?? 0}/{slot?.maxSlots ?? 0} slots
               </div>
             )}
@@ -187,7 +187,7 @@ export function SpellCastDialog({
           />
         )}
         {!hasSlot && (
-          <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 text-sm font-semibold text-red-700 dark:text-red-200">
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
             No level {actualCastLevel} spell slots remain for {actor.displayName}.
           </div>
         )}
@@ -198,7 +198,6 @@ export function SpellCastDialog({
           <Button
             type="button"
             icon={Sparkles}
-            variant="success"
             disabled={!spell || !hasSlot || targetIds.length === 0}
             onClick={() =>
               spell &&

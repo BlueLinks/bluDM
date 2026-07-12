@@ -169,13 +169,22 @@ export type DungeonStudioGrid = {
 
 export type DungeonStudioTilesetKey =
   | "dungeon"
+  | "stone"
   | "cave"
   | "castle"
+  | "cellar"
+  | "forest"
   | "sewer"
+  | "house"
+  | "ruins"
+  | "temple"
+  | "crypt"
   | "shop"
   | "home"
   | "town";
 ```
+
+Tileset/theme keys describe visual treatment, not location type. A Dungeon location might use `cave`, `ruins`, or `temple`; a Room region can override the parent theme; and individual painted cells can later carry tile overrides without changing walls, doors, room identity, or furniture placement.
 
 ### Cell Layers
 
@@ -187,6 +196,7 @@ export type DungeonStudioCellLayer = {
   visible: boolean;
   opacity: number;
   cellKind: "floor" | "water" | "cliff" | "chasm" | "rubble" | "hazard" | "road" | "grass";
+  themeKey?: DungeonStudioTilesetKey;
   cells: GridCell[];
 };
 ```
@@ -223,6 +233,7 @@ export type DungeonStudioRoomRegion = {
   locationId?: string;
   label: string;
   color: string;
+  themeKey?: DungeonStudioTilesetKey;
   cells: GridCell[];
 };
 ```
@@ -234,11 +245,13 @@ Room regions can create or link Campaign World Room locations.
 ```ts
 export type DungeonStudioEntity = {
   id: string;
-  kind: "npc" | "stairs" | "label" | "marker" | "light" | "prop";
+  kind: "npc" | "stairs" | "label" | "marker" | "light" | "prop" | "trap";
   cell: GridCell;
   xOffset?: number;
   yOffset?: number;
+  rotation?: 0 | 90 | 180 | 270;
   linkedId?: string;
+  assetKey?: string;
   label?: string;
   metadata?: Record<string, unknown>;
 };
@@ -367,6 +380,196 @@ Suggested Dungeon Studio shell:
 
 Keep repeated layout pieces in `frontend/src/components/layout` if they become shared.
 
+## Planned Dungeon Creation Workflow
+
+Dungeon Studio should support a flexible DM workflow rather than a forced wizard. The UI can suggest a natural order, but every tool should remain available so the DM can change theme, tiles, rooms, or objects at any point.
+
+Recommended mental model:
+
+1. **Floor plan / layout first**
+   - Paint floor cells manually, draw shapes, or later generate a starter layout.
+   - Add or drag walls, doors, cliff edges, and basic terrain.
+   - Wall drag should be constrained to the dominant axis so horizontal drags only place horizontal wall segments and vertical drags only place vertical wall segments. Diagonal walls remain explicit through diagonal mode.
+2. **Room definition and editing**
+   - Select, brush, or fill floor cells into room regions.
+   - Link a region to an existing Campaign World Room or create a new Room location from the region.
+   - Support renaming, recoloring, unlinking, and reassigning room cells without changing the structural floor plan.
+3. **Terrain / map tile selection**
+   - The DM can select or change visual tiles/themes before, during, or after drawing rooms so the map is visually understandable while building.
+   - Theme changes should not destroy structure, room links, furniture, or encounters.
+4. **Stairs and multi-floor thinking**
+   - Stairs should be placeable objects/entities with a direction or target floor reference.
+   - A floor should be able to link stairs to another Floor location when the target exists, or hold an unresolved stair marker until the next floor is created.
+5. **Furniture / object placement**
+   - Objects are a visual/object layer on top of floors, terrain, walls, and room regions.
+   - Placing an object should not mutate Campaign World records unless the object is explicitly linked to something canonical such as an NPC, trap note, or encounter hook.
+6. **Save / exit / return to World**
+   - Save should sit near the Return to World action in the studio header so leaving and persistence are treated as one decision area.
+   - If the user clicks Return to World with unsaved changes, prompt with:
+     - **Save and exit**
+     - **Exit without saving**
+     - **Cancel / stay**
+   - Match the existing character/NPC creator unsaved-changes behavior where practical.
+   - Return should preserve the Campaign World location context.
+
+## Tiles, Themes, And Visual Layers
+
+Dungeon Studio should treat map visuals as layered styling rather than hardcoding a dungeon appearance into the structural model.
+
+Theme keys to plan for:
+
+- `cave`
+- `castle`
+- `cellar`
+- `forest`
+- `sewer`
+- `house`
+- `dungeon` / `stone`
+- `ruins`
+- `temple`
+- `crypt`
+
+Theme application levels:
+
+1. **Global dungeon/floor theme**
+   - Stored on `DungeonStudioDocument.tileset`.
+   - Defines default floor, wall, terrain, door, and object palette styling.
+   - Best first implementation target.
+2. **Per-room theme**
+   - Stored as optional `DungeonStudioRoomRegion.themeKey`.
+   - Useful for mixed environments such as a stone dungeon with a crypt wing or flooded sewer room.
+   - Should override visuals only for room floor cells and suggested object palette, not room identity.
+3. **Per-tile / painted-area theme**
+   - Stored on visual/tile layers or cell metadata, separate from structure layers.
+   - Useful for rugs, cracked floors, moss, forest patches, lava, sewer sludge, rubble, or room dressing.
+   - Should be introduced after global/per-room themes to avoid UI overload.
+4. **Separate visual layer**
+   - Keep visual tile paint separate from walls, doors, room regions, and furniture objects.
+   - A tile/theme paint operation should be undoable and should not remove walls or room links.
+
+Implementation note: start with SVG/CSS pattern fills or simple color/pattern variants before bundling large image tile atlases. This keeps the editor useful while asset licensing and sprite rendering are settled.
+
+## Furniture And Object Catalog Plan
+
+Object placement should use a catalog with stable object keys. The first catalog should prioritize common DM map dressing rather than exhaustive decoration.
+
+Initial object categories:
+
+- tables
+- chairs
+- chests
+- barrels
+- crates
+- beds
+- bookshelves
+- rugs
+- torches / light sources
+- doors / gates as edge features or placeable gate props when needed
+- statues
+- traps
+- stairs
+
+Object behavior:
+
+- Place on a cell with optional offset and rotation.
+- Render above floor/terrain and below NPC/label overlays where practical.
+- Allow move, rotate, duplicate, delete, and inspect.
+- Store object `assetKey` and minimal metadata in `DungeonStudioEntity`.
+- Keep traps as visible/hidden object entities with optional notes; do not force encounter creation.
+- Keep stairs as first-class object entities that can later link floors.
+
+### Asset Research Notes
+
+Do not add third-party assets to the repository unless the license and redistribution terms are clear. Prefer CC0/public domain/MIT or explicitly free-for-commercial-use assets. Keep source and license metadata beside bundled assets if assets are added later.
+
+| Source                                                                                                 | Coverage                                                                   | License signal found                                                                                                 | Attribution                                                     | Bundle with app?                                                                                     | Notes                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kenney assets (`https://kenney.nl/assets`, support/license page)                                       | Broad 2D/3D game assets, including dungeon/texture packs and props         | Kenney support page states game assets on asset pages are public domain licensed (CC0) and commercial use is allowed | Not required; credit “Kenney” optional; logo should not be used | Likely yes, after checking the specific downloaded pack's included license file                      | Strong candidate for clean, legally simple starter assets. Visual style may need filtering to match bluDM.                                                |
+| Dungeon Crawl 32x32 tiles on OpenGameArt (`https://opengameart.org/content/dungeon-crawl-32x32-tiles`) | Large fantasy roguelike tileset: terrain, walls, items, monsters, features | OpenGameArt page lists `License(s): CC0`; page says no attribution required, courtesy links requested                | Not required under CC0; courtesy link recommended               | Likely yes, with source/license metadata retained                                                    | Very complete but pixel-art style may not match the current SVG map look. Large sheet should be curated before bundling.                                  |
+| 0x72 16x16 DungeonTileset II (`https://0x72.itch.io/dungeontileset-ii`)                                | Dungeon tiles, props, traps, doors, with community extensions              | Page text says “You can use this tileset for whatever you like (CC-0)” and credit is not necessary                   | Not required; creator appreciates credit                        | Likely yes for the base pack, after retaining page/license evidence; extensions need separate review | Good candidate for small object/tile prototypes. Treat linked extensions as separate candidates, not automatically covered.                               |
+| OpenGameArt individual packs                                                                           | Potential furniture, ruins, sewer, crypt, and theme-specific tiles         | Varies by pack                                                                                                       | Varies                                                          | Candidate only until each pack is reviewed                                                           | Use only packs with clear CC0/public domain/permissive licenses. Avoid mixing attribution-heavy assets until attribution UI/package metadata is designed. |
+
+Asset risks:
+
+- Some “free” assets are free only for personal use or require attribution/share-alike; do not bundle those without explicit approval.
+- Asset packs often include mixed contributors or extensions with different licenses.
+- Pixel-art assets may clash with the current clean SVG style; curated subsets or a consistent icon style may be needed.
+- Bundled assets increase app size; lazy-load catalog sprites by theme/category.
+
+### User-Uploaded Assets
+
+Plan user uploads as a later phase, not part of the bundled catalog MVP.
+
+- Allow image upload for custom props/objects with per-campaign scope.
+- Store asset metadata: name, category, dimensions, default scale, source/license notes entered by the user.
+- Let users mark assets as private campaign assets.
+- Do not redistribute user uploads beyond their self-hosted instance.
+- Add a simple asset manager only after core object placement works.
+
+## Random Dungeon Generation Plan
+
+Random generation should be a future feature that creates an editable draft, not a separate immutable map type.
+
+Generation targets:
+
+- room layouts and irregular areas
+- corridors and loops
+- doors and secret-door candidates
+- stairs up/down and potential floor connections
+- themed tiles based on selected global/per-room theme
+- furniture/object dressing by room type
+- treasure, trap, and encounter hooks as optional notes/prompts
+- seed-based reproduction
+
+Generator UX:
+
+- Open a generator panel from the editor; do not replace the editor.
+- Choose generator type, theme, size, seed, density, room count, corridor winding, cave openness, door chance, and whether to create room regions.
+- Preview output before applying.
+- Apply as replace-current-draft or add-to-current-map where feasible.
+- Generated output uses the same floor, edge, room, terrain, and object layers as manual editing.
+- Store generation metadata (`seed`, generator type, settings) so a result can be reproduced or audited.
+
+Suggested generation phases:
+
+1. Small local rectangular room + corridor generator with deterministic seed and editable output.
+2. Cave/cellular generator for cave themes.
+3. Theme-aware tile dressing.
+4. Furniture/object placement by room role.
+5. Treasure/encounter hook prompts linked to Campaign World encounter creation.
+
+Dependency note: `rot-js` remains a candidate for dungeon/cellular generation if dependency review is approved. A minimal local generator may be enough for the first deterministic proof of concept.
+
+## Campaign World Dungeon Presentation Plan
+
+Campaign World should show dungeons as useful world places without turning the world screen into a dense dungeon dashboard.
+
+Creation and attachment model:
+
+- A user can create a Dungeon as an independent top-level location.
+- A user can attach or move that Dungeon under a Region, Town/Settlement, Landmark, Cave, Ruin, Building, or other parent later using existing location parent editing.
+- A Region/Town/Location child list can include Dungeon entries alongside settlements, landmarks, buildings, and shops.
+- Dungeon Studio opens from the Dungeon/Floor entry, not from a separate global workspace.
+
+Dungeon metadata to surface in Campaign World:
+
+- name
+- type/theme, e.g. cave, crypt, ruins, temple, stone dungeon
+- floors and rooms summary
+- prep/status summary only when useful: unlinked rooms, missing encounters, unmapped floors, unsaved studio changes if known
+- notes summary
+- linked encounters count and next runnable encounter actions
+- map/studio entry point
+
+Avoid clutter:
+
+- Do not show every internal map count or tile/layer count in primary world cards.
+- Keep advanced studio metadata inside expandable details or inside Dungeon Studio.
+- Child lists should show the dungeon name, type/theme, short summary, and a clear Open/Open Studio action where context supports it.
+- Dungeon profile pages can prioritize floors, rooms, encounters, maps/studio, notes, then advanced details.
+- Floor profile pages can prioritize rooms, encounters, stairs/exits, studio map, notes.
+- Room profile pages can prioritize room prep, encounters, notes, exits, map position, then advanced details.
+
 ## Implementation Phases
 
 ### Phase 0: Contract And Tests
@@ -493,7 +696,7 @@ Acceptance criteria:
 
 ### Phase 4: Room Layer Editor
 
-Status: In progress. Dungeon Studio now has a room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, shared single/rectangle/circle brush shapes across floor/room/terrain/delete where applicable, clearer delete targets, room fill preview/fill for orthogonal wall/door-bounded areas that protects existing rooms by default, unlinked room-region creation from selections, a compact Room Workflow panel for naming/painting/filling/done/edit/delete, implicit rendered boundary walls around exposed floor edges, drag wall strokes with axis locking to avoid wobble-created perpendicular edges, right-click contextual erase, middle-mouse panning, room overlays, room counts, a consolidated editor toolbar for save/undo/redo/zoom, a left primary tool palette, generic active tool options beside the canvas, contextual inspector details, simplified non-decorative editor chrome, canvas wheel zoom, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware room fill remains a follow-up.
+Status: Completed. Dungeon Studio now has room mode with floor-cell room selection, room brush/eraser tools using the shared brush workflow, shared single/rectangle/circle brush shapes across floor/room/terrain/delete where applicable, clearer delete targets, room fill preview/fill for orthogonal wall/door-bounded areas that protects existing rooms by default, room-region creation from selections, room naming/recoloring/theme overrides, Campaign World Room linking and create/link actions, a compact Room Workflow panel, implicit rendered boundary walls around exposed floor edges, locked wall strokes that draw one continuous horizontal, vertical, or snapped diagonal segment with hover/drag preview, right-click contextual erase, middle-mouse panning, room overlays, room counts, unassigned floor coverage status, a consolidated undo/redo/zoom toolbar, a left primary tool palette, contextual inspector details, simplified non-decorative editor chrome, canvas wheel zoom, undo/redo integration, and save/reload persistence through the existing document model. Diagonal-aware fill is intentionally deferred until diagonal walls become room-boundary blockers throughout the editor.
 
 Deliverables:
 
@@ -514,67 +717,155 @@ Acceptance criteria:
 - Existing room locations can be linked to regions.
 - Dungeon/Floor child list still reflects canonical Room locations.
 
-### Phase 5: Random Generation MVP
+### Forward Phase 1: Core Dungeon Studio UX Fixes
+
+Status: Completed. Save now sits beside Return to World, the canvas toolbar only owns undo/redo/zoom/reset, Return to World prompts for Save and exit / Exit without saving / Cancel when dirty, room regions can create/link Campaign World Room locations, room color controls are available, unassigned floor coverage is surfaced, and dominant-axis wall/cliff drag regression tests are locked in.
 
 Deliverables:
 
-- Generator panel.
-- Classic dungeon generator.
-- Cave generator.
-- Seeded output.
-- Preview/regenerate/apply flow.
-- Convert generator output into studio cells/edges/rooms.
-
-Recommended implementation:
-
-- Prefer `rot-js` if dependency review is accepted.
-- If not, implement minimal local generators:
-  - rectangular rooms + corridors.
-  - cellular cave smoothing.
+- Move Save next to Return to World in the studio header.
+- Add unsaved-changes prompt on Return to World:
+  - Save and exit.
+  - Exit without saving.
+  - Cancel / stay.
+- Match existing character/NPC creator navigation-guard behavior where practical.
+- Keep the existing canvas toolbar for undo/redo/zoom/reset, but avoid duplicating Save.
+- Finish room-region linking to Campaign World Room locations.
+- Add room color controls.
+- Refine unassigned floor-cell coverage handling.
+- Add diagonal-aware room fill follow-up if it can be done without destabilizing room editing.
+- Keep wall/cliff drag constrained to dominant axis and add focused tests around horizontal/vertical wall strokes.
 
 Acceptance criteria:
 
-- User can generate a classic dungeon and edit it manually.
-- User can generate a cave/cavern and edit it manually.
-- Same seed/settings reproduce the same draft.
-- Generated rooms can become room regions.
+- Returning to World with no changes exits immediately.
+- Returning to World with unsaved changes prompts and honors all three choices.
+- Saving then exiting persists the studio document and returns to the same Campaign World location.
+- Room regions can be linked to Room locations without losing existing floor/wall/terrain data.
+- Horizontal wall/cliff drags do not create vertical segments; vertical drags do not create horizontal segments.
 
-### Phase 6: NPC Placement
+### Forward Phase 2: Tiles And Themes
+
+Status: Completed. The document contract and parser support all planned theme keys, the inspector exposes global theme selection, lightweight SVG fills render theme differences, room regions can store optional theme overrides, and theme changes are independent from structure, rooms, terrain, and objects.
 
 Deliverables:
 
-- NPC tool mode.
-- Campaign NPC picker.
-- Place NPC entity on grid.
-- Render NPC avatar/initials on map.
-- Inspector for placed NPC.
-- Optional prompt to connect NPC to room location under the token.
+- Add global dungeon/floor theme selection for cave, castle, cellar, forest, sewer, house, dungeon/stone, ruins, temple, and crypt.
+- Render theme differences using lightweight SVG/CSS colors/patterns first.
+- Store selected global theme in `DungeonStudioDocument.tileset`.
+- Add optional per-room theme override in the room inspector.
+- Keep theme changes independent from walls, doors, rooms, terrain, and objects.
 
 Acceptance criteria:
 
-- User can place, move, and remove NPC markers.
-- NPC markers link to existing NPC records.
-- Avatar display matches current NPC avatar helper behavior.
-- No duplicate NPC records are created.
+- A DM can change the visual theme at any point while editing.
+- Theme changes survive save/reload.
+- Existing documents without newer theme keys parse safely.
+- Room theme overrides are visually clear but not required.
 
-### Phase 7: Broader Location Map Support
+### Forward Phase 3: Furniture/Object Catalog
+
+Status: Completed. Dungeon Studio has an object mode and reusable catalog covering tables, chairs, chests, barrels, crates, beds, bookshelves, rugs, torches, gates, statues, traps, and stairs. Objects are stored as normal `DungeonStudioEntity` records, render above map geometry, can be placed/selected/rotated/duplicated/moved/deleted, and use built-in SVG/text glyphs so no third-party asset licensing is introduced.
 
 Deliverables:
 
-- Generalize naming from `DungeonStudio` internals where appropriate.
-- Add scope presets for:
-  - shop
-  - home
-  - tavern
-  - castle/keep
-  - town/street
-- Add object/entity presets for furniture, counters, beds, roads, stalls, etc.
+- Add object tool mode and catalog panel.
+- Start with tables, chairs, chests, barrels, crates, beds, bookshelves, rugs, torches, doors/gates, statues, traps, and stairs.
+- Implement place, move, rotate, duplicate, delete, and inspect.
+- Store objects as `DungeonStudioEntity` with `kind`, `assetKey`, cell position, offsets, rotation, label, and metadata.
+- Use simple built-in SVG glyphs or a small vetted CC0 asset subset first.
+- Record source/license metadata for any bundled asset pack.
 
 Acceptance criteria:
 
-- The same editor can open for non-dungeon local maps without dungeon-only assumptions.
-- Existing Dungeon/Floor behavior remains unchanged.
-- Map scope controls available tools and tilesets.
+- Objects render above floor/terrain and do not affect room/floor/wall data.
+- Object operations are undoable and survive save/reload.
+- No third-party asset is bundled without clear license evidence.
+
+### Forward Phase 4: Campaign World Dungeon Integration
+
+Status: Completed with the existing Campaign World location model and focused dungeon presentation. Dungeons can be created as top-level locations through the World editor, moved/attached later through parent editing, opened from Dungeon/Floor/Room map cards where context exists, and room regions can create/link canonical Room children. Floors remain nested child locations inside a Dungeon, while Rooms remain canonical deep-linkable locations but are hidden from the global overview tree unless selected or searched so they stay in dungeon/floor context. Technical studio metadata stays inside Dungeon Studio; Campaign World shows actual cropped studio previews, structure summaries, and entry points without duplicating dungeon-map editing controls.
+
+Deliverables:
+
+- Allow creating a Dungeon as an independent top-level Campaign World location.
+- Make attaching/moving a Dungeon under a Region/Town/Landmark/Building/Cave/Ruin straightforward through existing location editing.
+- Show Dungeon entries in child lists with name, type/theme, short summary, and clear open/profile actions.
+- On Dungeon/Floor profiles, surface Open Dungeon Studio without crowding profile cards.
+- Show useful dungeon metadata: floors, rooms, notes, linked encounters, and prep gaps.
+- Keep technical studio data in details or inside Dungeon Studio.
+
+Acceptance criteria:
+
+- A DM can create a dungeon without first choosing a parent.
+- A DM can later attach that dungeon to another world entity.
+- Dungeon/Floor/Room profiles prioritize sections according to prep workflow, not generic counts.
+- Campaign World remains readable on desktop and narrow layouts.
+
+### Forward Phase 5: Multi-Floor And Stairs
+
+Status: Completed for the foundation. Stairs are first-class object entities with up/down labels and unresolved state, and selected stair objects can link to existing Floor locations without requiring the target floor to exist. Creating a new Floor directly from a stair marker remains intentionally deferred as a convenience workflow.
+
+Deliverables:
+
+- Add stairs object/entity placement.
+- Support stairs up/down labels, notes, and unresolved target state.
+- Link a stair to another Floor location when available.
+- Add floor navigation from Dungeon Studio and Campaign World profiles.
+- Support creating a new Floor from a stair marker as a later convenience.
+
+Acceptance criteria:
+
+- Stairs can be placed and linked without requiring the target floor to exist immediately.
+- Linked stairs make cross-floor navigation clear in Dungeon Studio and Campaign World.
+- Floor creation/linking does not duplicate Room or encounter records.
+
+### Forward Phase 6: Random Generation
+
+Status: Completed for the local deterministic generator and first-run workflow. A blank studio map now starts with a choice between a fully custom dungeon and a randomly generated dungeon. Random generation shows controls and a preview before entering the full editor, supports seeded classic-room and cave generation, room regions, outer walls, stairs, themed floor documents, optional furniture placement, generation metadata, and normal editable output. Destructive generation inside an existing dungeon is not exposed; preview/apply-as-new-layer and encounter/treasure prompt generation are intentionally deferred until a clear workflow need emerges.
+
+Deliverables:
+
+- Add generator panel after manual editing and themes are stable.
+- Implement deterministic seed handling.
+- Generate classic room/corridor maps and cave maps.
+- Generate doors, stairs, themed floors, optional room regions, and optional furniture/treasure/encounter hooks.
+- Convert output to normal editable studio layers.
+
+Acceptance criteria:
+
+- Same seed/settings reproduce the same output.
+- Generated output can be edited manually with existing tools.
+- Generation can be previewed before replacing or adding to current map.
+- Generated room regions can link to Campaign World Room locations.
+
+### Forward Phase 7: User-Uploaded Assets
+
+Status: Completed for metadata-backed studio uploads. Custom image props can be uploaded into the studio document, appear in the same object catalog as built-ins, store source/license notes, remain private to the campaign instance/map metadata, and can be placed/moved/removed like bundled glyph objects. A dedicated backend asset manager is intentionally deferred until metadata-size and reuse needs justify it.
+
+Deliverables:
+
+- Add campaign-scoped custom asset upload after object placement is stable.
+- Store asset name, category, dimensions, default scale, and user-entered source/license notes.
+- Let uploaded assets appear in the object catalog.
+- Keep uploaded assets private to the self-hosted instance/campaign.
+
+Acceptance criteria:
+
+- User-uploaded assets can be placed, moved, and removed like bundled catalog objects.
+- Uploaded asset metadata survives reload.
+- The app does not imply that user-uploaded assets are redistributable.
+
+## Open Questions And Risks
+
+- Asset licensing: even “free” asset packs can include attribution, non-commercial, share-alike, or mixed-contributor terms. Bundle only reviewed packs with clear license files.
+- Visual consistency: pixel-art assets may clash with the current clean SVG style. The current implementation uses distinct in-repo vector placeholders. Optional generated, artist-made, or third-party assets should be added later only with a clear repo policy and license/source metadata.
+- Metadata size: object-heavy maps and image tile layers can grow `CampaignMap.metadata`; monitor payload size before committing to large embedded data.
+- Theme complexity: per-tile theme overrides can create UI clutter. Global theme and per-room overrides are implemented; per-tile theme paint remains deferred until a clear use case emerges.
+- Multi-floor linking: stairs can remain unresolved or link to existing Floor locations. Creating a new Floor directly from a stair marker is deferred as a convenience workflow.
+- Random generation scope: first local deterministic classic/cave generation is implemented as a pre-editor start workflow. Preview/apply-as-new-layer and encounter/treasure prompt generation are deferred to avoid turning generation into a separate product.
+- Campaign World clutter: Dungeon metadata should help prep decisions, not expose every studio internals count. Current integration uses cropped actual studio map thumbnails, theme/room/stair/object summaries, a floor-first dungeon structure card, and existing location/profile sections rather than dense dungeon dashboards. Old map tools are hidden when a Dungeon Studio map/entry point is the relevant editing workflow.
+- Save/exit guard: implemented in the studio header using the same three-choice pattern as character navigation guards where practical.
 
 ## Backend Work
 

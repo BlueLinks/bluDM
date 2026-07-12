@@ -1,21 +1,17 @@
-import {
-  Boxes,
-  DraftingCompass,
-  FilePenLine,
-  Footprints,
-  Map as MapIcon,
-  MapPin,
-  Route,
-} from "lucide-react";
+import { DraftingCompass, Footprints, Map as MapIcon, MapPin, Route } from "lucide-react";
 import type React from "react";
 import { Link } from "react-router-dom";
-import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
+import { ActionRow, CardSection, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
-import type { Encounter } from "../../../types";
 import { ChildPrepChips, type ChildPrepChip } from "./CampaignWorldChildPrepChips";
-import { locationPathLabel } from "./campaignWorldLocationUtils";
+import { ChildLocationTile, groupLocationsByType } from "./CampaignWorldChildLocationTiles";
+import { CampaignWorldEmptyState } from "./CampaignWorldEmptyState";
+import { MapPlaceholderPanel } from "./CampaignWorldMapPlaceholder";
 import { distanceUnitOptions, labelFor, paceOptions, terrainOptions } from "./travelOptions";
-import type { LocationProfileInfo } from "./locationProfiles";
+import { DungeonStudioMapThumbnail } from "./DungeonStudioMapThumbnail";
+import { parseDungeonStudioDocument, isDungeonStudioMap } from "./dungeonStudioDocument";
+import { dungeonStudioThemeLabel } from "./dungeonStudioThemes";
+import { locationProfile, type LocationProfileInfo } from "./locationProfiles";
 import type {
   CampaignJourney,
   CampaignLocation,
@@ -23,11 +19,14 @@ import type {
   CampaignMap,
 } from "./travelTypes";
 
+export { LocationNotesCard } from "./CampaignWorldLocationNotesCard";
+
 export function ChildLocationsCard({
   childLocations,
   emptyCopy,
   prepChipsByLocationId,
   prepSummaryChips,
+  nestedLocationsByParentId,
   title,
   onSelectLocation,
   action,
@@ -36,110 +35,79 @@ export function ChildLocationsCard({
   emptyCopy: string;
   prepChipsByLocationId?: Record<string, ChildPrepChip[]>;
   prepSummaryChips?: ChildPrepChip[];
+  nestedLocationsByParentId?: Record<string, CampaignLocation[]>;
   title: string;
   onSelectLocation: (locationID: string) => void;
   action?: React.ReactNode;
 }) {
   return (
     <CardSection>
-      <SectionHeader
-        action={action}
-        icon={MapPin}
-        meta={
-          childLocations.length
-            ? `${childLocations.length} ${childLocations.length === 1 ? "place" : "places"} ready to open`
-            : undefined
-        }
-        title={title}
-      />
+      <SectionHeader action={action} icon={MapPin} title={title} />
       {prepSummaryChips?.length ? (
         <div className="mt-3 rounded-md border border-dashed border-border bg-background px-3 py-2">
-          <div className="text-xs font-bold uppercase text-muted-foreground">Needs attention</div>
+          <div className="text-xs font-bold uppercase text-muted-foreground">At a glance</div>
           <ChildPrepChips chips={prepSummaryChips} />
         </div>
       ) : null}
       {childLocations.length ? (
-        <div className="mt-3 grid gap-2">
-          {childLocations.map((child) => (
-            <button
-              className="flex min-w-0 flex-wrap items-start justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left transition hover:border-primary/60"
-              key={child.id}
-              type="button"
-              onClick={() => onSelectLocation(child.id)}
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block [overflow-wrap:anywhere] font-semibold">{child.name}</span>
-                <span className="mt-1 block text-xs text-muted-foreground [overflow-wrap:anywhere]">
-                  {child.summary ||
-                    child.path?.map((segment) => segment.name).join(" / ") ||
-                    child.name}
-                </span>
-                <ChildPrepChips chips={prepChipsByLocationId?.[child.id]} />
-              </span>
-              <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
-                {child.customTypeLabel || child.locationType || "custom"}
-              </span>
-            </button>
+        <div className="mt-3 grid gap-4">
+          {groupLocationsByType(childLocations).map((group) => (
+            <div className="grid gap-2" key={group.label}>
+              <div className="text-xs font-semibold uppercase text-muted-foreground">
+                {group.label} · {group.items.length}
+              </div>
+              <div className="campaign-world-child-tile-grid grid gap-2">
+                {group.items.map((child) => (
+                  <div className="grid min-w-0 gap-2" key={child.id}>
+                    <ChildLocationTile
+                      child={child}
+                      prepChips={prepChipsByLocationId?.[child.id]}
+                      onSelectLocation={onSelectLocation}
+                    />
+                    <NestedChildLocations
+                      locations={nestedLocationsByParentId?.[child.id]}
+                      onSelectLocation={onSelectLocation}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          {emptyCopy}
-        </p>
-      )}
-    </CardSection>
-  );
-}
-
-export function LocationNotesCard({
-  location,
-  title,
-}: {
-  location: CampaignLocation;
-  title: string;
-}) {
-  const hasNotes = location.publicNotes || location.notes || location.dmNotes;
-  return (
-    <CardSection>
-      <SectionHeader
-        icon={FilePenLine}
-        title={title}
-        meta={hasNotes ? "Prepared notes" : "No notes"}
-      />
-      {hasNotes ? (
-        <div className="mt-3 grid gap-3">
-          {(location.publicNotes || location.notes) && (
-            <WorldNote label="Player-facing notes" value={location.publicNotes || location.notes} />
-          )}
-          {location.dmNotes && <WorldNote label="DM-only" value={location.dmNotes} secret />}
+        <div className="mt-3">
+          <CampaignWorldEmptyState icon={MapPin} title="No connected places yet" copy={emptyCopy} />
         </div>
-      ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No notes have been added yet.
-        </p>
       )}
     </CardSection>
   );
 }
 
-function WorldNote({
-  label,
-  value,
-  secret = false,
+function NestedChildLocations({
+  locations,
+  onSelectLocation,
 }: {
-  label: string;
-  value: string;
-  secret?: boolean;
+  locations?: CampaignLocation[];
+  onSelectLocation: (locationID: string) => void;
 }) {
+  if (!locations?.length) return null;
   return (
-    <div
-      className={[
-        "rounded-md border px-3 py-2 text-sm",
-        secret ? "border-amber-500/30 bg-amber-500/10" : "border-border bg-background",
-      ].join(" ")}
-    >
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <p className="mt-1 text-muted-foreground">{value}</p>
+    <div className="ml-11 flex min-w-0 flex-wrap gap-2">
+      {locations.slice(0, 8).map((location) => (
+        <button
+          className="rounded-md border border-border px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:border-primary/60 hover:text-foreground"
+          key={location.id}
+          type="button"
+          onClick={() => onSelectLocation(location.id)}
+        >
+          {location.name}
+        </button>
+      ))}
+      {locations.length > 8 ? (
+        <span className="px-2 py-1 text-xs font-semibold text-muted-foreground">
+          +{locations.length - 8} more
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -148,34 +116,81 @@ export function LocationMapCard({
   children,
   compact,
   location,
+  locations = [],
   maps,
   toolsOpen,
   onCloseMaps,
   onOpenMaps,
+  onSelectLocation,
   studioPath,
 }: {
   children?: React.ReactNode;
   compact: boolean;
   location: CampaignLocation;
+  locations?: CampaignLocation[];
   maps: CampaignMap[];
   toolsOpen: boolean;
   onCloseMaps: () => void;
   onOpenMaps: () => void;
+  onSelectLocation?: (locationID: string) => void;
   studioPath?: string;
 }) {
+  const profile = locationProfile(location);
   const attachedMaps = maps.filter((map) => (map.parentLocationId ?? "") === location.id);
   const parentMaps = maps.filter(
     (map) => (map.parentLocationId ?? "") === (location.parentLocationId ?? ""),
   );
-  const relevantMaps = compact ? parentMaps : attachedMaps;
+  const ancestorIds = ancestorLocationIds(location, locations);
+  const ancestorStudioMaps = maps.filter(
+    (map) => ancestorIds.has(map.parentLocationId ?? "") && isDungeonStudioMap(map),
+  );
+  const childLocationIds = new Set(
+    locations.filter((item) => item.parentLocationId === location.id).map((item) => item.id),
+  );
+  const childStudioMaps =
+    profile.variant === "dungeon"
+      ? maps.filter(
+          (map) => childLocationIds.has(map.parentLocationId ?? "") && isDungeonStudioMap(map),
+        )
+      : [];
+  const relevantMaps =
+    profile.profile === "room"
+      ? ancestorStudioMaps.length
+        ? ancestorStudioMaps
+        : parentMaps
+      : compact
+        ? parentMaps
+        : attachedMaps.length
+          ? attachedMaps
+          : ancestorStudioMaps.length && profile.variant === "floor"
+            ? ancestorStudioMaps
+            : childStudioMaps;
   const preview = relevantMaps.find((map) => map.imageUrl) ?? relevantMaps[0];
+  const studioMap = relevantMaps.find(isDungeonStudioMap);
+  const studioDocument = studioMap
+    ? parseDungeonStudioDocument(studioMap.metadata, {
+        scope: studioMap.mapType === "floor" ? "floor" : "dungeon",
+      })
+    : null;
   const hasAnchor = Object.keys(location.mapAnchor ?? {}).length > 0;
+  const showMapTools = !studioPath && !studioDocument;
+  const previewHeightClass = compact && profile.profile !== "room" ? "h-56" : "h-80 xl:h-96";
+  const mapTitle = studioDocument
+    ? profile.profile === "room"
+      ? "Room map"
+      : profile.variant === "floor"
+        ? "Floor map"
+        : "Dungeon map"
+    : compact
+      ? "Map position"
+      : "Map";
   return (
-    <CardSection className="grid min-w-0 gap-3">
+    <CardSection className="campaign-world-map-card grid min-w-0 gap-0 overflow-hidden p-0">
       <SectionHeader
+        className="border-b border-border/70 p-3"
         icon={MapIcon}
         meta={mapMeta(compact, hasAnchor, parentMaps.length, attachedMaps.length)}
-        title={compact ? "Map position" : "Map"}
+        title={mapTitle}
         action={
           <ActionRow justify="end">
             {studioPath ? (
@@ -185,30 +200,61 @@ export function LocationMapCard({
                 </Button>
               </Link>
             ) : null}
-            <Button
-              type="button"
-              icon={MapIcon}
-              size="sm"
-              variant="secondary"
-              aria-expanded={toolsOpen}
-              onClick={toolsOpen ? onCloseMaps : onOpenMaps}
-            >
-              {toolsOpen ? "Hide map tools" : "Show map tools"}
-            </Button>
+            {showMapTools ? (
+              <Button
+                type="button"
+                icon={MapIcon}
+                size="sm"
+                variant="secondary"
+                aria-expanded={toolsOpen}
+                onClick={toolsOpen ? onCloseMaps : onOpenMaps}
+              >
+                {toolsOpen ? "Hide map tools" : "Show map tools"}
+              </Button>
+            ) : null}
           </ActionRow>
         }
       />
-      {toolsOpen ? (
-        <div className="grid min-w-0 gap-3">{children}</div>
+      {toolsOpen && showMapTools ? (
+        <div className="grid min-w-0 gap-3 p-3 pt-0">{children}</div>
+      ) : studioDocument ? (
+        <div className="grid gap-2 px-3 pb-3">
+          <div
+            className={`campaign-world-map-preview ${previewHeightClass} min-w-0 overflow-hidden rounded-md border border-border bg-background`}
+          >
+            <DungeonStudioMapThumbnail
+              document={studioDocument}
+              focusRoomLocationId={location.locationType === "room" ? location.id : undefined}
+              label={`${location.name} dungeon map preview`}
+              onRoomSelect={onSelectLocation}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs font-semibold text-muted-foreground">
+            <span>{dungeonStudioThemeLabel(studioDocument.tileset)} theme</span>
+            <span>{studioDocument.rooms.length} rooms</span>
+            <span>
+              {studioDocument.entities.filter((entity) => entity.kind === "stairs").length} stairs
+            </span>
+            <span>{studioDocument.entities.length} objects</span>
+          </div>
+        </div>
       ) : preview?.imageUrl ? (
-        <img
-          className="max-h-64 w-full rounded-md border border-border object-cover"
-          src={preview.imageUrl}
-          alt={`${preview.name} preview`}
-        />
+        <div className="px-3 pb-3">
+          <img
+            className={`campaign-world-map-preview ${previewHeightClass} w-full rounded-md border border-border object-cover`}
+            src={preview.imageUrl}
+            alt={`${preview.name} preview`}
+          />
+        </div>
       ) : (
-        <div className="rounded-md border border-dashed border-border bg-background px-3 py-3 text-sm text-muted-foreground">
-          {mapEmptyCopy(compact, hasAnchor, relevantMaps.length)}
+        <div className="px-3 pb-3">
+          <MapPlaceholderPanel
+            compact={compact}
+            copy={mapEmptyCopy(compact, hasAnchor, relevantMaps.length)}
+            showAction={showMapTools}
+            title={compact && hasAnchor ? "Map position set" : undefined}
+            onOpenMaps={onOpenMaps}
+          />
         </div>
       )}
     </CardSection>
@@ -229,6 +275,16 @@ function mapMeta(
   return parentMapCount ? "Not placed on parent map" : "No parent map";
 }
 
+function ancestorLocationIds(location: CampaignLocation, locations: CampaignLocation[]) {
+  const ids = new Set<string>();
+  let parentId = location.parentLocationId;
+  while (parentId) {
+    ids.add(parentId);
+    parentId = locations.find((item) => item.id === parentId)?.parentLocationId;
+  }
+  return ids;
+}
+
 function mapEmptyCopy(compact: boolean, hasAnchor: boolean, attachedMapCount: number) {
   if (compact) {
     return hasAnchor
@@ -238,15 +294,6 @@ function mapEmptyCopy(compact: boolean, hasAnchor: boolean, attachedMapCount: nu
   return attachedMapCount
     ? "Map ready. Show map tools to manage pins and distances."
     : "No map attached yet. Show map tools to create one.";
-}
-
-export function MapStat({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="rounded-md border border-border bg-background px-3 py-2">
-      <div className="text-xs font-bold uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 font-semibold">{value}</div>
-    </div>
-  );
 }
 
 export function CompactTravelCard({
@@ -307,10 +354,26 @@ export function CompactTravelCard({
           ))}
         </div>
       ) : (
-        <p className="mt-3 rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
-          No saved journeys are tied to this location yet. Use Plan Travel From Here to start a
-          contextual route.
-        </p>
+        <div className="mt-3">
+          <CampaignWorldEmptyState
+            icon={Footprints}
+            title="No routes from here yet"
+            copy="Plan travel from this place when distance, pace, or route notes matter at the table."
+            action={
+              onPlanTravel ? (
+                <Button
+                  type="button"
+                  icon={Route}
+                  size="sm"
+                  variant="secondary"
+                  onClick={onPlanTravel}
+                >
+                  Plan travel
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
       )}
     </CardSection>
   );
@@ -325,64 +388,4 @@ function journeyRouteSummary(journey: CampaignJourney, location: CampaignLocatio
 
 function journeyDistanceSummary(journey: CampaignJourney) {
   return `${journey.distance.toLocaleString()} ${labelFor(distanceUnitOptions, journey.distanceUnit)}`;
-}
-
-export function StructureSummaryCard({
-  childLocations,
-  encounters,
-  links,
-  onSelectLocation,
-}: {
-  childLocations: CampaignLocation[];
-  encounters: Encounter[];
-  links: CampaignLocationLink[];
-  onSelectLocation: (locationID: string) => void;
-}) {
-  return (
-    <CardSection>
-      <SectionHeader icon={Boxes} title="Structure" meta="Dungeon prep" />
-      <ResponsiveGrid className="mt-3" variant="stats3">
-        <MapStat label="Floors/rooms" value={childLocations.length} />
-        <MapStat label="Encounters" value={encounters.length} />
-        <MapStat label="Exits/links" value={links.length} />
-      </ResponsiveGrid>
-      {childLocations.length ? (
-        <div className="mt-3 grid gap-2">
-          {childLocations.slice(0, 5).map((child) => (
-            <button
-              className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2 text-left transition hover:border-primary/60"
-              key={child.id}
-              type="button"
-              onClick={() => onSelectLocation(child.id)}
-            >
-              <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">{child.name}</span>
-              <span className="rounded-full border border-border px-2 py-0.5 text-[0.68rem] font-bold uppercase text-muted-foreground">
-                {child.customTypeLabel || child.locationType || "area"}
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </CardSection>
-  );
-}
-
-export function journeyInvolvesLocation(
-  journey: CampaignJourney,
-  location: CampaignLocation,
-  childLocations: CampaignLocation[],
-) {
-  const labels = [
-    location.name,
-    locationPathLabel(location),
-    ...childLocations.flatMap((child) => [child.name, locationPathLabel(child)]),
-  ]
-    .filter(Boolean)
-    .map((label) => label.toLowerCase());
-  const route = `${journey.origin} ${journey.destination} ${journey.name}`.toLowerCase();
-  return labels.some((label) => label && route.includes(label));
-}
-
-export function travelLikeLinks(links: CampaignLocationLink[]) {
-  return links.some((link) => ["road", "route", "trail", "path", "gate"].includes(link.linkType));
 }

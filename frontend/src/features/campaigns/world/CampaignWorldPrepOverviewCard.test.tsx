@@ -8,7 +8,6 @@ describe("PrepOverviewCard", () => {
   afterEach(() => cleanup());
 
   it("shows actionable next steps for underprepared rooms", () => {
-    const onAddEncounter = vi.fn();
     const onEditNotes = vi.fn();
     const onLinkExit = vi.fn();
     const onOpenMaps = vi.fn();
@@ -21,7 +20,6 @@ describe("PrepOverviewCard", () => {
         location={location({ notes: "", publicNotes: "" })}
         maps={[]}
         showRoomNextSteps
-        onAddEncounter={onAddEncounter}
         onEditNotes={onEditNotes}
         onLinkExit={onLinkExit}
         onOpenMaps={onOpenMaps}
@@ -29,24 +27,19 @@ describe("PrepOverviewCard", () => {
     );
 
     expect(
-      screen.getByText("What changes if the party waits, searches, or makes noise here?"),
-    ).toBeTruthy();
-    expect(
       screen.getByText("Where can the party go next, and what door, stair, or passage shows it?"),
     ).toBeTruthy();
     expect(
       screen.getByText("What should players notice first, and what can they discover with care?"),
     ).toBeTruthy();
     expect(
-      screen.getByText("Where does this room sit relative to the floor and nearby exits?"),
+      screen.getByText("Where does this room sit relative to the floor and connected rooms?"),
     ).toBeTruthy();
 
-    fireEvent.click(screen.getByRole("button", { name: "Add an encounter" }));
-    fireEvent.click(screen.getByRole("button", { name: "Link an exit" }));
+    fireEvent.click(screen.getByRole("button", { name: "Link a room" }));
     fireEvent.click(screen.getByRole("button", { name: "Add room notes" }));
     fireEvent.click(screen.getByRole("button", { name: "Place on map" }));
 
-    expect(onAddEncounter).toHaveBeenCalled();
     expect(onLinkExit).toHaveBeenCalled();
     expect(onEditNotes).toHaveBeenCalled();
     expect(onOpenMaps).toHaveBeenCalled();
@@ -61,7 +54,6 @@ describe("PrepOverviewCard", () => {
         location={location({ mapAnchor: { marker: "A1" } })}
         maps={[]}
         showRoomNextSteps
-        onAddEncounter={vi.fn()}
         onEditNotes={vi.fn()}
         onLinkExit={vi.fn()}
         onOpenMaps={vi.fn()}
@@ -71,7 +63,7 @@ describe("PrepOverviewCard", () => {
     expect(screen.queryByText("Next prep steps")).toBeNull();
   });
 
-  it("can hide the repeated prep header encounter action", () => {
+  it("keeps encounter creation out of prep overview", () => {
     render(
       <PrepOverviewCard
         childLocations={[]}
@@ -79,14 +71,12 @@ describe("PrepOverviewCard", () => {
         links={[]}
         location={location({ notes: "", publicNotes: "" })}
         maps={[]}
-        showEncounterAction={false}
         showRoomNextSteps
-        onAddEncounter={vi.fn()}
       />,
     );
 
     expect(screen.queryByRole("button", { name: "Add encounter" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Add an encounter" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Add an encounter" })).toBeNull();
   });
 
   it("summarizes running cues for prepared exploration spaces", () => {
@@ -97,14 +87,13 @@ describe("PrepOverviewCard", () => {
         links={[link()]}
         location={location({ summary: "A flooded archive with a whispering shelf." })}
         maps={[]}
-        onAddEncounter={vi.fn()}
       />,
     );
 
     expect(screen.getByText("Running cues")).toBeTruthy();
     expect(screen.getByText("A flooded archive with a whispering shelf.")).toBeTruthy();
     expect(screen.getByText("2 of 2 encounters planned to run.")).toBeTruthy();
-    expect(screen.getByText("1 exit can move players onward.")).toBeTruthy();
+    expect(screen.getByText("1 connected room can move players onward.")).toBeTruthy();
     expect(screen.getByText("Notes are ready; map context is missing.")).toBeTruthy();
   });
 
@@ -116,7 +105,6 @@ describe("PrepOverviewCard", () => {
         links={[]}
         location={location({ notes: "", publicNotes: "" })}
         maps={[]}
-        onAddEncounter={vi.fn()}
       />,
     );
 

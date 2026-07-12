@@ -1,9 +1,10 @@
 import type { DungeonStudioTool } from "./dungeonStudioEditing";
 
-export type ToolMode = "select" | "floor" | "terrain" | "room" | "delete";
+export type ToolMode = "select" | "floor" | "terrain" | "room" | "object" | "delete";
 
 export function modeForTool(tool: DungeonStudioTool): ToolMode {
   if (tool === "select") return "select";
+  if (tool === "object") return "object";
   if (tool === "water" || tool === "chasm" || tool === "cliff" || tool === "cliff-edge") {
     return "terrain";
   }
@@ -28,6 +29,8 @@ export function modeLabel(mode: ToolMode) {
       return "Terrain";
     case "room":
       return "Room";
+    case "object":
+      return "Objects";
     case "delete":
       return "Delete";
   }
@@ -75,6 +78,8 @@ export function toolLabel(tool: DungeonStudioTool) {
       return "Door";
     case "cliff-edge":
       return "Cliff Edge";
+    case "object":
+      return "Object";
   }
 }
 
@@ -120,5 +125,7 @@ export function toolTip(tool: DungeonStudioTool) {
       return "Click near a valid floor or terrain edge to place or remove a closed door.";
     case "cliff-edge":
       return "Click near a valid floor or terrain edge to toggle an amber cliff boundary.";
+    case "object":
+      return "Choose a catalog item, then click a grid cell to place it. Select placed objects to rotate, duplicate, move, or delete.";
   }
 }

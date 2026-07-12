@@ -16,10 +16,10 @@ export function CampaignWorkspaceTabs({ campaignId }: { campaignId: string }) {
           to={tab.to}
           className={({ isActive }) =>
             [
-              "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition",
+              "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
               isActive
-                ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary",
+                ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                : "border-border bg-surface text-surface-foreground hover:border-primary/40 hover:bg-card hover:text-foreground",
             ].join(" ")
           }
         >

@@ -1,32 +1,30 @@
-import { CheckCircle2, FilePenLine, MapPin, Route, Swords } from "lucide-react";
+import { CheckCircle2, FilePenLine, MapPin, Route } from "lucide-react";
 import type React from "react";
 import { CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
 import { Button } from "../../../components/ui";
 import type { Encounter } from "../../../types";
-import { MapStat } from "./CampaignWorldLocationProfileCards";
+import { MapStat } from "./CampaignWorldMapStat";
 import type { CampaignLocation, CampaignLocationLink, CampaignMap } from "./travelTypes";
 
 export function PrepOverviewCard({
   childLocations,
+  connectedRoomCount = 0,
   encounters,
   links,
   location,
   maps,
-  showEncounterAction = true,
   showRoomNextSteps = false,
-  onAddEncounter,
   onEditNotes,
   onLinkExit,
   onOpenMaps,
 }: {
   childLocations: CampaignLocation[];
+  connectedRoomCount?: number;
   encounters: Encounter[];
   links: CampaignLocationLink[];
   location: CampaignLocation;
   maps: CampaignMap[];
-  showEncounterAction?: boolean;
   showRoomNextSteps?: boolean;
-  onAddEncounter: () => void;
   onEditNotes?: () => void;
   onLinkExit?: () => void;
   onOpenMaps?: () => void;
@@ -37,13 +35,12 @@ export function PrepOverviewCard({
   const hasMap = maps.some((map) => (map.parentLocationId ?? "") === location.id);
   const hasPlacement = Object.keys(location.mapAnchor ?? {}).length > 0;
   const hasMapContext = hasMap || hasPlacement;
+  const effectiveConnectionCount = links.length + connectedRoomCount;
   const nextSteps = showRoomNextSteps
     ? roomNextSteps({
         hasMapContext,
         hasNotes,
-        encounterCount: encounters.length,
-        exitCount: links.length,
-        onAddEncounter,
+        connectionCount: effectiveConnectionCount,
         onEditNotes,
         onLinkExit,
         onOpenMaps,
@@ -51,6 +48,7 @@ export function PrepOverviewCard({
     : [];
   const runningCues = runningCuesFor({
     childLocations,
+    connectedRoomCount,
     encounters,
     hasMapContext,
     hasNotes,
@@ -60,28 +58,15 @@ export function PrepOverviewCard({
 
   return (
     <CardSection>
-      <SectionHeader
-        action={
-          showEncounterAction ? (
-            <Button
-              type="button"
-              icon={Swords}
-              size="sm"
-              variant="secondary"
-              onClick={onAddEncounter}
-            >
-              Add encounter
-            </Button>
-          ) : undefined
-        }
-        icon={CheckCircle2}
-        title="Prep overview"
-        meta="Ready-to-run signals"
-      />
+      <SectionHeader icon={CheckCircle2} title="Prep overview" meta="Ready-to-run signals" />
       <ResponsiveGrid className="mt-3" variant="stats3">
-        <MapStat label="Encounters" value={encounters.length} />
-        <MapStat label="Exits/links" value={links.length} />
-        <MapStat label="Child spaces" value={childLocations.length} />
+        <MapStat label="Encounters" tone="primary" value={encounters.length} />
+        <MapStat
+          label={showRoomNextSteps ? "Connected rooms" : "Exits/links"}
+          tone="secondary"
+          value={effectiveConnectionCount}
+        />
+        <MapStat label="Child spaces" tone="tertiary" value={childLocations.length} />
       </ResponsiveGrid>
       <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
         <PrepSignal label="Notes" ready={hasNotes} readyText="Prepared" emptyText="Needs notes" />
@@ -149,39 +134,26 @@ function RoomNextSteps({ steps }: { steps: RoomNextStep[] }) {
 }
 
 function roomNextSteps({
-  encounterCount,
-  exitCount,
+  connectionCount,
   hasMapContext,
   hasNotes,
-  onAddEncounter,
   onEditNotes,
   onLinkExit,
   onOpenMaps,
 }: {
-  encounterCount: number;
-  exitCount: number;
+  connectionCount: number;
   hasMapContext: boolean;
   hasNotes: boolean;
-  onAddEncounter: () => void;
   onEditNotes?: () => void;
   onLinkExit?: () => void;
   onOpenMaps?: () => void;
 }): RoomNextStep[] {
   const steps: Array<RoomNextStep | null> = [
-    encounterCount === 0
+    connectionCount === 0 && onLinkExit
       ? {
-          actionLabel: "Add an encounter",
-          icon: Swords,
-          label: "Threat or scene beat",
-          prompt: "What changes if the party waits, searches, or makes noise here?",
-          onClick: onAddEncounter,
-        }
-      : null,
-    exitCount === 0 && onLinkExit
-      ? {
-          actionLabel: "Link an exit",
+          actionLabel: "Link a room",
           icon: Route,
-          label: "Player routes",
+          label: "Connected rooms",
           prompt: "Where can the party go next, and what door, stair, or passage shows it?",
           onClick: onLinkExit,
         }
@@ -200,7 +172,7 @@ function roomNextSteps({
           actionLabel: "Place on map",
           icon: MapPin,
           label: "Map position",
-          prompt: "Where does this room sit relative to the floor and nearby exits?",
+          prompt: "Where does this room sit relative to the floor and connected rooms?",
           onClick: onOpenMaps,
         }
       : null,
@@ -222,7 +194,7 @@ function PrepSignal({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-2">
       <span className="font-semibold text-foreground">{label}</span>
-      <span className={ready ? "text-emerald-700 dark:text-emerald-200" : "text-muted-foreground"}>
+      <span className={ready ? "text-success" : "text-muted-foreground"}>
         {ready ? readyText : emptyText}
       </span>
     </div>
@@ -231,6 +203,7 @@ function PrepSignal({
 
 function runningCuesFor({
   childLocations,
+  connectedRoomCount,
   encounters,
   hasMapContext,
   hasNotes,
@@ -238,6 +211,7 @@ function runningCuesFor({
   location,
 }: {
   childLocations: CampaignLocation[];
+  connectedRoomCount: number;
   encounters: Encounter[];
   hasMapContext: boolean;
   hasNotes: boolean;
@@ -247,7 +221,7 @@ function runningCuesFor({
   const plannedEncounters = encounters.filter((encounter) =>
     ["active", "planned", "ready", "running"].includes((encounter.status || "").toLowerCase()),
   );
-  const namedExits = links.filter((link) => link.label || link.linkType);
+  const connectionCount = links.length + connectedRoomCount;
   return [
     {
       label: "Scene focus",
@@ -265,11 +239,11 @@ function runningCuesFor({
     },
     {
       label: "Routes",
-      copy: links.length
-        ? `${namedExits.length || links.length} exit${links.length === 1 ? "" : "s"} can move players onward.`
+      copy: connectionCount
+        ? `${connectionCount} connected room${connectionCount === 1 ? "" : "s"} can move players onward.`
         : childLocations.length
-          ? `${childLocations.length} child space${childLocations.length === 1 ? "" : "s"} exist; add exits when routes matter at the table.`
-          : "No exits or child spaces yet; add a route before this blocks exploration.",
+          ? `${childLocations.length} child space${childLocations.length === 1 ? "" : "s"} exist; add connections when routes matter at the table.`
+          : "No connected rooms or child spaces yet; add a route before this blocks exploration.",
     },
     {
       label: "References",

@@ -6,7 +6,6 @@ import type { Creature, Encounter } from "../../../types";
 import { CampaignWorldSection } from "./CampaignWorldSection";
 import { creature, item, location } from "./CampaignWorldSectionTestFixtures";
 import type { CampaignLocation } from "./travelTypes";
-
 vi.mock("../../../lib/api", () => ({
   api: {
     deleteCampaignLocation: vi.fn(),
@@ -153,7 +152,7 @@ describe("CampaignWorldSection", () => {
     });
 
     expect((await screen.findAllByText("Copper Kettle Cellar")).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole("button", { name: "Add an encounter" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add encounter" }));
 
     expect(onGenerateEncounter).toHaveBeenCalledWith(
       expect.objectContaining({ id: "room-1", name: "Copper Kettle Cellar" }),
@@ -196,7 +195,8 @@ describe("CampaignWorldSection", () => {
       ],
     });
 
-    fireEvent.click(await screen.findByRole("button", { name: "Link exit" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Connected rooms" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Link room" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Connect to"), {
       target: { value: "dungeon-1" },
@@ -219,7 +219,7 @@ describe("CampaignWorldSection", () => {
         visibility: "dm",
       }),
     );
-    expect(await screen.findByText("Trapdoor - Hidden below the rug.")).toBeTruthy();
+    expect(await screen.findByText("Trapdoor to Old Well")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
 
     await waitFor(() =>
@@ -229,6 +229,7 @@ describe("CampaignWorldSection", () => {
 
   it("reuses campaign encounter actions for encounters attached to the selected location", async () => {
     const onCloneEncounter = vi.fn();
+    const onDeleteEncounter = vi.fn();
     const onStartEncounter = vi.fn();
     const encounter: Encounter = {
       id: "encounter-1",
@@ -245,25 +246,27 @@ describe("CampaignWorldSection", () => {
       createdAt: "",
       updatedAt: "",
     };
-    renderWorld({ encounters: [encounter], onCloneEncounter, onStartEncounter });
+    renderWorld({ encounters: [encounter], onCloneEncounter, onDeleteEncounter, onStartEncounter });
 
-    const encounterCard = (await screen.findByText("Shop Brawl")).closest("div.rounded-md");
+    fireEvent.click(await screen.findByRole("button", { name: "Encounters" }));
+    const encounterCard = (await screen.findByText("Shop Brawl")).closest("article");
     expect(encounterCard).not.toBeNull();
     const card = encounterCard as HTMLElement;
     expect(within(card).getByText("Planned")).toBeTruthy();
-    expect(within(card).getByText("Brindleford / Copper Kettle")).toBeTruthy();
     expect(within(card).getByText("Room front")).toBeTruthy();
+    expect(within(card).queryByText(/Initiative/i)).toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: "Run" }));
     expect(onStartEncounter).toHaveBeenCalledWith(encounter, false);
-    fireEvent.click(within(card).getByRole("button", { name: "Test" }));
-    expect(onStartEncounter).toHaveBeenCalledWith(encounter, true);
+    expect(within(card).queryByRole("button", { name: "Test" })).toBeNull();
+    fireEvent.click(within(card).getByText("More"));
     expect(within(card).getByRole("link", { name: "Edit" }).getAttribute("href")).toBe(
       "/campaigns/campaign-1/encounters/encounter-1/edit",
     );
     fireEvent.click(within(card).getByRole("button", { name: "Clone" }));
     expect(onCloneEncounter).toHaveBeenCalledWith(encounter);
-    expect(within(card).queryByRole("button", { name: "Remove" })).toBeNull();
+    fireEvent.click(within(card).getByRole("button", { name: "Delete" }));
+    expect(onDeleteEncounter).toHaveBeenCalledWith(encounter);
   });
 
   it("creates and removes NPC links from a dialog without relationship clutter", async () => {
@@ -294,7 +297,6 @@ describe("CampaignWorldSection", () => {
     expect(await screen.findByRole("dialog", { name: "Mara Vell" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
-
     await waitFor(() =>
       expect(api.deleteCampaignNpcLocationLink).toHaveBeenCalledWith(
         "campaign-1",
@@ -307,14 +309,13 @@ describe("CampaignWorldSection", () => {
     renderWorld();
 
     expect(screen.queryByLabelText("Item")).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Inventory" }));
     fireEvent.click(await screen.findByRole("button", { name: "Add stock" }));
     const dialog = await screen.findByRole("dialog");
     fireEvent.change(within(dialog).getByLabelText("Search items"), {
       target: { value: "healing" },
     });
-    const stockItem = within(dialog).getByText("Healing Draught").closest("article");
-    expect(stockItem).not.toBeNull();
-    fireEvent.click(within(stockItem as HTMLElement).getByRole("button", { name: "Add" }));
+    fireEvent.click(within(dialog).getByText("Healing Draught").closest("button") as HTMLElement);
     fireEvent.change(within(dialog).getByLabelText("Qty"), { target: { value: "4" } });
     fireEvent.change(within(dialog).getByLabelText("Price"), { target: { value: "75" } });
     fireEvent.change(within(dialog).getByLabelText("Currency"), { target: { value: "sp" } });
@@ -324,6 +325,7 @@ describe("CampaignWorldSection", () => {
     fireEvent.change(within(dialog).getByLabelText("Stock notes"), {
       target: { value: "Behind the counter." },
     });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Review" }));
     fireEvent.click(within(dialog).getByRole("button", { name: "Add 1 stock item" }));
 
     await waitFor(() =>
@@ -348,7 +350,8 @@ describe("CampaignWorldSection", () => {
     const pricingDialog = await screen.findByRole("dialog", { name: "Shop pricing" });
     expect(within(pricingDialog).getByText("75 sp")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    fireEvent.click(within(stockRow as HTMLElement).getByLabelText("Manage Healing Draught stock"));
+    fireEvent.click(within(stockRow as HTMLElement).getByRole("button", { name: "Remove" }));
 
     await waitFor(() =>
       expect(api.deleteCampaignLocationStock).toHaveBeenCalledWith("campaign-1", "stock-1"),
@@ -427,7 +430,7 @@ describe("CampaignWorldSection", () => {
     let results = screen.getByLabelText("Location results");
     expect(within(results).getByText("Copper Kettle")).toBeTruthy();
     expect(within(results).queryByText("Old Well")).toBeNull();
-    expect(screen.getByText(/Showing\s+1\s+of\s+2\./)).toBeTruthy();
+    expect(screen.getByText(/1\s+of\s+2\s+shown/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear location search" }));
     fireEvent.change(screen.getByLabelText("Search locations"), {
@@ -463,8 +466,8 @@ function renderWorld({
   npcs = [],
   onChanged = vi.fn().mockResolvedValue(undefined),
   onCloneEncounter = vi.fn(),
+  onDeleteEncounter = vi.fn(),
   onGenerateEncounter = vi.fn(),
-  onManageNpcs = vi.fn(),
   onStartEncounter = vi.fn(),
   locations = [location()],
 }: {
@@ -472,8 +475,8 @@ function renderWorld({
   npcs?: Creature[];
   onChanged?: () => Promise<void>;
   onCloneEncounter?: (encounter: Encounter) => void;
+  onDeleteEncounter?: (encounter: Encounter) => void;
   onGenerateEncounter?: (location: CampaignLocation) => void;
-  onManageNpcs?: () => void;
   onStartEncounter?: (encounter: Encounter, test: boolean) => void;
   locations?: CampaignLocation[];
 } = {}) {
@@ -484,9 +487,10 @@ function renderWorld({
         encounters={encounters}
         locations={locations}
         npcs={npcs}
-        onManageNpcs={onManageNpcs}
+        onManageNpcs={vi.fn()}
         onChanged={onChanged}
         onCloneEncounter={onCloneEncounter}
+        onDeleteEncounter={onDeleteEncounter}
         onGenerateEncounter={onGenerateEncounter}
         onStartEncounter={onStartEncounter}
       />

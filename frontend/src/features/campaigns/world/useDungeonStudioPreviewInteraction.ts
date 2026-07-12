@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import {
   applyEdgeFeatureStroke,
   canToggleEdgeFeature,
   edgeFeatureAt,
+  entityAtCell,
   nextRoomRegionId,
   paintRoomCells,
+  placeObjectEntity,
   roomFillCells,
   roomRegionForCell,
   toggleEdgeFeature,
@@ -13,11 +15,14 @@ import {
   type DungeonStudioSelection,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import { cellKey, type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
+import { type DungeonStudioDocument, type GridCell } from "./dungeonStudioDocument";
 import {
-  edgeDragDirectionForAxis,
+  edgeDragStateFromPoint,
+  edgePathForDrag,
+  hoverEdgePath,
   updateEdgeDragAxis,
   type DungeonStudioEdgeDragState,
+  type DungeonStudioEdgePathSegment,
 } from "./dungeonStudioEdgeDrag";
 import {
   brushShapeCells,
@@ -55,6 +60,7 @@ type UseDungeonStudioPreviewInteractionArgs = {
   brushShape: DungeonStudioBrushShape;
   deleteTarget: DungeonStudioDeleteTarget;
   document: DungeonStudioDocument;
+  selectedObjectAssetKey: string;
   selected: DungeonStudioSelection;
   onDocumentChange: (
     update: (current: DungeonStudioDocument) => DungeonStudioDocument,
@@ -69,6 +75,7 @@ export function useDungeonStudioPreviewInteraction({
   deleteTarget,
   document,
   selected,
+  selectedObjectAssetKey,
   onDocumentChange,
 }: UseDungeonStudioPreviewInteractionArgs) {
   const viewport = useDungeonStudioViewport(document);
@@ -79,24 +86,14 @@ export function useDungeonStudioPreviewInteraction({
   const edgeStrokeAction = useRef<DungeonStudioEdgeStrokeAction>("add");
   const edgeStrokeKind = useRef<"wall" | "cliff-edge">("wall");
   const edgeDrag = useRef<DungeonStudioEdgeDragState | null>(null);
-  const roomSelectionCells = useRef<GridCell[]>([]);
   const roomBrushTargetId = useRef<string | null>(null);
   const shapeDraftRef = useRef<ShapeDraft | null>(null);
   const eraseShapeDraft = useRef(false);
   const lastPaintedCell = useRef("");
-  const lastPaintedEdge = useRef("");
   const [shapeDraft, setShapeDraft] = useState<ShapeDraft | null>(null);
   const [fillPreviewCells, setFillPreviewCells] = useState<GridCell[]>([]);
-  const floorCellKeys = useMemo(
-    () =>
-      new Set(
-        document.layers
-          .filter((layer) => layer.cellKind === "floor")
-          .flatMap((layer) => layer.cells.map(cellKey)),
-      ),
-    [document.layers],
-  );
-
+  const [edgePreview, setEdgePreview] = useState<DungeonStudioEdgePathSegment[]>([]);
+  const edgePreviewRef = useRef<DungeonStudioEdgePathSegment[]>([]);
   useEffect(() => {
     if (activeTool !== "room-fill") setFillPreviewCells([]);
   }, [activeTool]);
@@ -113,6 +110,11 @@ export function useDungeonStudioPreviewInteraction({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  function setEdgePreviewState(edges: DungeonStudioEdgePathSegment[]) {
+    edgePreviewRef.current = edges;
+    setEdgePreview(edges);
+  }
+
   function handlePointerDown(event: PointerEvent<HTMLDivElement>) {
     if (event.altKey || event.button === 1) {
       event.preventDefault();
@@ -121,14 +123,10 @@ export function useDungeonStudioPreviewInteraction({
     event.preventDefault();
     safeSetPointerCapture(event);
     if (event.button === 2) return startEraseStroke(event);
-    if (activeTool === "select") return selectCell(event);
+    if (activeTool === "select" || activeTool === "room-select") return selectCell(event);
+    if (activeTool === "object") return placeSelectedObject(event);
     if (activeTool === "room-fill") return applyRoomFill(event);
     if (isDraggableEdgeTool(activeTool)) return startEdgeStroke(event);
-    if (activeTool === "room-select" && brushShape === "single") {
-      drawing.current = true;
-      roomSelectionCells.current = [];
-      return addRoomSelectionCell(event);
-    }
     if (usesBrushShapeDraft(activeTool, brushShape)) return startBrushShapeDraft(event);
     if (isBrushTool(activeTool)) {
       roomBrushTargetId.current =
@@ -146,15 +144,15 @@ export function useDungeonStudioPreviewInteraction({
     if (viewport.isPanning()) return viewport.movePan(event);
     if (shapeDraftRef.current) return updateShapeDraft(event);
     if (activeTool === "room-fill") updateRoomFillPreview(event);
-    if (!drawing.current) return;
-    if (edgeStrokeStarted.current) applyEdgeStroke(event);
-    else if (activeTool === "room-select" && !erasingStroke.current) addRoomSelectionCell(event);
+    if (!drawing.current) return updateHoverPreview(event);
+    if (edgeStrokeStarted.current) updateEdgeStrokePreview(event);
     else applyCellTool(event);
   }
 
   function handlePointerEnd(event: PointerEvent<HTMLDivElement>) {
     viewport.endPan();
     if (shapeDraftRef.current) applyShapeDraft(event);
+    if (edgeStrokeStarted.current) commitEdgeStroke();
     resetStrokeState();
   }
 
@@ -166,6 +164,7 @@ export function useDungeonStudioPreviewInteraction({
 
   function handlePointerLeave() {
     setFillPreviewCells([]);
+    if (!drawing.current) setEdgePreviewState([]);
   }
 
   function startEraseStroke(event: PointerEvent<HTMLDivElement>) {
@@ -182,11 +181,10 @@ export function useDungeonStudioPreviewInteraction({
     brushStrokeStarted.current = false;
     erasingStroke.current = false;
     edgeStrokeStarted.current = false;
-    roomSelectionCells.current = [];
     roomBrushTargetId.current = null;
     lastPaintedCell.current = "";
-    lastPaintedEdge.current = "";
     edgeDrag.current = null;
+    setEdgePreviewState([]);
     eraseShapeDraft.current = false;
   }
 
@@ -260,24 +258,24 @@ export function useDungeonStudioPreviewInteraction({
   function selectCell(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
     if (!point) return;
+    const entity = entityAtCell(document, point.cell);
     const room = roomRegionForCell(document, point.cell);
     onDocumentChange(
       (current) => current,
-      room
-        ? { type: "region", cells: room.cells, label: room.label, roomId: room.id }
-        : { type: "cell", cell: point.cell },
+      entity
+        ? { type: "entity", entityId: entity.id }
+        : room
+          ? { type: "region", cells: room.cells, label: room.label, roomId: room.id }
+          : { type: "cell", cell: point.cell },
     );
   }
 
-  function addRoomSelectionCell(event: PointerEvent<HTMLDivElement>) {
+  function placeSelectedObject(event: PointerEvent<HTMLDivElement>) {
     const point = gridPointForEvent(event);
-    if (!point || !floorCellKeys.has(cellKey(point.cell))) return;
-    if (roomSelectionCells.current.some((cell) => cellKey(cell) === cellKey(point.cell))) return;
-    roomSelectionCells.current = [...roomSelectionCells.current, point.cell];
-    onDocumentChange((current) => current, {
-      type: "region",
-      cells: roomSelectionCells.current,
-      label: "Room selection",
+    if (!point || !selectedObjectAssetKey) return;
+    onDocumentChange((current) => placeObjectEntity(current, point.cell, selectedObjectAssetKey), {
+      type: "cell",
+      cell: point.cell,
     });
   }
 
@@ -340,8 +338,7 @@ export function useDungeonStudioPreviewInteraction({
         : "add";
     drawing.current = true;
     edgeStrokeStarted.current = true;
-    lastPaintedEdge.current = "";
-    applyEdgeStroke(event);
+    updateEdgeStrokePreview(event);
   }
 
   function startEdgeEraseStroke(event: PointerEvent<HTMLDivElement>) {
@@ -352,40 +349,41 @@ export function useDungeonStudioPreviewInteraction({
     edgeStrokeKind.current = activeTool === "cliff-edge" ? "cliff-edge" : "wall";
     drawing.current = true;
     edgeStrokeStarted.current = true;
-    lastPaintedEdge.current = "";
-    applyEdgeStroke(event);
+    updateEdgeStrokePreview(event);
   }
 
-  function applyEdgeStroke(event: PointerEvent<HTMLDivElement>) {
+  function updateHoverPreview(event: PointerEvent<HTMLDivElement>) {
+    if (!isDraggableEdgeTool(activeTool) && activeTool !== "door") return setEdgePreviewState([]);
     const point = edgePointForEvent(event);
-    if (!point) return;
-    const key = `${point.cell.x},${point.cell.y},${point.direction}`;
-    if (key === lastPaintedEdge.current) return;
-    lastPaintedEdge.current = key;
+    setEdgePreviewState(point ? hoverEdgePath(point) : []);
+  }
+
+  function updateEdgeStrokePreview(event: PointerEvent<HTMLDivElement>) {
+    const point = edgePointForEvent(event);
+    const drag = edgeDrag.current;
+    if (!point || !drag) return;
+    edgeDrag.current = updateEdgeDragAxis(drag, point.svgX, point.svgY);
+    setEdgePreviewState(edgePathForDrag(edgeDrag.current, point));
+  }
+
+  function commitEdgeStroke() {
+    const preview = edgePreviewRef.current;
     const kind = edgeStrokeKind.current;
-    if (
-      edgeStrokeAction.current === "add" &&
-      !canToggleEdgeFeature(document, point.cell, point.direction)
-    ) {
-      onDocumentChange((current) => current, {
-        type: "edge",
-        cell: point.cell,
-        direction: point.direction,
-        kind: `Invalid ${kind}`,
-      });
-      return;
-    }
+    const validPreview = preview.filter(
+      (edge) =>
+        edgeStrokeAction.current === "remove" ||
+        canToggleEdgeFeature(document, edge.cell, edge.direction),
+    );
+    const first = validPreview[0];
+    if (!first) return;
     onDocumentChange(
       (current) =>
-        applyEdgeFeatureStroke(
+        validPreview.reduce(
+          (next, edge) =>
+            applyEdgeFeatureStroke(next, edge.cell, edge.direction, kind, edgeStrokeAction.current),
           current,
-          point.cell,
-          point.direction,
-          kind,
-          edgeStrokeAction.current,
         ),
-      { type: "edge", cell: point.cell, direction: point.direction, kind },
-      { mergeWithPrevious: brushStrokeStarted.current },
+      { type: "edge", cell: first.cell, direction: first.direction, kind },
     );
     brushStrokeStarted.current = true;
   }
@@ -436,28 +434,16 @@ export function useDungeonStudioPreviewInteraction({
     if (activeTool === "diagonal-wall") {
       return { ...point, direction: closestDiagonalDirection(point.localX, point.localY) };
     }
-    if (edgeDrag.current) {
-      edgeDrag.current = updateEdgeDragAxis(edgeDrag.current, point.svgX, point.svgY);
-    }
     return {
       ...point,
       direction:
-        (edgeDrag.current ? edgeDragDirectionForAxis(edgeDrag.current) : undefined) ??
-        closestOrthogonalDirection(point.localX, point.localY),
+        edgeDrag.current?.startDirection ?? closestOrthogonalDirection(point.localX, point.localY),
     };
-  }
-
-  function edgeDragStateFromPoint(point: NonNullable<ReturnType<typeof gridPointForEvent>>) {
-    return {
-      startSvgX: point.svgX,
-      startSvgY: point.svgY,
-      startLocalX: point.localX,
-      startLocalY: point.localY,
-    } satisfies DungeonStudioEdgeDragState;
   }
 
   return {
     dimensions: viewport.dimensions,
+    edgePreview,
     fillPreviewCells,
     handlePointerCancel,
     handlePointerDown,

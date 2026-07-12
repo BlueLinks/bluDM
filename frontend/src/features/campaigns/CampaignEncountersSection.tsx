@@ -1,9 +1,8 @@
 import { ClipboardList, Copy, FlaskConical, Pencil, Play, Plus, Trash2 } from "lucide-react";
-import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Badge, Button, EmptyMini, SectionPanel } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
-import type { Encounter } from "../../types";
+import type { Creature, Encounter, Player } from "../../types";
 import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import type { CampaignLocation } from "./world/travelTypes";
 
@@ -12,48 +11,28 @@ const encounterStatusLabel = (status: string) =>
 
 export function CampaignEncountersSection({
   campaignID,
-  description,
   encounterOpen,
   encounters,
-  location,
-  locationID,
   locations,
-  name,
-  roomNumber,
-  status,
+  npcs,
+  players,
   onClone,
-  onCreate,
-  onDescriptionChange,
-  onLocationChange,
-  onLocationIDChange,
-  onNameChange,
   onOpenChange,
   onRemove,
-  onRoomNumberChange,
   onStart,
-  onStatusChange,
+  onCreated,
 }: {
   campaignID: string;
-  description: string;
   encounterOpen: boolean;
   encounters: Encounter[];
-  location: string;
-  locationID: string;
   locations: CampaignLocation[];
-  name: string;
-  roomNumber: string;
-  status: string;
+  npcs: Creature[];
+  players: Player[];
   onClone: (encounter: Encounter) => void;
-  onCreate: (event: FormEvent) => void;
-  onDescriptionChange: (description: string) => void;
-  onLocationChange: (location: string) => void;
-  onLocationIDChange: (locationID: string) => void;
-  onNameChange: (name: string) => void;
   onOpenChange: (open: boolean) => void;
   onRemove: (encounter: Encounter) => void;
-  onRoomNumberChange: (roomNumber: string) => void;
   onStart: (encounter: Encounter, test: boolean) => void;
-  onStatusChange: (status: string) => void;
+  onCreated?: () => Promise<void> | void;
 }) {
   return (
     <SectionPanel title="Encounters" icon={ClipboardList}>
@@ -75,27 +54,18 @@ export function CampaignEncountersSection({
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         <CampaignEncounterCreateDialog
-          description={description}
-          location={location}
-          locationID={locationID}
+          campaignId={campaignID}
           locations={locations}
-          name={name}
+          npcs={npcs}
           open={encounterOpen}
-          roomNumber={roomNumber}
-          status={status}
+          players={players}
           trigger={
-            <Button type="button" icon={Plus} variant="success">
+            <Button type="button" icon={Plus}>
               Add encounter
             </Button>
           }
-          onCreate={onCreate}
-          onDescriptionChange={onDescriptionChange}
-          onLocationChange={onLocationChange}
-          onLocationIDChange={onLocationIDChange}
-          onNameChange={onNameChange}
+          onCreated={onCreated}
           onOpenChange={onOpenChange}
-          onRoomNumberChange={onRoomNumberChange}
-          onStatusChange={onStatusChange}
         />
         <Button type="button" variant="secondary" disabled>
           Import encounter
@@ -127,11 +97,13 @@ export function CampaignEncounterCard({
             <p className="mt-1 text-sm text-muted-foreground">{encounter.description}</p>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge>{encounterStatusLabel(encounter.status)}</Badge>
-            {encounter.location && <Badge>{encounter.location}</Badge>}
-            {encounter.roomNumber && <Badge>Room {encounter.roomNumber}</Badge>}
-            <Badge>{encounter.combatantCount} combatants</Badge>
-            <Badge>{encounter.enemyCount} enemies</Badge>
+            <Badge tone={encounter.status === "completed" ? "published" : "draft"}>
+              {encounterStatusLabel(encounter.status)}
+            </Badge>
+            {encounter.location && <Badge tone="shared">{encounter.location}</Badge>}
+            {encounter.roomNumber && <Badge tone="metadata">Room {encounter.roomNumber}</Badge>}
+            <Badge tone="info">{encounter.combatantCount} combatants</Badge>
+            <Badge tone="warning">{encounter.enemyCount} enemies</Badge>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -142,7 +114,7 @@ export function CampaignEncounterCard({
             type="button"
             icon={FlaskConical}
             size="sm"
-            variant="secondary"
+            variant="tertiary"
             onClick={() => onStart(encounter, true)}
           >
             Test

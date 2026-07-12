@@ -1,15 +1,11 @@
-import { ClipboardList, Map, Plus, Swords } from "lucide-react";
-import { useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
+import { useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../../app/shell";
-import { ActionRow, ResponsiveGrid } from "../../../components/layout";
 import {
   Button,
   Callout,
-  EmptyMini,
   MutedPanel,
   Page,
-  PageHeader,
   ToastViewport,
   useToasts,
 } from "../../../components/ui";
@@ -19,11 +15,9 @@ import { CampaignEncounterCreateDialog } from "../CampaignEncounterCreateDialog"
 import { CampaignTravelTool } from "../CampaignTravelTool";
 import { CampaignWorkspaceTabs } from "../CampaignWorkspaceTabs";
 import { CampaignWorldSection } from "./CampaignWorldSection";
-import { locationPathLabel } from "./campaignWorldLocationUtils";
-import { locationProfile } from "./locationProfiles";
-import { TravelPanel } from "./TravelPanel";
 import { useCampaignWorkspaceData } from "./useCampaignWorkspaceData";
 import type { CampaignJourney, CampaignLocation } from "./travelTypes";
+import "./campaignWorldExperience.scss";
 
 export function CampaignWorldPage() {
   const { campaignID, locationID } = useParams();
@@ -38,40 +32,8 @@ export function CampaignWorldPage() {
   );
   const [travelOpenRequest, setTravelOpenRequest] = useState(0);
   const [encounterOpen, setEncounterOpen] = useState(false);
-  const [encounterName, setEncounterName] = useState("");
-  const [encounterDescription, setEncounterDescription] = useState("");
-  const [encounterStatus, setEncounterStatus] = useState("planned");
-  const [encounterLocation, setEncounterLocation] = useState("");
-  const [encounterLocationID, setEncounterLocationID] = useState("");
-  const [encounterRoomNumber, setEncounterRoomNumber] = useState("");
+  const [encounterLocationId, setEncounterLocationId] = useState("");
   const toast = useToasts();
-
-  async function createEncounter(event: FormEvent) {
-    event.preventDefault();
-    if (!detail || !encounterName.trim()) return;
-    setError("");
-    try {
-      const payload = await api.createEncounter(detail.campaign.id, {
-        name: encounterName,
-        description: encounterDescription,
-        status: encounterStatus,
-        location: encounterLocation,
-        locationId: encounterLocationID || undefined,
-        roomNumber: encounterRoomNumber,
-      });
-      toast.push(`${payload.encounter.name} created`);
-      setEncounterName("");
-      setEncounterDescription("");
-      setEncounterStatus("planned");
-      setEncounterLocation("");
-      setEncounterLocationID("");
-      setEncounterRoomNumber("");
-      setEncounterOpen(false);
-      await loadCampaign();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create encounter");
-    }
-  }
 
   async function cloneEncounter(encounter: Encounter) {
     setError("");
@@ -81,6 +43,17 @@ export function CampaignWorldPage() {
       await loadCampaign();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not clone encounter");
+    }
+  }
+
+  async function deleteEncounter(encounter: Encounter) {
+    setError("");
+    try {
+      await api.deleteEncounter(encounter.id);
+      toast.push(`${encounter.name} deleted`);
+      await loadCampaign();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete encounter");
     }
   }
 
@@ -102,18 +75,7 @@ export function CampaignWorldPage() {
   }
 
   function generateEncounterAtLocation(location: CampaignLocation) {
-    const path = locationPathLabel(location);
-    const profile = locationProfile(location);
-    const roomContext =
-      profile.profile === "room" ? location.name : profile.variant === "floor" ? location.name : "";
-    setEncounterName(`Incident at ${location.name}`);
-    setEncounterDescription(
-      `Generated from ${profile.label.toLowerCase()} location: ${path}. Prep what happens here, then refine trigger, difficulty, and combatants before starting play.`,
-    );
-    setEncounterStatus("planned");
-    setEncounterLocation(path);
-    setEncounterLocationID(location.id);
-    setEncounterRoomNumber(roomContext);
+    setEncounterLocationId(location.id);
     setEncounterOpen(true);
   }
 
@@ -131,7 +93,10 @@ export function CampaignWorldPage() {
   if (!detail) return null;
 
   return (
-    <Page className="2xl:px-2">
+    <Page
+      className="campaign-world-experience content-start px-3 py-3 md:px-4 md:py-4 2xl:px-5"
+      size="workspace"
+    >
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
       <CampaignTravelTool
         campaignId={detail.campaign.id}
@@ -153,120 +118,49 @@ export function CampaignWorldPage() {
           { label: "World" },
         ]}
       />
-      <PageHeader
-        eyebrow="Campaign World"
-        title={`${detail.campaign.name} World`}
-        copy="Build the campaign map, connect NPCs and shops, and generate encounters from the exact place the party stirs up trouble."
-        action={
-          <ActionRow>
-            <Link to={`/campaigns/${detail.campaign.id}`}>
-              <Button type="button" variant="secondary">
-                Overview
-              </Button>
-            </Link>
-            <CampaignEncounterCreateDialog
-              description={encounterDescription}
-              location={encounterLocation}
-              locationID={encounterLocationID}
-              locations={locations}
-              name={encounterName}
-              open={encounterOpen}
-              roomNumber={encounterRoomNumber}
-              status={encounterStatus}
-              trigger={
-                <Button type="button" icon={Plus} variant="secondary">
-                  Create encounter
-                </Button>
-              }
-              onCreate={(event: FormEvent) => void createEncounter(event)}
-              onDescriptionChange={setEncounterDescription}
-              onLocationChange={setEncounterLocation}
-              onLocationIDChange={setEncounterLocationID}
-              onNameChange={setEncounterName}
-              onOpenChange={setEncounterOpen}
-              onRoomNumberChange={setEncounterRoomNumber}
-              onStatusChange={setEncounterStatus}
-            />
-          </ActionRow>
-        }
-      />
+      <CampaignWorldCommandBar campaignName={detail.campaign.name} />
       <CampaignWorkspaceTabs campaignId={detail.campaign.id} />
       {error && <Callout tone="danger">{error}</Callout>}
-      <div className="grid gap-4">
-        <CampaignWorldSection
-          campaignId={detail.campaign.id}
-          encounters={detail.encounters}
-          locations={locations}
-          npcs={detail.npcs}
-          journeys={journeys}
-          mapsMode={mapsMode}
-          routeLocationID={locationID}
-          onManageNpcs={() => void navigate(`/campaigns/${detail.campaign.id}#campaign-npcs`)}
-          onPlanTravel={planTravelFromLocation}
-          onChanged={loadCampaign}
-          onCloneEncounter={(encounter) => void cloneEncounter(encounter)}
-          onGenerateEncounter={generateEncounterAtLocation}
-          onStartEncounter={(encounter, test) => void startEncounter(encounter, test)}
-        />
-        <ResponsiveGrid variant="equal2">
-          <WorldSummary
-            encounterCount={detail.encounterCount}
-            locationCount={detail.locationCount}
-            npcCount={detail.npcs.length}
-          />
-          <TravelPanel
-            campaignId={detail.campaign.id}
-            journeys={journeys}
-            locations={locations}
-            onEditJourney={(journey) => {
-              setTravelPlanningLocation(null);
-              setEditingJourney(journey);
-            }}
-            onChanged={loadCampaign}
-          />
-        </ResponsiveGrid>
-      </div>
+      <CampaignWorldSection
+        campaignId={detail.campaign.id}
+        encounters={detail.encounters}
+        locations={locations}
+        npcs={detail.npcs}
+        journeys={journeys}
+        mapsMode={mapsMode}
+        routeLocationID={locationID}
+        onManageNpcs={() => void navigate(`/campaigns/${detail.campaign.id}#campaign-npcs`)}
+        onPlanTravel={planTravelFromLocation}
+        onChanged={loadCampaign}
+        onCloneEncounter={(encounter) => void cloneEncounter(encounter)}
+        onDeleteEncounter={(encounter) => void deleteEncounter(encounter)}
+        onGenerateEncounter={generateEncounterAtLocation}
+        onStartEncounter={(encounter, test) => void startEncounter(encounter, test)}
+      />
+      <CampaignEncounterCreateDialog
+        campaignId={detail.campaign.id}
+        initialLocationId={encounterLocationId}
+        locations={locations}
+        npcs={detail.npcs}
+        open={encounterOpen}
+        players={detail.players}
+        onCreated={loadCampaign}
+        onOpenChange={(open) => {
+          setEncounterOpen(open);
+          if (!open) setEncounterLocationId("");
+        }}
+      />
     </Page>
   );
 }
 
-function WorldSummary({
-  encounterCount,
-  locationCount,
-  npcCount,
-}: {
-  encounterCount: number;
-  locationCount: number;
-  npcCount: number;
-}) {
-  const stats = [
-    { label: "Locations", value: locationCount, icon: Map },
-    { label: "NPC roster", value: npcCount, icon: Swords },
-    { label: "Encounters", value: encounterCount, icon: ClipboardList },
-  ];
-
+function CampaignWorldCommandBar({ campaignName }: { campaignName: string }) {
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <h3 className="font-semibold">World summary</h3>
+    <header className="campaign-world-command-bar">
+      <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">{campaignName} world</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        Adventure prep at a glance: places to visit, people to meet, and scenes ready to run.
+        Browse places, prepare what happens there, and keep table context close at hand.
       </p>
-      <ResponsiveGrid className="mt-4" variant="stats3">
-        {stats.map((stat) => (
-          <div className="rounded-md border border-border bg-background p-3" key={stat.label}>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-xs font-bold uppercase text-accent">{stat.label}</div>
-                <div className="mt-1 text-2xl font-semibold">{stat.value}</div>
-              </div>
-              <stat.icon className="h-5 w-5 text-accent" />
-            </div>
-          </div>
-        ))}
-      </ResponsiveGrid>
-      <div className="mt-4">
-        <EmptyMini copy="Open a location to focus maps, local notes, NPCs, commerce, encounters, and travel from that exact place." />
-      </div>
-    </section>
+    </header>
   );
 }

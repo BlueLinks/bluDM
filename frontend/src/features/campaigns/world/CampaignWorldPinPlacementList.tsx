@@ -30,7 +30,7 @@ export function PinPlacementList({
             Select a missing place, then click the map where it belongs.
           </p>
         </div>
-        <span className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
+        <span className="rounded-md border border-secondary/25 bg-secondary/10 px-2 py-1 text-xs font-semibold text-secondary">
           {placedCount}/{candidates.length} placed
         </span>
       </div>
@@ -41,7 +41,7 @@ export function PinPlacementList({
           onStartPlacement={onStartPlacement}
         />
       ) : (
-        <p className="inline-flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm font-semibold text-emerald-700 dark:text-emerald-200">
+        <p className="inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-3 py-2 text-sm font-semibold text-success">
           <CheckCircle2 className="h-4 w-4" /> All relevant places are pinned. Click pins on the map
           to manage them.
         </p>

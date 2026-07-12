@@ -216,7 +216,7 @@ function JourneyContextBadges({
     <div className="mt-2 flex flex-wrap gap-1">
       {badges.map((badge) => (
         <span
-          className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground"
+          className="inline-flex items-center gap-1 rounded-md border border-companion-shared/25 bg-companion-shared/10 px-2 py-1 text-xs font-semibold text-companion-shared"
           key={badge}
         >
           <MapPin className="h-3 w-3" />

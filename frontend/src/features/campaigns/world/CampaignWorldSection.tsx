@@ -1,34 +1,30 @@
-import { Map } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { SidebarDetailLayout } from "../../../components/layout";
-import { SectionPanel } from "../../../components/ui";
 import { api } from "../../../lib/api";
 import type { Item } from "../../../types";
-import { CampaignWorldLocationEditor, worldLocationPayload } from "./CampaignWorldLocationEditor";
+import { worldLocationPayload } from "./CampaignWorldLocationEditor";
+import { CampaignWorldLocationEditorDialogs } from "./CampaignWorldLocationEditorDialogs";
 import { CampaignWorldLocationWorkspace } from "./CampaignWorldLocationWorkspace";
 import { WorldLocationList } from "./CampaignWorldLocationList";
 import { CampaignWorldSearchEmptyState } from "./CampaignWorldSearchEmptyState";
+import { clearCampaignLocationNotes as clearNotes } from "./campaignWorldLocationNotes";
 import type { CampaignWorldSectionProps } from "./CampaignWorldSectionTypes";
 import type { LinkFormInput } from "./CampaignWorldLocationLinks";
 import type { NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
 import type { LocationStockFormInput } from "./CampaignWorldLocationStock";
 import {
   compareLocations,
-  DeleteLocationConfirm,
   descendantLocationIDs,
   EmptyWorldLocations,
   FilterHiddenNotice,
   locationMapMarker,
   MissingLocationFallback,
 } from "./CampaignWorldSectionHelpers";
+import { loadCampaignWorldMaps as load } from "./campaignWorldMapLoading";
 import { filterWorldLocations } from "./campaignWorldSearch";
-import {
-  applyShopTemplateDefaults,
-  shopTemplateFor,
-  shopTemplateKeyForLabel,
-  shopTemplateLabel,
-} from "./campaignWorldShopTemplates";
+import { shopTemplateKeyForLabel, shopTemplateLabel } from "./campaignWorldShopTemplates";
+import { nextShopTemplateDraft } from "./campaignWorldShopTemplateDraft";
 import type {
   CampaignLocation,
   CampaignLocationLink,
@@ -48,6 +44,7 @@ export function CampaignWorldSection({
   routeLocationID,
   onChanged,
   onCloneEncounter = () => undefined,
+  onDeleteEncounter = () => undefined,
   onGenerateEncounter,
   onPlanTravel,
   onStartEncounter = () => undefined,
@@ -110,7 +107,6 @@ export function CampaignWorldSection({
     !filteredLocations.some((location) => location.id === selected.id),
   );
   const missingRouteLocation = Boolean(routeLocationID && !selected);
-
   useEffect(() => {
     let active = true;
     setLinksLoading(true);
@@ -173,11 +169,9 @@ export function CampaignWorldSection({
       active = false;
     };
   }, [campaignId]);
-
   useEffect(() => {
-    void loadMaps();
+    void load(campaignId, setMaps, setMapsError, setMapsLoading);
   }, [campaignId]);
-
   useEffect(() => {
     if (!routeLocationID && !mapsMode && selected?.id)
       void navigate(`/campaigns/${campaignId}/world/location/${selected.id}`, { replace: true });
@@ -200,8 +194,9 @@ export function CampaignWorldSection({
     ? new Set([selected.id, ...descendantLocationIDs(sortedLocations, selected.id)])
     : new Set<string>();
   const selectedEncounters = selected
-    ? encounters.filter((encounter) =>
-        encounter.locationId ? selectedEncounterLocationIDs.has(encounter.locationId) : false,
+    ? encounters.filter(
+        (encounter) =>
+          encounter.locationId && selectedEncounterLocationIDs.has(encounter.locationId),
       )
     : [];
   const selectedNpcLinks = selected
@@ -212,7 +207,7 @@ export function CampaignWorldSection({
     setEditingLocation(null);
     setParentID(parent?.id ?? "");
     setName(draftName ?? "");
-    setLocationType(defaultLocationType ?? (parent ? "room" : "settlement"));
+    setLocationType(defaultLocationType ?? (parent ? "building" : "settlement"));
     setSummary("");
     setPublicNotes("");
     setDmNotes("");
@@ -258,13 +253,19 @@ export function CampaignWorldSection({
     if (!payload.name) return;
     setError("");
     try {
+      let createdLocationID = "";
       if (editingLocation) {
         await api.updateCampaignLocation(campaignId, editingLocation.id, payload);
       } else {
-        await api.createCampaignLocation(campaignId, payload);
+        const created = await api.createCampaignLocation(campaignId, payload);
+        createdLocationID = created.location.id;
       }
       setEditorOpen(false);
       await onChanged();
+      if (!editingLocation && payload.locationType === "dungeon" && createdLocationID) {
+        const studioPath = `/campaigns/${campaignId}/world/location/${createdLocationID}/studio`;
+        void navigate(studioPath);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save world location");
     }
@@ -348,38 +349,29 @@ export function CampaignWorldSection({
     if (nextType !== "shop") setShopTemplate("");
   }
   function changeShopTemplate(nextTemplateKey: string) {
-    const nextTemplate = shopTemplateFor(nextTemplateKey);
     setShopTemplate(nextTemplateKey);
-    if (editingLocation || !nextTemplate) return;
-    const nextDefaults = applyShopTemplateDefaults(
-      { dmNotes, mapMarker, publicNotes, summary, tags },
-      shopTemplate,
-      nextTemplateKey,
-    );
+    if (editingLocation) return;
+    const nextDefaults = nextShopTemplateDraft({
+      currentKey: shopTemplate,
+      dmNotes,
+      mapMarker,
+      publicNotes,
+      summary,
+      tags,
+      nextKey: nextTemplateKey,
+    });
     setSummary(nextDefaults.summary);
     setPublicNotes(nextDefaults.publicNotes);
     setDmNotes(nextDefaults.dmNotes);
     setTags(nextDefaults.tags);
     setMapMarker(nextDefaults.mapMarker);
   }
-  async function loadMaps() {
-    setMapsLoading(true);
-    setMapsError("");
-    try {
-      const { maps: nextMaps } = await api.campaignMaps(campaignId);
-      setMaps(nextMaps);
-    } catch (err) {
-      setMapsError(err instanceof Error ? err.message : "Could not load campaign maps");
-    } finally {
-      setMapsLoading(false);
-    }
-  }
   return (
-    <SectionPanel title="World" icon={Map} className="lg:col-span-2">
+    <div className="min-w-0">
       {sortedLocations.length === 0 ? (
         <EmptyWorldLocations onCreate={() => openCreate()} />
       ) : (
-        <div className="grid gap-4">
+        <div className="grid w-full gap-4">
           {missingRouteLocation ? (
             <MissingLocationFallback campaignId={campaignId} />
           ) : filteredLocations.length === 0 && !selected ? (
@@ -390,79 +382,89 @@ export function CampaignWorldSection({
               onCreate={() => openCreate(undefined, searchQuery)}
             />
           ) : (
-            <div className="grid gap-3">
+            <>
               {selectedHiddenByFilters ? <FilterHiddenNotice onClear={clearSearchFilters} /> : null}
-              <SidebarDetailLayout variant="compact">
-                <WorldLocationList
-                  locations={filteredLocations}
-                  query={searchQuery}
-                  resultCount={filteredLocations.length}
-                  selectedID={selected?.id ?? ""}
-                  totalCount={sortedLocations.length}
-                  onCreate={() => openCreate()}
-                  onQueryChange={setSearchQuery}
-                  onSelect={(locationID) => {
-                    if (mapsMode) setSelectedID(locationID);
-                    else selectLocation(locationID);
-                  }}
-                />
-                {selected && (
-                  <CampaignWorldLocationWorkspace
-                    campaignId={campaignId}
-                    childCount={childCount}
-                    childLocations={selectedChildren}
-                    encounters={selectedEncounters}
-                    links={links}
-                    linksError={linksError}
-                    linksLoading={linksLoading}
-                    focusedLocationID={focusedLocationID}
-                    focusedMapID={focusedMapID}
-                    location={selected}
-                    locations={sortedLocations}
-                    maps={maps}
-                    mapsError={mapsError}
-                    mapsLoading={mapsLoading}
-                    mapsMode={mapsMode}
-                    journeys={journeys}
-                    npcLinks={selectedNpcLinks}
-                    npcLinksError={npcLinksError}
-                    npcLinksLoading={npcLinksLoading}
-                    npcs={npcs}
-                    stock={selectedStock}
-                    stockError={stockError}
-                    stockItems={stockItems}
-                    stockLoading={stockLoading}
-                    onAddChild={(locationType) => openCreate(selected, undefined, locationType)}
-                    onCreateLink={createLocationLink}
-                    onCreateNpc={onManageNpcs}
-                    onCreateNpcLink={createNpcLocationLink}
-                    onCreateStock={createLocationStock}
-                    onCustomStockItemCreated={addCustomStockItem}
-                    onDeleteLink={deleteLocationLink}
-                    onDeleteLocation={() => setDeleteLocation(selected)}
-                    onDeleteNpcLink={deleteNpcLocationLink}
-                    onDeleteStock={deleteLocationStock}
-                    onEdit={() => openEdit(selected)}
-                    onCloneEncounter={onCloneEncounter}
-                    onGenerateEncounter={() => onGenerateEncounter(selected)}
-                    onCloseMaps={() => closeMapsForLocation(selected.id)}
-                    onMapsChanged={loadMaps}
-                    onNavigateFromPin={navigateFromPin}
-                    onOpenMaps={() => openMapsForLocation(selected.id)}
-                    onPlanTravel={() => onPlanTravel?.(selected)}
-                    onSelectLocation={jumpToLocation}
-                    onStartEncounter={onStartEncounter}
+              <SidebarDetailLayout
+                className="xl:grid-cols-[minmax(11.5rem,14rem)_minmax(0,1fr)]"
+                variant="compact"
+              >
+                <div className="order-2 min-w-0 xl:order-1">
+                  <WorldLocationList
+                    locations={filteredLocations}
+                    query={searchQuery}
+                    selectedID={selected?.id ?? ""}
+                    totalCount={sortedLocations.length}
+                    onCreate={() => openCreate()}
+                    onQueryChange={setSearchQuery}
+                    onSelect={(locationID) => {
+                      if (mapsMode) setSelectedID(locationID);
+                      else selectLocation(locationID);
+                    }}
                   />
+                </div>
+                {selected && (
+                  <div className="order-1 min-w-0 xl:order-2">
+                    <CampaignWorldLocationWorkspace
+                      campaignId={campaignId}
+                      childCount={childCount}
+                      childLocations={selectedChildren}
+                      encounters={selectedEncounters}
+                      links={links}
+                      linksError={linksError}
+                      linksLoading={linksLoading}
+                      focusedLocationID={focusedLocationID}
+                      focusedMapID={focusedMapID}
+                      location={selected}
+                      locations={sortedLocations}
+                      maps={maps}
+                      mapsError={mapsError}
+                      mapsLoading={mapsLoading}
+                      mapsMode={mapsMode}
+                      journeys={journeys}
+                      npcLinks={selectedNpcLinks}
+                      npcLinksError={npcLinksError}
+                      npcLinksLoading={npcLinksLoading}
+                      npcs={npcs}
+                      stock={selectedStock}
+                      stockError={stockError}
+                      stockItems={stockItems}
+                      stockLoading={stockLoading}
+                      onAddChild={(locationType) => openCreate(selected, undefined, locationType)}
+                      onCreateLink={createLocationLink}
+                      onCreateNpc={onManageNpcs}
+                      onCreateNpcLink={createNpcLocationLink}
+                      onCreateStock={createLocationStock}
+                      onCustomStockItemCreated={addCustomStockItem}
+                      onClearNotes={(location) => clearNotes(campaignId, location, onChanged)}
+                      onDeleteLink={deleteLocationLink}
+                      onDeleteLocation={() => setDeleteLocation(selected)}
+                      onDeleteNpcLink={deleteNpcLocationLink}
+                      onDeleteStock={deleteLocationStock}
+                      onEdit={() => openEdit(selected)}
+                      onCloneEncounter={onCloneEncounter}
+                      onDeleteEncounter={onDeleteEncounter}
+                      onGenerateEncounter={() => onGenerateEncounter(selected)}
+                      onCloseMaps={() => closeMapsForLocation(selected.id)}
+                      onMapsChanged={() => load(campaignId, setMaps, setMapsError, setMapsLoading)}
+                      onNavigateFromPin={navigateFromPin}
+                      onOpenMaps={() => openMapsForLocation(selected.id)}
+                      onPlanTravel={() => onPlanTravel?.(selected)}
+                      onSelectLocation={jumpToLocation}
+                      onStartEncounter={onStartEncounter}
+                    />
+                  </div>
                 )}
               </SidebarDetailLayout>
-            </div>
+            </>
           )}
         </div>
       )}
-      <CampaignWorldLocationEditor
+      <CampaignWorldLocationEditorDialogs
+        deleteLocation={deleteLocation}
         editingLocation={editingLocation}
         error={error}
         locationType={locationType}
+        locations={sortedLocations}
         mapMarker={mapMarker}
         name={name}
         open={editorOpen}
@@ -471,9 +473,10 @@ export function CampaignWorldSection({
         shopTemplate={shopTemplate}
         summary={summary}
         tags={tags}
-        locations={sortedLocations}
         dmNotes={dmNotes}
+        onCancelDelete={() => setDeleteLocation(null)}
         onClose={() => setEditorOpen(false)}
+        onConfirmDelete={() => void confirmDeleteLocation()}
         onDmNotesChange={setDmNotes}
         onLocationTypeChange={changeLocationType}
         onMapMarkerChange={setMapMarker}
@@ -486,12 +489,6 @@ export function CampaignWorldSection({
         onSummaryChange={setSummary}
         onTagsChange={setTags}
       />
-      <DeleteLocationConfirm
-        locationName={deleteLocation?.name}
-        open={Boolean(deleteLocation)}
-        onCancel={() => setDeleteLocation(null)}
-        onConfirm={() => void confirmDeleteLocation()}
-      />
-    </SectionPanel>
+    </div>
   );
 }

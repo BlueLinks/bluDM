@@ -29,7 +29,7 @@ export function TagFilterBar({
               "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-medium transition",
               selected
                 ? "border-primary bg-primary text-primary-foreground"
-                : "border-border bg-muted text-muted-foreground hover:border-primary hover:text-foreground",
+                : "border-companion-custom/25 bg-companion-custom/10 text-companion-custom hover:border-primary hover:text-foreground",
             ].join(" ")}
             key={tag}
             type="button"
@@ -58,7 +58,7 @@ export function TagChipList({ className = "", tags }: { className?: string; tags
     <div className={`flex flex-wrap gap-1.5 ${className}`}>
       {normalizedTags.map((tag) => (
         <span
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+          className="inline-flex items-center gap-1 rounded-md border border-companion-custom/25 bg-companion-custom/10 px-2 py-0.5 text-xs font-medium text-companion-custom"
           key={tag}
         >
           <Tag className="h-3 w-3" />

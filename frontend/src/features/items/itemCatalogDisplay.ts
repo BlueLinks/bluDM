@@ -20,7 +20,7 @@ import {
   truncate,
 } from "./itemCatalogDisplayUtils";
 
-export type ItemChipTone = "default" | "strong" | "warn" | "blue" | "purple";
+export type ItemChipTone = "accent" | "custom" | "default" | "info" | "warning";
 
 export type ItemChip = {
   label: string;
@@ -73,8 +73,8 @@ export function buildItemDisplay(item: Item): ItemDisplay {
     weight,
     chips: [
       ...detail.chips,
-      ...(item.rarity ? [{ label: item.rarity, tone: "purple" as const }] : []),
-      ...(item.attunement ? [{ label: "Attunement", tone: "purple" as const }] : []),
+      ...(item.rarity ? [{ label: item.rarity, tone: "custom" as const }] : []),
+      ...(item.attunement ? [{ label: "Attunement", tone: "custom" as const }] : []),
     ].slice(0, 8),
     primaryStats,
     detailSections: detail.detailSections,
@@ -171,11 +171,11 @@ function weaponDetail(item: Item, raw: Record<string, unknown>) {
     item.itemType;
   const rangeKind = stringValue(item.data.weaponRange) || stringAt(raw, "weapon_range", "name");
   const chips = [
-    dice ? { label: [dice, type].filter(Boolean).join(" "), tone: "warn" as const } : null,
+    dice ? { label: [dice, type].filter(Boolean).join(" "), tone: "warning" as const } : null,
     category ? { label: compactSubtype(category) } : null,
-    rangeKind ? { label: rangeKind, tone: "blue" as const } : null,
+    rangeKind ? { label: rangeKind, tone: "info" as const } : null,
     ...item.properties.map((property) => ({ label: property })),
-    mastery ? { label: `Mastery: ${mastery}`, tone: "purple" as const } : null,
+    mastery ? { label: `Mastery: ${mastery}`, tone: "custom" as const } : null,
   ].filter(isPresent);
   const rangeLabel = rangeText(range) || rangeText(throwRange);
   const detailLines = [
@@ -210,10 +210,10 @@ function armorDetail(item: Item, raw: Record<string, unknown>) {
     stringAt(raw, "armor_category", "name") ||
     item.itemType;
   const chips = [
-    acLabel ? { label: acLabel, tone: "strong" as const } : null,
+    acLabel ? { label: acLabel, tone: "accent" as const } : null,
     category ? { label: compactSubtype(category) } : null,
-    strengthMinimum ? { label: `Str ${strengthMinimum}`, tone: "blue" as const } : null,
-    stealthDisadvantage ? { label: "Stealth disadvantage", tone: "warn" as const } : null,
+    strengthMinimum ? { label: `Str ${strengthMinimum}`, tone: "info" as const } : null,
+    stealthDisadvantage ? { label: "Stealth disadvantage", tone: "warning" as const } : null,
   ].filter(isPresent);
   return {
     chips,
@@ -236,10 +236,10 @@ function toolDetail(item: Item, raw: Record<string, unknown>) {
     stringValue(item.data.toolCategory) || stringAt(raw, "tool_category", "name") || item.itemType;
   const chips = [
     category ? { label: compactSubtype(category) } : null,
-    ability ? { label: ability, tone: "blue" as const } : null,
+    ability ? { label: ability, tone: "info" as const } : null,
     utilize ? { label: `Utilize: ${utilize}` } : null,
-    craft.length ? { label: `Craft: ${craft.join(", ")}`, tone: "strong" as const } : null,
-    variants.length ? { label: `${variants.length} variants`, tone: "purple" as const } : null,
+    craft.length ? { label: `Craft: ${craft.join(", ")}`, tone: "accent" as const } : null,
+    variants.length ? { label: `${variants.length} variants`, tone: "custom" as const } : null,
   ].filter(isPresent);
   return {
     chips,
@@ -267,8 +267,8 @@ function focusDetail(item: Item, raw: Record<string, unknown>) {
   const usage = stringValue(item.data.focus_usage) || stringValue(raw.focus_usage);
   return {
     chips: [
-      { label: "Spellcasting focus", tone: "purple" as const },
-      family ? { label: family, tone: "blue" as const } : null,
+      { label: "Spellcasting focus", tone: "custom" as const },
+      family ? { label: family, tone: "info" as const } : null,
       variant ? { label: variant } : null,
     ].filter(isPresent),
     primaryStats: family ? [{ label: "Focus", value: family }] : [],
@@ -286,7 +286,7 @@ function packDetail(item: Item, raw: Record<string, unknown>) {
   const count = contents.length;
   return {
     chips: [
-      count ? { label: `Includes ${count} item types`, tone: "strong" as const } : null,
+      count ? { label: `Includes ${count} item types`, tone: "accent" as const } : null,
     ].filter(isPresent),
     primaryStats: count ? [{ label: "Contents", value: String(count) }] : [],
     detailSections: count
@@ -305,8 +305,8 @@ function ammunitionDetail(item: Item, raw: Record<string, unknown>) {
   const compatible = stringValue(item.data.compatible_weapon) || stringValue(raw.compatible_weapon);
   return {
     chips: [
-      quantity ? { label: `${quantity} pieces`, tone: "strong" as const } : null,
-      compatible ? { label: compatible, tone: "blue" as const } : null,
+      quantity ? { label: `${quantity} pieces`, tone: "accent" as const } : null,
+      compatible ? { label: compatible, tone: "info" as const } : null,
       { label: "Ammunition" },
     ].filter(isPresent),
     primaryStats: quantity ? [{ label: "Quantity", value: String(quantity) }] : [],
@@ -320,10 +320,10 @@ function consumableDetail(item: Item, raw: Record<string, unknown>) {
   const behavior = stringValue(item.data.consumeBehavior);
   return {
     chips: [
-      { label: "Consumable", tone: "warn" as const },
+      { label: "Consumable", tone: "warning" as const },
       quantity ? { label: quantity } : null,
-      behavior ? { label: behavior, tone: "blue" as const } : null,
-      effect ? { label: effect, tone: "strong" as const } : null,
+      behavior ? { label: behavior, tone: "info" as const } : null,
+      effect ? { label: effect, tone: "accent" as const } : null,
     ].filter(isPresent),
     primaryStats: effect ? [{ label: "Effect", value: truncate(effect, 18) }] : [],
     detailSections: effect ? [{ title: "Consumable Details", lines: [effect] }] : [],
@@ -337,10 +337,10 @@ function foodLodgingDetail(item: Item) {
   const effect = stringValue(item.data.effect);
   return {
     chips: [
-      { label: item.itemType || "Food and Lodging", tone: "blue" as const },
+      { label: item.itemType || "Food and Lodging", tone: "info" as const },
       duration ? { label: duration } : null,
-      quality ? { label: quality, tone: "purple" as const } : null,
-      behavior ? { label: behavior, tone: "warn" as const } : null,
+      quality ? { label: quality, tone: "custom" as const } : null,
+      behavior ? { label: behavior, tone: "warning" as const } : null,
     ].filter(isPresent),
     primaryStats: [
       ...(duration ? [{ label: "Duration", value: duration }] : []),
@@ -369,13 +369,13 @@ function mountVehicleDetail(item: Item, raw: Record<string, unknown>) {
   const hp = stringValue(item.data.vehicleHitPoints);
   return {
     chips: [
-      speed ? { label: `Speed ${speed}`, tone: "blue" as const } : null,
+      speed ? { label: `Speed ${speed}`, tone: "info" as const } : null,
       carry ? { label: `Carry ${carry} lb` } : null,
       crew ? { label: `Crew ${crew}` } : null,
       passengers ? { label: `Passengers ${passengers}` } : null,
       cargo ? { label: `Cargo ${cargo}` } : null,
-      ac ? { label: `AC ${ac}`, tone: "strong" as const } : null,
-      hp ? { label: `HP ${hp}`, tone: "strong" as const } : null,
+      ac ? { label: `AC ${ac}`, tone: "accent" as const } : null,
+      hp ? { label: `HP ${hp}`, tone: "accent" as const } : null,
     ].filter(isPresent),
     primaryStats: [
       ...(speed ? [{ label: "Speed", value: speed }] : []),

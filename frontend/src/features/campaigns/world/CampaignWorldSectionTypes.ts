@@ -12,6 +12,7 @@ export type CampaignWorldSectionProps = {
   onManageNpcs: () => void;
   onChanged: () => Promise<void>;
   onCloneEncounter?: (encounter: Encounter) => void;
+  onDeleteEncounter?: (encounter: Encounter) => void;
   onGenerateEncounter: (location: CampaignLocation) => void;
   onPlanTravel?: (location: CampaignLocation) => void;
   onStartEncounter?: (encounter: Encounter, test: boolean) => void;

@@ -10,7 +10,7 @@ export function RouteModeToggle({
   value: RouteInputMode;
 }) {
   return (
-    <div className="inline-flex w-full overflow-hidden rounded-md border border-border bg-muted/40 p-1 text-sm font-semibold sm:w-auto">
+    <div className="inline-flex w-full overflow-hidden rounded-md border border-border bg-surface p-1 text-sm font-semibold sm:w-auto">
       {[
         { value: "route", label: "Route" },
         { value: "distance", label: "Direct distance" },
@@ -19,10 +19,8 @@ export function RouteModeToggle({
           key={option.value}
           type="button"
           className={[
-            "flex-1 rounded px-3 py-1.5 transition sm:flex-none",
-            value === option.value
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:bg-background hover:text-foreground",
+            "flex-1 rounded px-3 py-1.5 text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 sm:flex-none",
+            value === option.value ? "bg-primary text-primary-foreground shadow-sm" : "",
           ].join(" ")}
           onClick={() => onChange(option.value as RouteInputMode)}
         >
@@ -52,20 +50,22 @@ export function RoutePointField({
     <div className="grid gap-2">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-muted-foreground">{label}</span>
-        <div className="inline-flex overflow-hidden rounded-md border border-border bg-background text-xs font-semibold">
+        <div className="inline-flex overflow-hidden rounded-md border border-border bg-surface text-xs font-semibold">
           <button
-            className={
-              mode === "saved" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
-            }
+            className={[
+              "px-2 py-1 text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+              mode === "saved" ? "bg-primary text-primary-foreground shadow-sm" : "",
+            ].join(" ")}
             type="button"
             onClick={() => onModeChange("saved")}
           >
             Saved
           </button>
           <button
-            className={
-              mode === "custom" ? "bg-primary px-2 py-1 text-primary-foreground" : "px-2 py-1"
-            }
+            className={[
+              "px-2 py-1 text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+              mode === "custom" ? "bg-primary text-primary-foreground shadow-sm" : "",
+            ].join(" ")}
             type="button"
             onClick={() => onModeChange("custom")}
           >

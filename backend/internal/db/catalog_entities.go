@@ -165,6 +165,7 @@ type RollTableEntity struct {
 	Category      string         `gorm:"not null;default:'custom';index:roll_tables_source_idx,priority:2"`
 	Tags          pq.StringArray `gorm:"type:text[];not null;default:'{}'::text[]"`
 	DieExpression string         `gorm:"not null"`
+	Metadata      JSONMap        `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
