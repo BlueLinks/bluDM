@@ -23,7 +23,7 @@
     "@radix-ui/react-select": "^2.3.0",
     "@vitejs/plugin-react": "^6.0.2",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.18.0",
+    "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.17.0",
