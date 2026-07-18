@@ -35,7 +35,7 @@ export function EncounterDifficultyPanel({
             <Skull className="h-5 w-5" />
           </span>
           <div className="min-w-0">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">Difficulty</div>
+            <h2 className="text-xs font-semibold uppercase text-muted-foreground">Difficulty</h2>
             <div className={["text-lg font-semibold", tone.text].join(" ")}>{difficulty.label}</div>
             <div className="text-xs text-muted-foreground">
               Threshold: {crossed.value.toLocaleString()} XP
