@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Portable campaign key example in the import/export manifest schema"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^docs/import-export/manifest-schema\.md$''']
+regexes = ['''key": "lost-mine-a1b2c3d4"''']
