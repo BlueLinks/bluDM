@@ -113,6 +113,8 @@ func (s *Server) downloadImportExportExport(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/zip")
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", entry.Filename))
 	w.Header().Set("Cache-Control", "private, no-store")
+	// The response is a binary ZIP attachment, not an HTML document.
+	// nosemgrep: go.lang.security.audit.xss.no-direct-write-to-responsewriter.no-direct-write-to-responsewriter
 	_, _ = w.Write(entry.Data)
 }
 
