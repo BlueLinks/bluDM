@@ -171,7 +171,6 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	if resolvedEnemy.CurrentHitPoints != 1 {
 		t.Fatalf("expected failed resource commit to roll back target state, got %+v", resolvedEnemy)
 	}
-
 	playerCombatant.DeathSaveSuccesses = 3
 	playerCombatant.Stable = true
 	requireNoError(t, stores.Runs.UpdateDeathSave(ctx, playerCombatant))
