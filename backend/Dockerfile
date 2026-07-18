@@ -1,4 +1,4 @@
-FROM golang:1.25.12-alpine AS build
+FROM golang:1.26.5-alpine AS build
 
 WORKDIR /app
 COPY go.mod go.sum* ./
@@ -7,7 +7,7 @@ COPY . .
 RUN go build -o /out/bludm-api ./cmd/server
 RUN go build -o /out/bludm-migrate ./cmd/migrate
 
-FROM alpine:3.21
+FROM alpine:3.24
 
 RUN adduser -D -H appuser
 USER appuser
