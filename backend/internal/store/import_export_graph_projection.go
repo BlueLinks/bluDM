@@ -1,7 +1,7 @@
 package store
 
 import (
-	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
 	"regexp"
 	"sort"
@@ -143,7 +143,7 @@ func stableGraphKey(label, id string) string {
 	if key == "" {
 		key = "object"
 	}
-	sum := sha1.Sum([]byte(id))
+	sum := sha256.Sum256([]byte(id))
 	return key + "-" + hex.EncodeToString(sum[:])[:8]
 }
 

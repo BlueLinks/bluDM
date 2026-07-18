@@ -1,4 +1,4 @@
-GO_VERSION ?= 1.25.11
+GO_VERSION ?= 1.25.12
 GO_TOOLCHAIN ?= go$(GO_VERSION)
 
 .PHONY: lint lint-frontend lint-backend check-size format format-check test test-frontend test-backend test-e2e verify verify-security verify-docker verify-recovery verify-full
