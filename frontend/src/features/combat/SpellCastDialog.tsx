@@ -28,8 +28,10 @@ type CastPayload = {
 export function SpellCastDialog({
   actor,
   combatants,
+  currentConcentration,
+  initialSpellID,
   open,
-  selectedID,
+  selectedIDs,
   slots,
   spells,
   onCast,
@@ -37,8 +39,10 @@ export function SpellCastDialog({
 }: {
   actor: EncounterRunCombatant;
   combatants: EncounterRunCombatant[];
+  currentConcentration?: string;
+  initialSpellID?: string;
   open: boolean;
-  selectedID: string;
+  selectedIDs: string[];
   slots: EncounterRunSpellSlot[];
   spells: CreatureSpell[];
   onCast: (payload: CastPayload) => void;
@@ -58,8 +62,9 @@ export function SpellCastDialog({
   const [rollMode, setRollMode] = useState<RollMode>("normal");
   const [spellDetail, setSpellDetail] = useState<Spell | null>(null);
   const [resolutions, setResolutions] = useState<Record<string, TableResolutionState>>({});
+  const [confirmConcentrationReplacement, setConfirmConcentrationReplacement] = useState(false);
   const [targetIds, setTargetIds] = useState<string[]>(() =>
-    selectedID ? [selectedID] : actor ? [actor.id] : [],
+    selectedIDs.length > 0 ? selectedIDs : actor ? [actor.id] : [],
   );
   useEffect(() => {
     if (!spellID && sortedSpells[0]) {
@@ -68,8 +73,19 @@ export function SpellCastDialog({
     }
   }, [sortedSpells, spellID]);
   useEffect(() => {
-    if (open) setTargetIds(selectedID ? [selectedID] : [actor.id]);
-  }, [actor.id, open, selectedID]);
+    if (!open || !initialSpellID) return;
+    const selectedSpell = sortedSpells.find((item) => item.spellId === initialSpellID);
+    if (selectedSpell) {
+      setSpellID(initialSpellID);
+      setCastLevel(String(Math.max(1, selectedSpell.spellLevel)));
+    }
+  }, [initialSpellID, open, sortedSpells]);
+  useEffect(() => {
+    if (open) {
+      setTargetIds(selectedIDs.length > 0 ? selectedIDs : [actor.id]);
+      setConfirmConcentrationReplacement(false);
+    }
+  }, [actor.id, open, selectedIDs]);
   useEffect(() => {
     if (!open || !spell) {
       setSpellDetail(null);
@@ -94,21 +110,17 @@ export function SpellCastDialog({
   );
   const needsSlot = actualCastLevel > 0;
   const hasSlot = !needsSlot || Boolean(slot && slot.remainingSlots > 0);
+  const replacesConcentration = Boolean(currentConcentration && spellDetail?.concentration);
 
   function setSpell(nextID: string) {
     const nextSpell = sortedSpells.find((item) => item.spellId === nextID);
     setSpellID(nextID);
     if (nextSpell) setCastLevel(String(Math.max(1, nextSpell.spellLevel)));
+    setConfirmConcentrationReplacement(false);
   }
 
   return (
-    <Modal
-      title="Cast spell"
-      open={open}
-      onOpenChange={onOpenChange}
-      trigger={<span />}
-      className="max-w-3xl"
-    >
+    <Modal title="Cast spell" open={open} onOpenChange={onOpenChange} className="max-w-3xl">
       <div className="grid gap-5">
         <div className="rounded-lg border border-border bg-muted/30 p-3">
           <div className="text-xs font-bold uppercase text-muted-foreground">Caster</div>
@@ -186,11 +198,15 @@ export function SpellCastDialog({
             onChange={setResolutions}
           />
         )}
-        {!hasSlot && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
-            No level {actualCastLevel} spell slots remain for {actor.displayName}.
-          </div>
-        )}
+        <SpellAvailabilityNotices
+          actorName={actor.displayName}
+          castLevel={actualCastLevel}
+          confirmReplacement={confirmConcentrationReplacement}
+          currentConcentration={currentConcentration}
+          hasSlot={hasSlot}
+          replacesConcentration={replacesConcentration}
+          onConfirmReplacement={setConfirmConcentrationReplacement}
+        />
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
@@ -198,7 +214,12 @@ export function SpellCastDialog({
           <Button
             type="button"
             icon={Sparkles}
-            disabled={!spell || !hasSlot || targetIds.length === 0}
+            disabled={
+              !spell ||
+              !hasSlot ||
+              targetIds.length === 0 ||
+              (replacesConcentration && !confirmConcentrationReplacement)
+            }
             onClick={() =>
               spell &&
               onCast({
@@ -222,6 +243,46 @@ export function SpellCastDialog({
         </div>
       </div>
     </Modal>
+  );
+}
+
+function SpellAvailabilityNotices({
+  actorName,
+  castLevel,
+  confirmReplacement,
+  currentConcentration,
+  hasSlot,
+  replacesConcentration,
+  onConfirmReplacement,
+}: {
+  actorName: string;
+  castLevel: number;
+  confirmReplacement: boolean;
+  currentConcentration?: string;
+  hasSlot: boolean;
+  replacesConcentration: boolean;
+  onConfirmReplacement: (confirmed: boolean) => void;
+}) {
+  return (
+    <>
+      {!hasSlot && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm font-semibold text-destructive">
+          No level {castLevel} spell slots remain for {actorName}.
+        </div>
+      )}
+      {replacesConcentration && (
+        <div className="grid gap-2 border border-warning/50 bg-warning/10 p-3 text-sm">
+          <div className="font-semibold text-warning">
+            Casting this spell ends concentration on {currentConcentration}.
+          </div>
+          <Checkbox
+            checked={confirmReplacement}
+            label="End the current concentration when this cast is applied"
+            onChange={onConfirmReplacement}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

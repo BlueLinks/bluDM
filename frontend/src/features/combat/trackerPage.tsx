@@ -15,11 +15,24 @@ import type {
   RollMode,
 } from "../../types";
 import { ActiveSpellAreas } from "./ActiveSpellAreas";
-import { CombatActiveTurnPanel } from "./CombatActiveTurnPanel";
-import { CombatBoard } from "./CombatBoard";
+import type { HpMultiplier } from "./CombatContextPanel";
 import { CombatTrackerOverlays } from "./CombatTrackerOverlays";
-import { ConcentrationAlerts } from "./ConcentrationAlerts";
+import { CombatWorkspace } from "./CombatWorkspace";
 import { CombatStatusBar } from "./combatWidgets";
+import type { CombatRollFlash } from "./combatTypes";
+import { applyResolutionPayload, blankResolutionTarget } from "./resolutionModel";
+import {
+  combatStartTimestamp,
+  combatTrackerBreadcrumbs,
+  hasLivingEnemies,
+  hpAdjustmentAmount,
+  needsDeathSaves,
+  rollModeFromEvent,
+  spellLevelLabel,
+  stringFromResult,
+  stringValue,
+  useCombatElapsed,
+} from "./trackerPageHelpers";
 
 export function CombatTrackerPage() {
   const { runID } = useParams();
@@ -27,13 +40,16 @@ export function CombatTrackerPage() {
   const [run, setRun] = useState<EncounterRun | null>(null);
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [error, setError] = useState("");
-  const [selectedID, setSelectedID] = useState("");
+  const [selectedSheetID, setSelectedSheetID] = useState("");
+  const [actingID, setActingID] = useState("");
+  const [targetIDs, setTargetIDs] = useState<string[]>([]);
   const [hpAmount, setHpAmount] = useState("");
+  const [hpMultiplier, setHpMultiplier] = useState<HpMultiplier>("full");
   const [damageType, setDamageType] = useState("slashing");
   const [actions, setActions] = useState<CreatureAction[]>([]);
   const [spellcasting, setSpellcasting] = useState<CreatureSpellcastingProfile | null>(null);
   const [pendingAction, setPendingAction] = useState<Record<string, unknown> | null>(null);
-  const [spellDialogOpen, setSpellDialogOpen] = useState(false);
+  const [selectedSpellID, setSelectedSpellID] = useState<string | null>(null);
   const [manualSlotsOpen, setManualSlotsOpen] = useState(false);
   const [showMeters, setShowMeters] = useState(false);
   const [editing, setEditing] = useState<EncounterRunCombatant | null>(null);
@@ -42,16 +58,10 @@ export function CombatTrackerPage() {
   const [leaveWarningOpen, setLeaveWarningOpen] = useState(false);
   const [navigationBypass, setNavigationBypass] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState("");
-  const [rollFlash, setRollFlash] = useState<{
-    id?: string;
-    title: string;
-    total: number;
-    detail: string;
-    subtitle?: string;
-  } | null>(null);
-  const [turnStartedAt, setTurnStartedAt] = useState(() => Date.now());
-  const [elapsed, setElapsed] = useState(0);
+  const [rollFlash, setRollFlash] = useState<CombatRollFlash | null>(null);
   const toast = useToasts();
+  const combatStartedAt = combatStartTimestamp(run);
+  const elapsed = useCombatElapsed(combatStartedAt);
 
   async function load() {
     if (!runID) return;
@@ -68,34 +78,37 @@ export function CombatTrackerPage() {
     }
   }
 
-  useEffect(() => {
-    void load();
-  }, [runID]);
-
-  useEffect(() => {
-    const timer = window.setInterval(
-      () => setElapsed(Math.floor((Date.now() - turnStartedAt) / 1000)),
-      1000,
-    );
-    return () => window.clearInterval(timer);
-  }, [turnStartedAt]);
+  useEffect(() => void load(), [runID]);
 
   const combatants = run?.combatants ?? [];
   const active = combatants[run?.currentTurnIndex ?? 0];
-  const selected = combatants.find((combatant) => combatant.id === selectedID) ?? null;
-  const enemiesAlive = combatants.some(
-    (combatant) =>
-      combatant.side === "enemy" && combatant.currentHitPoints > 0 && !combatant.defeated,
+  const selectedSheet = combatants.find((combatant) => combatant.id === selectedSheetID) ?? active;
+  const acting = combatants.find((combatant) => combatant.id === actingID) ?? active;
+  const targets = combatants.filter((combatant) => targetIDs.includes(combatant.id));
+  const pendingActionTarget = combatants.find(
+    (combatant) => combatant.id === stringValue(pendingAction?.targetId),
   );
+  const enemiesAlive = hasLivingEnemies(combatants);
   const downEnemies = combatants.filter((combatant) => isDownEnemy(combatant));
   const orderedCombatants = rotateCombatantsFromActive(
     combatants.filter((combatant) => !isDownEnemy(combatant)),
     active?.id,
   );
-  const activeNeedsDeathSaves = Boolean(
-    active && active.sourceType === "player" && active.currentHitPoints <= 0 && !active.stable,
-  );
+  const actorNeedsDeathSaves = needsDeathSaves(acting);
   const shouldWarnLeaving = Boolean(run && run.status === "active" && !navigationBypass);
+
+  useEffect(() => {
+    if (!active) return;
+    setSelectedSheetID((current) =>
+      combatants.some((combatant) => combatant.id === current) ? current : active.id,
+    );
+    setActingID((current) =>
+      combatants.some((combatant) => combatant.id === current) ? current : active.id,
+    );
+    setTargetIDs((current) =>
+      current.filter((id) => combatants.some((combatant) => combatant.id === id)),
+    );
+  }, [active?.id, combatants]);
 
   useEffect(() => {
     if (!shouldWarnLeaving) return;
@@ -146,73 +159,115 @@ export function CombatTrackerPage() {
   }, [run?.id, run?.status, enemiesAlive, combatants.length]);
 
   useEffect(() => {
-    if (!active?.creatureId) {
+    if (!acting?.creatureId) {
       setActions([]);
       setSpellcasting(null);
       return;
     }
     void api
-      .creatureActions(active.creatureId)
+      .creatureActions(acting.creatureId)
       .then((payload) => setActions(payload.actions))
       .catch(() => setActions([]));
     void api
-      .creatureSpellcasting(active.creatureId)
+      .creatureSpellcasting(acting.creatureId)
       .then((payload) => setSpellcasting(payload.spellcasting))
       .catch(() => setSpellcasting(null));
-  }, [active?.creatureId]);
+  }, [acting?.creatureId]);
 
   async function refreshFrom(promise: Promise<{ run: EncounterRun }>) {
     try {
       const payload = await promise;
       setRun(payload.run);
       setError("");
+      return payload.run;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Combat command failed");
+      return null;
     }
   }
 
   async function move(direction: "next" | "previous") {
     if (!run) return;
-    await refreshFrom(api.moveTurn(run.id, direction));
-    setTurnStartedAt(Date.now());
+    const nextRun = await refreshFrom(api.moveTurn(run.id, direction));
+    const nextActive = nextRun?.combatants?.[nextRun.currentTurnIndex];
+    if (nextActive) setActingID(nextActive.id);
   }
 
-  async function applyManual(mode: "damage" | "healing") {
-    if (!run || !active || !selected) return;
-    await refreshFrom(
-      api.manualHP(run.id, {
-        actorId: active.id,
-        targetId: selected.id,
-        amount: Number(hpAmount) || 0,
-        mode,
-        damageType,
-      }),
-    );
-    setHpAmount("");
+  async function applyManual(mode: "damage" | "healing" | "temporary") {
+    if (!run || !acting || targets.length === 0) return;
+    const amount = hpAdjustmentAmount(hpAmount, hpMultiplier);
+    if (amount <= 0) return;
+    try {
+      let nextRun = run;
+      if (mode === "temporary") {
+        const payload = await api.applyResolution(
+          run.id,
+          applyResolutionPayload({
+            actorId: acting.id,
+            kind: "healing",
+            sourceName: "Quick temporary HP",
+            notes: "",
+            targets: targets.map((target) => ({
+              ...blankResolutionTarget(target.id),
+              temporaryHitPoints: amount,
+            })),
+          }),
+        );
+        nextRun = payload.run;
+      } else {
+        for (const target of targets) {
+          const payload = await api.manualHP(run.id, {
+            actorId: acting.id,
+            targetId: target.id,
+            amount,
+            mode,
+            damageType: mode === "damage" ? damageType : undefined,
+          });
+          nextRun = payload.run;
+        }
+      }
+      setRun(nextRun);
+      setHpAmount("");
+      setError("");
+      toast.push(
+        `Applied ${mode === "damage" ? "damage" : mode === "healing" ? "healing" : "temporary HP"} to ${targets.length} target${targets.length === 1 ? "" : "s"}.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not adjust hit points");
+    }
   }
 
   async function execute(action: CreatureAction, event?: React.MouseEvent) {
-    if (!run || !active || !selected) return;
+    if (!run || !acting || targets.length !== 1) return;
+    const target = targets[0];
     try {
       const rollMode = rollModeFromEvent(event);
       const payload = await api.executeAction(run.id, {
-        actorId: active.id,
-        targetId: selected.id,
+        actorId: acting.id,
+        targetId: target.id,
         actionId: action.id,
         rollMode,
       });
-      setPendingAction(payload.result);
+      setPendingAction({
+        ...payload.result,
+        actorId: acting.id,
+        actorName: acting.displayName,
+        targetId: target.id,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not execute action");
     }
   }
 
   async function resolve(override: string, damageOverride?: number) {
-    if (!run || !active || !selected || !pendingAction) return;
+    if (!run || !pendingAction) return;
+    const actorId = stringValue(pendingAction.actorId);
+    const targetId = stringValue(pendingAction.targetId);
+    if (!actorId || !targetId) return;
     const damage = damageOverride ?? (Number(pendingAction.adjustedDamage) || 0);
     const payload = await api.resolveActionDamage(run.id, {
-      actorId: active.id,
-      targetId: selected.id,
+      actorId,
+      targetId,
       damage,
       override,
     });
@@ -228,16 +283,16 @@ export function CombatTrackerPage() {
     rollMode: RollMode;
     rollTableResolutions?: RollTableResolutionPayload[];
   }) {
-    if (!run || !active) return;
+    if (!run || !acting) return;
     try {
       const response = await api.castSpell(run.id, {
-        actorId: active.id,
+        actorId: acting.id,
         ...payload,
       });
       setRun(response.run);
-      setSpellDialogOpen(false);
+      setSelectedSpellID(null);
       const spellName = stringFromResult(response.result.spell, "name") || "Spell";
-      toast.push(`${active.displayName} cast ${spellName}.`);
+      toast.push(`${acting.displayName} cast ${spellName}.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not cast spell");
     }
@@ -249,16 +304,16 @@ export function CombatTrackerPage() {
   }
 
   async function manualSpellSlot(spellLevel: number, mode: "consume" | "restore") {
-    if (!run || !active) return;
+    if (!run || !acting) return;
     try {
       const payload = await api.manualSpellSlot(run.id, {
-        combatantId: active.id,
+        combatantId: acting.id,
         spellLevel,
         mode,
       });
       setRun(payload.run);
       toast.push(
-        `${mode === "consume" ? "Consumed" : "Restored"} a ${spellLevelLabel(spellLevel)} slot for ${active.displayName}.`,
+        `${mode === "consume" ? "Consumed" : "Restored"} a ${spellLevelLabel(spellLevel)} slot for ${acting.displayName}.`,
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update spell slot");
@@ -290,7 +345,6 @@ export function CombatTrackerPage() {
     await refreshFrom(api.endSpellArea(run.id, { areaEffectId }));
     toast.push("Spell area ended.");
   }
-
   async function updateDeathSaveFor(
     combatant: EncounterRunCombatant,
     action: "success" | "failure" | "undo-success" | "undo-failure" | "stabilize",
@@ -298,28 +352,26 @@ export function CombatTrackerPage() {
     if (!run) return;
     await refreshFrom(api.deathSave(run.id, combatant.id, action));
   }
-
-  if (!run || !active) {
+  if (!run || !active || !acting || !selectedSheet) {
     return <MutedPanel>{error || "Loading combat tracker..."}</MutedPanel>;
   }
-  const currentRun = run;
-
   function goToSummary() {
     setNavigationBypass(true);
     setLeaveWarningOpen(false);
-    window.setTimeout(() => void navigate(`/encounter-runs/${currentRun.id}/summary`), 0);
+    window.setTimeout(() => void navigate(`/encounter-runs/${run!.id}/summary`), 0);
   }
+  async function undoLastChange() {
+    if (!runID) return;
+    const nextRun = await refreshFrom(api.undoRun(runID));
+    const nextActive = nextRun?.combatants?.[nextRun.currentTurnIndex];
+    if (nextActive) setActingID(nextActive.id);
+  }
+  const breadcrumbs = combatTrackerBreadcrumbs(encounter?.name);
 
   return (
     <Page size="wide" className="combat-tracker-page gap-2 sm:gap-4">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
-      <Breadcrumbs
-        items={[
-          { label: "Campaigns", to: "/campaigns" },
-          ...(encounter ? [{ label: encounter.name }] : [{ label: "Encounter" }]),
-          { label: "Combat" },
-        ]}
-      />
+      <Breadcrumbs items={breadcrumbs} />
       <div className="combat-stack grid gap-2 sm:gap-4">
         <CombatStatusBar
           combatantCount={combatants.length}
@@ -329,12 +381,7 @@ export function CombatTrackerPage() {
           onEnd={goToSummary}
           onMeters={() => setShowMeters((current) => !current)}
           onMove={move}
-          onUndo={() => runID && refreshFrom(api.undoRun(runID))}
-        />
-        <ConcentrationAlerts
-          alerts={run.alerts ?? []}
-          combatants={combatants}
-          onResolve={(alert, action) => void resolveConcentration(alert.id, action)}
+          onUndo={() => void undoLastChange()}
         />
         <ActiveSpellAreas
           combatants={combatants}
@@ -343,50 +390,63 @@ export function CombatTrackerPage() {
           onEnd={(area) => void endSpellArea(area.id)}
           onMove={(area) => void moveSpellArea(area.id)}
         />
-        <div className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3">
-          <CombatActiveTurnPanel
-            actions={actions}
-            active={active}
-            activeNeedsDeathSaves={activeNeedsDeathSaves}
-            damageType={damageType}
-            hpAmount={hpAmount}
-            selected={selected}
-            spellSlotsTracked={Boolean(
-              run.spellSlots?.some((slot) => slot.combatantId === active.id),
-            )}
-            spells={spellcasting?.spells ?? []}
-            onAction={execute}
-            onAmountChange={setHpAmount}
-            onDamageTypeChange={setDamageType}
-            onDeathSave={(action) => void updateDeathSaveFor(active, action)}
-            onManual={applyManual}
-            onOpenManualSlots={() => setManualSlotsOpen(true)}
-            onOpenSpells={() => setSpellDialogOpen(true)}
-          />
-        </div>
-
-        <CombatBoard
+        <CombatWorkspace
+          actions={actions}
           active={active}
-          activeEffects={run.activeEffects ?? []}
-          combatants={combatants}
+          acting={acting}
+          actorNeedsDeathSaves={actorNeedsDeathSaves}
+          combatStartedAt={combatStartedAt}
+          damageType={damageType}
           downEnemies={downEnemies}
+          hpAmount={hpAmount}
+          hpMultiplier={hpMultiplier}
           orderedCombatants={orderedCombatants}
-          runID={run.id}
-          selected={selected}
-          selectedID={selectedID}
+          run={run}
+          selectedSheet={selectedSheet}
+          selectedSheetID={selectedSheetID || selectedSheet.id}
           showMeters={showMeters}
+          spells={spellcasting?.spells ?? []}
+          spellSlotsTracked={Boolean(
+            run.spellSlots?.some((slot) => slot.combatantId === acting.id),
+          )}
+          targetIDs={targetIDs}
+          onAction={execute}
+          onApplyResolution={(resolution) =>
+            refreshFrom(api.applyResolution(run.id, resolution)).then((next) => {
+              if (!next) throw new Error("Could not apply resolution");
+            })
+          }
+          onActorChange={setActingID}
           onAddTarget={() => setAddingTarget(true)}
+          onAmountChange={setHpAmount}
+          onClearTargets={() => setTargetIDs([])}
+          onConcentrationResolve={(alert, action) => resolveConcentration(alert.id, action)}
+          onDamageTypeChange={setDamageType}
           onDeathSave={updateDeathSaveFor}
           onEdit={setEditing}
+          onHpMultiplierChange={setHpMultiplier}
+          onManual={applyManual}
+          onOpenManualSlots={() => setManualSlotsOpen(true)}
+          onOpenSpells={(spell) => setSelectedSpellID(spell?.spellId ?? "")}
+          onRemoveTarget={(id) =>
+            setTargetIDs((current) => current.filter((targetID) => targetID !== id))
+          }
           onRoll={(message, flash) => {
             toast.push(message);
             setRollFlash({ ...flash, id: createId() });
           }}
-          onSelect={setSelectedID}
+          onSelectSheet={setSelectedSheetID}
+          onToggleTarget={(id) =>
+            setTargetIDs((current) =>
+              current.includes(id)
+                ? current.filter((targetID) => targetID !== id)
+                : [...current, id],
+            )
+          }
         />
       </div>
       <CombatTrackerOverlays
-        active={active}
+        active={acting}
         addingTarget={addingTarget}
         editing={editing}
         leaveWarningOpen={leaveWarningOpen}
@@ -395,9 +455,10 @@ export function CombatTrackerPage() {
         pendingNavigation={pendingNavigation}
         rollFlash={rollFlash}
         run={run}
-        selected={selected}
-        selectedID={selectedID}
-        spellDialogOpen={spellDialogOpen}
+        selected={pendingActionTarget ?? null}
+        selectedIDs={targetIDs}
+        selectedSpellID={selectedSpellID ?? ""}
+        spellDialogOpen={selectedSpellID !== null}
         spellcasting={spellcasting}
         toasts={toast.toasts}
         victoryOpen={victoryOpen}
@@ -427,28 +488,9 @@ export function CombatTrackerPage() {
         onSetPendingAction={setPendingAction}
         onSetPendingNavigation={setPendingNavigation}
         onSetRun={setRun}
-        onSetSpellDialogOpen={setSpellDialogOpen}
+        onSetSpellDialogOpen={(open) => !open && setSelectedSpellID(null)}
         onSetVictoryOpen={setVictoryOpen}
       />
     </Page>
   );
-}
-
-function rollModeFromEvent(event?: React.MouseEvent): RollMode {
-  if (event?.shiftKey) return "advantage";
-  if (event?.ctrlKey) return "disadvantage";
-  return "normal";
-}
-
-function stringFromResult(value: unknown, key: string) {
-  if (!value || typeof value !== "object") return "";
-  const candidate = (value as Record<string, unknown>)[key];
-  return typeof candidate === "string" ? candidate : "";
-}
-
-function spellLevelLabel(level: number) {
-  if (level === 1) return "1st-level";
-  if (level === 2) return "2nd-level";
-  if (level === 3) return "3rd-level";
-  return `${level}th-level`;
 }

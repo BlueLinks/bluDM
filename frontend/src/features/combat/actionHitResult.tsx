@@ -3,6 +3,7 @@ import type { RollLogEntry } from "../../components/RollLogProvider";
 import { damageTypes } from "../../components/shared/damageTypes";
 import { Button, Input } from "../../components/ui";
 import type { ActionRollPart } from "../../types";
+import { adjustDamageComponent } from "./resolutionModel";
 
 export type AddRollLogEntry = (entry: Omit<RollLogEntry, "createdAt" | "id">) => void;
 
@@ -208,8 +209,8 @@ function DamageRollLine({
           <DamageSegment
             label="Critical roll"
             value={criticalExtra}
-            modifier={roll.fixedValue}
-            total={criticalExtra + roll.fixedValue}
+            modifier={0}
+            total={criticalExtra}
             critical
             onReroll={() => onReroll(roll, "critical")}
           />
@@ -278,20 +279,24 @@ function damageAdjustment(
   resistances: string[],
   immunities: string[],
 ) {
-  if (immunities.some((item) => item.toLowerCase() === damageType)) {
-    return { label: "Immune", total: 0, tone: "text-info" };
-  }
-  if (vulnerabilities.some((item) => item.toLowerCase() === damageType)) {
-    return { label: "Vulnerable", total: total * 2, tone: "text-destructive" };
-  }
-  if (resistances.some((item) => item.toLowerCase() === damageType)) {
-    return {
-      label: "Resistant",
-      total: Math.floor(total / 2),
-      tone: "text-warning",
-    };
-  }
-  return { label: "Normal", total, tone: "text-muted-foreground" };
+  const adjusted = adjustDamageComponent(total, damageType, {
+    vulnerabilities,
+    resistances,
+    immunities,
+  });
+  const labels = {
+    immune: "Immune",
+    vulnerable: "Vulnerable",
+    resistant: "Resistant",
+    normal: "Normal",
+  };
+  const tones = {
+    immune: "text-info",
+    vulnerable: "text-destructive",
+    resistant: "text-warning",
+    normal: "text-muted-foreground",
+  };
+  return { label: labels[adjusted.defense], total: adjusted.amount, tone: tones[adjusted.defense] };
 }
 
 export function bumpRollVersions(rolls: ActionRollPart[], current: Record<string, number>) {
@@ -364,9 +369,7 @@ export function rerollDamageRolls(rolls: ActionRollPart[], critical: boolean) {
 }
 
 function damageRollTotal(baseRolled: number, criticalRolled: number, fixedValue: number) {
-  const base = baseRolled + fixedValue;
-  const critical = criticalRolled > 0 ? criticalRolled + fixedValue : 0;
-  return Math.max(0, base + critical);
+  return Math.max(0, baseRolled + criticalRolled + fixedValue);
 }
 
 function rollDiceTotal(count: number, dieSize: number) {

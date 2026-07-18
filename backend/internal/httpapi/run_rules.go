@@ -140,6 +140,7 @@ func combatantUndoPayload(combatant models.EncounterRunCombatant) map[string]any
 		"deathSaveSuccesses": combatant.DeathSaveSuccesses,
 		"deathSaveFailures":  combatant.DeathSaveFailures,
 		"stable":             combatant.Stable,
+		"conditions":         combatant.Conditions,
 	}
 }
 

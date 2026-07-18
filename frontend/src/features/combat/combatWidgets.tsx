@@ -9,6 +9,7 @@ import type {
   EncounterRun,
   EncounterRunCombatant,
 } from "../../types";
+import type { CombatRollFlash } from "./combatTypes";
 import { RunTargetCombatantCard } from "../encounters/EncounterCombatantCard";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
@@ -219,13 +220,15 @@ export function CombatControls({
   );
 }
 
-function ActionMenu({
+export function ActionMenu({
   actions,
   disabled,
+  disabledReason,
   onAction,
 }: {
   actions: CreatureAction[];
   disabled: boolean;
+  disabledReason?: string;
   onAction: (action: CreatureAction, event?: React.MouseEvent) => void;
 }) {
   return (
@@ -237,7 +240,7 @@ function ActionMenu({
         ].join(" ")}
         title={
           disabled
-            ? "Select a target first"
+            ? disabledReason || "Select a target first"
             : "Choose an action. Shift-click roll for advantage, Control-click for disadvantage."
         }
       >
@@ -342,7 +345,7 @@ export function RollFlash({
   flash,
   onDone,
 }: {
-  flash: { id?: string; title: string; total: number; detail: string; subtitle?: string } | null;
+  flash: CombatRollFlash | null;
   onDone: () => void;
 }) {
   useEffect(() => {

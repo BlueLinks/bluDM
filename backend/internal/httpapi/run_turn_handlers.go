@@ -348,7 +348,7 @@ func actionRollTotal(part models.ActionRollPart, critical bool, roller func(int,
 	}
 	total := rolled + part.FixedValue
 	if critical {
-		total += criticalRolled + part.FixedValue
+		total += criticalRolled
 	}
 	if total < 0 {
 		total = 0

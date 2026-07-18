@@ -172,7 +172,11 @@ export function ActionResult({
 
   return (
     <div className="grid gap-4">
-      <TargetCard target={target} />
+      <ActionContextCard
+        actionName={action?.name ?? "Action"}
+        actorName={typeof result.actorName === "string" ? result.actorName : "Acting combatant"}
+        target={target}
+      />
       <AttackRollCard
         action={action}
         attack={attack}
@@ -214,15 +218,31 @@ export function ActionResult({
   );
 }
 
-function TargetCard({ target }: { target: EncounterRunCombatant }) {
+function ActionContextCard({
+  actionName,
+  actorName,
+  target,
+}: {
+  actionName: string;
+  actorName: string;
+  target: EncounterRunCombatant;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
-      <Avatar combatant={target} />
+    <div className="grid gap-3 rounded-lg border border-border bg-background p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
-        <div className="text-xs font-bold uppercase text-muted-foreground">Target</div>
-        <div className="truncate text-lg font-semibold">{target.displayName}</div>
-        <div className="text-sm text-muted-foreground">
-          AC {effectiveAC(target)} · HP {target.currentHitPoints}/{effectiveMaxHP(target)}
+        <div className="text-xs font-bold uppercase text-muted-foreground">Action context</div>
+        <div className="truncate font-semibold">
+          {actorName} · {actionName}
+        </div>
+      </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar combatant={target} />
+        <div className="min-w-0">
+          <div className="text-xs font-bold uppercase text-muted-foreground">Target</div>
+          <div className="truncate font-semibold">{target.displayName}</div>
+          <div className="text-sm text-muted-foreground">
+            AC {effectiveAC(target)} · HP {target.currentHitPoints}/{effectiveMaxHP(target)}
+          </div>
         </div>
       </div>
     </div>

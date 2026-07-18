@@ -121,6 +121,57 @@ func TestRunPersistenceRegressions(t *testing.T) {
 		t.Fatalf("expected undoable combat log event, got %+v", events)
 	}
 
+	enemyCombatant.CurrentHitPoints = 1
+	enemyCombatant.TemporaryHitPoints = 0
+	enemyCombatant.DamageTaken = 12
+	enemyCombatant.Conditions = []string{"Prone"}
+	playerCombatant.DamageDealt = 12
+	resolutionPayload := map[string]any{
+		"undoable":      true,
+		"sourceName":    "Reported spell",
+		"targetsBefore": []map[string]any{{"id": enemyCombatant.ID, "currentHitPoints": 6, "temporaryHitPoints": 2}},
+		"resource":      map[string]any{"kind": "spell_slot", "combatantId": playerCombatant.ID, "spellLevel": 1, "before": 3, "after": 2},
+	}
+	requireNoError(t, stores.Runs.SaveResolutionAndLog(
+		ctx,
+		run.ID,
+		"resolution_applied",
+		playerCombatant.ID,
+		enemyCombatant.ID,
+		[]models.EncounterRunCombatant{enemyCombatant, playerCombatant},
+		&ResolutionResourceUpdate{CombatantID: playerCombatant.ID, SpellLevel: 1, Before: 3, Remaining: 2},
+		resolutionPayload,
+	))
+	resolvedEnemy, err := stores.Runs.CombatantByID(ctx, run.ID, enemyCombatant.ID)
+	requireNoError(t, err)
+	if resolvedEnemy.CurrentHitPoints != 1 || resolvedEnemy.TemporaryHitPoints != 0 || !hasStringValue(resolvedEnemy.Conditions, "Prone") {
+		t.Fatalf("expected resolution HP, temp HP, and condition persistence, got %+v", resolvedEnemy)
+	}
+	resolvedRun, err := stores.Runs.ByID(ctx, owner.ID, run.ID)
+	requireNoError(t, err)
+	if len(resolvedRun.SpellSlots) != 1 || resolvedRun.SpellSlots[0].RemainingSlots != 2 {
+		t.Fatalf("expected atomic resolution spell-slot update, got %+v", resolvedRun.SpellSlots)
+	}
+	staleEnemy := resolvedEnemy
+	staleEnemy.CurrentHitPoints = 0
+	if err := stores.Runs.SaveResolutionAndLog(
+		ctx,
+		run.ID,
+		"resolution_applied",
+		playerCombatant.ID,
+		enemyCombatant.ID,
+		[]models.EncounterRunCombatant{staleEnemy},
+		&ResolutionResourceUpdate{CombatantID: playerCombatant.ID, SpellLevel: 1, Before: 3, Remaining: 2},
+		map[string]any{"sourceName": "Stale cast"},
+	); err == nil {
+		t.Fatal("expected stale spell-slot resolution to fail")
+	}
+	resolvedEnemy, err = stores.Runs.CombatantByID(ctx, run.ID, enemyCombatant.ID)
+	requireNoError(t, err)
+	if resolvedEnemy.CurrentHitPoints != 1 {
+		t.Fatalf("expected failed resource commit to roll back target state, got %+v", resolvedEnemy)
+	}
+
 	playerCombatant.DeathSaveSuccesses = 3
 	playerCombatant.Stable = true
 	requireNoError(t, stores.Runs.UpdateDeathSave(ctx, playerCombatant))
@@ -179,6 +230,15 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	if remaining["1"] != float64(1) && remaining["1"] != 1 {
 		t.Fatalf("expected remaining spell slot to persist, got %+v", remaining)
 	}
+}
+
+func hasStringValue(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
 
 func TestAuthSessionExpiryRegression(t *testing.T) {

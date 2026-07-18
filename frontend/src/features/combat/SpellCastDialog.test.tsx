@@ -24,7 +24,7 @@ describe("SpellCastDialog", () => {
         actor={combatant("caster", "Caster")}
         combatants={[combatant("caster", "Caster"), combatant("target", "Target")]}
         open
-        selectedID="target"
+        selectedIDs={["target"]}
         slots={[
           {
             combatantId: "caster",
