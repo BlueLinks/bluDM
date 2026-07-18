@@ -152,7 +152,7 @@ func TestSpellEffectAmountScalesAboveBaseSlot(t *testing.T) {
 	}
 }
 
-func TestActionRollTotalDoublesDiceAndModifierOnCriticalHit(t *testing.T) {
+func TestActionRollTotalDoublesDiceButNotModifierOnCriticalHit(t *testing.T) {
 	part := models.ActionRollPart{
 		DiceCount:  1,
 		DieSize:    8,
@@ -171,8 +171,8 @@ func TestActionRollTotalDoublesDiceAndModifierOnCriticalHit(t *testing.T) {
 	if rolled.CriticalRolledValue != 7 {
 		t.Fatalf("critical rolled value = %d, want 7", rolled.CriticalRolledValue)
 	}
-	if rolled.Total != 18 {
-		t.Fatalf("critical total = %d, want dice and fixed modifier doubled to 18", rolled.Total)
+	if rolled.Total != 15 {
+		t.Fatalf("critical total = %d, want doubled dice and one modifier for 15", rolled.Total)
 	}
 }
 

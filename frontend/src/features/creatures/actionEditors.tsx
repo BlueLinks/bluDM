@@ -133,7 +133,7 @@ export function WeaponMenu({ onAdd }: { onAdd: (weapon: CommonWeapon) => void })
       onOpenChange={setOpen}
       title="Add common weapon"
       trigger={
-        <Button type="button" icon={Plus} variant="success">
+        <Button type="button" icon={Plus}>
           Add weapon
         </Button>
       }
@@ -141,7 +141,7 @@ export function WeaponMenu({ onAdd }: { onAdd: (weapon: CommonWeapon) => void })
       <div className="grid gap-2">
         {commonWeapons.map((weapon) => (
           <button
-            className="rounded-md border border-border bg-background p-3 text-left text-sm transition hover:bg-muted"
+            className="rounded-md border border-border bg-surface p-3 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
             key={weapon.name}
             type="button"
             onClick={() => {
@@ -188,7 +188,7 @@ export function ActionSummary({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Badge>{formatRolls(action.rolls)}</Badge>
+          <Badge tone="warning">{formatRolls(action.rolls)}</Badge>
           {onEdit && <Button icon={Pencil} size="sm" variant="secondary" onClick={onEdit} />}
           {onDuplicate && (
             <Button icon={Copy} size="sm" variant="secondary" onClick={onDuplicate} />
@@ -256,8 +256,8 @@ export function SortableActionEditor({
                 className={[
                   "inline-flex items-center rounded-md px-2 py-1 text-xs font-bold",
                   bankModified
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-200"
-                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
+                    ? "bg-warning/15 text-warning"
+                    : "bg-companion-metadata/15 text-companion-metadata",
                 ].join(" ")}
               >
                 {bankModified ? "Banked, edited locally" : "In Action Bank"}

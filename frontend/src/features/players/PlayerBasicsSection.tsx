@@ -262,7 +262,7 @@ function FeatPicker({
             <button
               key={feat}
               type="button"
-              className="inline-flex max-w-full items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-companion-custom/25 bg-companion-custom/10 px-2.5 py-1 text-xs font-semibold text-companion-custom"
               onClick={() => onRemoveFeat(feat)}
             >
               <span className="min-w-0 truncate">{feat}</span>
@@ -278,7 +278,7 @@ function FeatPicker({
             loading={loading}
             onChange={onFeatInputChange}
           />
-          <Button type="button" icon={Plus} variant="success" onClick={onAddFeat}>
+          <Button type="button" icon={Plus} onClick={onAddFeat}>
             Add
           </Button>
         </div>

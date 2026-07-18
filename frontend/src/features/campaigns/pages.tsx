@@ -1,7 +1,8 @@
-import { Castle, ChevronRight, Plus, ScrollText } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { Castle, ChevronRight, Map, Plus, ScrollText } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { ResponsiveGrid, SidebarDetailLayout, WorkspaceBanner } from "../../components/layout";
 import {
   Button,
   Callout,
@@ -16,7 +17,7 @@ import {
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
-import type { Campaign, CampaignDetail, Creature, Encounter, Player } from "../../types";
+import type { Campaign, Creature, Encounter, Player } from "../../types";
 import { CampaignEncountersSection } from "./CampaignEncountersSection";
 import { CampaignForm } from "./CampaignForm";
 import { CampaignNpcSection } from "./CampaignNpcSection";
@@ -25,8 +26,11 @@ import { CampaignPartySection } from "./CampaignPartySection";
 import { CampaignRemovalDialogs } from "./CampaignRemovalDialogs";
 import { CampaignSourceSettings } from "./CampaignSourceSettings";
 import { CampaignTravelTool } from "./CampaignTravelTool";
-import { TravelPanel } from "./TravelPanel";
-import type { CampaignJourney, CampaignLocation } from "./travelTypes";
+import { CampaignWorkspaceHub } from "./CampaignWorkspaceHub";
+import { CampaignWorkspaceTabs } from "./CampaignWorkspaceTabs";
+import { TravelPanel } from "./world/TravelPanel";
+import { useCampaignWorkspaceData } from "./world/useCampaignWorkspaceData";
+import type { CampaignJourney } from "./world/travelTypes";
 
 export function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -86,24 +90,39 @@ export function CampaignsPage() {
       )}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {campaigns.map((campaign) => (
-          <Link
-            className="group rounded-lg border border-border bg-card p-5 transition hover:border-primary hover:shadow-md"
+          <article
+            className="rounded-lg border border-border bg-card p-5 transition hover:border-primary hover:shadow-md"
             key={campaign.id}
-            to={`/campaigns/${campaign.id}`}
           >
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="font-semibold">{campaign.name}</h3>
-                <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
-                  {campaign.description || "No description yet."}
-                </p>
+              <div className="min-w-0">
+                <Link
+                  className="group inline-flex items-start gap-2"
+                  to={`/campaigns/${campaign.id}`}
+                >
+                  <span>
+                    <h3 className="font-semibold">{campaign.name}</h3>
+                    <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">
+                      {campaign.description || "No description yet."}
+                    </p>
+                  </span>
+                  <ChevronRight className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
+                </Link>
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-primary" />
             </div>
-            <p className="mt-5 text-xs text-muted-foreground">
-              Updated {new Date(campaign.updatedAt).toLocaleDateString()}
-            </p>
-          </Link>
+            <div className="mt-5 flex items-center justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                Updated {new Date(campaign.updatedAt).toLocaleDateString()}
+              </p>
+              <Link
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs font-semibold text-accent transition hover:border-primary hover:text-primary"
+                to={`/campaigns/${campaign.id}/world`}
+              >
+                <Map className="h-3.5 w-3.5" />
+                Open world
+              </Link>
+            </div>
+          </article>
         ))}
       </div>
     </Page>
@@ -113,49 +132,17 @@ export function CampaignsPage() {
 export function CampaignDetailPage() {
   const { campaignID } = useParams();
   const navigate = useNavigate();
-  const [detail, setDetail] = useState<CampaignDetail | null>(null);
-  const [locations, setLocations] = useState<CampaignLocation[]>([]);
-  const [journeys, setJourneys] = useState<CampaignJourney[]>([]);
+  const { detail, error, journeys, loading, locations, loadCampaign, setDetail, setError } =
+    useCampaignWorkspaceData(campaignID);
   const [editingJourney, setEditingJourney] = useState<CampaignJourney | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [partyOpen, setPartyOpen] = useState(false);
   const [npcOpen, setNpcOpen] = useState(false);
   const [encounterOpen, setEncounterOpen] = useState(false);
-  const [encounterName, setEncounterName] = useState("");
-  const [encounterDescription, setEncounterDescription] = useState("");
-  const [encounterStatus, setEncounterStatus] = useState("planned");
-  const [encounterLocation, setEncounterLocation] = useState("");
-  const [encounterRoomNumber, setEncounterRoomNumber] = useState("");
   const [removePlayer, setRemovePlayer] = useState<Player | null>(null);
   const [removeNpc, setRemoveNpc] = useState<Creature | null>(null);
   const [removeEncounter, setRemoveEncounter] = useState<Encounter | null>(null);
   const [allCreatures, setAllCreatures] = useState<Creature[]>([]);
   const toast = useToasts();
-
-  async function loadCampaign() {
-    if (!campaignID) return;
-    setLoading(true);
-    setError("");
-    try {
-      const [campaignDetail, locationPayload, journeyPayload] = await Promise.all([
-        api.campaign(campaignID),
-        api.campaignLocations(campaignID),
-        api.campaignJourneys(campaignID),
-      ]);
-      setDetail({ ...campaignDetail, locationCount: locationPayload.locations.length });
-      setLocations(locationPayload.locations);
-      setJourneys(journeyPayload.journeys);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load campaign");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    void loadCampaign();
-  }, [campaignID]);
 
   async function longRest() {
     if (!campaignID) return;
@@ -215,31 +202,6 @@ export function CampaignDetailPage() {
     await loadCampaign();
   }
 
-  async function createEncounter(event: FormEvent) {
-    event.preventDefault();
-    if (!detail || !encounterName.trim()) return;
-    setError("");
-    try {
-      const payload = await api.createEncounter(detail.campaign.id, {
-        name: encounterName,
-        description: encounterDescription,
-        status: encounterStatus,
-        location: encounterLocation,
-        roomNumber: encounterRoomNumber,
-      });
-      toast.push(`${payload.encounter.name} created`);
-      setEncounterName("");
-      setEncounterDescription("");
-      setEncounterStatus("planned");
-      setEncounterLocation("");
-      setEncounterRoomNumber("");
-      setEncounterOpen(false);
-      await loadCampaign();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create encounter");
-    }
-  }
-
   async function cloneEncounter(encounter: Encounter) {
     setError("");
     try {
@@ -297,23 +259,35 @@ export function CampaignDetailPage() {
       <Breadcrumbs
         items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name }]}
       />
-      <PageHeader
+      <WorkspaceBanner
         eyebrow="Campaign"
         title={detail.campaign.name}
         copy={
           detail.campaign.description ||
           "Party state, encounters, and campaign-specific NPCs will gather here."
         }
+        action={
+          <Link to={`/campaigns/${detail.campaign.id}/world`}>
+            <Button type="button" icon={Map} variant="secondary">
+              Open world
+            </Button>
+          </Link>
+        }
+        tone="secondary"
       />
+      <CampaignWorkspaceTabs campaignId={detail.campaign.id} />
       {error && <Callout tone="danger">{error}</Callout>}
       <CampaignOverviewCards detail={detail} />
-      <CampaignSourceSettings
-        campaign={detail.campaign}
-        onSaved={(campaign) =>
-          setDetail((current) => (current ? { ...current, campaign } : current))
-        }
-      />
-      <div className="grid gap-4 lg:grid-cols-2">
+      <SidebarDetailLayout variant="workspace">
+        <CampaignWorkspaceHub campaignId={detail.campaign.id} detail={detail} journeys={journeys} />
+        <CampaignSourceSettings
+          campaign={detail.campaign}
+          onSaved={(campaign) =>
+            setDetail((current) => (current ? { ...current, campaign } : current))
+          }
+        />
+      </SidebarDetailLayout>
+      <ResponsiveGrid variant="equal2">
         <TravelPanel
           campaignId={detail.campaign.id}
           journeys={journeys}
@@ -321,47 +295,46 @@ export function CampaignDetailPage() {
           onEditJourney={setEditingJourney}
           onChanged={loadCampaign}
         />
-        <CampaignPartySection
-          campaignID={detail.campaign.id}
-          open={partyOpen}
-          players={detail.players}
-          onLongRest={() => void longRest()}
-          onOpenChange={setPartyOpen}
-          onRemovePlayer={setRemovePlayer}
-        />
-        <CampaignEncountersSection
-          campaignID={detail.campaign.id}
-          description={encounterDescription}
-          encounterOpen={encounterOpen}
-          encounters={detail.encounters}
-          location={encounterLocation}
-          name={encounterName}
-          roomNumber={encounterRoomNumber}
-          status={encounterStatus}
-          onClone={(encounter) => void cloneEncounter(encounter)}
-          onCreate={(event) => void createEncounter(event)}
-          onDescriptionChange={setEncounterDescription}
-          onLocationChange={setEncounterLocation}
-          onNameChange={setEncounterName}
-          onOpenChange={setEncounterOpen}
-          onRemove={setRemoveEncounter}
-          onRoomNumberChange={setEncounterRoomNumber}
-          onStart={(encounter, test) => void startEncounter(encounter, test)}
-          onStatusChange={setEncounterStatus}
-        />
-        <CampaignNpcSection
-          allCreatures={allCreatures}
-          linkedNpcs={detail.npcs}
-          open={npcOpen}
-          onLink={(creature) => void linkNpc(creature)}
-          onOpenDialog={() => void openNpcDialog()}
-          onOpenChange={setNpcOpen}
-          onRemove={setRemoveNpc}
-        />
+        <div id="campaign-encounters">
+          <CampaignEncountersSection
+            campaignID={detail.campaign.id}
+            encounterOpen={encounterOpen}
+            encounters={detail.encounters}
+            locations={locations}
+            npcs={detail.npcs}
+            players={detail.players}
+            onClone={(encounter) => void cloneEncounter(encounter)}
+            onCreated={loadCampaign}
+            onOpenChange={setEncounterOpen}
+            onRemove={setRemoveEncounter}
+            onStart={(encounter, test) => void startEncounter(encounter, test)}
+          />
+        </div>
+        <div id="campaign-party">
+          <CampaignPartySection
+            campaignID={detail.campaign.id}
+            open={partyOpen}
+            players={detail.players}
+            onLongRest={() => void longRest()}
+            onOpenChange={setPartyOpen}
+            onRemovePlayer={setRemovePlayer}
+          />
+        </div>
+        <div id="campaign-npcs">
+          <CampaignNpcSection
+            allCreatures={allCreatures}
+            linkedNpcs={detail.npcs}
+            open={npcOpen}
+            onLink={(creature) => void linkNpc(creature)}
+            onOpenDialog={() => void openNpcDialog()}
+            onOpenChange={setNpcOpen}
+            onRemove={setRemoveNpc}
+          />
+        </div>
         <SectionPanel title="Recent Notes" icon={ScrollText}>
           <EmptyMini copy="Combat summaries, XP awards, and loot reminders will appear here." />
         </SectionPanel>
-      </div>
+      </ResponsiveGrid>
       <CampaignRemovalDialogs
         encounter={removeEncounter}
         npc={removeNpc}

@@ -1,61 +1,38 @@
 import { ClipboardList, Copy, FlaskConical, Pencil, Play, Plus, Trash2 } from "lucide-react";
-import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
-import {
-  Badge,
-  Button,
-  EmptyMini,
-  Field,
-  FloatingInput,
-  Modal,
-  SectionPanel,
-  Select,
-  Textarea,
-} from "../../components/ui";
+import { Badge, Button, EmptyMini, SectionPanel } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
-import type { Encounter } from "../../types";
+import type { Creature, Encounter, Player } from "../../types";
+import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
+import type { CampaignLocation } from "./world/travelTypes";
 
 const encounterStatusLabel = (status: string) =>
   encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 
 export function CampaignEncountersSection({
   campaignID,
-  description,
   encounterOpen,
   encounters,
-  location,
-  name,
-  roomNumber,
-  status,
+  locations,
+  npcs,
+  players,
   onClone,
-  onCreate,
-  onDescriptionChange,
-  onLocationChange,
-  onNameChange,
   onOpenChange,
   onRemove,
-  onRoomNumberChange,
   onStart,
-  onStatusChange,
+  onCreated,
 }: {
   campaignID: string;
-  description: string;
   encounterOpen: boolean;
   encounters: Encounter[];
-  location: string;
-  name: string;
-  roomNumber: string;
-  status: string;
+  locations: CampaignLocation[];
+  npcs: Creature[];
+  players: Player[];
   onClone: (encounter: Encounter) => void;
-  onCreate: (event: FormEvent) => void;
-  onDescriptionChange: (description: string) => void;
-  onLocationChange: (location: string) => void;
-  onNameChange: (name: string) => void;
   onOpenChange: (open: boolean) => void;
   onRemove: (encounter: Encounter) => void;
-  onRoomNumberChange: (roomNumber: string) => void;
   onStart: (encounter: Encounter, test: boolean) => void;
-  onStatusChange: (status: string) => void;
+  onCreated?: () => Promise<void> | void;
 }) {
   return (
     <SectionPanel title="Encounters" icon={ClipboardList}>
@@ -64,7 +41,7 @@ export function CampaignEncountersSection({
       ) : (
         <div className="grid gap-3">
           {encounters.map((encounter) => (
-            <EncounterCard
+            <CampaignEncounterCard
               campaignID={campaignID}
               encounter={encounter}
               key={encounter.id}
@@ -76,48 +53,20 @@ export function CampaignEncountersSection({
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
-        <Modal
+        <CampaignEncounterCreateDialog
+          campaignId={campaignID}
+          locations={locations}
+          npcs={npcs}
           open={encounterOpen}
-          onOpenChange={onOpenChange}
-          title="Add encounter"
+          players={players}
           trigger={
-            <Button type="button" icon={Plus} variant="success">
+            <Button type="button" icon={Plus}>
               Add encounter
             </Button>
           }
-        >
-          <form className="grid gap-4" onSubmit={onCreate}>
-            <FloatingInput label="Encounter name" value={name} onChange={onNameChange} required />
-            <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Status">
-                <Select
-                  value={status}
-                  placeholder="Status"
-                  options={encounterStatusOptions}
-                  onValueChange={onStatusChange}
-                />
-              </Field>
-              <FloatingInput label="Location" value={location} onChange={onLocationChange} />
-              <FloatingInput label="Room number" value={roomNumber} onChange={onRoomNumberChange} />
-            </div>
-            <Field label="Description">
-              <Textarea
-                rows={4}
-                value={description}
-                onChange={(event) => onDescriptionChange(event.target.value)}
-                placeholder="Optional notes, setup, terrain, or goals"
-              />
-            </Field>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" icon={Plus} variant="success">
-                Create encounter
-              </Button>
-            </div>
-          </form>
-        </Modal>
+          onCreated={onCreated}
+          onOpenChange={onOpenChange}
+        />
         <Button type="button" variant="secondary" disabled>
           Import encounter
         </Button>
@@ -126,7 +75,7 @@ export function CampaignEncountersSection({
   );
 }
 
-function EncounterCard({
+export function CampaignEncounterCard({
   campaignID,
   encounter,
   onClone,
@@ -136,7 +85,7 @@ function EncounterCard({
   campaignID: string;
   encounter: Encounter;
   onClone: (encounter: Encounter) => void;
-  onRemove: (encounter: Encounter) => void;
+  onRemove?: (encounter: Encounter) => void;
   onStart: (encounter: Encounter, test: boolean) => void;
 }) {
   return (
@@ -148,11 +97,13 @@ function EncounterCard({
             <p className="mt-1 text-sm text-muted-foreground">{encounter.description}</p>
           )}
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge>{encounterStatusLabel(encounter.status)}</Badge>
-            {encounter.location && <Badge>{encounter.location}</Badge>}
-            {encounter.roomNumber && <Badge>Room {encounter.roomNumber}</Badge>}
-            <Badge>{encounter.combatantCount} combatants</Badge>
-            <Badge>{encounter.enemyCount} enemies</Badge>
+            <Badge tone={encounter.status === "completed" ? "published" : "draft"}>
+              {encounterStatusLabel(encounter.status)}
+            </Badge>
+            {encounter.location && <Badge tone="shared">{encounter.location}</Badge>}
+            {encounter.roomNumber && <Badge tone="metadata">Room {encounter.roomNumber}</Badge>}
+            <Badge tone="info">{encounter.combatantCount} combatants</Badge>
+            <Badge tone="warning">{encounter.enemyCount} enemies</Badge>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -163,7 +114,7 @@ function EncounterCard({
             type="button"
             icon={FlaskConical}
             size="sm"
-            variant="secondary"
+            variant="tertiary"
             onClick={() => onStart(encounter, true)}
           >
             Test
@@ -182,15 +133,17 @@ function EncounterCard({
           >
             Clone
           </Button>
-          <Button
-            type="button"
-            icon={Trash2}
-            size="sm"
-            variant="danger"
-            onClick={() => onRemove(encounter)}
-          >
-            Remove
-          </Button>
+          {onRemove ? (
+            <Button
+              type="button"
+              icon={Trash2}
+              size="sm"
+              variant="danger"
+              onClick={() => onRemove(encounter)}
+            >
+              Remove
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

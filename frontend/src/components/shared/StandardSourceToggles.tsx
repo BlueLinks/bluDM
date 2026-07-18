@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { standardSourceDisplayName } from "../../lib/domain/standardSources";
 import type { StandardSource } from "../../types";
-import { Checkbox, MutedPanel } from "../ui";
+import { MutedPanel } from "../ui";
+import { sourceToneClass } from "./sourceTones";
 
 export function StandardSourceToggles({
   selected,
@@ -21,20 +22,30 @@ export function StandardSourceToggles({
 
   return (
     <div className="flex flex-wrap gap-2">
-      {sources.map((source) => (
-        <div key={source.key} className="rounded-full border border-border bg-card text-sm">
-          <Checkbox
-            label={standardSourceDisplayName(source)}
-            checked={selected.includes(source.key)}
-            onChange={(checked) => {
+      {sources.map((source) => {
+        const checked = selected.includes(source.key);
+        return (
+          <button
+            key={source.key}
+            type="button"
+            aria-pressed={checked}
+            className={[
+              "rounded-full border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+              checked
+                ? sourceToneClass("official")
+                : "border-border bg-surface text-surface-foreground hover:border-primary/40 hover:bg-card hover:text-foreground",
+            ].join(" ")}
+            onClick={() => {
               const next = checked
-                ? [...selected, source.key]
-                : selected.filter((key) => key !== source.key);
+                ? selected.filter((key) => key !== source.key)
+                : [...selected, source.key];
               onChange(next.length > 0 ? Array.from(new Set(next)) : selected);
             }}
-          />
-        </div>
-      ))}
+          >
+            {standardSourceDisplayName(source)}
+          </button>
+        );
+      })}
     </div>
   );
 }

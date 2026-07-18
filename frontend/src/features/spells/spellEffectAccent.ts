@@ -2,39 +2,39 @@ import type { SpellEffectCategory } from "../../lib/domain/spellEffectOptions";
 
 export function categoryAccent(category: SpellEffectCategory) {
   const accents: Record<SpellEffectCategory, { border: string; badge: string }> = {
-    hp: { border: "border-l-rose-400", badge: "bg-rose-500/15 text-rose-700 dark:text-rose-200" },
-    damage: { border: "border-l-red-400", badge: "bg-red-500/15 text-red-700 dark:text-red-200" },
+    hp: { border: "border-l-success", badge: "bg-success/15 text-success" },
+    damage: { border: "border-l-destructive", badge: "bg-destructive/15 text-destructive" },
     movement: {
-      border: "border-l-emerald-400",
-      badge: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-200",
+      border: "border-l-info",
+      badge: "bg-info/15 text-info",
     },
     defense: {
-      border: "border-l-sky-400",
-      badge: "bg-sky-500/15 text-sky-700 dark:text-sky-200",
+      border: "border-l-companion-official",
+      badge: "bg-companion-official/15 text-companion-official",
     },
     rolls: {
-      border: "border-l-violet-400",
-      badge: "bg-violet-500/15 text-violet-700 dark:text-violet-200",
+      border: "border-l-companion-custom",
+      badge: "bg-companion-custom/15 text-companion-custom",
     },
     conditions: {
-      border: "border-l-amber-400",
-      badge: "bg-amber-500/15 text-amber-700 dark:text-amber-200",
+      border: "border-l-warning",
+      badge: "bg-warning/15 text-warning",
     },
     action: {
-      border: "border-l-orange-400",
-      badge: "bg-orange-500/15 text-orange-700 dark:text-orange-200",
+      border: "border-l-companion-imported",
+      badge: "bg-companion-imported/15 text-companion-imported",
     },
     senses: {
-      border: "border-l-cyan-400",
-      badge: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-200",
+      border: "border-l-companion-metadata",
+      badge: "bg-companion-metadata/15 text-companion-metadata",
     },
     area: {
-      border: "border-l-lime-400",
-      badge: "bg-lime-500/15 text-lime-700 dark:text-lime-200",
+      border: "border-l-companion-shared",
+      badge: "bg-companion-shared/15 text-companion-shared",
     },
     utility: {
-      border: "border-l-slate-400",
-      badge: "bg-slate-500/15 text-slate-700 dark:text-slate-200",
+      border: "border-l-companion-metadata",
+      badge: "bg-companion-metadata/15 text-companion-metadata",
     },
   };
   return accents[category];

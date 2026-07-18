@@ -1,0 +1,494 @@
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { SidebarDetailLayout } from "../../../components/layout";
+import { api } from "../../../lib/api";
+import type { Item } from "../../../types";
+import { worldLocationPayload } from "./CampaignWorldLocationEditor";
+import { CampaignWorldLocationEditorDialogs } from "./CampaignWorldLocationEditorDialogs";
+import { CampaignWorldLocationWorkspace } from "./CampaignWorldLocationWorkspace";
+import { WorldLocationList } from "./CampaignWorldLocationList";
+import { CampaignWorldSearchEmptyState } from "./CampaignWorldSearchEmptyState";
+import { clearCampaignLocationNotes as clearNotes } from "./campaignWorldLocationNotes";
+import type { CampaignWorldSectionProps } from "./CampaignWorldSectionTypes";
+import type { LinkFormInput } from "./CampaignWorldLocationLinks";
+import type { NpcLocationFormInput } from "./CampaignWorldLocationNpcs";
+import type { LocationStockFormInput } from "./CampaignWorldLocationStock";
+import {
+  compareLocations,
+  descendantLocationIDs,
+  EmptyWorldLocations,
+  FilterHiddenNotice,
+  locationMapMarker,
+  MissingLocationFallback,
+} from "./CampaignWorldSectionHelpers";
+import { loadCampaignWorldMaps as load } from "./campaignWorldMapLoading";
+import { filterWorldLocations } from "./campaignWorldSearch";
+import { shopTemplateKeyForLabel, shopTemplateLabel } from "./campaignWorldShopTemplates";
+import { nextShopTemplateDraft } from "./campaignWorldShopTemplateDraft";
+import type {
+  CampaignLocation,
+  CampaignLocationLink,
+  CampaignLocationStock,
+  CampaignMap,
+  CampaignNpcLocationLink,
+} from "./travelTypes";
+
+export function CampaignWorldSection({
+  campaignId,
+  encounters,
+  locations,
+  npcs,
+  onManageNpcs,
+  journeys = [],
+  mapsMode = false,
+  routeLocationID,
+  onChanged,
+  onCloneEncounter = () => undefined,
+  onDeleteEncounter = () => undefined,
+  onGenerateEncounter,
+  onPlanTravel,
+  onStartEncounter = () => undefined,
+}: CampaignWorldSectionProps) {
+  const navigate = useNavigate();
+  const sortedLocations = useMemo(() => [...locations].sort(compareLocations), [locations]);
+  const [selectedID, setSelectedID] = useState(sortedLocations[0]?.id ?? "");
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingLocation, setEditingLocation] = useState<CampaignLocation | null>(null);
+  const [parentID, setParentID] = useState("");
+  const [name, setName] = useState("");
+  const [locationType, setLocationType] = useState("settlement");
+  const [summary, setSummary] = useState("");
+  const [publicNotes, setPublicNotes] = useState("");
+  const [dmNotes, setDmNotes] = useState("");
+  const [tags, setTags] = useState("");
+  const [mapMarker, setMapMarker] = useState("");
+  const [shopTemplate, setShopTemplate] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [error, setError] = useState("");
+  const [deleteLocation, setDeleteLocation] = useState<CampaignLocation | null>(null);
+  const [links, setLinks] = useState<CampaignLocationLink[]>([]);
+  const [npcLinks, setNpcLinks] = useState<CampaignNpcLocationLink[]>([]);
+  const [stock, setStock] = useState<CampaignLocationStock[]>([]);
+  const [stockItems, setStockItems] = useState<Item[]>([]);
+  const [maps, setMaps] = useState<CampaignMap[]>([]);
+  const [focusedMapID, setFocusedMapID] = useState("");
+  const [focusedLocationID, setFocusedLocationID] = useState("");
+  const [linksLoading, setLinksLoading] = useState(false);
+  const [npcLinksLoading, setNpcLinksLoading] = useState(false);
+  const [stockLoading, setStockLoading] = useState(false);
+  const [mapsLoading, setMapsLoading] = useState(false);
+  const [linksError, setLinksError] = useState("");
+  const [npcLinksError, setNpcLinksError] = useState("");
+  const [stockError, setStockError] = useState("");
+  const [mapsError, setMapsError] = useState("");
+  const filteredLocations = useMemo(
+    () =>
+      filterWorldLocations(
+        sortedLocations,
+        {
+          query: searchQuery,
+          relationship: "",
+          tag: "",
+          type: "",
+        },
+        { encounters, npcLinks, npcs, stock, stockItems },
+      ),
+    [encounters, npcLinks, npcs, searchQuery, sortedLocations, stock, stockItems],
+  );
+  const hasActiveFilters = Boolean(searchQuery);
+  const effectiveSelectedID = routeLocationID ?? selectedID;
+  const selected = routeLocationID
+    ? sortedLocations.find((location) => location.id === routeLocationID)
+    : (filteredLocations.find((location) => location.id === effectiveSelectedID) ??
+      filteredLocations[0]);
+  const selectedHiddenByFilters = Boolean(
+    selected &&
+    hasActiveFilters &&
+    !filteredLocations.some((location) => location.id === selected.id),
+  );
+  const missingRouteLocation = Boolean(routeLocationID && !selected);
+  useEffect(() => {
+    let active = true;
+    setLinksLoading(true);
+    setLinksError("");
+    api
+      .campaignLocationLinks(campaignId)
+      .then(({ links: nextLinks }) => {
+        if (active) setLinks(nextLinks);
+      })
+      .catch((err: unknown) => {
+        if (active) setLinksError(err instanceof Error ? err.message : "Could not load links");
+      })
+      .finally(() => {
+        if (active) setLinksLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [campaignId]);
+  useEffect(() => {
+    let active = true;
+    setStockLoading(true);
+    setStockError("");
+    Promise.all([
+      api.campaignLocationStock(campaignId),
+      api.items({ includeStandard: true, includeUser: true }),
+    ])
+      .then(([stockPayload, itemPayload]) => {
+        if (!active) return;
+        setStock(stockPayload.stock);
+        setStockItems(itemPayload.items);
+      })
+      .catch((err: unknown) => {
+        if (active) setStockError(err instanceof Error ? err.message : "Could not load shop stock");
+      })
+      .finally(() => {
+        if (active) setStockLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [campaignId]);
+  useEffect(() => {
+    let active = true;
+    setNpcLinksLoading(true);
+    setNpcLinksError("");
+    api
+      .campaignNpcLocationLinks(campaignId)
+      .then(({ links: nextLinks }) => {
+        if (active) setNpcLinks(nextLinks);
+      })
+      .catch((err: unknown) => {
+        if (active)
+          setNpcLinksError(err instanceof Error ? err.message : "Could not load NPC links");
+      })
+      .finally(() => {
+        if (active) setNpcLinksLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [campaignId]);
+  useEffect(() => {
+    void load(campaignId, setMaps, setMapsError, setMapsLoading);
+  }, [campaignId]);
+  useEffect(() => {
+    if (!routeLocationID && !mapsMode && selected?.id)
+      void navigate(`/campaigns/${campaignId}/world/location/${selected.id}`, { replace: true });
+  }, [campaignId, mapsMode, navigate, routeLocationID, selected?.id]);
+  useEffect(() => {
+    if (routeLocationID) return;
+    if (!filteredLocations.length) {
+      setSelectedID("");
+      return;
+    }
+    if (!filteredLocations.some((location) => location.id === selectedID)) {
+      setSelectedID(filteredLocations[0].id);
+    }
+  }, [filteredLocations, routeLocationID, selectedID]);
+  const selectedChildren = selected
+    ? sortedLocations.filter((location) => location.parentLocationId === selected.id)
+    : [];
+  const childCount = selectedChildren.length;
+  const selectedEncounterLocationIDs = selected
+    ? new Set([selected.id, ...descendantLocationIDs(sortedLocations, selected.id)])
+    : new Set<string>();
+  const selectedEncounters = selected
+    ? encounters.filter(
+        (encounter) =>
+          encounter.locationId && selectedEncounterLocationIDs.has(encounter.locationId),
+      )
+    : [];
+  const selectedNpcLinks = selected
+    ? npcLinks.filter((link) => link.locationId === selected.id)
+    : [];
+  const selectedStock = selected ? stock.filter((entry) => entry.locationId === selected.id) : [];
+  function openCreate(parent?: CampaignLocation, draftName?: string, defaultLocationType?: string) {
+    setEditingLocation(null);
+    setParentID(parent?.id ?? "");
+    setName(draftName ?? "");
+    setLocationType(defaultLocationType ?? (parent ? "building" : "settlement"));
+    setSummary("");
+    setPublicNotes("");
+    setDmNotes("");
+    setTags("");
+    setMapMarker("");
+    setShopTemplate("");
+    setError("");
+    setEditorOpen(true);
+  }
+  function openEdit(location: CampaignLocation) {
+    setEditingLocation(location);
+    setParentID(location.parentLocationId ?? "");
+    setName(location.name);
+    setLocationType(location.locationType ?? "custom");
+    setSummary(location.summary ?? "");
+    setPublicNotes(location.publicNotes || location.notes);
+    setDmNotes(location.dmNotes ?? "");
+    setTags((location.tags ?? []).join(", "));
+    setMapMarker(locationMapMarker(location));
+    setShopTemplate(
+      location.locationType === "shop" ? shopTemplateKeyForLabel(location.customTypeLabel) : "",
+    );
+    setError("");
+    setEditorOpen(true);
+  }
+  async function saveLocation(event: FormEvent) {
+    event.preventDefault();
+    const selectedShopTemplateLabel = shopTemplateLabel(shopTemplate);
+    const payload = worldLocationPayload({
+      parentID,
+      name,
+      locationType,
+      customTypeLabel:
+        locationType === "shop"
+          ? selectedShopTemplateLabel || editingLocation?.customTypeLabel
+          : undefined,
+      summary,
+      publicNotes,
+      dmNotes,
+      tags,
+      mapMarker,
+    });
+    if (!payload.name) return;
+    setError("");
+    try {
+      let createdLocationID = "";
+      if (editingLocation) {
+        await api.updateCampaignLocation(campaignId, editingLocation.id, payload);
+      } else {
+        const created = await api.createCampaignLocation(campaignId, payload);
+        createdLocationID = created.location.id;
+      }
+      setEditorOpen(false);
+      await onChanged();
+      if (!editingLocation && payload.locationType === "dungeon" && createdLocationID) {
+        const studioPath = `/campaigns/${campaignId}/world/location/${createdLocationID}/studio`;
+        void navigate(studioPath);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save world location");
+    }
+  }
+  async function createLocationLink(input: LinkFormInput) {
+    const { link } = await api.createCampaignLocationLink(campaignId, {
+      ...input,
+      direction: "bidirectional",
+      visibility: "dm",
+    });
+    setLinks((current) => [...current, link]);
+  }
+  async function deleteLocationLink(linkID: string) {
+    await api.deleteCampaignLocationLink(campaignId, linkID);
+    setLinks((current) => current.filter((link) => link.id !== linkID));
+  }
+  async function createNpcLocationLink(input: NpcLocationFormInput) {
+    const { link } = await api.createCampaignNpcLocationLink(campaignId, input);
+    setNpcLinks((current) => [...current, link]);
+  }
+  async function deleteNpcLocationLink(linkID: string) {
+    await api.deleteCampaignNpcLocationLink(campaignId, linkID);
+    setNpcLinks((current) => current.filter((link) => link.id !== linkID));
+  }
+  async function createLocationStock(input: LocationStockFormInput) {
+    const { stock: savedStock } = await api.upsertCampaignLocationStock(campaignId, input);
+    setStock((current) => [...current.filter((entry) => entry.id !== savedStock.id), savedStock]);
+  }
+  async function deleteLocationStock(stockID: string) {
+    await api.deleteCampaignLocationStock(campaignId, stockID);
+    setStock((current) => current.filter((entry) => entry.id !== stockID));
+  }
+  async function confirmDeleteLocation() {
+    if (!deleteLocation) return;
+    setError("");
+    try {
+      await api.deleteCampaignLocation(campaignId, deleteLocation.id);
+      setDeleteLocation(null);
+      await onChanged();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not delete world location");
+    }
+  }
+  function clearSearchFilters() {
+    setSearchQuery("");
+  }
+  function selectLocation(locationID: string, { clearFilters = false } = {}) {
+    if (clearFilters) clearSearchFilters();
+    setFocusedMapID("");
+    setFocusedLocationID("");
+    setSelectedID(locationID);
+    void navigate(`/campaigns/${campaignId}/world/location/${locationID}`);
+  }
+  function jumpToLocation(locationID: string) {
+    selectLocation(locationID, { clearFilters: true });
+  }
+  function openMapsForLocation(locationID = selected?.id ?? "") {
+    if (locationID) setSelectedID(locationID);
+    void navigate(`/campaigns/${campaignId}/world/maps`);
+  }
+  function closeMapsForLocation(locationID = selected?.id ?? "") {
+    if (!locationID) return;
+    setFocusedMapID("");
+    setFocusedLocationID("");
+    setSelectedID(locationID);
+    void navigate(`/campaigns/${campaignId}/world/location/${locationID}`);
+  }
+  function navigateFromPin(locationID: string, sourceMapID: string) {
+    clearSearchFilters();
+    const ownMap = maps.find((map) => (map.parentLocationId ?? "") === locationID);
+    setFocusedMapID(ownMap?.id ?? sourceMapID);
+    setFocusedLocationID(ownMap ? "" : locationID);
+    setSelectedID(locationID);
+    void navigate(`/campaigns/${campaignId}/world/location/${locationID}`);
+  }
+  function addCustomStockItem(item: Item) {
+    setStockItems((current) => [item, ...current]);
+  }
+  function changeLocationType(nextType: string) {
+    setLocationType(nextType);
+    if (nextType !== "shop") setShopTemplate("");
+  }
+  function changeShopTemplate(nextTemplateKey: string) {
+    setShopTemplate(nextTemplateKey);
+    if (editingLocation) return;
+    const nextDefaults = nextShopTemplateDraft({
+      currentKey: shopTemplate,
+      dmNotes,
+      mapMarker,
+      publicNotes,
+      summary,
+      tags,
+      nextKey: nextTemplateKey,
+    });
+    setSummary(nextDefaults.summary);
+    setPublicNotes(nextDefaults.publicNotes);
+    setDmNotes(nextDefaults.dmNotes);
+    setTags(nextDefaults.tags);
+    setMapMarker(nextDefaults.mapMarker);
+  }
+  return (
+    <div className="min-w-0">
+      {sortedLocations.length === 0 ? (
+        <EmptyWorldLocations onCreate={() => openCreate()} />
+      ) : (
+        <div className="grid w-full gap-4">
+          {missingRouteLocation ? (
+            <MissingLocationFallback campaignId={campaignId} />
+          ) : filteredLocations.length === 0 && !selected ? (
+            <CampaignWorldSearchEmptyState
+              hasActiveFilters={hasActiveFilters}
+              searchQuery={searchQuery}
+              onClear={clearSearchFilters}
+              onCreate={() => openCreate(undefined, searchQuery)}
+            />
+          ) : (
+            <>
+              {selectedHiddenByFilters ? <FilterHiddenNotice onClear={clearSearchFilters} /> : null}
+              <SidebarDetailLayout
+                className="xl:grid-cols-[minmax(11.5rem,14rem)_minmax(0,1fr)]"
+                variant="compact"
+              >
+                <div className="order-2 min-w-0 xl:order-1">
+                  <WorldLocationList
+                    locations={filteredLocations}
+                    query={searchQuery}
+                    selectedID={selected?.id ?? ""}
+                    totalCount={sortedLocations.length}
+                    onCreate={() => openCreate()}
+                    onQueryChange={setSearchQuery}
+                    onSelect={(locationID) => {
+                      if (mapsMode) setSelectedID(locationID);
+                      else selectLocation(locationID);
+                    }}
+                  />
+                </div>
+                {selected && (
+                  <div className="order-1 min-w-0 xl:order-2">
+                    <CampaignWorldLocationWorkspace
+                      campaignId={campaignId}
+                      childCount={childCount}
+                      childLocations={selectedChildren}
+                      encounters={selectedEncounters}
+                      links={links}
+                      linksError={linksError}
+                      linksLoading={linksLoading}
+                      focusedLocationID={focusedLocationID}
+                      focusedMapID={focusedMapID}
+                      location={selected}
+                      locations={sortedLocations}
+                      maps={maps}
+                      mapsError={mapsError}
+                      mapsLoading={mapsLoading}
+                      mapsMode={mapsMode}
+                      journeys={journeys}
+                      npcLinks={selectedNpcLinks}
+                      npcLinksError={npcLinksError}
+                      npcLinksLoading={npcLinksLoading}
+                      npcs={npcs}
+                      stock={selectedStock}
+                      stockError={stockError}
+                      stockItems={stockItems}
+                      stockLoading={stockLoading}
+                      onAddChild={(locationType) => openCreate(selected, undefined, locationType)}
+                      onCreateLink={createLocationLink}
+                      onCreateNpc={onManageNpcs}
+                      onCreateNpcLink={createNpcLocationLink}
+                      onCreateStock={createLocationStock}
+                      onCustomStockItemCreated={addCustomStockItem}
+                      onClearNotes={(location) => clearNotes(campaignId, location, onChanged)}
+                      onDeleteLink={deleteLocationLink}
+                      onDeleteLocation={() => setDeleteLocation(selected)}
+                      onDeleteNpcLink={deleteNpcLocationLink}
+                      onDeleteStock={deleteLocationStock}
+                      onEdit={() => openEdit(selected)}
+                      onCloneEncounter={onCloneEncounter}
+                      onDeleteEncounter={onDeleteEncounter}
+                      onGenerateEncounter={() => onGenerateEncounter(selected)}
+                      onCloseMaps={() => closeMapsForLocation(selected.id)}
+                      onMapsChanged={() => load(campaignId, setMaps, setMapsError, setMapsLoading)}
+                      onNavigateFromPin={navigateFromPin}
+                      onOpenMaps={() => openMapsForLocation(selected.id)}
+                      onPlanTravel={() => onPlanTravel?.(selected)}
+                      onSelectLocation={jumpToLocation}
+                      onStartEncounter={onStartEncounter}
+                    />
+                  </div>
+                )}
+              </SidebarDetailLayout>
+            </>
+          )}
+        </div>
+      )}
+      <CampaignWorldLocationEditorDialogs
+        deleteLocation={deleteLocation}
+        editingLocation={editingLocation}
+        error={error}
+        locationType={locationType}
+        locations={sortedLocations}
+        mapMarker={mapMarker}
+        name={name}
+        open={editorOpen}
+        parentID={parentID}
+        publicNotes={publicNotes}
+        shopTemplate={shopTemplate}
+        summary={summary}
+        tags={tags}
+        dmNotes={dmNotes}
+        onCancelDelete={() => setDeleteLocation(null)}
+        onClose={() => setEditorOpen(false)}
+        onConfirmDelete={() => void confirmDeleteLocation()}
+        onDmNotesChange={setDmNotes}
+        onLocationTypeChange={changeLocationType}
+        onMapMarkerChange={setMapMarker}
+        onNameChange={setName}
+        onOpenChange={setEditorOpen}
+        onParentIDChange={setParentID}
+        onPublicNotesChange={setPublicNotes}
+        onShopTemplateChange={changeShopTemplate}
+        onSubmit={saveLocation}
+        onSummaryChange={setSummary}
+        onTagsChange={setTags}
+      />
+    </div>
+  );
+}

@@ -1,14 +1,16 @@
-import { AlertTriangle, ShieldCheck, ShieldX } from "lucide-react";
+import { AlertTriangle, Dice5, ShieldCheck, ShieldX } from "lucide-react";
 import { Button } from "../../components/ui";
 import type { EncounterRunAlert, EncounterRunCombatant } from "../../types";
 
 export function ConcentrationAlerts({
   alerts,
   combatants,
+  onRequestSave,
   onResolve,
 }: {
   alerts: EncounterRunAlert[];
   combatants: EncounterRunCombatant[];
+  onRequestSave: (alert: EncounterRunAlert) => void;
   onResolve: (alert: EncounterRunAlert, action: string) => void;
 }) {
   if (alerts.length === 0) return null;
@@ -19,11 +21,11 @@ export function ConcentrationAlerts({
         return (
           <div
             key={alert.id}
-            className="rounded-lg border border-amber-500/50 bg-amber-500/12 p-3 shadow-sm"
+            className="rounded-lg border border-warning/50 bg-warning/10 p-3 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 font-black text-amber-800 dark:text-amber-100">
+                <div className="flex items-center gap-2 font-black text-warning">
                   <AlertTriangle className="h-4 w-4" />
                   {alert.title}
                 </div>
@@ -33,6 +35,14 @@ export function ConcentrationAlerts({
                 </div>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="tertiary"
+                  icon={Dice5}
+                  onClick={() => onRequestSave(alert)}
+                >
+                  Roll save
+                </Button>
                 <Button
                   size="sm"
                   variant="success"

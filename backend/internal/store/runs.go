@@ -273,6 +273,10 @@ func (s RunStore) SaveHPChangeAndLog(ctx context.Context, runID, eventType, acto
 }
 
 func (s RunStore) RestoreCombatantState(ctx context.Context, payload map[string]any) error {
+	conditions, err := jsonBytes(stringListFromAny(payload["conditions"]))
+	if err != nil {
+		return err
+	}
 	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunCombatantEntity{}).
 		Where("id = ?", strings.TrimSpace(stringFromAny(payload["id"]))).
 		Updates(map[string]any{
@@ -287,6 +291,7 @@ func (s RunStore) RestoreCombatantState(ctx context.Context, payload map[string]
 			"death_save_successes": intFromAny(payload["deathSaveSuccesses"]),
 			"death_save_failures":  intFromAny(payload["deathSaveFailures"]),
 			"stable":               boolFromAny(payload["stable"]),
+			"conditions":           conditions,
 		}).Error
 }
 

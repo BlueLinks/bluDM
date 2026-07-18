@@ -79,10 +79,10 @@ export function SpellEffectCategoryPicker({
               key={category.value}
               type="button"
               className={[
-                "rounded-md border px-2 py-2 text-left text-xs font-semibold transition",
+                "rounded-md border px-2 py-2 text-left text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
                 active
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                  : "border-border bg-surface text-surface-foreground hover:border-primary/40 hover:bg-card hover:text-foreground",
               ].join(" ")}
               onClick={() => onChange(category.value)}
             >

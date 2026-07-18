@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Callout, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
-import { blankTravelForm } from "./travelOptions";
+import { realMapDistance, travelCompatibleDistance } from "./world/campaignMapDistance";
+import { blankTravelForm } from "./world/travelOptions";
 import {
   JourneySaveRow,
   TravelInputControls,
@@ -10,11 +11,13 @@ import {
 import type {
   CampaignJourney,
   CampaignLocation,
+  CampaignMap,
+  CampaignMapPin,
   TravelCalculation,
   TravelFormState,
   TravelWeather,
   TravelWeatherRollRequest,
-} from "./travelTypes";
+} from "./world/travelTypes";
 import { TravelCalculatorResults } from "./TravelCalculatorResults";
 
 const noWeatherRolls = { temperature: false, wind: false, precipitation: false };
@@ -25,6 +28,7 @@ export function TravelCalculatorModal({
   locations,
   onJourneySaved,
   open,
+  planningLocation,
   onEditComplete,
   onOpenChange,
 }: {
@@ -33,6 +37,7 @@ export function TravelCalculatorModal({
   locations: CampaignLocation[];
   onJourneySaved: () => Promise<void>;
   open: boolean;
+  planningLocation?: CampaignLocation | null;
   onEditComplete?: () => void;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -43,6 +48,9 @@ export function TravelCalculatorModal({
   const [journeyName, setJourneyName] = useState("");
   const [rollAnimationKey, setRollAnimationKey] = useState(0);
   const [rollingTarget, setRollingTarget] = useState<TravelRollTarget | null>(null);
+  const [maps, setMaps] = useState<CampaignMap[]>([]);
+  const [pinsByMap, setPinsByMap] = useState<Record<string, CampaignMapPin[]>>({});
+  const [mapDistanceNote, setMapDistanceNote] = useState("");
   const [error, setError] = useState("");
   const canCalculate = Number(form.distance) > 0;
 
@@ -73,6 +81,95 @@ export function TravelCalculatorModal({
     setJourneyName(editingJourney.name);
     setCalculation(null);
   }, [editingJourney, open]);
+
+  useEffect(() => {
+    if (!open || editingJourney || !planningLocation) return;
+    setForm({
+      ...blankTravelForm,
+      routeInputMode: "route",
+      origin: planningLocation.name,
+    });
+    setOriginMode("saved");
+    setDestinationMode("saved");
+    setJourneyName("");
+    setCalculation(null);
+    setMapDistanceNote("");
+  }, [editingJourney, open, planningLocation]);
+
+  useEffect(() => {
+    if (!open) return;
+    const mapApi: Partial<Pick<typeof api, "campaignMaps" | "campaignMapPins">> = api;
+    const listMaps = mapApi.campaignMaps;
+    const listPins = mapApi.campaignMapPins;
+    if (!listMaps || !listPins) return;
+    let active = true;
+    listMaps(campaignId)
+      .then(async ({ maps: nextMaps }) => {
+        const pinEntries = await Promise.all(
+          nextMaps.map(async (map) => {
+            try {
+              const { pins } = await listPins(campaignId, map.id);
+              return [map.id, pins] as const;
+            } catch {
+              return [map.id, [] as CampaignMapPin[]] as const;
+            }
+          }),
+        );
+        if (!active) return;
+        setMaps(nextMaps);
+        setPinsByMap(
+          pinEntries.reduce<Record<string, CampaignMapPin[]>>((acc, [mapId, pins]) => {
+            acc[mapId] = pins;
+            return acc;
+          }, {}),
+        );
+      })
+      .catch(() => {
+        if (active) {
+          setMaps([]);
+          setPinsByMap({});
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [campaignId, open]);
+
+  const locationByName = useMemo(
+    () => new Map(locations.map((location) => [location.name, location])),
+    [locations],
+  );
+
+  useEffect(() => {
+    if (!open || form.routeInputMode !== "route") return;
+    const origin = locationByName.get(form.origin);
+    const destination = locationByName.get(form.destination);
+    if (!origin || !destination || origin.id === destination.id) {
+      setMapDistanceNote("");
+      return;
+    }
+    for (const map of maps) {
+      const pins = pinsByMap[map.id] ?? [];
+      const originPin = pins.find((pin) => pin.locationId === origin.id);
+      const destinationPin = pins.find((pin) => pin.locationId === destination.id);
+      if (originPin && destinationPin) {
+        const distance = realMapDistance(map, originPin, destinationPin);
+        const travelDistance = travelCompatibleDistance(distance, map.scaleDistanceUnit);
+        setForm((current) => ({
+          ...current,
+          distance: String(Math.round(travelDistance.distance * 100) / 100),
+          distanceUnit: travelDistance.unit,
+        }));
+        setMapDistanceNote(
+          `Using straight-line distance from ${map.name}: ${travelDistance.distance.toFixed(2)} ${travelDistance.unit}.`,
+        );
+        return;
+      }
+    }
+    setMapDistanceNote(
+      "No shared map pins found for these route endpoints. Enter a direct distance if needed.",
+    );
+  }, [form.destination, form.origin, form.routeInputMode, locationByName, maps, open, pinsByMap]);
 
   function setField<K extends keyof TravelFormState>(field: K, value: TravelFormState[K]) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -162,6 +259,12 @@ export function TravelCalculatorModal({
     >
       <div className="grid gap-5">
         {error && <Callout tone="danger">{error}</Callout>}
+        {!editingJourney && planningLocation ? (
+          <Callout>
+            Planning from {planningLocation.name}. Choose a saved or custom destination; shared map
+            pins will fill straight-line distance when available.
+          </Callout>
+        ) : null}
         <div className="grid gap-4">
           <TravelInputControls
             canCalculate={canCalculate}
@@ -177,6 +280,9 @@ export function TravelCalculatorModal({
             onTerrainChange={setTerrain}
             onWeatherChange={setWeather}
           />
+          {form.routeInputMode === "route" && mapDistanceNote ? (
+            <Callout>{mapDistanceNote}</Callout>
+          ) : null}
           <JourneySaveRow
             canCalculate={canCalculate}
             editing={Boolean(editingJourney)}

@@ -3,24 +3,26 @@ import {
   Castle,
   Import,
   Menu,
-  Moon,
   Package,
   PanelLeftClose,
   PanelLeftOpen,
   ScrollText,
   Shield,
   Sparkles,
-  Sun,
   Swords,
   UsersRound,
 } from "lucide-react";
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
 import { RollLogProvider } from "../components/RollLogProvider";
 import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 import { AccountMenu } from "./AccountMenu";
+import { ThemeMenu, type ThemeAccent, type ThemeMode } from "./theme";
+
+export { useThemeMode } from "./theme";
+export type { ThemeAccent, ThemeMode } from "./theme";
 
 const navItems = [
   { to: "/campaigns", label: "Campaigns", icon: Castle },
@@ -42,32 +44,6 @@ export function useTopBarActions(actions: React.ReactNode) {
   }, [actions, setActions]);
 }
 
-export function useThemeMode() {
-  const [theme, setTheme] = useState<"system" | "light" | "dark">(() => {
-    const stored = localStorage.getItem("bludm-theme");
-    return stored === "light" || stored === "dark" || stored === "system" ? stored : "system";
-  });
-  const [systemDark, setSystemDark] = useState(
-    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-color-scheme: dark)");
-    const listener = (event: MediaQueryListEvent) => setSystemDark(event.matches);
-    query.addEventListener("change", listener);
-    return () => query.removeEventListener("change", listener);
-  }, []);
-
-  const resolvedTheme = theme === "system" ? (systemDark ? "dark" : "light") : theme;
-
-  useEffect(() => {
-    localStorage.setItem("bludm-theme", theme);
-    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
-  }, [theme, resolvedTheme]);
-
-  return { theme, setTheme, resolvedTheme };
-}
-
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <main className="min-h-screen bg-background text-foreground">
@@ -78,25 +54,30 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
 export function WorkspaceShell({
   children,
+  accent,
   user,
   theme,
   resolvedTheme,
+  onAccentChange,
   onThemeChange,
   onLogout,
   onLoadAccount,
   onSetPassword,
 }: {
   children: React.ReactNode;
+  accent: ThemeAccent;
   user?: User;
-  theme: "system" | "light" | "dark";
+  theme: ThemeMode;
   resolvedTheme: "light" | "dark";
-  onThemeChange: (theme: "system" | "light" | "dark") => void;
+  onAccentChange: (accent: ThemeAccent) => void;
+  onThemeChange: (theme: ThemeMode) => void;
   onLogout: () => Promise<void>;
   onLoadAccount: () => Promise<AccountInfo>;
   onSetPassword: (currentPassword: string, newPassword: string) => Promise<AccountInfo>;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [topBarActions, setTopBarActions] = useState<React.ReactNode>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("bludm-sidebar") === "collapsed",
   );
@@ -109,6 +90,7 @@ export function WorkspaceShell({
   const crumbs = shellCrumbs(location.pathname);
   const parent = parentPath(location.pathname);
   const isCombatTracker = /^\/encounter-runs\/[^/]+$/.test(location.pathname);
+  const isCampaignWorld = /^\/campaigns\/[^/]+\/world(?:\/|$)/.test(location.pathname);
   const contentPadding =
     isCombatTracker && uiDensity !== "comfy" ? "px-1 py-2 sm:px-2 lg:px-3" : "px-4 py-6 lg:px-8";
 
@@ -120,6 +102,12 @@ export function WorkspaceShell({
     localStorage.setItem("bludm-ui-density", uiDensity);
   }, [uiDensity]);
 
+  useEffect(() => {
+    if (!contentRef.current) return;
+    contentRef.current.scrollTop = 0;
+    contentRef.current.scrollLeft = 0;
+  }, [location.pathname]);
+
   return (
     <RollLogProvider>
       <TopBarActionsContext.Provider value={setTopBarActions}>
@@ -127,6 +115,7 @@ export function WorkspaceShell({
           className={[
             "fixed inset-0 overflow-hidden bg-background text-foreground",
             `ui-density-${uiDensity}`,
+            isCampaignWorld ? "campaign-world-shell" : "",
           ].join(" ")}
         >
           <div className="flex h-full">
@@ -177,12 +166,12 @@ export function WorkspaceShell({
                   >
                     Back
                   </Button>
-                  <div className="hidden min-w-0 sm:block">
+                  <div className="hidden min-w-0 lg:block">
                     <div className="text-xs font-bold uppercase tracking-wide text-accent">
                       bluDM
                     </div>
                     <nav
-                      className="flex min-w-0 flex-wrap items-center gap-1 text-sm font-semibold"
+                      className="flex min-w-0 flex-nowrap items-center gap-1 overflow-hidden whitespace-nowrap text-sm font-semibold"
                       aria-label="Current path"
                     >
                       {crumbs.length === 0 ? (
@@ -209,12 +198,14 @@ export function WorkspaceShell({
                     </nav>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 max-w-64 shrink items-center gap-1 overflow-x-auto overscroll-x-contain pr-1 sm:max-w-none sm:shrink-0 sm:gap-2 sm:overflow-visible sm:pr-0">
                   {topBarActions}
                   <DiceRoller />
                   <ThemeMenu
+                    accent={accent}
                     resolvedTheme={resolvedTheme}
                     theme={theme}
+                    onAccentChange={onAccentChange}
                     onThemeChange={onThemeChange}
                   />
                   <AccountMenu
@@ -227,7 +218,10 @@ export function WorkspaceShell({
                   />
                 </div>
               </header>
-              <div className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}>
+              <div
+                ref={contentRef}
+                className={["min-h-0 flex-1 overflow-y-auto", contentPadding].join(" ")}
+              >
                 {children}
               </div>
             </section>
@@ -251,7 +245,7 @@ function Sidebar({
     <div className="flex h-full min-h-0 flex-col p-3">
       <div
         className={[
-          "mb-5 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
+          "app-brand-tile mb-5 flex items-center rounded-lg bg-primary px-3 py-3 text-primary-foreground",
           collapsed ? "justify-center" : "gap-3",
         ].join(" ")}
       >
@@ -267,10 +261,10 @@ function Sidebar({
             <NavLink
               className={({ isActive }) =>
                 [
-                  "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition",
+                  "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
                   isActive
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-accent text-accent-foreground shadow-sm"
+                    : "text-surface-foreground hover:bg-surface hover:text-foreground",
                 ].join(" ")
               }
               key={item.to}
@@ -287,7 +281,7 @@ function Sidebar({
         <button
           type="button"
           className={[
-            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-background px-2.5 py-2 text-sm font-medium text-muted-foreground transition hover:bg-muted hover:text-foreground",
+            "mt-4 flex shrink-0 items-center rounded-md border border-border bg-surface px-2.5 py-2 text-sm font-medium text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
             collapsed ? "justify-center" : "gap-3",
           ].join(" ")}
           onClick={onToggleCollapsed}
@@ -300,52 +294,6 @@ function Sidebar({
           )}
           <span className={collapsed ? "sr-only" : ""}>{collapsed ? "Expand" : "Collapse"}</span>
         </button>
-      )}
-    </div>
-  );
-}
-
-function ThemeMenu({
-  theme,
-  resolvedTheme,
-  onThemeChange,
-}: {
-  theme: "system" | "light" | "dark";
-  resolvedTheme: "light" | "dark";
-  onThemeChange: (theme: "system" | "light" | "dark") => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <Button
-        className="hidden sm:inline-flex"
-        type="button"
-        variant="ghost"
-        size="sm"
-        icon={resolvedTheme === "dark" ? Moon : Sun}
-        onClick={() => setOpen((current) => !current)}
-      >
-        Theme
-      </Button>
-      {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 grid w-36 gap-1 rounded-lg border border-border bg-card p-2 text-sm shadow-xl">
-          {(["system", "light", "dark"] as const).map((option) => (
-            <button
-              key={option}
-              type="button"
-              className={[
-                "rounded-md px-3 py-2 text-left capitalize hover:bg-muted",
-                theme === option ? "bg-muted font-semibold" : "",
-              ].join(" ")}
-              onClick={() => {
-                onThemeChange(option);
-                setOpen(false);
-              }}
-            >
-              {option}
-            </button>
-          ))}
-        </div>
       )}
     </div>
   );

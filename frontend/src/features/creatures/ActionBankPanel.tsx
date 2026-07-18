@@ -47,7 +47,7 @@ export function ActionBankPanel({
           onOpenChange={onModalChange}
           title={editingTemplate ? "Edit custom action" : "Add custom action"}
           trigger={
-            <Button type="button" icon={Plus} variant="success" onClick={() => onOpenTemplate()}>
+            <Button type="button" icon={Plus} onClick={() => onOpenTemplate()}>
               Add action
             </Button>
           }
@@ -70,7 +70,7 @@ export function ActionBankPanel({
                   Overwrite
                 </Button>
               ) : (
-                <Button type="submit" icon={Plus} variant="success">
+                <Button type="submit" icon={Plus}>
                   {editingTemplate ? "Update custom action" : "Save custom action"}
                 </Button>
               )}

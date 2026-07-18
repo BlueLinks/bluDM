@@ -1,5 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
-import { Button, Field, FormSection, Input, Select } from "../../components/ui";
+import { Button, Callout, Field, FormSection, Input, Select } from "../../components/ui";
 import { abilities, hitSpecialEvents, successfulSaveEffects } from "../../lib/domain/options";
 import type { SpellActionFormState, SpellFormState } from "../../types";
 import { blankSpellAction, blankSpellRoll } from "./spellFormState";
@@ -38,7 +38,6 @@ export function SpellActionsSection({
         <Button
           type="button"
           icon={Plus}
-          variant="success"
           onClick={() => setForm({ ...form, actions: [...form.actions, blankSpellAction()] })}
         >
           Add spell action
@@ -99,10 +98,10 @@ function SpellActionCard({
         />
       </div>
       {action.actionType === "spell_attack" && (
-        <div className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-sm text-sky-900 dark:text-sky-100">
+        <Callout tone="info">
           Spell attack roll selected. Add one or more effects below for what happens on a hit. If
           this spell creates multiple attacks, resolve each attack separately in combat.
-        </div>
+        </Callout>
       )}
       {action.actionType === "weapon_attack" && (
         <WeaponAttackFields action={action} onChange={onChange} />

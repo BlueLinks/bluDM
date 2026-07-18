@@ -202,9 +202,7 @@ export function NpcsPage() {
         copy="Reusable stat blocks, default disposition, attacks, and spells live here. Encounter-side disposition can override these defaults."
         action={
           <Link to="/npcs/new">
-            <Button icon={Plus} variant="success">
-              Add NPC
-            </Button>
+            <Button icon={Plus}>Add NPC</Button>
           </Link>
         }
       />

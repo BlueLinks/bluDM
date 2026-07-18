@@ -1,4 +1,5 @@
 import { BookOpen, UserRound } from "lucide-react";
+import { sourceToneClass, type ContentSourceTone } from "./sourceTones";
 
 export function ContentSourceFilter({
   standardCopy = "Shared read-only content",
@@ -26,7 +27,7 @@ export function ContentSourceFilter({
       label: userLabel,
       copy: userCopy,
       onChange: onShowUserChange,
-      tone: "emerald",
+      tone: "personal" as const,
     },
     {
       checked: showStandard,
@@ -34,7 +35,7 @@ export function ContentSourceFilter({
       label: standardLabel,
       copy: standardCopy,
       onChange: onShowStandardChange,
-      tone: "sky",
+      tone: "official" as const,
     },
   ];
 
@@ -75,12 +76,9 @@ export function ContentSourceFilter({
   );
 }
 
-function sourceToggleClass(checked: boolean, tone: string) {
+function sourceToggleClass(checked: boolean, tone: ContentSourceTone) {
   if (!checked) {
-    return "border-border bg-muted/20 text-muted-foreground hover:border-primary/50 hover:bg-muted";
+    return "border-border bg-surface text-surface-foreground hover:border-primary/50 hover:bg-card hover:text-foreground";
   }
-  if (tone === "emerald") {
-    return "border-emerald-500 bg-emerald-500/10 text-emerald-800 shadow-sm dark:text-emerald-200";
-  }
-  return "border-sky-500 bg-sky-500/10 text-sky-800 shadow-sm dark:text-sky-200";
+  return `${sourceToneClass(tone)} shadow-sm`;
 }

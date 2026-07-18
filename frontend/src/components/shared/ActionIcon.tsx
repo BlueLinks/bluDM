@@ -10,7 +10,7 @@ export type ActionIconValue = {
 
 export function ActionIcon({ action, className }: { action: ActionIconValue; className?: string }) {
   const baseClass = [
-    "grid h-10 w-10 shrink-0 place-items-center rounded-md border border-border bg-muted text-foreground",
+    "grid h-10 w-10 shrink-0 place-items-center rounded-md border border-companion-metadata/25 bg-companion-metadata/10 text-companion-metadata",
     className,
   ]
     .filter(Boolean)

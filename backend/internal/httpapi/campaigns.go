@@ -153,6 +153,7 @@ func (s *Server) createEncounter(w http.ResponseWriter, r *http.Request) {
 	req.Description = strings.TrimSpace(req.Description)
 	req.Status = normalizeEncounterStatus(req.Status)
 	req.Location = strings.TrimSpace(req.Location)
+	req.LocationID = strings.TrimSpace(req.LocationID)
 	req.RoomNumber = strings.TrimSpace(req.RoomNumber)
 	if req.Name == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
@@ -163,9 +164,14 @@ func (s *Server) createEncounter(w http.ResponseWriter, r *http.Request) {
 		Description: req.Description,
 		Status:      req.Status,
 		Location:    req.Location,
+		LocationID:  req.LocationID,
 		RoomNumber:  req.RoomNumber,
 	})
 	if err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusNotFound, "campaign location not found")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not create encounter")
 		return
 	}

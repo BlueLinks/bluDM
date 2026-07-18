@@ -344,7 +344,9 @@ function TableList({
                 {rollTableCategoryLabel(table.category)} · {table.dieExpression}
               </div>
             </div>
-            <Badge>{table.source === "provided" ? "Provided" : "Campaign"}</Badge>
+            <Badge tone={table.source === "provided" ? "official" : "shared"}>
+              {table.source === "provided" ? "Provided" : "Campaign"}
+            </Badge>
           </div>
           {table.description && (
             <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{table.description}</p>
@@ -377,8 +379,8 @@ function SelectedTableCard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-lg font-semibold">{table.name}</h3>
-            <Badge>{table.dieExpression}</Badge>
-            <Badge>{rollTableCategoryLabel(table.category)}</Badge>
+            <Badge tone="warning">{table.dieExpression}</Badge>
+            <Badge tone="metadata">{rollTableCategoryLabel(table.category)}</Badge>
           </div>
           {table.description && (
             <p className="mt-2 text-sm text-muted-foreground">{table.description}</p>

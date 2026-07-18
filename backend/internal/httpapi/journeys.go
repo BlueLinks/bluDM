@@ -11,8 +11,28 @@ import (
 )
 
 type locationRequest struct {
-	Name  string `json:"name"`
-	Notes string `json:"notes"`
+	ParentLocationID string         `json:"parentLocationId"`
+	Name             string         `json:"name"`
+	LocationType     string         `json:"locationType"`
+	CustomTypeLabel  string         `json:"customTypeLabel"`
+	Summary          string         `json:"summary"`
+	Notes            string         `json:"notes"`
+	PublicNotes      string         `json:"publicNotes"`
+	DMNotes          string         `json:"dmNotes"`
+	Tags             []string       `json:"tags"`
+	SortOrder        int            `json:"sortOrder"`
+	Status           string         `json:"status"`
+	MapAnchor        map[string]any `json:"mapAnchor"`
+}
+
+type locationLinkRequest struct {
+	SourceLocationID string `json:"sourceLocationId"`
+	TargetLocationID string `json:"targetLocationId"`
+	LinkType         string `json:"linkType"`
+	Label            string `json:"label"`
+	Direction        string `json:"direction"`
+	Visibility       string `json:"visibility"`
+	Notes            string `json:"notes"`
 }
 
 type travelRequest struct {
@@ -133,6 +153,65 @@ func (s *Server) deleteCampaignLocation(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *Server) listCampaignLocationLinks(w http.ResponseWriter, r *http.Request) {
+	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
+	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+		writeError(w, http.StatusNotFound, "campaign not found")
+		return
+	}
+	links, err := s.locationLinksForCampaign(r.Context(), campaignID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not list campaign location links")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"links": links})
+}
+
+func (s *Server) createCampaignLocationLink(w http.ResponseWriter, r *http.Request) {
+	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
+	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+		writeError(w, http.StatusNotFound, "campaign not found")
+		return
+	}
+	var req locationLinkRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.normalize()
+	if err := validateLocationLinkRequest(req); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	link, err := s.insertCampaignLocationLink(r.Context(), campaignID, req)
+	if err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "linked locations must belong to the campaign")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "could not create campaign location link")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"link": link})
+}
+
+func (s *Server) deleteCampaignLocationLink(w http.ResponseWriter, r *http.Request) {
+	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
+	linkID := strings.TrimSpace(r.PathValue("linkID"))
+	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+		writeError(w, http.StatusNotFound, "campaign not found")
+		return
+	}
+	if err := s.stores.Travel.DeleteLocationLink(r.Context(), currentUserIDMust(r.Context()), campaignID, linkID); err != nil {
+		if !store.IsNotFound(err) {
+			writeError(w, http.StatusInternalServerError, "could not delete campaign location link")
+			return
+		}
+		writeError(w, http.StatusNotFound, "location link not found")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (s *Server) calculateTravel(w http.ResponseWriter, r *http.Request) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
 	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
@@ -153,8 +232,25 @@ func (s *Server) calculateTravel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (req *locationRequest) normalize() {
+	req.ParentLocationID = strings.TrimSpace(req.ParentLocationID)
 	req.Name = strings.TrimSpace(req.Name)
+	req.LocationType = normalizeLocationToken(req.LocationType)
+	if req.LocationType == "" {
+		req.LocationType = "custom"
+	}
+	req.CustomTypeLabel = strings.TrimSpace(req.CustomTypeLabel)
+	req.Summary = strings.TrimSpace(req.Summary)
 	req.Notes = strings.TrimSpace(req.Notes)
+	req.PublicNotes = strings.TrimSpace(req.PublicNotes)
+	req.DMNotes = strings.TrimSpace(req.DMNotes)
+	req.Tags = normalizeLocationTags(req.Tags)
+	req.Status = normalizeLocationToken(req.Status)
+	if req.Status == "" {
+		req.Status = "active"
+	}
+	if req.MapAnchor == nil {
+		req.MapAnchor = map[string]any{}
+	}
 }
 
 func validateLocationRequest(req locationRequest) error {
@@ -162,6 +258,59 @@ func validateLocationRequest(req locationRequest) error {
 		return errors.New("name is required")
 	}
 	return nil
+}
+
+func (req *locationLinkRequest) normalize() {
+	req.SourceLocationID = strings.TrimSpace(req.SourceLocationID)
+	req.TargetLocationID = strings.TrimSpace(req.TargetLocationID)
+	req.LinkType = normalizeLocationToken(req.LinkType)
+	if req.LinkType == "" {
+		req.LinkType = "link"
+	}
+	req.Label = strings.TrimSpace(req.Label)
+	req.Direction = normalizeLocationToken(req.Direction)
+	if req.Direction == "" {
+		req.Direction = "two-way"
+	}
+	req.Visibility = normalizeLocationToken(req.Visibility)
+	if req.Visibility == "" {
+		req.Visibility = "public"
+	}
+	req.Notes = strings.TrimSpace(req.Notes)
+}
+
+func validateLocationLinkRequest(req locationLinkRequest) error {
+	switch {
+	case req.SourceLocationID == "":
+		return errors.New("sourceLocationId is required")
+	case req.TargetLocationID == "":
+		return errors.New("targetLocationId is required")
+	case req.SourceLocationID == req.TargetLocationID:
+		return errors.New("sourceLocationId and targetLocationId must be different")
+	default:
+		return nil
+	}
+}
+
+func normalizeLocationToken(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	value = strings.ReplaceAll(value, "_", "-")
+	value = strings.ReplaceAll(value, " ", "-")
+	return value
+}
+
+func normalizeLocationTags(tags []string) []string {
+	seen := map[string]bool{}
+	normalized := []string{}
+	for _, tag := range tags {
+		tag = strings.TrimSpace(tag)
+		if tag == "" || seen[tag] {
+			continue
+		}
+		seen[tag] = true
+		normalized = append(normalized, tag)
+	}
+	return normalized
 }
 
 func (req *travelRequest) normalize() {
@@ -268,10 +417,43 @@ func (s *Server) locationsForCampaign(ctx context.Context, campaignID string) ([
 	return s.stores.Travel.LocationsForCampaign(ctx, currentUserIDMust(ctx), campaignID)
 }
 
+func (s *Server) locationLinksForCampaign(ctx context.Context, campaignID string) ([]models.CampaignLocationLink, error) {
+	return s.stores.Travel.LocationLinksForCampaign(ctx, currentUserIDMust(ctx), campaignID)
+}
+
 func (s *Server) insertCampaignLocation(ctx context.Context, campaignID string, req locationRequest) (models.CampaignLocation, error) {
-	return s.stores.Travel.CreateLocation(ctx, currentUserIDMust(ctx), campaignID, store.LocationInput{Name: req.Name, Notes: req.Notes})
+	return s.stores.Travel.CreateLocation(ctx, currentUserIDMust(ctx), campaignID, locationInputFromRequest(req))
 }
 
 func (s *Server) updateCampaignLocationRecord(ctx context.Context, campaignID string, locationID string, req locationRequest) (models.CampaignLocation, error) {
-	return s.stores.Travel.UpdateLocation(ctx, currentUserIDMust(ctx), campaignID, locationID, store.LocationInput{Name: req.Name, Notes: req.Notes})
+	return s.stores.Travel.UpdateLocation(ctx, currentUserIDMust(ctx), campaignID, locationID, locationInputFromRequest(req))
+}
+
+func (s *Server) insertCampaignLocationLink(ctx context.Context, campaignID string, req locationLinkRequest) (models.CampaignLocationLink, error) {
+	return s.stores.Travel.CreateLocationLink(ctx, currentUserIDMust(ctx), campaignID, store.LocationLinkInput{
+		SourceLocationID: req.SourceLocationID,
+		TargetLocationID: req.TargetLocationID,
+		LinkType:         req.LinkType,
+		Label:            req.Label,
+		Direction:        req.Direction,
+		Visibility:       req.Visibility,
+		Notes:            req.Notes,
+	})
+}
+
+func locationInputFromRequest(req locationRequest) store.LocationInput {
+	return store.LocationInput{
+		ParentLocationID: req.ParentLocationID,
+		Name:             req.Name,
+		LocationType:     req.LocationType,
+		CustomTypeLabel:  req.CustomTypeLabel,
+		Summary:          req.Summary,
+		Notes:            req.Notes,
+		PublicNotes:      req.PublicNotes,
+		DMNotes:          req.DMNotes,
+		Tags:             req.Tags,
+		SortOrder:        req.SortOrder,
+		Status:           req.Status,
+		MapAnchor:        req.MapAnchor,
+	}
 }

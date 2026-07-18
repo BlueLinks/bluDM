@@ -64,7 +64,11 @@ func (s DemoStore) SeedFixture(ctx context.Context, ownerUserID string) (string,
 			}
 			creatureIDs[creature.name] = id
 		}
-		return seedDemoEncounter(ctx, tx, campaignID, creatureIDs)
+		locationIDs, err := seedDemoWorld(ctx, tx, ownerUserID, campaignID, creatureIDs)
+		if err != nil {
+			return err
+		}
+		return seedDemoEncounter(ctx, tx, campaignID, creatureIDs, locationIDs)
 	})
 	return campaignID, err
 }
@@ -243,7 +247,7 @@ func seedCreatureActionFromTemplate(ctx context.Context, tx *gorm.DB, creatureID
 	`, actionID, templateID).Error
 }
 
-func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, creatureIDs map[string]string) error {
+func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, creatureIDs map[string]string, locationIDs map[string]string) error {
 	var encounterID string
 	err := tx.WithContext(ctx).Raw(`select id from encounters where campaign_id = ? and name = 'Roadside Trouble' limit 1`, campaignID).Row().Scan(&encounterID)
 	if err != nil && err != sql.ErrNoRows {
@@ -251,10 +255,15 @@ func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, crea
 	}
 	if err == sql.ErrNoRows {
 		if err := tx.WithContext(ctx).Raw(`
-			insert into encounters (campaign_id, name, description)
-			values (?, 'Roadside Trouble', 'A mixed encounter for testing player, friendly, and enemy setup.')
+			insert into encounters (campaign_id, name, description, status)
+			values (?, 'Roadside Trouble', 'A mixed encounter for testing player, friendly, and enemy setup.', 'ready')
 			returning id
 		`, campaignID).Row().Scan(&encounterID); err != nil {
+			return err
+		}
+	}
+	if gateID := locationIDs["gate"]; gateID != "" {
+		if err := tx.WithContext(ctx).Exec(`update encounters set status = 'ready', location_id = ?, location = 'North Road Gate', room_number = 'Gate road' where id = ?`, gateID, encounterID).Error; err != nil {
 			return err
 		}
 	}

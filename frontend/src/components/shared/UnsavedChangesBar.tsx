@@ -35,7 +35,7 @@ export function UnsavedChangesBar({
             Cancel
           </Button>
         )}
-        <Button type="button" icon={Check} variant="success" disabled={saving} onClick={onSave}>
+        <Button type="button" icon={Check} disabled={saving} onClick={onSave}>
           {saving ? savingLabel : saveLabel}
         </Button>
       </div>

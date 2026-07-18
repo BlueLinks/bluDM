@@ -89,7 +89,7 @@ export function CombatBoard({
             ))}
             {downEnemies.length > 0 && (
               <div className="mt-3 grid gap-2">
-                <div className="flex items-center gap-2 text-sm font-bold text-red-700 dark:text-red-300">
+                <div className="flex items-center gap-2 text-sm font-bold text-destructive">
                   <Skull className="h-4 w-4" /> Down ({downEnemies.length})
                 </div>
                 {downEnemies.map((combatant) => (

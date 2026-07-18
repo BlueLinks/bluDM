@@ -79,7 +79,7 @@ function TableRowEditor({
             {effects.length} structured {effects.length === 1 ? "effect" : "effects"}
           </div>
         </div>
-        <div className="rounded-full border border-border bg-muted px-2 py-1 text-xs font-bold text-muted-foreground">
+        <div className="rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-xs font-bold text-primary">
           d{face}
         </div>
       </div>

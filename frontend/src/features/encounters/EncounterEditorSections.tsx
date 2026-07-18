@@ -1,10 +1,96 @@
-import { ClipboardList, Plus, Swords, UsersRound } from "lucide-react";
-import { Button, Field, FloatingInput, SectionPanel, Select, Textarea } from "../../components/ui";
+import {
+  ClipboardList,
+  FileText,
+  FlaskConical,
+  ListChecks,
+  Play,
+  Plus,
+  ScrollText,
+  Swords,
+  UsersRound,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import { Button, Field, FloatingInput, Select, Textarea } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
 import type { DraftCombatant, Player } from "../../types";
 import { CombatantList } from "./editorComponents";
 import type { EncounterMetaDraft } from "./domain";
 import { playerClassLevel } from "./domain";
+
+export function EncounterEditNav() {
+  const items = [
+    { label: "Overview", icon: ListChecks, href: "#encounter-overview" },
+    { label: "Party", icon: UsersRound, href: "#encounter-party" },
+    { label: "Allies", icon: UsersRound, href: "#encounter-allies" },
+    { label: "Enemies", icon: Swords, href: "#encounter-enemies" },
+    { label: "Details", icon: ClipboardList, href: "#encounter-details" },
+    { label: "Notes", icon: FileText, href: "#encounter-notes" },
+    { label: "Running", icon: Play, href: "#encounter-running" },
+  ];
+  return (
+    <nav className="flex flex-wrap gap-1 border-b border-border" aria-label="Encounter sections">
+      {items.map((item, index) => (
+        <a
+          className={[
+            "inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium",
+            index === 0
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          ].join(" ")}
+          href={item.href}
+          key={item.href}
+        >
+          <item.icon className="h-4 w-4" />
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
+export function EncounterSummaryPanel({
+  createdAt,
+  enemyCount,
+  meta,
+  partyCount,
+}: {
+  createdAt: string;
+  enemyCount: number;
+  meta: EncounterMetaDraft;
+  partyCount: number;
+}) {
+  return (
+    <section
+      className="rounded-md border border-border bg-card p-4"
+      id="encounter-overview"
+      aria-label="Encounter overview"
+    >
+      <div className="flex items-center gap-2">
+        <ClipboardList className="h-4 w-4 text-accent" />
+        <h3 className="font-semibold">Encounter summary</h3>
+      </div>
+      <dl className="mt-4 grid gap-0 text-sm">
+        <SummaryRow label="Location" value={meta.location || "Unplaced"} />
+        <SummaryRow label="Status" value={encounterStatusLabel(meta.status)} />
+        <SummaryRow label="Party" value={`${partyCount} player${partyCount === 1 ? "" : "s"}`} />
+        <SummaryRow label="Enemies" value={`${enemyCount} foe${enemyCount === 1 ? "" : "s"}`} />
+        <SummaryRow
+          label="Created"
+          value={createdAt ? new Date(createdAt).toLocaleDateString() : "Unknown"}
+        />
+      </dl>
+    </section>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 border-b border-border py-2 last:border-b-0">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">{value}</dd>
+    </div>
+  );
+}
 
 export function EncounterDetailsSection({
   meta,
@@ -14,10 +100,14 @@ export function EncounterDetailsSection({
   onChange: (meta: EncounterMetaDraft) => void;
 }) {
   return (
-    <SectionPanel title="Encounter Details" icon={ClipboardList}>
-      <div className="grid gap-3 lg:grid-cols-[1fr_1fr_auto_auto]">
+    <section className="rounded-md border border-border bg-card p-4" id="encounter-details">
+      <div className="flex items-center gap-2">
+        <ClipboardList className="h-4 w-4 text-accent" />
+        <h3 className="font-semibold">Details</h3>
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem]">
         <FloatingInput
-          label="Name"
+          label="Encounter name"
           value={meta.name}
           onChange={(name) => onChange({ ...meta, name })}
           required
@@ -32,6 +122,8 @@ export function EncounterDetailsSection({
           value={meta.roomNumber}
           onChange={(roomNumber) => onChange({ ...meta, roomNumber })}
         />
+      </div>
+      <div className="mt-3 max-w-xs">
         <Field label="Status">
           <Select
             value={meta.status}
@@ -41,14 +133,64 @@ export function EncounterDetailsSection({
           />
         </Field>
       </div>
-      <Field className="mt-3" label="Description">
+    </section>
+  );
+}
+
+export function EncounterNotesSection({
+  meta,
+  onChange,
+}: {
+  meta: EncounterMetaDraft;
+  onChange: (meta: EncounterMetaDraft) => void;
+}) {
+  return (
+    <section className="rounded-md border border-border bg-card p-4" id="encounter-notes">
+      <div className="flex items-center gap-2">
+        <ScrollText className="h-4 w-4 text-accent" />
+        <h3 className="font-semibold">Notes</h3>
+      </div>
+      <Field className="mt-4" label="Description / notes">
         <Textarea
-          rows={3}
+          rows={6}
           value={meta.description}
           onChange={(event) => onChange({ ...meta, description: event.target.value })}
         />
       </Field>
-    </SectionPanel>
+    </section>
+  );
+}
+
+export function EncounterRunningSection({
+  saving,
+  onSaveAndRun,
+  onSaveAndTest,
+}: {
+  saving: boolean;
+  onSaveAndRun: () => void;
+  onSaveAndTest: () => void;
+}) {
+  return (
+    <section className="rounded-md border border-border bg-card p-4" id="encounter-running">
+      <div className="flex items-center gap-2">
+        <Play className="h-4 w-4 text-accent" />
+        <h3 className="font-semibold">Running</h3>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button type="button" icon={Play} disabled={saving} onClick={onSaveAndRun}>
+          {saving ? "Saving..." : "Run encounter"}
+        </Button>
+        <Button
+          type="button"
+          icon={FlaskConical}
+          variant="tertiary"
+          disabled={saving}
+          onClick={onSaveAndTest}
+        >
+          Test
+        </Button>
+      </div>
+    </section>
   );
 }
 
@@ -58,6 +200,8 @@ export function EncounterRosterSections({
   friendlyCombatants,
   playerCombatants,
   onAddAllPlayers,
+  onAddAlly,
+  onAddEnemy,
   onAddPlayer,
   onEdit,
   onRemove,
@@ -67,73 +211,78 @@ export function EncounterRosterSections({
   friendlyCombatants: DraftCombatant[];
   playerCombatants: DraftCombatant[];
   onAddAllPlayers: () => void;
+  onAddAlly: () => void;
+  onAddEnemy: () => void;
   onAddPlayer: (player: Player) => void;
   onEdit: (combatant: DraftCombatant) => void;
   onRemove: (combatant: DraftCombatant) => void;
 }) {
   return (
     <div className="grid gap-4">
-      <SectionPanel title="Players And Friendlies" icon={UsersRound}>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-muted-foreground">
-            Add or remove player characters here. Full player editing stays in the Players section.
-          </p>
+      <RosterCard
+        action={
           <Button
             type="button"
             icon={Plus}
             size="sm"
-            variant="success"
+            variant="secondary"
             disabled={availablePlayers.length === 0}
             onClick={onAddAllPlayers}
           >
             Add all players
           </Button>
-        </div>
-        {availablePlayers.length > 0 && (
-          <div className="mb-4 grid gap-2">
+        }
+        id="encounter-party"
+        title="Party"
+      >
+        {availablePlayers.length > 0 ? (
+          <div className="mb-4 flex flex-wrap gap-2">
             {availablePlayers.map((player) => (
-              <div
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
+              <button
+                className="rounded-md border border-border bg-background px-3 py-2 text-left text-sm hover:bg-muted"
                 key={player.id}
+                type="button"
+                onClick={() => onAddPlayer(player)}
               >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-medium">{player.characterName}</div>
-                  <div className="text-xs text-muted-foreground">{playerClassLevel(player)}</div>
-                </div>
-                <Button
-                  type="button"
-                  icon={Plus}
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => onAddPlayer(player)}
-                >
-                  Add
-                </Button>
-              </div>
+                <span className="block font-medium">{player.characterName}</span>
+                <span className="text-xs text-muted-foreground">{playerClassLevel(player)}</span>
+              </button>
             ))}
           </div>
-        )}
-        <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-          Players
-        </h4>
+        ) : null}
         <CombatantList
           combatants={playerCombatants}
           empty="No players added yet."
           sideTone="player"
           onRemove={onRemove}
         />
-        <h4 className="mb-2 mt-5 text-sm font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-          Friendlies
-        </h4>
+      </RosterCard>
+      <RosterCard
+        action={
+          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddAlly}>
+            Add ally
+          </Button>
+        }
+        id="encounter-allies"
+        title={`Allies (${friendlyCombatants.length})`}
+      >
         <CombatantList
           combatants={friendlyCombatants}
-          empty="No friendly NPCs or monsters yet."
+          empty="No allies or friendly creatures yet."
           sideTone="friendly"
           onEdit={onEdit}
           onRemove={onRemove}
         />
-      </SectionPanel>
-      <SectionPanel title="Enemies" icon={Swords}>
+      </RosterCard>
+      <RosterCard
+        action={
+          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
+            Add enemy
+          </Button>
+        }
+        id="encounter-enemies"
+        title={`Enemies (${enemyCombatants.length})`}
+      >
         <CombatantList
           combatants={enemyCombatants}
           empty="No enemies yet."
@@ -141,7 +290,36 @@ export function EncounterRosterSections({
           onEdit={onEdit}
           onRemove={onRemove}
         />
-      </SectionPanel>
+      </RosterCard>
     </div>
   );
+}
+
+function RosterCard({
+  action,
+  children,
+  id,
+  title,
+}: {
+  action?: ReactNode;
+  children: ReactNode;
+  id: string;
+  title: string;
+}) {
+  return (
+    <section className="rounded-md border border-border bg-card p-4" id={id}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <UsersRound className="h-4 w-4 text-accent" />
+          <h3 className="font-semibold">{title}</h3>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function encounterStatusLabel(status: string) {
+  return encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 }

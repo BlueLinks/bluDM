@@ -1,73 +1,371 @@
-import { Import, Plus } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Info } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Callout, Page, PageHeader, ToastViewport, useToasts } from "../components/ui";
+import { api } from "../lib/api";
+import type {
+  ImportExportBundleType,
+  ImportExportExport,
+  ImportExportHistoryRecord,
+  ImportMode,
+  ImportExportPreview,
+} from "../lib/api/importExport";
+import type { Campaign } from "../types";
+import { ExportTab, OverviewTab } from "./ImportPageOverviewExport";
+import { HistoryTab, ImportTab, SettingsTab } from "./ImportPageImportHistorySettings";
 import {
-  Button,
-  Callout,
-  Page,
-  PageHeader,
-  SectionPanel,
-  ToastViewport,
-  useToasts,
-} from "../components/ui";
+  bundleOptions,
+  defaultSettings,
+  estimateBundleSize,
+  hasBlockingConflict,
+  historyFromRecord,
+  importErrorMessage,
+  needsCampaignContext,
+  tabs,
+  usesObjectSelection,
+  type ExportObjectChoice,
+  type HistoryRow,
+  type TabKey,
+} from "./ImportPageSupport";
+import { exportObjectChoices } from "./importPageExportObjects";
 
-export function ImportPage({
-  seedTestData,
-}: {
-  seedTestData: () => Promise<{ campaignId: string; message: string }>;
-}) {
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-  const [seeding, setSeeding] = useState(false);
-  const navigate = useNavigate();
+export function ImportPage() {
+  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaignError, setCampaignError] = useState("");
+  const [selectedBundle, setSelectedBundle] = useState<ImportExportBundleType>("everything");
+  const [selectedCampaignIDs, setSelectedCampaignIDs] = useState<string[]>([]);
+  const [exportObjects, setExportObjects] = useState<ExportObjectChoice[]>([]);
+  const [selectedObjectIDs, setSelectedObjectIDs] = useState<string[]>([]);
+  const [objectsLoading, setObjectsLoading] = useState(false);
+  const [objectsError, setObjectsError] = useState("");
+  const [settings, setSettings] = useState(defaultSettings);
+  const [exporting, setExporting] = useState(false);
+  const [lastExport, setLastExport] = useState<ImportExportExport | null>(null);
+  const [historyRows, setHistoryRows] = useState<HistoryRow[]>([]);
+  const [selectedHistory, setSelectedHistory] = useState<ImportExportHistoryRecord | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<ImportExportPreview | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode>("clone");
+  const [restoreConfirmed, setRestoreConfirmed] = useState(false);
+  const [mergeConfirmed, setMergeConfirmed] = useState(false);
+  const [importComplete, setImportComplete] = useState("");
+  const [importError, setImportError] = useState("");
   const toast = useToasts();
 
-  async function seedDemo() {
-    setSeeding(true);
-    setError("");
-    setMessage("");
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .campaigns()
+      .then((payload) => {
+        if (!cancelled) {
+          setCampaigns(payload.campaigns);
+          setSelectedCampaignIDs((current) =>
+            current.length ? current : payload.campaigns.slice(0, 1).map((campaign) => campaign.id),
+          );
+        }
+      })
+      .catch((err) => !cancelled && setCampaignError(importErrorMessage(err, "campaigns")));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    void loadHistory();
+  }, []);
+
+  useEffect(() => {
+    setSelectedObjectIDs([]);
+  }, [selectedBundle]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadExportObjects() {
+      if (!usesObjectSelection(selectedBundle)) {
+        setExportObjects([]);
+        setObjectsError("");
+        return;
+      }
+      setObjectsLoading(true);
+      setObjectsError("");
+      try {
+        const objects = await exportObjectChoices(selectedBundle, selectedCampaignIDs);
+        if (!cancelled) {
+          setExportObjects(objects);
+          setSelectedObjectIDs((current) =>
+            current.filter((id) => objects.some((object) => object.id === id)),
+          );
+        }
+      } catch (err) {
+        if (!cancelled) setObjectsError(importErrorMessage(err, "export objects"));
+      } finally {
+        if (!cancelled) setObjectsLoading(false);
+      }
+    }
+    void loadExportObjects();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBundle, selectedCampaignIDs]);
+
+  const selectedOption = bundleOptions.find((option) => option.key === selectedBundle);
+  const exportDisabled =
+    exporting ||
+    objectsLoading ||
+    !selectedOption?.supported ||
+    (needsCampaignContext(selectedBundle) &&
+      selectedBundle !== "encounter" &&
+      selectedBundle !== "map" &&
+      selectedCampaignIDs.length === 0) ||
+    (usesObjectSelection(selectedBundle) && exportObjects.length === 0);
+  const estimatedSize = useMemo(
+    () => estimateBundleSize(selectedBundle, selectedCampaignIDs.length, settings.includeAssets),
+    [selectedBundle, selectedCampaignIDs.length, settings.includeAssets],
+  );
+
+  async function createExport() {
+    setExporting(true);
+    setImportError("");
     try {
-      const payload = await seedTestData();
-      setMessage(payload.message);
-      toast.push("Demo test data added");
-      void navigate(`/campaigns/${payload.campaignId}`);
+      const payload = await api.createExport({
+        bundleType: selectedBundle,
+        campaignIds: needsCampaignContext(selectedBundle) ? selectedCampaignIDs : [],
+        objectIds: usesObjectSelection(selectedBundle)
+          ? selectedObjectIDs.length
+            ? selectedObjectIDs
+            : exportObjects.map((object) => object.id)
+          : [],
+        options: {
+          includeAssets: settings.includeAssets,
+          includeDungeonStudio: settings.includeDungeonStudio,
+          includePlayers: settings.includePlayers,
+        },
+      });
+      setLastExport(payload.export);
+      if (payload.history) {
+        setSelectedHistory(payload.history);
+      }
+      await loadHistory();
+      toast.push("Export bundle is ready");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not seed test data");
+      setImportError(importErrorMessage(err, "export"));
     } finally {
-      setSeeding(false);
+      setExporting(false);
+    }
+  }
+
+  async function previewImport(file = importFile, mode = importMode) {
+    if (!file) return;
+    setImportError("");
+    setImportComplete("");
+    setPreview(null);
+    try {
+      const payload = await api.previewImport(file, mode);
+      setPreview(payload.preview);
+      setActiveTab("import");
+      toast.push("Import preview ready");
+    } catch (err) {
+      setImportError(importErrorMessage(err, "preview"));
+    }
+  }
+
+  async function executeImport() {
+    if (!importFile || !preview || hasBlockingConflict(preview.conflicts)) return;
+    setImporting(true);
+    setImportError("");
+    try {
+      const payload = await api.executeImport(
+        importFile,
+        importMode,
+        restoreConfirmed,
+        mergeConfirmed,
+      );
+      const count = payload.import.campaignIds?.length ?? 0;
+      setImportComplete(
+        count > 0
+          ? `${importMode === "restore" ? "Restored" : importMode === "merge" ? "Merged" : "Imported"} ${count} campaign${count === 1 ? "" : "s"}.`
+          : `${importMode === "restore" ? "Restore" : importMode === "merge" ? "Merge" : "Import"} completed.`,
+      );
+      if (payload.history) {
+        setSelectedHistory(payload.history);
+      }
+      await loadHistory();
+      toast.push("Bundle imported");
+    } catch (err) {
+      setImportError(importErrorMessage(err, "import"));
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  function chooseFile(file: File | null) {
+    setImportFile(file);
+    setPreview(null);
+    setImportMode("clone");
+    setRestoreConfirmed(false);
+    setMergeConfirmed(false);
+    setImportComplete("");
+    setImportError("");
+    if (file) void previewImport(file);
+  }
+
+  async function loadHistory() {
+    try {
+      const payload = await api.history();
+      setHistoryRows(payload.history.map(historyFromRecord));
+    } catch (err) {
+      setImportError(importErrorMessage(err, "history"));
+    }
+  }
+
+  async function deleteHistory(historyID: string) {
+    try {
+      await api.deleteHistory(historyID);
+      if (selectedHistory?.id === historyID) setSelectedHistory(null);
+      await loadHistory();
+      toast.push("History entry deleted");
+    } catch (err) {
+      setImportError(importErrorMessage(err, "history"));
+    }
+  }
+
+  async function clearHistory() {
+    try {
+      await api.clearHistory();
+      setSelectedHistory(null);
+      await loadHistory();
+      toast.push("History cleared");
+    } catch (err) {
+      setImportError(importErrorMessage(err, "history"));
     }
   }
 
   return (
-    <Page>
+    <Page size="wide">
       <ToastViewport toasts={toast.toasts} />
       <PageHeader
-        eyebrow="Import"
-        title="Import and demo data"
-        copy="App-native JSON imports will live here. For development, seed a ready-made campaign with players, friendlies, enemies, and reusable actions."
-      />
-      {message && <Callout>{message}</Callout>}
-      {error && <Callout tone="danger">{error}</Callout>}
-      <SectionPanel title="Demo Fixture" icon={Import}>
-        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
-          <div>
-            <h3 className="font-semibold">Greenhill Ambush</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Adds three player characters, two friendly NPCs, several enemies, weapon and
-              spell-like action templates, and a prepared encounter.
-            </p>
-          </div>
+        eyebrow="Data management"
+        title="Import / Export"
+        copy="Create portable bluDM bundles, preview imports before anything is written, and clone campaign data safely into the current account."
+        action={
           <Button
             type="button"
-            icon={Plus}
-            variant="success"
-            disabled={seeding}
-            onClick={() => void seedDemo()}
+            icon={Info}
+            variant="secondary"
+            onClick={() => setActiveTab("settings")}
           >
-            {seeding ? "Seeding..." : "Seed test data"}
+            How it works
           </Button>
-        </div>
-      </SectionPanel>
+        }
+      />
+
+      <nav
+        aria-label="Import export sections"
+        className="flex flex-wrap gap-2 border-b border-border"
+      >
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            className={[
+              "inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+              activeTab === tab.key
+                ? "border-accent text-accent"
+                : "border-transparent text-surface-foreground hover:text-foreground",
+            ].join(" ")}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {campaignError && <Callout tone="danger">{campaignError}</Callout>}
+      {objectsError && <Callout tone="danger">{objectsError}</Callout>}
+      {importError && <Callout tone="danger">{importError}</Callout>}
+      {importComplete && <Callout tone="success">{importComplete}</Callout>}
+
+      {activeTab === "overview" && (
+        <OverviewTab
+          historyRows={historyRows}
+          lastExport={lastExport}
+          onExport={() => setActiveTab("export")}
+          onImport={() => setActiveTab("import")}
+        />
+      )}
+      {activeTab === "export" && (
+        <ExportTab
+          campaigns={campaigns}
+          estimatedSize={estimatedSize}
+          exporting={exporting}
+          exportDisabled={exportDisabled}
+          lastExport={lastExport}
+          objects={exportObjects}
+          objectsLoading={objectsLoading}
+          selectedBundle={selectedBundle}
+          selectedCampaignIDs={selectedCampaignIDs}
+          selectedObjectIDs={selectedObjectIDs}
+          settings={settings}
+          onCreateExport={() => void createExport()}
+          onSelectBundle={setSelectedBundle}
+          onToggleObject={(objectID) => {
+            setSelectedObjectIDs((current) =>
+              current.includes(objectID)
+                ? current.filter((id) => id !== objectID)
+                : [...current, objectID],
+            );
+          }}
+          onToggleCampaign={(campaignID) => {
+            setSelectedCampaignIDs((current) =>
+              current.includes(campaignID)
+                ? current.filter((id) => id !== campaignID)
+                : [...current, campaignID],
+            );
+          }}
+          onToggleSetting={(key) =>
+            setSettings((current) => ({ ...current, [key]: !current[key] }))
+          }
+        />
+      )}
+      {activeTab === "import" && (
+        <ImportTab
+          file={importFile}
+          importComplete={importComplete}
+          importMode={importMode}
+          importing={importing}
+          preview={preview}
+          restoreConfirmed={restoreConfirmed}
+          mergeConfirmed={mergeConfirmed}
+          onChooseFile={chooseFile}
+          onExecute={() => void executeImport()}
+          onPreview={() => void previewImport()}
+          onSelectMode={(mode) => {
+            setImportMode(mode);
+            setRestoreConfirmed(false);
+            setMergeConfirmed(false);
+            if (importFile) void previewImport(importFile, mode);
+          }}
+          onToggleMergeConfirmed={() => setMergeConfirmed((current) => !current)}
+          onToggleRestoreConfirmed={() => setRestoreConfirmed((current) => !current)}
+        />
+      )}
+      {activeTab === "history" && (
+        <HistoryTab
+          rows={historyRows}
+          selected={selectedHistory}
+          onClear={() => void clearHistory()}
+          onDelete={(historyID) => void deleteHistory(historyID)}
+          onSelect={(record) => setSelectedHistory(record)}
+        />
+      )}
+      {activeTab === "settings" && (
+        <SettingsTab
+          settings={settings}
+          onToggle={(key) => setSettings((current) => ({ ...current, [key]: !current[key] }))}
+        />
+      )}
     </Page>
   );
 }

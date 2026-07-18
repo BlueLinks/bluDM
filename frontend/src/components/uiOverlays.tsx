@@ -31,7 +31,10 @@ export function Sheet({
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Dialog.Close
+              aria-label="Close"
+              className="rounded-md p-2 text-surface-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+            >
               <X className="h-5 w-5" />
             </Dialog.Close>
           </div>
@@ -66,7 +69,7 @@ export function Modal({
           forceMount
           aria-describedby={undefined}
           className={[
-            "modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl",
+            "modal-content fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg border border-border bg-card p-6 shadow-xl max-sm:inset-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0 max-sm:p-4",
             className,
           ]
             .filter(Boolean)
@@ -74,7 +77,10 @@ export function Modal({
         >
           <div className="mb-6 flex items-center justify-between gap-4">
             <Dialog.Title className="text-xl font-semibold">{title}</Dialog.Title>
-            <Dialog.Close className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground">
+            <Dialog.Close
+              aria-label="Close"
+              className="rounded-md p-2 text-surface-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+            >
               <X className="h-5 w-5" />
             </Dialog.Close>
           </div>
@@ -217,7 +223,7 @@ export function SlotStepper({
         {suffix} level
       </span>
       <button
-        className="grid h-6 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
+        className="grid h-6 w-full place-items-center rounded-md border border-border bg-surface text-surface-foreground transition hover:border-primary/30 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => onChange(String(current + 1))}
         aria-label={`Increase ${level}${suffix} level spell slots`}
@@ -227,14 +233,14 @@ export function SlotStepper({
       <label className="grid justify-items-center gap-1">
         <span className="text-[0.62rem] font-bold uppercase text-muted-foreground">Slots</span>
         <input
-          className="h-10 w-12 rounded-md border border-border bg-card text-center text-lg font-semibold outline-none ring-primary/30 focus:ring-2"
+          className="h-10 w-12 rounded-md border border-border bg-card text-center text-lg font-semibold text-card-foreground outline-none ring-primary/30 focus-visible:ring-2"
           inputMode="numeric"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
       </label>
       <button
-        className="grid h-6 w-full place-items-center rounded-md bg-muted text-muted-foreground hover:bg-primary hover:text-primary-foreground"
+        className="grid h-6 w-full place-items-center rounded-md border border-border bg-surface text-surface-foreground transition hover:border-primary/30 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
         type="button"
         onClick={() => onChange(String(Math.max(0, current - 1)))}
         aria-label={`Decrease ${level}${suffix} level spell slots`}
@@ -305,7 +311,7 @@ export function ToastViewport({
             {onDismiss && (
               <button
                 type="button"
-                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="rounded p-1 text-surface-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
                 onClick={() => onDismiss(toast.id)}
                 title="Dismiss"
               >

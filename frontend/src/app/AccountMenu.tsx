@@ -2,6 +2,7 @@ import { KeyRound, UserRound } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { avatarImageSrc } from "../components/AvatarImagePicker";
+import { InitialsAvatar } from "../components/shared/displayPrimitives";
 import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 
@@ -55,13 +56,12 @@ export function AccountMenu({
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-lg border border-border bg-card p-3 text-sm shadow-xl">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-border bg-muted text-sm font-bold uppercase text-muted-foreground">
-              {avatarSrc ? (
-                <img alt="" className="h-full w-full object-cover" src={avatarSrc} />
-              ) : (
-                (user?.email ?? "DM").slice(0, 2)
-              )}
-            </div>
+            <InitialsAvatar
+              className="rounded-full"
+              name={user?.email ?? "DM"}
+              size="sm"
+              src={avatarSrc}
+            />
             <div className="min-w-0">
               <div className="truncate font-semibold">{user?.email ?? "DM"}</div>
               <div className="text-xs text-muted-foreground">Private DM workspace</div>
@@ -98,10 +98,8 @@ export function AccountMenu({
               {(["auto", "compact", "comfy"] as const).map((option) => (
                 <button
                   className={[
-                    "rounded px-2 py-1.5 text-xs font-bold capitalize transition",
-                    density === option
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    "rounded px-2 py-1.5 text-xs font-bold capitalize text-surface-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+                    density === option ? "bg-primary text-primary-foreground shadow-sm" : "",
                   ].join(" ")}
                   key={option}
                   type="button"
@@ -124,7 +122,7 @@ export function AccountMenu({
             Log out
           </Button>
           <Link
-            className="mt-2 block rounded-md px-3 py-2 text-center text-sm font-semibold text-muted-foreground hover:bg-muted hover:text-foreground"
+            className="mt-2 block rounded-md px-3 py-2 text-center text-sm font-semibold text-surface-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
             to="/settings"
             onClick={() => setOpen(false)}
           >

@@ -135,7 +135,7 @@ function RollTableTagPicker({
         )}
         {selectedTags.map((tag) => (
           <span
-            className="inline-flex items-center gap-1 rounded-md bg-muted py-1 pl-2 pr-1 text-xs font-medium text-muted-foreground"
+            className="inline-flex items-center gap-1 rounded-md border border-companion-custom/25 bg-companion-custom/10 py-1 pl-2 pr-1 text-xs font-medium text-companion-custom"
             key={tag}
           >
             <Tag className="h-3 w-3" />

@@ -330,7 +330,7 @@ export function FocusFields({
           onChange={(event) => setField("focusUsage", event.target.value)}
         />
       </Field>
-      <Badge>Spellcasting focus</Badge>
+      <Badge tone="custom">Spellcasting focus</Badge>
     </DetailSection>
   );
 }

@@ -1,22 +1,16 @@
-import {
-  ChevronDown,
-  HeartPulse,
-  ScrollText,
-  Shield,
-  Sparkles,
-  Swords,
-  WandSparkles,
-} from "lucide-react";
+import { ChevronDown, HeartPulse, ScrollText, Sparkles, Swords, WandSparkles } from "lucide-react";
 import React, { useEffect } from "react";
 import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { Button, DeathSaveTrack, Input, SectionPanel, Select } from "../../components/ui";
-import { actionSummary, effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
+import { actionSummary } from "../../lib/domain/combat";
 import type {
   CreatureAction,
   CreatureSpell,
   EncounterRun,
   EncounterRunCombatant,
 } from "../../types";
+import type { CombatRollFlash } from "./combatTypes";
+import { RunTargetCombatantCard } from "../encounters/EncounterCombatantCard";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
 export function CombatStatusBar({
@@ -129,23 +123,10 @@ function TargetSummary({ combatant }: { combatant: EncounterRunCombatant | null 
   }
   return (
     <div
-      className="flex min-w-0 items-center gap-2 justify-self-stretch rounded-lg border border-border bg-background px-2 py-2 md:justify-self-end xl:gap-3 xl:px-3"
+      className="justify-self-stretch md:justify-self-end"
       title={`Targeted: ${combatant.displayName}`}
     >
-      <Avatar combatant={combatant} />
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-bold uppercase text-muted-foreground">Targeting</div>
-        <div className="truncate text-sm font-semibold">{combatant.displayName}</div>
-        <div className="mt-1 flex flex-wrap gap-2 text-xs">
-          <span className="inline-flex items-center gap-1 font-bold text-sky-700 dark:text-sky-200">
-            <Shield className="h-3.5 w-3.5" /> {effectiveAC(combatant)}
-          </span>
-          <span className="inline-flex items-center gap-1 font-bold text-rose-700 dark:text-rose-200">
-            <HeartPulse className="h-3.5 w-3.5" /> {combatant.currentHitPoints}/
-            {effectiveMaxHP(combatant)}
-          </span>
-        </div>
-      </div>
+      <RunTargetCombatantCard combatant={combatant} />
     </div>
   );
 }
@@ -239,25 +220,27 @@ export function CombatControls({
   );
 }
 
-function ActionMenu({
+export function ActionMenu({
   actions,
   disabled,
+  disabledReason,
   onAction,
 }: {
   actions: CreatureAction[];
   disabled: boolean;
+  disabledReason?: string;
   onAction: (action: CreatureAction, event?: React.MouseEvent) => void;
 }) {
   return (
     <details className="group relative">
       <summary
         className={[
-          "inline-flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-500/20 dark:text-emerald-200",
+          "inline-flex min-h-10 cursor-pointer list-none items-center justify-center gap-2 rounded-md border border-primary/35 bg-primary/10 px-3 py-2 text-sm font-bold text-primary transition hover:bg-primary/20",
           disabled ? "pointer-events-none opacity-60" : "",
         ].join(" ")}
         title={
           disabled
-            ? "Select a target first"
+            ? disabledReason || "Select a target first"
             : "Choose an action. Shift-click roll for advantage, Control-click for disadvantage."
         }
       >
@@ -277,12 +260,7 @@ function ActionMenu({
                 {actionSummary(action) || "No damage roll"}
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="success"
-              onClick={(event) => onAction(action, event)}
-            >
+            <Button type="button" size="sm" onClick={(event) => onAction(action, event)}>
               Roll
             </Button>
           </div>
@@ -367,7 +345,7 @@ export function RollFlash({
   flash,
   onDone,
 }: {
-  flash: { id?: string; title: string; total: number; detail: string; subtitle?: string } | null;
+  flash: CombatRollFlash | null;
   onDone: () => void;
 }) {
   useEffect(() => {

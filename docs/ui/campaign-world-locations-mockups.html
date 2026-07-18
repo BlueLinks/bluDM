@@ -1,0 +1,1050 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Campaign World Locations Mockups</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f5f3ee;
+        --panel: #fffdfa;
+        --panel-soft: #faf7f1;
+        --border: #d9d0c2;
+        --ink: #191713;
+        --muted: #6f675c;
+        --accent: #2f624f;
+        --accent-soft: #e7f2ec;
+        --gold: #8a5a12;
+        --gold-soft: #f6ead0;
+        --danger: #9a3329;
+        --blue: #295d7d;
+        --blue-soft: #e4f0f5;
+        --shadow: 0 18px 40px rgb(25 23 19 / 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+
+      main {
+        display: grid;
+        gap: 34px;
+        margin: 0 auto;
+        max-width: 1280px;
+        padding: 32px 20px 64px;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: clamp(2rem, 5vw, 4rem);
+        line-height: 1;
+      }
+
+      h2 {
+        font-size: 1.55rem;
+      }
+
+      h3 {
+        font-size: 1rem;
+      }
+
+      button,
+      input,
+      select,
+      textarea {
+        font: inherit;
+      }
+
+      .hero {
+        display: grid;
+        gap: 12px;
+      }
+
+      .eyebrow {
+        color: var(--danger);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .btn {
+        align-items: center;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--ink);
+        display: inline-flex;
+        font-weight: 750;
+        gap: 8px;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 12px;
+        white-space: nowrap;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: white;
+      }
+
+      .btn.warning {
+        background: var(--gold);
+        border-color: var(--gold);
+        color: white;
+      }
+
+      .panel,
+      .card,
+      .mockup {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+      }
+
+      .mockup {
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .mockup-head {
+        align-items: center;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        padding: 16px 18px;
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 290px minmax(0, 1fr) 300px;
+        min-height: 680px;
+      }
+
+      .sidebar,
+      .related {
+        background: var(--panel-soft);
+        display: grid;
+        gap: 14px;
+        align-content: start;
+        padding: 16px;
+      }
+
+      .sidebar {
+        border-right: 1px solid var(--border);
+      }
+
+      .related {
+        border-left: 1px solid var(--border);
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+        align-content: start;
+        padding: 18px;
+      }
+
+      .search {
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        min-height: 42px;
+        padding: 10px 12px;
+        width: 100%;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .chip {
+        background: #f1eee8;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 750;
+        padding: 5px 9px;
+      }
+
+      .chip.green {
+        background: var(--accent-soft);
+        border-color: #bad8c6;
+        color: var(--accent);
+      }
+
+      .chip.gold {
+        background: var(--gold-soft);
+        border-color: #dec58c;
+        color: var(--gold);
+      }
+
+      .chip.blue {
+        background: var(--blue-soft);
+        border-color: #b7d2df;
+        color: var(--blue);
+      }
+
+      .tree {
+        display: grid;
+        gap: 4px;
+      }
+
+      .tree-row {
+        align-items: center;
+        border-radius: 6px;
+        display: flex;
+        gap: 8px;
+        min-height: 34px;
+        padding: 7px 8px;
+      }
+
+      .tree-row.active {
+        background: var(--accent);
+        color: white;
+      }
+
+      .location-label,
+      .icon-label {
+        align-items: center;
+        display: inline-flex;
+        gap: 8px;
+      }
+
+      .location-label {
+        min-width: 0;
+      }
+
+      .location-name {
+        line-height: 1.2;
+      }
+
+      .icon {
+        color: currentColor;
+        display: inline-block;
+        flex: 0 0 auto;
+        height: 16px;
+        width: 16px;
+      }
+
+      .icon svg {
+        display: block;
+        height: 100%;
+        width: 100%;
+      }
+
+      .icon-lg {
+        height: 18px;
+        width: 18px;
+      }
+
+      .tree-row.depth-1 {
+        padding-left: 24px;
+      }
+
+      .tree-row.depth-2 {
+        padding-left: 40px;
+      }
+
+      .tree-row.depth-3 {
+        padding-left: 56px;
+      }
+
+      .path {
+        color: var(--muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 750;
+      }
+
+      .path span:not(:last-child)::after {
+        color: #b2a89a;
+        content: "/";
+        padding-left: 6px;
+      }
+
+      .title-row {
+        align-items: start;
+        display: flex;
+        gap: 14px;
+        justify-content: space-between;
+      }
+
+      .stack {
+        display: grid;
+        gap: 10px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        display: grid;
+        gap: 8px;
+        padding: 14px;
+      }
+
+      .card-head {
+        align-items: start;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+      }
+
+      .note {
+        background: #fbfaf7;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 12px;
+      }
+
+      .note.secret {
+        background: #f8ede8;
+        border-color: #e0b7a8;
+      }
+
+      .map-box {
+        align-items: center;
+        background:
+          linear-gradient(90deg, rgb(47 98 79 / 0.08) 1px, transparent 1px),
+          linear-gradient(rgb(47 98 79 / 0.08) 1px, transparent 1px), #f8f5ed;
+        background-size: 28px 28px;
+        border: 1px dashed #b9ad9c;
+        border-radius: 8px;
+        display: grid;
+        min-height: 150px;
+        padding: 18px;
+        text-align: center;
+      }
+
+      .room-map {
+        background: #f7f4ed;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        padding: 14px;
+      }
+
+      .room {
+        align-items: center;
+        background: white;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: grid;
+        min-height: 82px;
+        padding: 10px;
+        text-align: center;
+      }
+
+      .room.active {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgb(47 98 79 / 0.14);
+      }
+
+      .form-shell {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+      }
+
+      label {
+        color: var(--muted);
+        display: grid;
+        font-size: 13px;
+        font-weight: 750;
+        gap: 7px;
+      }
+
+      input,
+      select,
+      textarea {
+        background: #f7f5f0;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--ink);
+        min-height: 42px;
+        padding: 10px 12px;
+      }
+
+      textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .modal-backdrop {
+        background: rgb(25 23 19 / 0.45);
+        padding: 24px;
+      }
+
+      .modal {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 16px;
+        margin: 0 auto;
+        max-width: 880px;
+        padding: 20px;
+      }
+
+      .event-seeds {
+        display: grid;
+        gap: 10px;
+      }
+
+      .seed {
+        background: #fbfaf7;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: grid;
+        gap: 6px;
+        padding: 12px;
+      }
+
+      .mobile-tabs {
+        display: none;
+      }
+
+      @media (max-width: 1020px) {
+        .workspace {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .sidebar,
+        .related {
+          border: 0;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .mobile-tabs {
+          display: flex;
+          gap: 6px;
+          padding: 12px;
+          border-bottom: 1px solid var(--border);
+          overflow-x: auto;
+        }
+
+        .grid.three,
+        .grid.two,
+        .form-shell {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 680px) {
+        main {
+          padding: 22px 12px 42px;
+        }
+
+        .mockup-head,
+        .title-row {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .room-map {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <svg aria-hidden="true" focusable="false" height="0" width="0" style="position: absolute">
+      <defs>
+        <symbol id="icon-region" viewBox="0 0 16 16">
+          <path
+            d="M2.5 3.5 5.5 2l5 1.5 3-1v10l-3 1-5-1.5-3 1v-10Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path d="M5.5 2v10M10.5 3.5v10" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </symbol>
+        <symbol id="icon-town" viewBox="0 0 16 16">
+          <path
+            d="M2.5 13.5h11M4 13.5V7.5l3-2 2 1V4.5l3-2v11"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path d="M6.5 13.5V10h2v3.5" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </symbol>
+        <symbol id="icon-shop" viewBox="0 0 16 16">
+          <path
+            d="M3 5.5h10l-1 2.5H4L3 5.5Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path
+            d="M4.5 8v5.5h7V8M6 13.5v-2.5h4v2.5"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path d="M2.5 5.5 4 2.5h8l1.5 3" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </symbol>
+        <symbol id="icon-home" viewBox="0 0 16 16">
+          <path
+            d="M3 7.5 8 3l5 4.5v6H3v-6Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path d="M6.5 13.5V9.5h3v4" fill="none" stroke="currentColor" stroke-width="1.3" />
+        </symbol>
+        <symbol id="icon-room" viewBox="0 0 16 16">
+          <path
+            d="M3 3h10v10H3z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path
+            d="M10.5 8H13M10.5 8a1 1 0 1 0 0-.01"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.3"
+          />
+        </symbol>
+        <symbol id="icon-dungeon" viewBox="0 0 16 16">
+          <path
+            d="M3 13.5V6l5-3.5L13 6v7.5H3Z"
+            fill="none"
+            stroke="currentColor"
+            stroke-linejoin="round"
+            stroke-width="1.3"
+          />
+          <path
+            d="M5.5 13.5v-3h5v3M6 7.5h.01M8 7.5h.01M10 7.5h.01"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.3"
+          />
+        </symbol>
+        <symbol id="icon-link" viewBox="0 0 16 16">
+          <path
+            d="M6.2 9.8 4.5 11.5a2.1 2.1 0 1 1-3-3l1.7-1.7M9.8 6.2l1.7-1.7a2.1 2.1 0 1 1 3 3l-1.7 1.7M5.5 10.5l5-5"
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-width="1.3"
+          />
+        </symbol>
+      </defs>
+    </svg>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Issue #100 mockups</p>
+        <h1>Campaign World Locations</h1>
+        <p class="muted">
+          A campaign-scoped workspace for towns, shops, houses, dungeons, rooms, NPC links,
+          encounter hooks, and future map anchors.
+        </p>
+      </section>
+
+      <section class="mockup" aria-labelledby="workspace-title">
+        <div class="mockup-head">
+          <div>
+            <p class="eyebrow">Campaign / Ashes of Veyrune</p>
+            <h2 id="workspace-title">World</h2>
+          </div>
+          <div class="actions">
+            <button class="btn">Search all</button>
+            <button class="btn primary">Add location</button>
+          </div>
+        </div>
+
+        <div class="mobile-tabs" aria-label="Mobile workspace tabs">
+          <button class="btn primary">Detail</button>
+          <button class="btn">Tree</button>
+          <button class="btn">Related</button>
+        </div>
+
+        <div class="workspace">
+          <aside class="sidebar" aria-label="Location tree">
+            <input class="search" value="brindle copper" aria-label="Search locations" />
+            <div class="chips">
+              <span class="chip green">Active</span>
+              <span class="chip">Type: any</span>
+              <span class="chip">Has encounters</span>
+            </div>
+
+            <div class="tree">
+              <div class="tree-row">
+                ▾
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-region" /></svg>
+                  </span>
+                  <span class="location-name">Veyrune Reach</span>
+                </span>
+                <span class="chip">Region</span>
+              </div>
+              <div class="tree-row depth-1">
+                ▾
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-town" /></svg>
+                  </span>
+                  <span class="location-name">Brindleford</span>
+                </span>
+                <span class="chip">Town</span>
+              </div>
+              <div class="tree-row depth-2 active">
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-shop" /></svg>
+                  </span>
+                  <span class="location-name">Copper Kettle</span>
+                </span>
+                <span class="chip">Shop</span>
+              </div>
+              <div class="tree-row depth-3">
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-room" /></svg>
+                  </span>
+                  <span class="location-name">Cellar</span>
+                </span>
+                <span class="chip">Room</span>
+              </div>
+              <div class="tree-row depth-3">
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-room" /></svg>
+                  </span>
+                  <span class="location-name">Hidden Shrine</span>
+                </span>
+                <span class="chip">Room</span>
+              </div>
+              <div class="tree-row depth-2">
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-dungeon" /></svg>
+                  </span>
+                  <span class="location-name">Old Well</span>
+                </span>
+                <span class="chip">Dungeon</span>
+              </div>
+              <div class="tree-row depth-1">
+                <span class="location-label">
+                  <span class="icon" aria-hidden="true">
+                    <svg viewBox="0 0 16 16"><use href="#icon-link" /></svg>
+                  </span>
+                  <span class="location-name">Rook Road</span>
+                </span>
+                <span class="chip">Road</span>
+              </div>
+            </div>
+          </aside>
+
+          <section class="content" aria-label="Location detail">
+            <div class="title-row">
+              <div class="stack">
+                <nav class="path" aria-label="Location path">
+                  <span>Veyrune Reach</span>
+                  <span>Brindleford</span>
+                  <span>Copper Kettle</span>
+                </nav>
+                <div>
+                  <p class="eyebrow">Shop location</p>
+                  <h2 class="icon-label">
+                    <span class="icon icon-lg" aria-hidden="true">
+                      <svg viewBox="0 0 16 16"><use href="#icon-shop" /></svg>
+                    </span>
+                    Copper Kettle
+                  </h2>
+                </div>
+                <div class="chips">
+                  <span class="chip green">Shop</span>
+                  <span class="chip">Warm food</span>
+                  <span class="chip">Rumor hub</span>
+                  <span class="chip gold">Map pin not placed</span>
+                </div>
+              </div>
+              <div class="actions">
+                <button class="btn">Add child</button>
+                <button class="btn">Link exit</button>
+                <button class="btn warning">Generate encounter here</button>
+                <button class="btn primary">Edit</button>
+              </div>
+            </div>
+
+            <div class="grid two">
+              <div class="note">
+                <h3>Public notes</h3>
+                <p class="muted">
+                  Copper pots hang from the rafters. The common room is tight, noisy, and easy to
+                  block with overturned tables.
+                </p>
+              </div>
+              <div class="note secret">
+                <h3>DM-only notes</h3>
+                <p class="muted">
+                  The cellar trapdoor hides a shrine passage. Mara will deny knowing about it unless
+                  shown the bronze raven token.
+                </p>
+              </div>
+            </div>
+
+            <div class="grid three">
+              <article class="card">
+                <div class="card-head">
+                  <h3 class="icon-label">
+                    <span class="icon" aria-hidden="true">
+                      <svg viewBox="0 0 16 16"><use href="#icon-room" /></svg>
+                    </span>
+                    Cellar
+                  </h3>
+                  <span class="chip">Room</span>
+                </div>
+                <p class="muted">Crates, flour sacks, and a locked trapdoor.</p>
+                <div class="chips">
+                  <span class="chip blue">1 encounter</span>
+                  <span class="chip">2 links</span>
+                </div>
+              </article>
+              <article class="card">
+                <div class="card-head">
+                  <h3 class="icon-label">
+                    <span class="icon" aria-hidden="true">
+                      <svg viewBox="0 0 16 16"><use href="#icon-room" /></svg>
+                    </span>
+                    Hidden Shrine
+                  </h3>
+                  <span class="chip">Room</span>
+                </div>
+                <p class="muted">A secret chamber beneath the kitchen wall.</p>
+                <div class="chips">
+                  <span class="chip gold">Hidden</span>
+                  <span class="chip">Map room</span>
+                </div>
+              </article>
+              <article class="card">
+                <div class="card-head">
+                  <h3 class="icon-label">
+                    <span class="icon" aria-hidden="true">
+                      <svg viewBox="0 0 16 16"><use href="#icon-link" /></svg>
+                    </span>
+                    Market Gate
+                  </h3>
+                  <span class="chip">Linked</span>
+                </div>
+                <p class="muted">Back alley route to the town square.</p>
+                <div class="chips">
+                  <span class="chip">Door</span>
+                  <span class="chip">Two-way</span>
+                </div>
+              </article>
+            </div>
+
+            <div class="map-box">
+              <div>
+                <h3>Map anchor reserved</h3>
+                <p class="muted">
+                  Later this shop can be placed on the Brindleford map and linked to a local
+                  interior map.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <aside class="related" aria-label="Related records">
+            <article class="card">
+              <div class="card-head">
+                <h3>Shop stock</h3>
+                <button class="btn">Open</button>
+              </div>
+              <p>Healing draught <span class="muted">3 in stock · 55 gp</span></p>
+              <p>Spiced stew <span class="muted">Available · 4 cp</span></p>
+              <p>Silvered dagger <span class="muted">Behind counter</span></p>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <h3>NPC links</h3>
+                <button class="btn">Link</button>
+              </div>
+              <p>Mara Vell <span class="muted">Owner · lives upstairs</span></p>
+              <p>Tovin <span class="muted">Cook · owes gang debt</span></p>
+            </article>
+
+            <article class="card">
+              <div class="card-head">
+                <h3>Encounters</h3>
+                <button class="btn">Attach</button>
+              </div>
+              <p>Kitchen brawl <span class="muted">Possible · medium</span></p>
+              <p>Cellar shrine guards <span class="muted">Planned</span></p>
+            </article>
+          </aside>
+        </div>
+      </section>
+
+      <section class="mockup" aria-labelledby="editor-title">
+        <div class="mockup-head">
+          <div>
+            <p class="eyebrow">Create / edit flow</p>
+            <h2 id="editor-title">Add Location</h2>
+          </div>
+          <div class="actions">
+            <button class="btn">Cancel</button>
+            <button class="btn primary">Save location</button>
+          </div>
+        </div>
+        <div class="content">
+          <div class="form-shell">
+            <div class="grid two">
+              <label>
+                Name
+                <input value="Lantern Room" />
+              </label>
+              <label>
+                Type
+                <select>
+                  <option>Room</option>
+                  <option>Shop</option>
+                  <option>Dungeon</option>
+                  <option>Custom</option>
+                </select>
+              </label>
+              <label>
+                Parent
+                <input value="Veyrune Reach / Brindleford / Copper Kettle / Cellar" />
+              </label>
+              <label>
+                Tags
+                <input value="secret, ritual, cramped" />
+              </label>
+              <label>
+                Public notes
+                <textarea>A low chamber lit by green lantern glass.</textarea>
+              </label>
+              <label>
+                DM-only notes
+                <textarea>The lantern is a dormant map anchor for the local shrine map.</textarea>
+              </label>
+            </div>
+            <aside class="card">
+              <h3>Path preview</h3>
+              <nav class="path" aria-label="New location path">
+                <span>Veyrune Reach</span>
+                <span>Brindleford</span>
+                <span>Copper Kettle</span>
+                <span>Cellar</span>
+                <span>Lantern Room</span>
+              </nav>
+              <p class="muted">
+                Moving this location later keeps child locations, NPC links, shop data, encounters,
+                and map anchors attached to its ID.
+              </p>
+              <div class="chips">
+                <span class="chip green">Add child-ready</span>
+                <span class="chip gold">No map anchor</span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="mockup" aria-labelledby="dungeon-title">
+        <div class="mockup-head">
+          <div>
+            <p class="eyebrow">Dungeon planning state</p>
+            <h2 id="dungeon-title" class="icon-label">
+              <span class="icon icon-lg" aria-hidden="true">
+                <svg viewBox="0 0 16 16"><use href="#icon-dungeon" /></svg>
+              </span>
+              Old Well / Lower Floor
+            </h2>
+          </div>
+          <div class="actions">
+            <button class="btn">Add room</button>
+            <button class="btn">Link rooms</button>
+            <button class="btn primary">Attach encounter</button>
+          </div>
+        </div>
+        <div class="content">
+          <nav class="path" aria-label="Dungeon path">
+            <span>Veyrune Reach</span>
+            <span>Brindleford</span>
+            <span>Old Well</span>
+            <span>Lower Floor</span>
+          </nav>
+          <div class="room-map" aria-label="Simple dungeon room map">
+            <div class="room">Well Shaft</div>
+            <div class="room active">Flooded Hall</div>
+            <div class="room">Shrine Door</div>
+            <div class="room">Hidden Shrine</div>
+            <div class="room">Collapsed Store</div>
+            <div class="room">Guard Post</div>
+            <div class="room">Ritual Pool</div>
+            <div class="room">Escape Tunnel</div>
+          </div>
+          <div class="grid three">
+            <article class="card">
+              <h3>Room links</h3>
+              <p class="muted">Flooded Hall → Shrine Door · locked door</p>
+              <p class="muted">Flooded Hall → Escape Tunnel · secret passage</p>
+            </article>
+            <article class="card">
+              <h3>Attached encounter</h3>
+              <p>Cellar shrine guards</p>
+              <p class="muted">Structured location path replaces guesswork.</p>
+            </article>
+            <article class="card">
+              <h3>Map state</h3>
+              <p class="muted">
+                Local map not drawn. Rooms already have stable IDs for later geometry.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="mockup" aria-labelledby="encounter-title">
+        <div class="modal-backdrop">
+          <div class="modal">
+            <div class="title-row">
+              <div class="stack">
+                <p class="eyebrow">Generate encounter here</p>
+                <h2 id="encounter-title">Copper Kettle incident</h2>
+                <nav class="path" aria-label="Encounter location path">
+                  <span>Veyrune Reach</span>
+                  <span>Brindleford</span>
+                  <span>Copper Kettle</span>
+                </nav>
+              </div>
+              <button class="btn">Close</button>
+            </div>
+
+            <div class="grid two">
+              <label>
+                Trigger
+                <select>
+                  <option>Party starts a fight</option>
+                  <option>Guards arrive</option>
+                  <option>Monster breaks in</option>
+                  <option>Custom</option>
+                </select>
+              </label>
+              <label>
+                Intent
+                <select>
+                  <option>Combat with social fallout</option>
+                  <option>Chase</option>
+                  <option>Hazard</option>
+                  <option>Social complication</option>
+                </select>
+              </label>
+              <label>
+                Difficulty budget
+                <select>
+                  <option>Medium for current party</option>
+                  <option>Easy</option>
+                  <option>Hard</option>
+                  <option>Deadly</option>
+                </select>
+              </label>
+              <label>
+                Include linked NPCs
+                <select>
+                  <option>Mara and staff can be involved</option>
+                  <option>Do not include named NPCs</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="event-seeds">
+              <article class="seed">
+                <div class="card-head">
+                  <h3>Tables over, blades out</h3>
+                  <span class="chip blue">Save or start now</span>
+                </div>
+                <p class="muted">
+                  Two off-duty guards and Tovin's debt collector join the brawl. Difficult terrain:
+                  tables, spilled stew, hanging cookware.
+                </p>
+              </article>
+              <article class="seed">
+                <div class="card-head">
+                  <h3>Cellar door bursts open</h3>
+                  <span class="chip gold">Complication</span>
+                </div>
+                <p class="muted">
+                  The fight reveals the hidden trapdoor and draws shrine guards upward before the
+                  party is ready.
+                </p>
+              </article>
+            </div>
+
+            <div class="actions">
+              <button class="btn">Attach seed</button>
+              <button class="btn">Save planned encounter</button>
+              <button class="btn primary">Start encounter now</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

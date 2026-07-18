@@ -145,7 +145,7 @@ function AvatarCropPreview({
   return (
     <section className="grid gap-3">
       <div
-        className="relative mx-auto overflow-hidden rounded-lg border border-border bg-muted text-sm font-semibold text-muted-foreground"
+        className="relative mx-auto overflow-hidden rounded-lg border border-companion-metadata/25 bg-companion-metadata/10 text-sm font-semibold text-companion-metadata"
         style={{ width: stageSize, height: stageSize, touchAction: "none" }}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -201,7 +201,7 @@ function AvatarCropMask({ cropSize, stageSize }: { cropSize: number; stageSize: 
         style={{ width: "100%", height: cropInset }}
       />
       <div
-        className="pointer-events-none absolute border-2 border-sky-400 shadow-[0_0_0_1px_rgba(255,255,255,0.7)]"
+        className="pointer-events-none absolute border-2 border-primary shadow-[0_0_0_1px_hsl(var(--background)/0.7)]"
         style={{ left: cropInset, top: cropInset, width: cropSize, height: cropSize }}
       />
     </>

@@ -49,6 +49,11 @@ export const encounterRunApi = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  applyResolution: (runId: string, resolution: unknown) =>
+    request<{ run: EncounterRun; result: Record<string, unknown> }>(
+      `/api/encounter-runs/${runId}/commands/apply-resolution`,
+      { method: "POST", body: JSON.stringify(resolution) },
+    ),
   addRunCombatants: (
     runId: string,
     payload: {

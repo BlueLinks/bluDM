@@ -4,18 +4,22 @@ import { useTopBarActions } from "../../app/shell";
 import { Button } from "../../components/ui";
 import { CampaignRollTableTool } from "./CampaignRollTableTool";
 import { TravelCalculatorModal } from "./TravelCalculatorModal";
-import type { CampaignJourney, CampaignLocation } from "./travelTypes";
+import type { CampaignJourney, CampaignLocation } from "./world/travelTypes";
 
 export function CampaignTravelTool({
   campaignId,
   editingJourney,
   locations,
+  openRequestKey = 0,
+  planningLocation,
   onEditComplete,
   onJourneySaved,
 }: {
   campaignId: string;
   editingJourney: CampaignJourney | null;
   locations: CampaignLocation[];
+  openRequestKey?: number;
+  planningLocation?: CampaignLocation | null;
   onEditComplete: () => void;
   onJourneySaved: () => Promise<void>;
 }) {
@@ -45,11 +49,16 @@ export function CampaignTravelTool({
     if (editingJourney) setOpen(true);
   }, [editingJourney]);
 
+  useEffect(() => {
+    if (openRequestKey > 0) setOpen(true);
+  }, [openRequestKey]);
+
   return (
     <TravelCalculatorModal
       campaignId={campaignId}
       editingJourney={editingJourney}
       locations={locations}
+      planningLocation={planningLocation}
       onEditComplete={onEditComplete}
       onJourneySaved={onJourneySaved}
       open={open}

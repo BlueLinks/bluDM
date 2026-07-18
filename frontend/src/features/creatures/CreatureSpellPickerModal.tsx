@@ -78,7 +78,7 @@ export function CreatureSpellPickerModal({
       onOpenChange={onOpenChange}
       title="Add spells"
       trigger={
-        <Button type="button" icon={Plus} variant="success">
+        <Button type="button" icon={Plus}>
           Add spells
         </Button>
       }
@@ -142,7 +142,6 @@ export function CreatureSpellPickerModal({
           </Button>
           <Button
             type="button"
-            variant="success"
             onClick={() => {
               onSaveSelection(draftRefs);
               onOpenChange(false);

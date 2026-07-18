@@ -133,16 +133,16 @@ function BaseACSegmented({
 }) {
   const selected = configText(roll.effectConfig?.[configKey], options[0]?.value ?? "");
   return (
-    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-card">
+    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-border bg-surface">
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className={[
-            "min-h-10 px-3 text-sm font-semibold transition",
+            "min-h-10 px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
             selected === option.value
-              ? "bg-primary text-primary-foreground"
-              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-surface text-surface-foreground hover:bg-card hover:text-foreground",
           ].join(" ")}
           onClick={() => updateEffectConfig(rolls, roll.id, configKey, option.value, onChange)}
         >

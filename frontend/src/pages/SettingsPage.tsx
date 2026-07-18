@@ -1,6 +1,7 @@
 import { Image, KeyRound, Link2, ShieldCheck, Trash2, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AvatarImagePicker, avatarImageSrc } from "../components/AvatarImagePicker";
+import { InitialsAvatar } from "../components/shared/displayPrimitives";
 import { Button, DashboardCard, Page, PageHeader, SectionPanel } from "../components/ui";
 import { api } from "../lib/api";
 import type { AccountInfo, AuthProvider } from "../types";
@@ -58,17 +59,12 @@ export function SettingsPage() {
           <SectionPanel title="Profile" icon={Image}>
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <div className="grid h-20 w-20 place-items-center overflow-hidden rounded-full border border-border bg-muted text-xl font-bold uppercase text-muted-foreground">
-                  {avatarImageSrc(account.avatarAssetId, account.avatarUrl) ? (
-                    <img
-                      alt=""
-                      className="h-full w-full object-cover"
-                      src={avatarImageSrc(account.avatarAssetId, account.avatarUrl)}
-                    />
-                  ) : (
-                    account.email.slice(0, 2)
-                  )}
-                </div>
+                <InitialsAvatar
+                  className="rounded-full"
+                  name={account.email}
+                  size="lg"
+                  src={avatarImageSrc(account.avatarAssetId, account.avatarUrl)}
+                />
                 <div>
                   <div className="font-semibold">{account.email}</div>
                   <p className="mt-1 max-w-xl text-sm leading-6 text-muted-foreground">

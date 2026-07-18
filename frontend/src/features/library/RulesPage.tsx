@@ -63,7 +63,7 @@ export function RulesPage() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-semibold">{entry.name}</h3>
-                  <Badge>{entry.sourceLabel}</Badge>
+                  <Badge tone="official">{entry.sourceLabel}</Badge>
                 </div>
                 <p className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
                   {entry.category.replaceAll("-", " ")}
@@ -101,8 +101,8 @@ function RulePreview({
       {entry && (
         <div className="grid gap-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge>{entry.sourceLabel}</Badge>
-            <Badge>{entry.category.replaceAll("-", " ")}</Badge>
+            <Badge tone="official">{entry.sourceLabel}</Badge>
+            <Badge tone="metadata">{entry.category.replaceAll("-", " ")}</Badge>
           </div>
           <h3 className="flex items-center gap-2 text-2xl font-bold">
             <BookOpen className="h-6 w-6" />

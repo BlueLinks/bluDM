@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { StatusPanel } from "../components/ui";
-import { api } from "../lib/api";
 
 const ImportPage = lazy(() =>
   import("../pages/ImportPage").then((module) => ({ default: module.ImportPage })),
@@ -17,6 +16,16 @@ const CampaignsPage = lazy(() =>
 );
 const CampaignDetailPage = lazy(() =>
   import("../features/campaigns/pages").then((module) => ({ default: module.CampaignDetailPage })),
+);
+const CampaignWorldPage = lazy(() =>
+  import("../features/campaigns/world/CampaignWorldPage").then((module) => ({
+    default: module.CampaignWorldPage,
+  })),
+);
+const DungeonStudioPage = lazy(() =>
+  import("../features/campaigns/world/DungeonStudioPage").then((module) => ({
+    default: module.DungeonStudioPage,
+  })),
 );
 const PlayerCreatePage = lazy(() =>
   import("../features/players/pages").then((module) => ({ default: module.PlayerCreatePage })),
@@ -79,6 +88,16 @@ export function AppRoutes() {
         <Route path="/" element={<Navigate replace to="/campaigns" />} />
         <Route path="/campaigns" element={<CampaignsPage />} />
         <Route path="/campaigns/:campaignID" element={<CampaignDetailPage />} />
+        <Route path="/campaigns/:campaignID/world" element={<CampaignWorldPage />} />
+        <Route
+          path="/campaigns/:campaignID/world/location/:locationID"
+          element={<CampaignWorldPage />}
+        />
+        <Route
+          path="/campaigns/:campaignID/world/location/:locationID/studio"
+          element={<DungeonStudioPage />}
+        />
+        <Route path="/campaigns/:campaignID/world/maps" element={<CampaignWorldPage />} />
         <Route
           path="/campaigns/:campaignID/encounters/:encounterID/edit"
           element={<EncounterEditPage />}
@@ -95,7 +114,7 @@ export function AppRoutes() {
         <Route path="/spells" element={<SpellsPage />} />
         <Route path="/items" element={<ItemsPage />} />
         <Route path="/rules" element={<RulesPage />} />
-        <Route path="/import" element={<ImportPage seedTestData={api.seedTestData} />} />
+        <Route path="/import" element={<ImportPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="*" element={<Navigate replace to="/campaigns" />} />

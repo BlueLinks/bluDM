@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"bludm/backend/internal/config"
 	"bludm/backend/internal/store"
@@ -14,10 +16,22 @@ import (
 )
 
 type Server struct {
-	cfg    config.Config
-	db     *pgxpool.Pool
-	stores *store.Stores
-	log    *slog.Logger
+	cfg         config.Config
+	db          *pgxpool.Pool
+	stores      *store.Stores
+	log         *slog.Logger
+	exportCache exportCache
+}
+
+type exportCache struct {
+	mu      sync.Mutex
+	entries map[string]cachedExport
+}
+
+type cachedExport struct {
+	Filename  string
+	Data      []byte
+	CreatedAt time.Time
 }
 
 func (s *Server) withCSRF(next http.Handler) http.Handler {
@@ -57,7 +71,15 @@ func (s *Server) sameOrigin(r *http.Request, raw string) bool {
 }
 
 func New(cfg config.Config, pool *pgxpool.Pool, gormDB *gorm.DB, logger *slog.Logger) *Server {
-	return &Server{cfg: cfg, db: pool, stores: store.New(gormDB), log: logger}
+	return &Server{
+		cfg:    cfg,
+		db:     pool,
+		stores: store.New(gormDB),
+		log:    logger,
+		exportCache: exportCache{
+			entries: map[string]cachedExport{},
+		},
+	}
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {

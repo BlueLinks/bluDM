@@ -74,7 +74,6 @@ export function ActionRollEditor({
         <Button
           type="button"
           icon={Plus}
-          variant="success"
           size="sm"
           onClick={() => onChange([...rolls, blankRoll()])}
         >

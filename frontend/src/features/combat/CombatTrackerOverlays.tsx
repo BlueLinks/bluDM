@@ -5,6 +5,7 @@ import type {
   EncounterRunCombatant,
   RollMode,
 } from "../../types";
+import type { CombatRollFlash } from "./combatTypes";
 import { AddRunTargetDialog } from "./AddRunTargetDialog";
 import { ActionResolutionDialog, LeaveCombatDialog, VictoryDialog } from "./CombatTrackerDialogs";
 import { ManualSpellSlotDialog } from "./ManualSpellSlotDialog";
@@ -23,7 +24,8 @@ export function CombatTrackerOverlays({
   rollFlash,
   run,
   selected,
-  selectedID,
+  selectedIDs,
+  selectedSpellID,
   spellDialogOpen,
   spellcasting,
   toasts,
@@ -54,16 +56,11 @@ export function CombatTrackerOverlays({
   manualSlotsOpen: boolean;
   pendingAction: Record<string, unknown> | null;
   pendingNavigation: string;
-  rollFlash: {
-    id?: string;
-    title: string;
-    total: number;
-    detail: string;
-    subtitle?: string;
-  } | null;
+  rollFlash: CombatRollFlash | null;
   run: EncounterRun;
   selected: EncounterRunCombatant | null;
-  selectedID: string;
+  selectedIDs: string[];
+  selectedSpellID: string;
   spellDialogOpen: boolean;
   spellcasting: CreatureSpellcastingProfile | null;
   toasts: ToastItem[];
@@ -108,8 +105,13 @@ export function CombatTrackerOverlays({
       <SpellCastDialog
         actor={active}
         combatants={run.combatants ?? []}
+        currentConcentration={
+          run.activeEffects?.find((effect) => effect.casterId === active.id && effect.concentration)
+            ?.spellName
+        }
         open={spellDialogOpen}
-        selectedID={selectedID}
+        initialSpellID={selectedSpellID}
+        selectedIDs={selectedIDs}
         slots={run.spellSlots ?? []}
         spells={spellcasting?.spells ?? []}
         onCast={(payload) =>

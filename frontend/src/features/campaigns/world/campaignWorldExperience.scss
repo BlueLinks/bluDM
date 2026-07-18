@@ -1,0 +1,159 @@
+.campaign-world-experience {
+  min-height: calc(100vh - 6rem);
+  align-content: start;
+  gap: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.75rem;
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(circle at 15% 0%, hsl(var(--primary) / 0.08), transparent 28rem),
+    radial-gradient(circle at 90% 10%, hsl(var(--accent) / 0.055), transparent 24rem),
+    hsl(var(--background));
+  box-shadow: 0 10px 30px hsl(220 35% 4% / 0.1);
+
+  .campaign-world-command-bar {
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.65rem;
+    padding: 1rem 1.1rem;
+    background:
+      radial-gradient(circle at 82% 20%, hsl(var(--accent) / 0.13), transparent 18rem),
+      linear-gradient(115deg, hsl(var(--card)), hsl(var(--surface)));
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.04);
+  }
+
+  > a,
+  nav[aria-label="Breadcrumb"] {
+    opacity: 0.82;
+  }
+
+  nav[aria-label="Campaign workspace sections"] {
+    align-self: start;
+    justify-self: start;
+    width: fit-content;
+
+    a {
+      min-height: 2.15rem;
+    }
+  }
+
+  input,
+  textarea,
+  select {
+    background-color: hsl(var(--card));
+    color: hsl(var(--foreground));
+  }
+
+  ::placeholder {
+    color: hsl(var(--muted-foreground) / 0.8);
+  }
+
+  .campaign-world-nav {
+    border-color: hsl(var(--border));
+    background: hsl(var(--card));
+
+    button[aria-current="page"] {
+      border-color: hsl(var(--primary) / 0.45);
+      background: hsl(var(--primary) / 0.1);
+      box-shadow: inset 3px 0 0 hsl(var(--primary));
+    }
+  }
+
+  .campaign-world-mode-tabs {
+    border-bottom-color: hsl(var(--border));
+
+    button {
+      padding-bottom: 0.7rem;
+    }
+  }
+
+  .campaign-world-profile-hero {
+    border-color: hsl(var(--border));
+    background:
+      radial-gradient(circle at 82% 16%, hsl(var(--accent) / 0.15), transparent 18rem),
+      linear-gradient(118deg, hsl(var(--card)), hsl(var(--surface)) 72%, hsl(var(--background)));
+  }
+
+  .campaign-world-profile-hero__body[data-profile="shop"],
+  .campaign-world-profile-hero__body[data-profile="room"],
+  .campaign-world-profile-hero__body[data-variant="dungeon"],
+  .campaign-world-profile-hero__body[data-variant="floor"] {
+    padding: 0.9rem 1rem;
+
+    .campaign-world-profile-hero__icon {
+      height: 2.5rem;
+      width: 2.5rem;
+    }
+
+    h4 {
+      font-size: 2rem;
+      line-height: 1.05;
+    }
+  }
+
+  .campaign-world-profile-hero__icon {
+    border-color: hsl(var(--border));
+    background: hsl(var(--surface));
+  }
+
+  :where(section.rounded-md.border-border) {
+    border-color: hsl(var(--border));
+    background: hsl(var(--card));
+    box-shadow: none;
+  }
+
+  .campaign-world-child-tile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  }
+
+  .campaign-world-balanced-flow {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .campaign-world-balanced-flow > :where(.min-w-0) {
+    min-width: 0;
+  }
+
+  .campaign-world-map-card,
+  .campaign-world-map-preview,
+  .campaign-world-map-placeholder {
+    border-color: hsl(var(--border));
+    background: hsl(var(--background));
+    box-shadow: none;
+  }
+
+  .campaign-world-map-card > div:first-child {
+    border-bottom-color: hsl(var(--border));
+    background: hsl(var(--surface));
+  }
+
+  .campaign-world-stock-card {
+    border-color: hsl(var(--border));
+    box-shadow: none;
+
+    > div:nth-child(2) {
+      background: hsl(var(--surface));
+    }
+  }
+
+  .campaign-world-map-placeholder .absolute:first-child {
+    opacity: 0.18;
+  }
+}
+
+@media (min-width: 96rem) {
+  .campaign-world-experience {
+    .campaign-world-balanced-flow {
+      column-count: 2;
+      column-gap: 1rem;
+      display: block;
+    }
+
+    .campaign-world-balanced-flow > :where(.min-w-0) {
+      break-inside: avoid;
+      margin-bottom: 1rem;
+    }
+  }
+}

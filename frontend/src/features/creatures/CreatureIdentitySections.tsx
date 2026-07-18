@@ -283,7 +283,7 @@ function CreatureChallenge({
             {(Number(form.xp) || 0).toLocaleString()}
           </span>
         </div>
-        <div className="grid gap-1 self-end rounded-md border border-border bg-muted px-3 py-2 text-center">
+        <div className="grid gap-1 self-end rounded-md border border-companion-metadata/25 bg-companion-metadata/10 px-3 py-2 text-center">
           <span className="inline-flex items-center justify-center gap-1 text-[0.68rem] font-bold uppercase tracking-wide text-muted-foreground">
             PB
             <InfoHelpButton title="Proficiency bonus">

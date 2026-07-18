@@ -9,8 +9,8 @@ import {
   temperatureOptions,
   terrainOptions,
   windOptions,
-} from "./travelOptions";
-import type { TravelFormState, TravelWeather, TravelWeatherRollRequest } from "./travelTypes";
+} from "./world/travelOptions";
+import type { TravelFormState, TravelWeather, TravelWeatherRollRequest } from "./world/travelTypes";
 import { ComputedRouteDistance, RouteModeToggle, RoutePointField } from "./TravelRouteControls";
 
 export type TravelRollTarget = "temperature" | "wind" | "precipitation" | "weather" | "encounter";

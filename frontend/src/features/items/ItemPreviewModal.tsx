@@ -1,4 +1,5 @@
 import { Copy, Edit3, Trash2 } from "lucide-react";
+import { MetricCard } from "../../components/layout";
 import { Badge, Button, Modal } from "../../components/ui";
 import type { Item } from "../../types";
 import { buildItemDisplay, type ItemStat } from "./itemCatalogDisplay";
@@ -36,7 +37,7 @@ export function ItemPreviewModal({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-2xl font-semibold leading-tight">{item.name}</h2>
-                <Badge tone={item.librarySource === "user" ? "friendly" : "default"}>
+                <Badge tone={item.librarySource === "user" ? "personal" : "official"}>
                   {display.sourceLabel}
                 </Badge>
               </div>
@@ -104,7 +105,7 @@ export function ItemPreviewModal({
                 <h3 className="font-semibold">Inventory Hooks</h3>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {display.inventoryHooks.map((hook) => (
-                    <ItemChipView key={hook} chip={{ label: hook, tone: "strong" }} />
+                    <ItemChipView key={hook} chip={{ label: hook, tone: "accent" }} />
                   ))}
                 </div>
               </section>
@@ -138,12 +139,5 @@ export function ItemPreviewModal({
 }
 
 function PreviewStat({ stat }: { stat: ItemStat }) {
-  return (
-    <span className="grid gap-1 rounded-md border border-border bg-background px-3 py-2">
-      <span className="text-[0.68rem] font-extrabold uppercase tracking-wide text-muted-foreground">
-        {stat.label}
-      </span>
-      <strong className="min-w-0 break-words text-sm">{stat.value}</strong>
-    </span>
-  );
+  return <MetricCard label={stat.label} tone="secondary" value={stat.value} />;
 }

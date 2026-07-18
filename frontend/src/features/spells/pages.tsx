@@ -1,7 +1,10 @@
 import { BookOpen, Copy, Eye, ListChecks, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { ResponsiveGrid } from "../../components/layout";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
+import { PropertyCard } from "../../components/shared/displayPrimitives";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
+import { sourceBadgeClass, sourceToneClass } from "../../components/shared/sourceTones";
 import {
   Badge,
   Button,
@@ -11,7 +14,6 @@ import {
   MutedPanel,
   Page,
   PageHeader,
-  StatPill,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import { friendlyMechanicKey, friendlyMechanicValue } from "../../lib/domain/spellMessaging";
@@ -157,7 +159,7 @@ function SpellGrid({
     return <MutedPanel>No spells match the current filters.</MutedPanel>;
   }
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <ResponsiveGrid variant="equal2">
       {spells.map((spell) => (
         <SpellCard
           key={spell.id}
@@ -168,7 +170,7 @@ function SpellGrid({
           onPreview={onPreview}
         />
       ))}
-    </div>
+    </ResponsiveGrid>
   );
 }
 
@@ -189,7 +191,7 @@ function SpellCard({
     <article
       className={[
         "rounded-lg border bg-card p-4",
-        spell.readOnly ? "border-sky-300/80 dark:border-sky-800" : "border-border",
+        spell.readOnly ? "border-companion-official/50 shadow-sm" : "border-border",
       ].join(" ")}
     >
       <div className="flex items-start justify-between gap-4">
@@ -219,9 +221,9 @@ function SpellCard({
         </div>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
-        {spell.concentration && <Badge>Concentration</Badge>}
-        {spell.ritual && <Badge>Ritual</Badge>}
-        <Badge>{displaySpellDuration(spell) || "Spell"}</Badge>
+        {spell.concentration && <Badge tone="warning">Concentration</Badge>}
+        {spell.ritual && <Badge tone="metadata">Ritual</Badge>}
+        <Badge tone="metadata">{displaySpellDuration(spell) || "Spell"}</Badge>
       </div>
       <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
         {spell.description || generateSpellDescription(spell)}
@@ -259,7 +261,7 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
   return (
     <div className="grid gap-5">
       {spell.readOnly && (
-        <div className="rounded-lg border border-sky-300 bg-sky-50 p-4 text-sky-950 dark:border-sky-800 dark:bg-sky-950 dark:text-sky-100">
+        <div className={["rounded-lg border p-4", sourceToneClass("official")].join(" ")}>
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <SrdBadge label={spell.sourceLabel} />
             <span className="text-sm font-semibold">Read-only standard spell</span>
@@ -287,10 +289,14 @@ function SpellPreview({ spell, onCopy }: { spell: Spell; onCopy: (spell: Spell) 
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
-        <StatPill label="Casting Time" value={spell.castingTime || "-"} />
-        <StatPill label="Range" value={displaySpellRange(spell)} />
-        <StatPill label="Duration" value={displaySpellDuration(spell)} />
-        <StatPill label="Components" value={componentSummary(spell.components ?? {})} />
+        <PropertyCard label="Casting Time" value={spell.castingTime || "-"} />
+        <PropertyCard label="Range" value={displaySpellRange(spell)} />
+        <PropertyCard
+          label="Duration"
+          tone={spell.concentration ? "warning" : "default"}
+          value={displaySpellDuration(spell)}
+        />
+        <PropertyCard label="Components" value={componentSummary(spell.components ?? {})} />
       </div>
       <ClassList classes={spell.classes ?? []} />
       <TextBlock title="Description" value={spell.description || generateSpellDescription(spell)} />
@@ -319,7 +325,9 @@ function ClassList({ classes }: { classes: string[] }) {
       <h4 className="font-semibold">Classes</h4>
       <div className="mt-2 flex flex-wrap gap-2">
         {classes.map((className) => (
-          <Badge key={className}>{className}</Badge>
+          <Badge key={className} tone="official">
+            {className}
+          </Badge>
         ))}
       </div>
     </section>
@@ -424,7 +432,12 @@ function spellCopyDraft(spell: Spell): Spell {
 
 function SrdBadge({ label }: { label?: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-sky-300 bg-sky-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-sky-900 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200">
+    <span
+      className={[
+        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
+        sourceBadgeClass("official"),
+      ].join(" ")}
+    >
       <BookOpen className="h-3 w-3" />
       {label || "SRD"}
     </span>

@@ -26,7 +26,7 @@ export function CampaignPartyDialog({
               campaign.
             </p>
           </div>
-          <Button type="button" icon={Plus} variant="success" onClick={onAddPlayer}>
+          <Button type="button" icon={Plus} onClick={onAddPlayer}>
             Add player
           </Button>
         </div>

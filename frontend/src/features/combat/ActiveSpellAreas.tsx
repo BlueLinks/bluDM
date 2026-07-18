@@ -22,7 +22,7 @@ export function ActiveSpellAreas({
     <SectionPanel
       title="Active Areas"
       icon={Sparkles}
-      className="combat-panel border-sky-500/40 bg-sky-500/8 p-2 sm:p-3"
+      className="combat-panel border-info/40 bg-info/10 p-2 sm:p-3"
       bodyClassName="grid gap-2"
     >
       {areas.map((area) => (
@@ -67,12 +67,10 @@ function ActiveSpellAreaCard({
   const tableRows = objectRows(payload.rows);
   const eligibleTargets = combatants.filter((combatant) => !combatant.defeated);
   return (
-    <div className="rounded-lg border border-sky-500/30 bg-background/80 p-3 shadow-sm">
+    <div className="rounded-lg border border-info/30 bg-background/80 p-3 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs font-bold uppercase text-sky-700 dark:text-sky-200">
-            {area.spellName}
-          </div>
+          <div className="text-xs font-bold uppercase text-info">{area.spellName}</div>
           <div className="font-semibold">
             {shapeLabel(shape)} {radius && `${radius} ft radius`}
             {height && `, ${height} ft high`}
@@ -83,7 +81,7 @@ function ActiveSpellAreaCard({
             {trigger}
           </div>
           {text(payload.riderText, "") && (
-            <div className="mt-2 rounded-md border border-border bg-muted/50 px-2 py-1 text-xs">
+            <div className="mt-2 rounded-md border border-info/25 bg-info/10 px-2 py-1 text-xs text-info">
               {text(payload.riderText, "")}
             </div>
           )}
@@ -154,7 +152,7 @@ function LayerSummary({ layers }: { layers: Record<string, unknown>[] }) {
       {layers.map((layer, index) => (
         <div
           key={`${text(layer.color, "Layer")}-${index}`}
-          className="rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+          className="rounded-md border border-info/25 bg-info/10 px-2 py-1 text-xs text-info"
         >
           <span className="font-semibold">
             {numberText(layer.order) || index + 1}. {text(layer.color, "Layer")}
@@ -176,7 +174,7 @@ function RollTableSummary({ rows }: { rows: Record<string, unknown>[] }) {
       {rows.map((row, index) => (
         <div
           key={`${text(row.name, "Outcome")}-${index}`}
-          className="rounded-md border border-border bg-muted/40 px-2 py-1 text-xs"
+          className="rounded-md border border-info/25 bg-info/10 px-2 py-1 text-xs text-info"
         >
           <span className="font-semibold">
             {numberText(row.roll) || index + 1}. {text(row.name, "Outcome")}

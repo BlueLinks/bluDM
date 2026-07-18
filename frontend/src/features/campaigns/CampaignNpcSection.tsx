@@ -65,7 +65,7 @@ export function CampaignNpcSection({
           onOpenChange={onOpenChange}
           title="Add campaign NPC"
           trigger={
-            <Button type="button" icon={Plus} variant="success" onClick={onOpenDialog}>
+            <Button type="button" icon={Plus} onClick={onOpenDialog}>
               Add NPC link
             </Button>
           }

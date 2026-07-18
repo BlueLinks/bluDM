@@ -92,6 +92,19 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 		if before, ok := event.Payload["before"].(map[string]any); ok {
 			_ = s.restoreCombatantState(r.Context(), before)
 		}
+	case "resolution_applied":
+		for _, before := range mapsFromAny(event.Payload["targetsBefore"]) {
+			_ = s.restoreCombatantState(r.Context(), before)
+		}
+		if before, ok := event.Payload["actorBefore"].(map[string]any); ok && stringFromAny(before["id"]) != "" {
+			_ = s.restoreCombatantState(r.Context(), before)
+		}
+		if resource, ok := event.Payload["resource"].(map[string]any); ok && stringFromAny(resource["kind"]) == "spell_slot" {
+			_ = s.stores.Runs.UpdateSpellSlot(
+				r.Context(), runID, stringFromAny(resource["combatantId"]),
+				intFromAny(resource["spellLevel"]), intFromAny(resource["before"]),
+			)
+		}
 	default:
 		writeError(w, http.StatusBadRequest, "latest event cannot be undone")
 		return
@@ -100,6 +113,17 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 	_ = s.appendCombatLogEvent(r.Context(), runID, "undo", "", "", map[string]any{"undoneEventId": event.ID, "undoneSequence": event.Sequence})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
+}
+
+func mapsFromAny(value any) []map[string]any {
+	items, _ := value.([]any)
+	values := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		if object, ok := item.(map[string]any); ok {
+			values = append(values, object)
+		}
+	}
+	return values
 }
 
 func (s *Server) endEncounterRun(w http.ResponseWriter, r *http.Request) {

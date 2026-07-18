@@ -69,6 +69,7 @@ export type Encounter = {
   description: string;
   status: "planned" | "completed" | "skipped";
   location: string;
+  locationId?: string;
   roomNumber: string;
   lootNotes: string;
   combatants?: EncounterCombatant[];

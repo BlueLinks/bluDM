@@ -349,7 +349,7 @@ function CompactNumberStepper({
       {label}
       <div className="grid max-w-[136px] grid-cols-[2.25rem_4rem_2.25rem] overflow-hidden rounded-md border border-border bg-background">
         <button
-          className="grid h-10 place-items-center border-r border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 place-items-center border-r border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => onChange(String(clamp(current - 1)))}
           aria-label={`Decrease ${label}`}
@@ -365,7 +365,7 @@ function CompactNumberStepper({
           onChange={(event) => onChange(String(clamp(Number(event.target.value) || 0)))}
         />
         <button
-          className="grid h-10 place-items-center border-l border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="grid h-10 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
           onClick={() => onChange(String(clamp(current + 1)))}
           aria-label={`Increase ${label}`}

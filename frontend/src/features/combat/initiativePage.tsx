@@ -19,6 +19,7 @@ import { GripVertical, Pencil, Play, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { ResponsiveGrid } from "../../components/layout";
 import {
   Button,
   Callout,
@@ -164,7 +165,7 @@ export function EncounterInitiativePage() {
           items={combatants.map((combatant) => combatant.id)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="grid gap-4 lg:grid-cols-3">
+          <ResponsiveGrid variant="equal3">
             <InitiativeGroup
               title="Players"
               combatants={grouped.player}
@@ -186,7 +187,7 @@ export function EncounterInitiativePage() {
               onUpdate={setRun}
               onRoll={() => command(() => api.rollInitiative(run.id, ["enemy"]))}
             />
-          </div>
+          </ResponsiveGrid>
         </SortableContext>
       </DndContext>
     </Page>
@@ -243,10 +244,10 @@ function SortableInitiativeRow({
   const style = { transform: CSS.Transform.toString(transform), transition };
   const tone =
     combatant.side === "enemy"
-      ? "border-red-500/30 bg-red-500/10"
+      ? "border-destructive/30 bg-destructive/10"
       : combatant.side === "friendly"
-        ? "border-emerald-500/30 bg-emerald-500/10"
-        : "border-sky-500/25 bg-sky-500/10";
+        ? "border-companion-shared/30 bg-companion-shared/10"
+        : "border-info/25 bg-info/10";
   return (
     <div
       ref={setNodeRef}

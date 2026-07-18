@@ -9,6 +9,7 @@ export type EncounterMetaDraft = {
   description: string;
   status: string;
   location: string;
+  locationId: string;
   roomNumber: string;
 };
 
@@ -89,6 +90,7 @@ export function encounterMetaChanged(encounter: Encounter | null, meta: Encounte
     encounter.description !== meta.description ||
     encounter.status !== meta.status ||
     encounter.location !== meta.location ||
+    (encounter.locationId ?? "") !== meta.locationId ||
     encounter.roomNumber !== meta.roomNumber
   );
 }

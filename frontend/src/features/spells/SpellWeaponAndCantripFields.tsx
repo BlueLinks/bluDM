@@ -111,7 +111,7 @@ function DamageTypePicker({
             id: "weapon_original",
             label: "Weapon's original damage",
             icon: Swords,
-            tone: "text-slate-600 dark:text-slate-300",
+            tone: "text-companion-metadata",
           },
           ...damageTypes,
         ]

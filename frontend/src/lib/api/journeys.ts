@@ -1,4 +1,4 @@
-import type { CampaignJourney, TravelFormState } from "../../features/campaigns/travelTypes";
+import type { CampaignJourney, TravelFormState } from "../../features/campaigns/world/travelTypes";
 import { request } from "./request";
 
 export const journeyApi = {

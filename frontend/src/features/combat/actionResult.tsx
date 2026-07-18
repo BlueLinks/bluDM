@@ -172,7 +172,11 @@ export function ActionResult({
 
   return (
     <div className="grid gap-4">
-      <TargetCard target={target} />
+      <ActionContextCard
+        actionName={action?.name ?? "Action"}
+        actorName={typeof result.actorName === "string" ? result.actorName : "Acting combatant"}
+        target={target}
+      />
       <AttackRollCard
         action={action}
         attack={attack}
@@ -214,15 +218,31 @@ export function ActionResult({
   );
 }
 
-function TargetCard({ target }: { target: EncounterRunCombatant }) {
+function ActionContextCard({
+  actionName,
+  actorName,
+  target,
+}: {
+  actionName: string;
+  actorName: string;
+  target: EncounterRunCombatant;
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border bg-background p-3">
-      <Avatar combatant={target} />
+    <div className="grid gap-3 rounded-lg border border-border bg-background p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
       <div className="min-w-0">
-        <div className="text-xs font-bold uppercase text-muted-foreground">Target</div>
-        <div className="truncate text-lg font-semibold">{target.displayName}</div>
-        <div className="text-sm text-muted-foreground">
-          AC {effectiveAC(target)} · HP {target.currentHitPoints}/{effectiveMaxHP(target)}
+        <div className="text-xs font-bold uppercase text-muted-foreground">Action context</div>
+        <div className="truncate font-semibold">
+          {actorName} · {actionName}
+        </div>
+      </div>
+      <div className="flex min-w-0 items-center gap-3">
+        <Avatar combatant={target} />
+        <div className="min-w-0">
+          <div className="text-xs font-bold uppercase text-muted-foreground">Target</div>
+          <div className="truncate font-semibold">{target.displayName}</div>
+          <div className="text-sm text-muted-foreground">
+            AC {effectiveAC(target)} · HP {target.currentHitPoints}/{effectiveMaxHP(target)}
+          </div>
         </div>
       </div>
     </div>
@@ -252,14 +272,14 @@ function AttackRollCard({
       className={[
         "action-roll-card rounded-lg border bg-background p-4 transition",
         critical
-          ? "crit-roll-card border-amber-400/70 bg-amber-500/10 shadow-lg shadow-amber-500/20"
+          ? "crit-roll-card border-warning/70 bg-warning/10 shadow-lg shadow-warning/20"
           : "border-border",
       ].join(" ")}
     >
       <div
         className={[
           "text-xs font-bold uppercase",
-          critical ? "text-amber-700 dark:text-amber-200" : "text-muted-foreground",
+          critical ? "text-warning" : "text-muted-foreground",
         ].join(" ")}
       >
         Roll To Hit
@@ -268,18 +288,18 @@ function AttackRollCard({
         <div
           className={
             critical
-              ? "crit-roll-value text-5xl font-black leading-none text-amber-600 drop-shadow-sm dark:text-amber-200"
+              ? "crit-roll-value text-5xl font-black leading-none text-warning drop-shadow-sm"
               : "action-roll-value text-2xl font-black"
           }
         >
           {attack.attackTotal}
         </div>
         <div className="text-sm text-muted-foreground">{detail}</div>
-        <Badge tone={calculatedHit ? "friendly" : "default"}>
+        <Badge tone={calculatedHit ? "success" : "default"}>
           {calculatedHit ? "Calculated hit" : "Calculated miss"}
         </Badge>
         {critical && (
-          <span className="crit-roll-badge rounded-md border border-amber-400/70 bg-amber-400/20 px-3 py-1 text-sm font-black uppercase text-amber-700 dark:text-amber-100">
+          <span className="crit-roll-badge rounded-md border border-warning/70 bg-warning/20 px-3 py-1 text-sm font-black uppercase text-warning">
             Critical hit
           </span>
         )}
@@ -300,9 +320,7 @@ function HitToggle({ hit, onChange }: { hit: boolean; onChange: (hit: boolean) =
         type="button"
         className={[
           "rounded-md px-3 py-2 text-sm font-bold transition",
-          hit
-            ? "bg-emerald-600 text-white dark:bg-emerald-400 dark:text-slate-950"
-            : "text-muted-foreground hover:bg-muted",
+          hit ? "bg-success text-success-foreground" : "text-muted-foreground hover:bg-muted",
         ].join(" ")}
         onClick={() => onChange(true)}
       >
@@ -312,7 +330,9 @@ function HitToggle({ hit, onChange }: { hit: boolean; onChange: (hit: boolean) =
         type="button"
         className={[
           "rounded-md px-3 py-2 text-sm font-bold transition",
-          !hit ? "bg-red-600 text-white" : "text-muted-foreground hover:bg-muted",
+          !hit
+            ? "bg-destructive text-destructive-foreground"
+            : "text-muted-foreground hover:bg-muted",
         ].join(" ")}
         onClick={() => onChange(false)}
       >
