@@ -1,5 +1,6 @@
-import { ChevronDown, Search, Star } from "lucide-react";
+import { BowArrow, ChevronDown, Search, Star, Sword, WandSparkles, Zap } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
+import { ActionIcon } from "../../components/shared/ActionIcon";
 import { Button, Checkbox, Input } from "../../components/ui";
 import { actionSummary } from "../../lib/domain/combat";
 import type { CreatureAction, CreatureSpell } from "../../types";
@@ -14,18 +15,20 @@ export function CombatActionPicker({
   actions,
   actionDisabledReason,
   spells,
+  triggerLabel = "Choose attack or spell",
   onAction,
   onSpell,
 }: {
   actions: CreatureAction[];
   actionDisabledReason?: string;
   spells: CreatureSpell[];
+  triggerLabel?: string;
   onAction: (action: CreatureAction, event?: React.MouseEvent) => void;
   onSpell: (spell: CreatureSpell) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
+  const [category, setCategory] = useState("Attacks");
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(readFavorites);
   const [recent, setRecent] = useState<string[]>([]);
@@ -35,8 +38,8 @@ export function CombatActionPicker({
     (item) => showUnavailable || item.kind === "spell" || !actionDisabledReason,
   );
   const allGroups = pickerGroups(availableItems, favorites, recent);
-  const groups =
-    category === "All" ? allGroups : allGroups.filter((group) => group.label === category);
+  const groups = allGroups.filter((group) => group.label === category);
+  const selectedKey = items.find((item) => itemName(item) === triggerLabel)?.key;
 
   function choose(item: PickerItem, event?: React.MouseEvent) {
     setRecent((current) => [item.key, ...current.filter((key) => key !== item.key)].slice(0, 4));
@@ -56,38 +59,33 @@ export function CombatActionPicker({
   }
 
   return (
-    <details ref={detailsRef} className="group relative col-span-2">
-      <summary className="inline-flex min-h-10 w-full cursor-pointer list-none items-center justify-center gap-2 rounded-md border border-primary/35 bg-primary/10 px-3 py-2 text-sm font-bold text-primary transition hover:bg-primary/20">
-        Choose attack or spell
+    <details ref={detailsRef} className="group relative min-w-0">
+      <summary className="inline-flex min-h-9 w-full cursor-pointer list-none items-center justify-between gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface group-open:border-primary">
+        <span className="truncate">{triggerLabel}</span>
         <ChevronDown className="h-4 w-4 transition group-open:rotate-180" />
       </summary>
-      <div className="absolute right-0 top-12 z-30 grid w-80 gap-2 rounded-lg border border-border bg-card p-3 shadow-xl sm:w-96">
+      <div className="absolute left-0 top-[5.4375rem] z-30 grid w-80 gap-0 rounded-lg border border-border bg-card p-1 shadow-xl sm:-left-[6.75rem] sm:w-[23.125rem]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             aria-label="Search actions and spells"
-            className="pl-8"
+            className="!h-[2.125rem] !min-h-[2.125rem] !py-1 pl-8"
             placeholder="Search actions and spells"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
         </div>
-        <Checkbox
-          checked={showUnavailable}
-          label="Show unavailable actions"
-          onChange={setShowUnavailable}
-        />
-        <div className="flex gap-1 overflow-x-auto" aria-label="Action categories">
-          {["All", ...allGroups.map((group) => group.label)].map((label) => (
+        <div className="grid grid-cols-3 border-b border-border" aria-label="Action categories">
+          {["Favorites", "Attacks", "Spells"].map((label) => (
             <button
               key={label}
               type="button"
               aria-pressed={category === label}
               className={[
-                "shrink-0 rounded px-2 py-1 text-xs font-semibold",
+                "-mb-px border-b-2 px-2 py-2 text-xs font-semibold transition",
                 category === label
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted",
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:bg-surface hover:text-foreground",
               ].join(" ")}
               onClick={() => setCategory(label)}
             >
@@ -95,15 +93,20 @@ export function CombatActionPicker({
             </button>
           ))}
         </div>
-        <div
-          className="max-h-80 overflow-y-auto border-t border-border"
-          onKeyDown={handlePickerKeys}
-        >
+        {actionDisabledReason ? (
+          <Checkbox
+            checked={showUnavailable}
+            label="Show unavailable actions"
+            onChange={setShowUnavailable}
+          />
+        ) : null}
+        <div className="max-h-80 overflow-y-auto p-1" onKeyDown={handlePickerKeys}>
           {groups.map((group) => (
             <PickerGroup
               key={group.label}
               favorites={favorites}
               group={group}
+              selectedKey={selectedKey}
               actionDisabledReason={actionDisabledReason}
               onChoose={choose}
               onFavorite={toggleFavorite}
@@ -124,28 +127,47 @@ function PickerGroup({
   actionDisabledReason,
   favorites,
   group,
+  selectedKey,
   onChoose,
   onFavorite,
 }: {
   actionDisabledReason?: string;
   favorites: string[];
   group: { label: string; items: PickerItem[] };
+  selectedKey?: string;
   onChoose: (item: PickerItem, event?: React.MouseEvent) => void;
   onFavorite: (key: string) => void;
 }) {
   return (
-    <section className="py-2" aria-label={group.label}>
-      <h3 className="px-1 text-xs font-bold uppercase text-muted-foreground">{group.label}</h3>
+    <section className="grid gap-1" aria-label={group.label}>
       {group.items.map((item) => {
         const disabled = item.kind === "action" && Boolean(actionDisabledReason);
+        const isFeature =
+          item.kind === "action" && item.action.actionType.toLowerCase().includes("feature");
         return (
           <div
             key={`${group.label}-${item.key}`}
-            className="flex min-w-0 items-center border-b border-border py-1 last:border-b-0"
+            className={[
+              "flex min-h-[3.375rem] min-w-0 items-center rounded-md border px-1.5",
+              item.key === selectedKey
+                ? "border-primary bg-primary/25"
+                : "border-border bg-background",
+            ].join(" ")}
           >
+            {item.kind === "spell" ? (
+              <span className="grid h-8 w-8 shrink-0 place-items-center text-foreground">
+                <WandSparkles className="h-6 w-6" />
+              </span>
+            ) : isFeature ? (
+              <span className="grid h-8 w-8 shrink-0 place-items-center text-foreground">
+                <Zap className="h-6 w-6" />
+              </span>
+            ) : (
+              <PickerActionIcon action={item.action} />
+            )}
             <button
               type="button"
-              className="min-w-0 flex-1 px-1.5 py-1 text-left hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-w-0 flex-1 rounded px-2 py-1 text-left hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
               data-picker-choice
               disabled={disabled}
               title={disabled ? actionDisabledReason : itemHint(item)}
@@ -161,7 +183,7 @@ function PickerGroup({
               aria-label={`${favorites.includes(item.key) ? "Remove" : "Add"} ${itemName(item)} ${favorites.includes(item.key) ? "from" : "to"} favorites`}
               onClick={() => onFavorite(item.key)}
             >
-              <Star className={favorites.includes(item.key) ? "h-4 w-4 fill-current" : "h-4 w-4"} />
+              <Star className="h-5 w-5" />
             </Button>
           </div>
         );
@@ -202,15 +224,7 @@ function orderedMatches(items: PickerItem[], keys: string[]) {
 
 function itemCategory(item: PickerItem) {
   if (item.kind === "spell") return "Spells";
-  const actionType = item.action.actionType.toLowerCase();
-  if (actionType.includes("legendary")) return "Legendary Actions";
-  if (actionType.includes("lair")) return "Lair Actions";
-  if (actionType.includes("reaction")) return "Reactions";
-  if (actionType.includes("feature") || actionType.includes("trait")) return "Features";
-  if (actionType.includes("item")) return "Items";
-  if (actionType.includes("attack")) return "Attacks";
-  if (actionType.includes("other") || actionType.includes("special")) return "Other";
-  return "Creature actions";
+  return "Attacks";
 }
 
 function itemName(item: PickerItem) {
@@ -219,12 +233,35 @@ function itemName(item: PickerItem) {
 
 function itemHint(item: PickerItem) {
   if (item.kind === "action") {
-    return (
-      [item.action.actionType, actionSummary(item.action)].filter(Boolean).join(" · ") || "Action"
-    );
+    if (item.action.actionType.toLowerCase().includes("feature")) {
+      return item.action.description.replace(/[.!?]+$/, "") || "Creature action";
+    }
+    const damage = actionSummary(item.action).replace(/([d\d])([+-])(\d+)/g, "$1 $2 $3");
+    const range = item.action.range > 0 ? `${item.action.range}/${item.action.range * 4} ft` : "";
+    return [
+      `${item.action.attackModifier >= 0 ? "+" : ""}${item.action.attackModifier} to hit`,
+      damage,
+      range,
+    ]
+      .filter(Boolean)
+      .join(" · ");
   }
   const level = item.spell.spellLevel === 0 ? "Cantrip" : `Level ${item.spell.spellLevel}`;
   return `${level}${item.spell.prepared ? " · Prepared" : ""}${item.spell.innate ? " · Innate" : ""}`;
+}
+
+function PickerActionIcon({ action }: { action: CreatureAction }) {
+  const name = action.name.toLowerCase();
+  const Icon = name.includes("bow") ? BowArrow : name.includes("sword") ? Sword : null;
+  if (!Icon && action.iconSource && action.iconSource !== "none") {
+    return <ActionIcon action={action} className="h-8 w-8 rounded-md [&_img]:h-5 [&_img]:w-5" />;
+  }
+  const FallbackIcon = Icon ?? Sword;
+  return (
+    <span className="grid h-8 w-8 shrink-0 place-items-center text-foreground">
+      <FallbackIcon className="h-6 w-6" />
+    </span>
+  );
 }
 
 function handlePickerKeys(event: React.KeyboardEvent<HTMLDivElement>) {

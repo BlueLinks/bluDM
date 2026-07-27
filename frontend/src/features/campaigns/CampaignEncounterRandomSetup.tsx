@@ -47,18 +47,25 @@ export function EncounterSetupStep({
   onUpdateEnemy: (draft: EncounterBuilderCreatureDraft) => void;
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
-      <div className="grid content-start gap-4">
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24.1875rem]">
+      <div className="grid content-start gap-3 lg:pr-[0.1875rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold">Encounter Type</h3>
             <p className="text-sm text-muted-foreground">Choose what the party is fighting.</p>
           </div>
-          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
+          <Button
+            className="border-primary text-primary"
+            type="button"
+            icon={Plus}
+            size="sm"
+            variant="outline"
+            onClick={onAddEnemy}
+          >
             Add enemy
           </Button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {archetypeOptions.map((option) => (
             <ArchetypeCard
               active={options.archetype === option.value}
@@ -72,15 +79,16 @@ export function EncounterSetupStep({
           value={options.challenge}
           onChange={(challenge) => onOptionsChange({ ...options, challenge })}
         />
-        <ResponsiveGrid variant="form2">
-          <Field label="Number of enemy groups">
+        <ResponsiveGrid className="-mt-px items-start" variant="form2">
+          <Field className="!gap-1.5" label="Number of enemy groups">
             <EnemyCountStepper
               value={options.enemyCount}
               onChange={(enemyCount) => onOptionsChange({ ...options, enemyCount })}
             />
           </Field>
-          <Field label="Terrain / environment">
+          <Field className="!gap-1.5" label="Terrain / environment">
             <Select
+              size="sm"
               value={options.terrain}
               placeholder="Terrain"
               options={terrainOptions}
@@ -88,7 +96,7 @@ export function EncounterSetupStep({
             />
           </Field>
         </ResponsiveGrid>
-        <div className="flex flex-wrap gap-4 text-sm">
+        <div className="-mt-[0.625rem] flex flex-wrap gap-x-5 gap-y-2 text-sm">
           <Toggle
             checked={options.useLocationTheme}
             label="Use location theme"
@@ -139,7 +147,7 @@ function ArchetypeCard({
   return (
     <button
       className={[
-        "flex min-w-0 items-start gap-3 rounded-md border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+        "flex min-h-[4.875rem] min-w-0 items-start gap-2.5 rounded-md border p-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
         active
           ? "border-primary bg-primary text-primary-foreground shadow-sm"
           : "border-border bg-surface text-surface-foreground hover:bg-card hover:text-foreground",
@@ -149,8 +157,15 @@ function ArchetypeCard({
     >
       <EncounterArchetypeIcon iconKey={option.iconKey} />
       <span className="min-w-0">
-        <span className="block font-semibold">{option.label}</span>
-        <span className="mt-1 block text-xs text-muted-foreground">{option.copy}</span>
+        <span className="block font-semibold leading-5">{option.label}</span>
+        <span
+          className={[
+            "mt-1 block text-xs",
+            active ? "text-primary-foreground" : "text-muted-foreground",
+          ].join(" ")}
+        >
+          {option.copy}
+        </span>
       </span>
     </button>
   );
@@ -164,14 +179,14 @@ function ChallengeChooser({
   onChange: (challenge: string) => void;
 }) {
   return (
-    <section className="grid gap-2">
+    <section className="-mt-[0.4375rem] grid gap-1">
       <h3 className="font-semibold">Difficulty</h3>
-      <div className="grid gap-2 sm:grid-cols-4">
+      <div className="grid gap-2.5 sm:grid-cols-[1.02fr_1.015fr_0.98fr_0.985fr]">
         {challengeOptions.map((option) => (
           <button
             aria-pressed={value === option.value}
             className={[
-              "rounded-md border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+              "rounded-md border p-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
               value === option.value
                 ? "border-primary bg-primary text-primary-foreground shadow-sm"
                 : "border-border bg-surface text-surface-foreground hover:bg-card hover:text-foreground",
@@ -180,8 +195,8 @@ function ChallengeChooser({
             type="button"
             onClick={() => onChange(option.value)}
           >
-            <span className="block text-base font-semibold">{option.label}</span>
-            <span className="mt-1 block text-xs">{challengeCopy(option.value)}</span>
+            <span className="block text-base font-semibold leading-5">{option.label}</span>
+            <span className="mt-0.5 block text-xs">{challengeCopy(option.value)}</span>
           </button>
         ))}
       </div>
@@ -211,7 +226,7 @@ function EnemyCountStepper({
       <div className="inline-flex w-fit items-center overflow-hidden rounded-md border border-border bg-surface">
         <button
           aria-label="Decrease enemy count"
-          className="grid h-10 w-10 place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid h-8 w-10 place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={value <= enemyCountMin}
           type="button"
           onClick={() => update(value - 1)}
@@ -220,7 +235,7 @@ function EnemyCountStepper({
         </button>
         <input
           aria-label="Enemy count"
-          className="h-10 w-12 border-x border-border bg-card text-center text-sm font-semibold text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/35"
+          className="h-8 w-10 border-x border-border bg-card text-center text-sm font-semibold text-card-foreground outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/35"
           inputMode="numeric"
           max={enemyCountMax}
           min={enemyCountMin}
@@ -230,7 +245,7 @@ function EnemyCountStepper({
         />
         <button
           aria-label="Increase enemy count"
-          className="grid h-10 w-10 place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-40"
+          className="grid h-8 w-10 place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-40"
           disabled={value >= enemyCountMax}
           type="button"
           onClick={() => update(value + 1)}
@@ -263,15 +278,20 @@ function EnemyDraftList({
     );
   }
   return (
-    <section className="grid gap-3 rounded-md border border-border bg-card p-3">
-      <h3 className="font-semibold">Generated Enemies</h3>
+    <section className="mt-px grid gap-0.5 rounded-md border border-border bg-card px-4 pb-2 pt-1">
+      <h3 className="font-semibold">Generated enemies</h3>
       <div className="grid gap-2">
         {enemies.map((enemy) => (
           <CreatureCombatantCard
+            className="py-[0.4375rem]"
+            compact
             key={enemy.id}
             creature={enemy.creature}
+            statsClassName="!gap-[0.4375rem] [&>span.rounded-full]:px-1.5"
+            showChallengeRating={false}
             quantity={
               <CombatantQuantityControl
+                compact
                 value={enemy.quantity}
                 onChange={(quantity) => onUpdate({ ...enemy, quantity })}
               />
@@ -281,9 +301,10 @@ function EnemyDraftList({
               <>
                 <RolledHpToggle
                   checked={enemy.rolledHp}
+                  compact
                   onChange={(rolledHp) => onUpdate({ ...enemy, rolledHp })}
                 />
-                <CombatantActions onRemove={() => onRemove(enemy.id)} />
+                <CombatantActions compact onRemove={() => onRemove(enemy.id)} />
               </>
             }
           />

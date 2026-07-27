@@ -7,6 +7,7 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "audit:security": "node ../scripts/check-frontend-audit.mjs",
     "check:size": "node ../scripts/check-file-size.mjs",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -26,7 +27,7 @@
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.17.0",
+    "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16"
