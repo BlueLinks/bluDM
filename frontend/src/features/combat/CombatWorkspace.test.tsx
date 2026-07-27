@@ -2,7 +2,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RollLogProvider } from "../../components/RollLogProvider";
 import { api } from "../../lib/api";
-import type { CombatLogEvent, EncounterRun, EncounterRunCombatant } from "../../types";
+import type {
+  CombatLogEvent,
+  CreatureAction,
+  EncounterRun,
+  EncounterRunCombatant,
+} from "../../types";
 import { eventLabel } from "./CombatLog";
 import { CombatSheet } from "./CombatSheet";
 import { CombatWorkspace } from "./CombatWorkspace";
@@ -37,13 +42,33 @@ describe("encounter combat workspace", () => {
     );
 
     expect(screen.getByTitle("Armor Class").textContent).toContain("15");
-    expect(screen.getByText(/8\/20 HP/)).toBeTruthy();
+    expect(screen.getByText(/8 \/ 20 HP/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: /Goblin/ }));
     expect(onSelect).toHaveBeenCalledTimes(1);
   });
 
-  it("restores the historical three-column board and keeps saves in an overlay", () => {
+  it("marks acting and target state without destructive enemy framing", () => {
+    const target = combatant("target", "Goblin");
+    const { container } = render(
+      <TargetRow
+        active
+        combatant={target}
+        selected
+        onDeathSave={vi.fn()}
+        onEdit={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('[aria-current="step"]')).toBeTruthy();
+    expect(screen.getByTitle("Selected target")).toBeTruthy();
+    expect(container.querySelector(".target-row-card")?.className).not.toContain(
+      "border-destructive",
+    );
+  });
+
+  it("keeps actor, action, target, and the three-region board in one focused workspace", () => {
     const actor = combatant("actor", "Mage", { side: "player", sourceType: "player" });
     const target = combatant("target", "Goblin");
     const run: EncounterRun = {
@@ -65,7 +90,7 @@ describe("encounter combat workspace", () => {
     render(
       <RollLogProvider>
         <CombatWorkspace
-          actions={[]}
+          actions={[action()]}
           active={actor}
           acting={actor}
           actorNeedsDeathSaves={false}
@@ -104,10 +129,10 @@ describe("encounter combat workspace", () => {
       </RollLogProvider>,
     );
 
-    const actionBar = screen.getByLabelText("Current turn controls");
-    const activeSheet = screen.getByRole("heading", { name: "Active Sheet" });
-    const initiative = screen.getByRole("heading", { name: "Initiative & Targets" });
-    const targetSheet = screen.getByRole("heading", { name: "Target Sheet" });
+    const actionBar = screen.getByLabelText("Turn actions");
+    const activeSheet = screen.getByRole("heading", { name: "Active combatant" });
+    const initiative = screen.getByRole("heading", { name: "Turn order" });
+    const targetSheet = screen.getByRole("heading", { name: "Target" });
     expect(
       actionBar.compareDocumentPosition(activeSheet) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -117,6 +142,7 @@ describe("encounter combat workspace", () => {
     expect(
       initiative.compareDocumentPosition(targetSheet) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(screen.getAllByText("Shortsword").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Request save" }));
     fireEvent.change(screen.getByLabelText("Goblin result method"), {
@@ -171,7 +197,7 @@ describe("encounter combat workspace", () => {
     );
   });
 
-  it("renders the original compact sheet without the replacement tab workspace", () => {
+  it("keeps vitals first and progressively discloses skills and deeper sheet sections", () => {
     const selected = combatant("selected", "Ward Knight", {
       temporaryHitPoints: 6,
       conditions: ["Prone"],
@@ -190,11 +216,22 @@ describe("encounter combat workspace", () => {
         <CombatSheet combatant={selected} runID="run" onRoll={vi.fn()} />
       </RollLogProvider>,
     );
-    expect(screen.getByRole("heading", { name: "Active Sheet" })).toBeTruthy();
-    expect(screen.getByText("AC")).toBeTruthy();
-    expect(screen.getByText("HP")).toBeTruthy();
-    expect(screen.getByText("Speed")).toBeTruthy();
-    expect(screen.queryByRole("tab")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Active combatant" })).toBeTruthy();
+    expect(screen.getAllByText("AC").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("HP").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Speed").length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "overview",
+      "actions",
+      "defenses",
+    ]);
+    expect(screen.getByText("Acrobatics")).toBeTruthy();
+    expect(screen.queryByText("Performance")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show all skills" }));
+    expect(screen.getByText("Performance")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "defenses" }));
+    expect(screen.getByText("Resistances")).toBeTruthy();
+    expect(screen.getByText("fire")).toBeTruthy();
   });
 
   it("formats durable HP log entries with source, target, type, and resulting HP", () => {
@@ -258,4 +295,23 @@ function combatant(
     temporaryHitPoints: 0,
     ...overrides,
   };
+}
+
+function action(): CreatureAction {
+  return {
+    id: "shortsword",
+    name: "Shortsword",
+    actionType: "Melee Attack",
+    attackModifier: 4,
+    description: "",
+    rolls: [
+      {
+        rollKind: "damage",
+        damageType: "piercing",
+        diceCount: 1,
+        dieSize: 6,
+        fixedValue: 2,
+      },
+    ],
+  } as CreatureAction;
 }

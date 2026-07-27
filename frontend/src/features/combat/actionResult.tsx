@@ -158,6 +158,13 @@ export function ActionResult({
     setEditingDamage(false);
   }
 
+  function changeHit(nextHit: boolean) {
+    if (nextHit && !hit) {
+      setDamage(String(calculatedDamage));
+    }
+    setHit(nextHit);
+  }
+
   function resolveDamage(override: string, damage: number) {
     addRollLogEntry({
       title: `${action?.name ?? "Action"} ${override}`,
@@ -186,7 +193,7 @@ export function ActionResult({
         rollAnimationKey={rollAnimationKey}
         onReroll={rerollToHit}
       />
-      <HitToggle hit={hit} onChange={setHit} />
+      <HitToggle hit={hit} onChange={changeHit} />
       {hit ? (
         <ActionHitResult
           actionSpecial={actionSpecial}

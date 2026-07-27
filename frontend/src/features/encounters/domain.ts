@@ -130,19 +130,18 @@ export function playerClassLevel(player: Player) {
 
 export function combatantPlayerClassLevel(combatant: EncounterCombatant) {
   const player = combatant.snapshot?.player;
-  if (
-    player &&
-    typeof player === "object" &&
-    "characterSheet" in player &&
-    player.characterSheet &&
-    typeof player.characterSheet === "object"
-  ) {
-    const sheet = player.characterSheet as Record<string, unknown>;
-    const className = typeof sheet.className === "string" ? sheet.className : "";
-    const level = typeof sheet.level === "number" ? sheet.level : undefined;
-    return (
-      [level ? `Level ${level}` : "", className].filter(Boolean).join(" ") || "Player character"
-    );
+  const sheetValue =
+    player && typeof player === "object"
+      ? ((player as Record<string, unknown>).characterSheet ??
+        (player as Record<string, unknown>).character_sheet)
+      : null;
+  if (sheetValue && typeof sheetValue === "object") {
+    const sheet = sheetValue as Record<string, unknown>;
+    const className =
+      typeof (sheet.className ?? sheet.class_name) === "string"
+        ? String(sheet.className ?? sheet.class_name)
+        : "";
+    return ["Player character", className].filter(Boolean).join(" · ");
   }
   return "Player character";
 }

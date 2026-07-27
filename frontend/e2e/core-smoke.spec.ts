@@ -20,7 +20,7 @@ test("core bluDM browser journeys", async ({ page }) => {
 
   await page.goto("/campaigns");
   await expect(page.getByRole("heading", { name: "Choose the table" })).toBeVisible();
-  await expect(page.getByText("Demo: Greenhill Ambush")).toBeVisible();
+  await expect(page.getByText("Demo: Greenhill Ambush", { exact: true })).toBeVisible();
 
   await page.goto(`/campaigns/${campaignID}`);
   await expect(page.getByRole("heading", { name: "Demo: Greenhill Ambush" })).toBeVisible();
@@ -32,7 +32,7 @@ test("core bluDM browser journeys", async ({ page }) => {
 
   await page.goto("/npcs");
   await expect(page.getByRole("heading", { name: "Creature library" })).toBeVisible();
-  await expect(page.getByText(npc.name)).toBeVisible();
+  await expect(page.getByRole("heading", { name: npc.name, exact: true })).toBeVisible();
 
   await page.goto(`/npcs/${npc.id}/edit`);
   await expect(page.getByRole("heading", { name: `Edit ${npc.name}` })).toBeVisible();
@@ -48,8 +48,29 @@ test("core bluDM browser journeys", async ({ page }) => {
   const runID = await startEncounterRun(page, encounter!.id);
   await page.goto(`/encounter-runs/${runID}/initiative`);
   await expect(page.getByRole("heading", { name: "Set initiative" })).toBeVisible();
-  await page.getByRole("button", { name: "Roll All Non-Players" }).click();
-  await page.getByRole("button", { name: "Begin Combat" }).click();
+  for (const [index, partyMember] of detail.players.entries()) {
+    const input = page.getByLabel(`${partyMember.characterName} initiative`);
+    await input.fill(String(15 - index));
+    await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().endsWith(`/api/encounter-runs/${runID}/commands/set-initiative`) &&
+          response.ok(),
+      ),
+      input.press("Enter"),
+    ]);
+  }
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/api/encounter-runs/${runID}/commands/roll-initiative`) &&
+        response.ok(),
+    ),
+    page.getByRole("button", { name: "Roll NPCs & allies" }).click(),
+  ]);
+  const beginCombat = page.getByRole("button", { name: "Begin Combat" });
+  await expect(beginCombat).toBeEnabled();
+  await beginCombat.click();
   await expect.poll(() => new URL(page.url()).pathname).toBe(`/encounter-runs/${runID}`);
   await expect(page.getByRole("button", { name: "Finish Combat" })).toBeVisible();
 

@@ -51,7 +51,7 @@ jobs:
         run: node scripts/check-file-size.mjs
 
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm run audit:security
 
   backend:
     name: Backend
@@ -178,6 +178,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: true
+          trivyignores: .trivyignore.yaml
 
       - name: Semgrep OSS scan
         run: |

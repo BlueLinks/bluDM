@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { Check, MapPin } from "lucide-react";
 import type { ReactNode } from "react";
 import { ActionRow, ResponsiveGrid } from "../../components/layout";
 import { Button, Field, FloatingInput, Select, Textarea } from "../../components/ui";
@@ -113,12 +113,13 @@ export function ReviewCreateStep({
         </div>
         <ReviewList title={`Players (${players.length})`}>
           {players.map((player) => (
-            <PlayerCombatantCard key={player.id} player={player} />
+            <PlayerCombatantCard compact key={player.id} player={player} />
           ))}
         </ReviewList>
         <ReviewList title={`Allies (${allies.length})`}>
           {allies.map((ally) => (
             <CreatureCombatantCard
+              compact
               key={ally.id}
               creature={ally.creature}
               quantity={ally.quantity > 1 ? `Qty ${ally.quantity}` : undefined}
@@ -128,6 +129,7 @@ export function ReviewCreateStep({
         <ReviewList title={`Enemies (${enemies.length} groups)`}>
           {enemies.map((enemy) => (
             <CreatureCombatantCard
+              compact
               key={enemy.id}
               creature={enemy.creature}
               quantity={`Qty ${enemy.quantity}`}
@@ -168,23 +170,40 @@ export function FooterActions({
   onSave: () => void;
 }) {
   return (
-    <ActionRow className="border-t border-border pt-3" justify="between">
-      <Button type="button" variant="secondary" onClick={onCancel}>
-        Cancel
-      </Button>
-      <ActionRow justify="end">
+    <ActionRow
+      className="z-20 border-t border-border bg-card py-[0.6875rem] pl-[1.875rem] pr-7"
+      justify="between"
+    >
+      <ActionRow className="gap-5">
+        <Button className="w-24 !py-1" size="sm" type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
         {step !== "party" ? (
-          <Button type="button" icon={ChevronLeft} variant="secondary" onClick={onBack}>
+          <Button className="w-20 !py-1" size="sm" type="button" variant="outline" onClick={onBack}>
             Back
           </Button>
         ) : null}
+      </ActionRow>
+      <ActionRow justify="end">
         {step !== "review" ? (
-          <Button type="button" icon={ChevronRight} onClick={onNext}>
+          <Button
+            className="w-[11.125rem] whitespace-nowrap !py-1"
+            size="sm"
+            type="button"
+            onClick={onNext}
+          >
             {step === "party" ? "Next: Encounter Setup" : "Next: Review & Create"}
           </Button>
         ) : null}
         {step === "review" ? (
-          <Button type="button" icon={Check} disabled={!canSave || saving} onClick={onSave}>
+          <Button
+            className="!py-1"
+            size="sm"
+            type="button"
+            icon={Check}
+            disabled={!canSave || saving}
+            onClick={onSave}
+          >
             {saving ? "Saving..." : "Create encounter"}
           </Button>
         ) : null}
