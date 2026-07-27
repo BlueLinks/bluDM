@@ -1,91 +1,16 @@
-import {
-  ClipboardList,
-  FileText,
-  FlaskConical,
-  ListChecks,
-  Play,
-  Plus,
-  ScrollText,
-  Swords,
-  UsersRound,
-} from "lucide-react";
+import { FlaskConical, Play, Plus, Skull, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button, Field, FloatingInput, Select, Textarea } from "../../components/ui";
+import { ResponsiveGrid } from "../../components/layout";
+import { Button, Field, Input, Select, Textarea } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
 import type { DraftCombatant, Player } from "../../types";
 import { CombatantList } from "./editorComponents";
 import type { EncounterMetaDraft } from "./domain";
 import { playerClassLevel } from "./domain";
 
-export function EncounterEditNav() {
-  const items = [
-    { label: "Overview", icon: ListChecks, href: "#encounter-overview" },
-    { label: "Party", icon: UsersRound, href: "#encounter-party" },
-    { label: "Allies", icon: UsersRound, href: "#encounter-allies" },
-    { label: "Enemies", icon: Swords, href: "#encounter-enemies" },
-    { label: "Details", icon: ClipboardList, href: "#encounter-details" },
-    { label: "Notes", icon: FileText, href: "#encounter-notes" },
-    { label: "Running", icon: Play, href: "#encounter-running" },
-  ];
-  return (
-    <nav className="flex flex-wrap gap-1 border-b border-border" aria-label="Encounter sections">
-      {items.map((item, index) => (
-        <a
-          className={[
-            "inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium",
-            index === 0
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          ].join(" ")}
-          href={item.href}
-          key={item.href}
-        >
-          <item.icon className="h-4 w-4" />
-          {item.label}
-        </a>
-      ))}
-    </nav>
-  );
-}
-
-export function EncounterSummaryPanel({
-  createdAt,
-  enemyCount,
-  meta,
-  partyCount,
-}: {
-  createdAt: string;
-  enemyCount: number;
-  meta: EncounterMetaDraft;
-  partyCount: number;
-}) {
-  return (
-    <section
-      className="rounded-md border border-border bg-card p-4"
-      id="encounter-overview"
-      aria-label="Encounter overview"
-    >
-      <div className="flex items-center gap-2">
-        <ClipboardList className="h-4 w-4 text-accent" />
-        <h3 className="font-semibold">Encounter summary</h3>
-      </div>
-      <dl className="mt-4 grid gap-0 text-sm">
-        <SummaryRow label="Location" value={meta.location || "Unplaced"} />
-        <SummaryRow label="Status" value={encounterStatusLabel(meta.status)} />
-        <SummaryRow label="Party" value={`${partyCount} player${partyCount === 1 ? "" : "s"}`} />
-        <SummaryRow label="Enemies" value={`${enemyCount} foe${enemyCount === 1 ? "" : "s"}`} />
-        <SummaryRow
-          label="Created"
-          value={createdAt ? new Date(createdAt).toLocaleDateString() : "Unknown"}
-        />
-      </dl>
-    </section>
-  );
-}
-
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 border-b border-border py-2 last:border-b-0">
+    <div className="grid grid-cols-[8rem_minmax(0,1fr)] gap-3 border-b border-border py-1 last:border-b-0">
       <dt className="text-muted-foreground">{label}</dt>
       <dd className="min-w-0 text-right font-medium [overflow-wrap:anywhere]">{value}</dd>
     </div>
@@ -94,100 +19,152 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 
 export function EncounterDetailsSection({
   meta,
+  nested = false,
   onChange,
 }: {
   meta: EncounterMetaDraft;
+  nested?: boolean;
   onChange: (meta: EncounterMetaDraft) => void;
 }) {
   return (
-    <section className="rounded-md border border-border bg-card p-4" id="encounter-details">
-      <div className="flex items-center gap-2">
-        <ClipboardList className="h-4 w-4 text-accent" />
-        <h3 className="font-semibold">Details</h3>
+    <section
+      className={[
+        "rounded-md border border-border",
+        nested ? "bg-surface px-2.5 py-[0.5625rem]" : "bg-card p-3",
+      ].join(" ")}
+      id="encounter-details"
+    >
+      <h3 className="border-b border-border pb-1 font-semibold">Details</h3>
+      <div className="mt-1.5 grid gap-2 md:grid-cols-2">
+        <Field className="!gap-1" label="Encounter name">
+          <Input
+            className="!h-[1.875rem] !min-h-[1.875rem] px-2 !py-0.5"
+            value={meta.name}
+            onChange={(event) => onChange({ ...meta, name: event.target.value })}
+            required
+          />
+        </Field>
+        <Field className="!gap-1" label="Location">
+          <Input
+            className="!h-[1.875rem] !min-h-[1.875rem] px-2 !py-0.5"
+            value={meta.location}
+            onChange={(event) => onChange({ ...meta, location: event.target.value })}
+          />
+        </Field>
       </div>
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem]">
-        <FloatingInput
-          label="Encounter name"
-          value={meta.name}
-          onChange={(name) => onChange({ ...meta, name })}
-          required
-        />
-        <FloatingInput
-          label="Location"
-          value={meta.location}
-          onChange={(location) => onChange({ ...meta, location })}
-        />
-        <FloatingInput
-          label="Room"
-          value={meta.roomNumber}
-          onChange={(roomNumber) => onChange({ ...meta, roomNumber })}
-        />
-      </div>
-      <div className="mt-3 max-w-xs">
-        <Field label="Status">
+      <ResponsiveGrid className="mt-1.5 gap-2" variant="form2">
+        <Field className="!gap-1" label="Room">
+          <Input
+            className="!h-[1.875rem] !min-h-[1.875rem] px-2 !py-0.5"
+            value={meta.roomNumber}
+            onChange={(event) => onChange({ ...meta, roomNumber: event.target.value })}
+          />
+        </Field>
+        <Field className="!gap-1" label="Status">
           <Select
+            className="!min-h-[1.875rem] !py-0.5"
+            size="sm"
             value={meta.status}
             placeholder="Status"
             options={encounterStatusOptions}
             onValueChange={(status) => onChange({ ...meta, status })}
           />
         </Field>
-      </div>
+      </ResponsiveGrid>
     </section>
   );
 }
 
 export function EncounterNotesSection({
+  className = "",
   meta,
+  nested = false,
   onChange,
 }: {
+  className?: string;
   meta: EncounterMetaDraft;
+  nested?: boolean;
   onChange: (meta: EncounterMetaDraft) => void;
 }) {
   return (
-    <section className="rounded-md border border-border bg-card p-4" id="encounter-notes">
-      <div className="flex items-center gap-2">
-        <ScrollText className="h-4 w-4 text-accent" />
-        <h3 className="font-semibold">Notes</h3>
-      </div>
-      <Field className="mt-4" label="Description / notes">
-        <Textarea
-          rows={6}
-          value={meta.description}
-          onChange={(event) => onChange({ ...meta, description: event.target.value })}
-        />
-      </Field>
+    <section
+      className={[
+        "rounded-md border border-border",
+        nested ? "bg-surface px-3 pb-[0.3125rem] pt-1" : "bg-card p-3",
+        className,
+      ].join(" ")}
+      id="encounter-notes"
+    >
+      <h3 className="border-b border-border pb-1 font-semibold">DM notes</h3>
+      <Textarea
+        aria-label="Notes for running this encounter"
+        className="mt-2 w-full"
+        rows={3}
+        value={meta.description}
+        onChange={(event) => onChange({ ...meta, description: event.target.value })}
+      />
     </section>
   );
 }
 
 export function EncounterRunningSection({
+  allyCount,
+  enemyCount,
+  partyCount,
   saving,
+  nested = false,
   onSaveAndRun,
   onSaveAndTest,
 }: {
+  allyCount: number;
+  enemyCount: number;
+  partyCount: number;
   saving: boolean;
+  nested?: boolean;
   onSaveAndRun: () => void;
   onSaveAndTest: () => void;
 }) {
   return (
-    <section className="rounded-md border border-border bg-card p-4" id="encounter-running">
-      <div className="flex items-center gap-2">
-        <Play className="h-4 w-4 text-accent" />
-        <h3 className="font-semibold">Running</h3>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="button" icon={Play} disabled={saving} onClick={onSaveAndRun}>
-          {saving ? "Saving..." : "Run encounter"}
+    <section
+      className={[
+        "rounded-md border border-border",
+        nested ? "-mt-0.5 bg-surface px-3 pb-[0.5625rem] pt-1.5" : "bg-card p-3",
+      ].join(" ")}
+      id="encounter-running"
+    >
+      <h3 className="border-b border-border pb-1 font-semibold">Ready to run</h3>
+      <dl className="grid gap-0 text-sm">
+        <SummaryRow label="Party" value={`${partyCount} player${partyCount === 1 ? "" : "s"}`} />
+        <SummaryRow label="Allies" value={String(allyCount)} />
+        <SummaryRow label="Enemies" value={String(enemyCount)} />
+        <SummaryRow label="Next" value="Set initiative" />
+      </dl>
+      <div className="mt-3 grid gap-3.5">
+        <Button
+          className="!py-[0.5625rem]"
+          type="button"
+          icon={Play}
+          disabled={saving}
+          onClick={onSaveAndRun}
+        >
+          <span className="grid gap-0.5">
+            <span>{saving ? "Saving..." : "Run encounter"}</span>
+            {!saving ? (
+              <span className="text-xs font-normal">
+                Creates a run, then opens initiative setup.
+              </span>
+            ) : null}
+          </span>
         </Button>
         <Button
+          className="border-primary !py-[0.4375rem] text-primary"
           type="button"
           icon={FlaskConical}
-          variant="tertiary"
+          variant="outline"
           disabled={saving}
           onClick={onSaveAndTest}
         >
-          Test
+          Test run
         </Button>
       </div>
     </section>
@@ -218,22 +195,25 @@ export function EncounterRosterSections({
   onRemove: (combatant: DraftCombatant) => void;
 }) {
   return (
-    <div className="grid gap-4">
+    <section className="grid gap-3 rounded-md border border-border bg-card p-3 pb-[0.9375rem]">
+      <h2 className="font-semibold">Combatants</h2>
       <RosterCard
         action={
           <Button
+            className="!h-7 !py-0.5"
             type="button"
             icon={Plus}
             size="sm"
-            variant="secondary"
+            variant="outline"
             disabled={availablePlayers.length === 0}
             onClick={onAddAllPlayers}
           >
-            Add all players
+            Add player
           </Button>
         }
+        icon={UsersRound}
         id="encounter-party"
-        title="Party"
+        title={`Party (${playerCombatants.length})`}
       >
         {availablePlayers.length > 0 ? (
           <div className="mb-4 flex flex-wrap gap-2">
@@ -259,10 +239,18 @@ export function EncounterRosterSections({
       </RosterCard>
       <RosterCard
         action={
-          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddAlly}>
+          <Button
+            className="!h-7 !py-0.5"
+            type="button"
+            icon={Plus}
+            size="sm"
+            variant="outline"
+            onClick={onAddAlly}
+          >
             Add ally
           </Button>
         }
+        icon={UsersRound}
         id="encounter-allies"
         title={`Allies (${friendlyCombatants.length})`}
       >
@@ -276,10 +264,18 @@ export function EncounterRosterSections({
       </RosterCard>
       <RosterCard
         action={
-          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
+          <Button
+            className="!h-7 px-1.5 !py-0.5"
+            type="button"
+            icon={Plus}
+            size="sm"
+            variant="outline"
+            onClick={onAddEnemy}
+          >
             Add enemy
           </Button>
         }
+        icon={Skull}
         id="encounter-enemies"
         title={`Enemies (${enemyCombatants.length})`}
       >
@@ -291,7 +287,7 @@ export function EncounterRosterSections({
           onRemove={onRemove}
         />
       </RosterCard>
-    </div>
+    </section>
   );
 }
 
@@ -299,27 +295,30 @@ function RosterCard({
   action,
   children,
   id,
+  icon: Icon,
   title,
 }: {
   action?: ReactNode;
   children: ReactNode;
   id: string;
+  icon: typeof UsersRound;
   title: string;
 }) {
   return (
-    <section className="rounded-md border border-border bg-card p-4" id={id}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <UsersRound className="h-4 w-4 text-accent" />
-          <h3 className="font-semibold">{title}</h3>
+    <section className="overflow-hidden rounded-md border border-border bg-surface" id={id}>
+      <div className="flex min-h-11 flex-wrap items-center justify-between gap-3 border-b border-border px-3 py-1">
+        <div
+          className={[
+            "ml-1 flex items-center gap-3",
+            Icon === Skull ? "text-destructive" : "text-primary",
+          ].join(" ")}
+        >
+          <Icon className="h-4 w-4" />
+          <h3 className="font-semibold text-foreground">{title}</h3>
         </div>
         {action}
       </div>
-      {children}
+      <div className="px-2">{children}</div>
     </section>
   );
-}
-
-function encounterStatusLabel(status: string) {
-  return encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 }

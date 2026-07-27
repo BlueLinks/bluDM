@@ -98,7 +98,7 @@ export function CampaignEncounterCreateDialog({
     setAllies([]);
     setEnemies([]);
     setRandomOptions(defaultRandomOptions);
-    setPreviewRoll((current) => current + 1);
+    setPreviewRoll(1);
     setAcceptedPreview(null);
     setAddDialogMode(null);
     setError("");
@@ -209,61 +209,69 @@ export function CampaignEncounterCreateDialog({
 
   return (
     <Modal
-      className="max-w-6xl"
+      className="encounter-builder-modal max-h-[calc(100vh-5rem)] max-w-[73.625rem] overflow-hidden p-0"
       open={open}
       onOpenChange={onOpenChange}
       title="Create encounter"
       trigger={trigger}
     >
-      <div className="grid gap-4">
-        {error ? <Callout tone="danger">{error}</Callout> : null}
-        <BuilderProgress furthestStep={furthestStep} step={step} onStepSelect={goToStep} />
-        {step === "party" ? (
-          <PartyAlliesStep
-            allies={allies}
-            availablePlayers={availablePlayers}
-            players={selectedPlayers}
-            onAddAllPlayers={() => setSelectedPlayerIds(players.map((player) => player.id))}
-            onAddAlly={() => setAddDialogMode("ally")}
-            onAddPlayer={(player) => setSelectedPlayerIds((current) => [...current, player.id])}
-            onRemoveAlly={(id) => setAllies((current) => current.filter((item) => item.id !== id))}
-            onRemovePlayer={(id) =>
-              setSelectedPlayerIds((current) => current.filter((playerId) => playerId !== id))
-            }
-          />
-        ) : step === "setup" ? (
-          <EncounterSetupStep
-            allyCount={allies.length}
-            enemies={setupPreview.enemies}
-            options={randomOptions}
-            players={selectedPlayers}
-            preview={setupPreview}
-            onAddEnemy={() => setAddDialogMode("enemy")}
-            onOptionsChange={updateOptions}
-            onRegenerate={regenerate}
-            onRemoveEnemy={(id) =>
-              setEnemies((current) =>
-                (current.length ? current : setupPreview.enemies).filter((item) => item.id !== id),
-              )
-            }
-            onUpdateEnemy={(draft) =>
-              setEnemies((current) => {
-                const source = current.length ? current : setupPreview.enemies;
-                return source.map((item) => (item.id === draft.id ? draft : item));
-              })
-            }
-          />
-        ) : (
-          <ReviewCreateStep
-            allies={allies}
-            enemies={acceptedPreview?.enemies ?? setupPreview.enemies}
-            locations={locations}
-            meta={meta}
-            players={selectedPlayers}
-            onLocationChange={updateLocation}
-            onMetaChange={setMeta}
-          />
-        )}
+      <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)_auto]">
+        <div className="px-[1.5625rem]">
+          <BuilderProgress furthestStep={furthestStep} step={step} onStepSelect={goToStep} />
+        </div>
+        <div className="encounter-builder-body min-h-0 overflow-y-auto px-[1.5625rem] py-3">
+          {error ? <Callout tone="danger">{error}</Callout> : null}
+          {step === "party" ? (
+            <PartyAlliesStep
+              allies={allies}
+              availablePlayers={availablePlayers}
+              players={selectedPlayers}
+              onAddAllPlayers={() => setSelectedPlayerIds(players.map((player) => player.id))}
+              onAddAlly={() => setAddDialogMode("ally")}
+              onAddPlayer={(player) => setSelectedPlayerIds((current) => [...current, player.id])}
+              onRemoveAlly={(id) =>
+                setAllies((current) => current.filter((item) => item.id !== id))
+              }
+              onRemovePlayer={(id) =>
+                setSelectedPlayerIds((current) => current.filter((playerId) => playerId !== id))
+              }
+            />
+          ) : step === "setup" ? (
+            <EncounterSetupStep
+              allyCount={allies.length}
+              enemies={setupPreview.enemies}
+              options={randomOptions}
+              players={selectedPlayers}
+              preview={setupPreview}
+              onAddEnemy={() => setAddDialogMode("enemy")}
+              onOptionsChange={updateOptions}
+              onRegenerate={regenerate}
+              onRemoveEnemy={(id) =>
+                setEnemies((current) =>
+                  (current.length ? current : setupPreview.enemies).filter(
+                    (item) => item.id !== id,
+                  ),
+                )
+              }
+              onUpdateEnemy={(draft) =>
+                setEnemies((current) => {
+                  const source = current.length ? current : setupPreview.enemies;
+                  return source.map((item) => (item.id === draft.id ? draft : item));
+                })
+              }
+            />
+          ) : (
+            <ReviewCreateStep
+              allies={allies}
+              enemies={acceptedPreview?.enemies ?? setupPreview.enemies}
+              locations={locations}
+              meta={meta}
+              players={selectedPlayers}
+              onLocationChange={updateLocation}
+              onMetaChange={setMeta}
+            />
+          )}
+        </div>
         <FooterActions
           canSave={Boolean(meta.name.trim())}
           saving={saving}

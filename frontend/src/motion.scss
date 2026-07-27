@@ -1,0 +1,155 @@
+.target-row-card:has(.hp-drop-zero) {
+  animation: hp-zero-pulse 520ms ease-out both;
+}
+
+.hp-bar-pulse {
+  animation: hp-bar-pulse 360ms ease-out both;
+}
+
+.damage-roll-line {
+  animation: damage-roll-pop 320ms ease-out both;
+}
+
+.action-roll-card {
+  animation: action-roll-pop 260ms ease-out both;
+}
+
+.action-roll-value {
+  animation: action-roll-value 300ms ease-out both;
+}
+
+.crit-roll-card {
+  animation: crit-card-pop 520ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.crit-roll-value {
+  animation: crit-value-pop 620ms cubic-bezier(0.18, 1.25, 0.28, 1) both;
+}
+
+.crit-roll-badge {
+  animation: crit-badge-flash 760ms ease-out both;
+}
+
+@keyframes damage-roll-pop {
+  0% {
+    opacity: 0.65;
+    transform: translateY(5px) scale(0.985);
+  }
+  62% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.01);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hp-bar-pulse {
+  0% {
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+  45% {
+    filter: brightness(1.18);
+    transform: scaleY(1.45);
+  }
+  100% {
+    filter: brightness(1);
+    transform: scaleY(1);
+  }
+}
+
+@keyframes hp-zero-pulse {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    box-shadow: 0 0 0 3px hsl(var(--destructive) / 0.2);
+    transform: scale(1.012);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes action-roll-pop {
+  from {
+    opacity: 0.88;
+    transform: translateY(4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes action-roll-value {
+  0% {
+    opacity: 0;
+    transform: scale(0.82);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes crit-card-pop {
+  0% {
+    box-shadow: 0 0 0 hsl(var(--warning) / 0);
+    transform: scale(0.985);
+  }
+  45% {
+    box-shadow: 0 0 26px hsl(var(--warning) / 0.36);
+    transform: scale(1.015);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes crit-value-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.75) rotate(-3deg);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.16) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes crit-badge-flash {
+  0% {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.92);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(0) scale(1.08);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .target-row-card:has(.hp-drop-zero),
+  .hp-bar-pulse,
+  .hp-drop-zero,
+  .damage-roll-line,
+  .action-roll-card,
+  .action-roll-value,
+  .crit-roll-card,
+  .crit-roll-value,
+  .crit-roll-badge {
+    animation: none !important;
+  }
+}

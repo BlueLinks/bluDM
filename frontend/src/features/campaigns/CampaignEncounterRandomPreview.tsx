@@ -3,7 +3,7 @@ import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import { Button, Callout } from "../../components/ui";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
 import type { EncounterCombatant, Player } from "../../types";
-import { CreatureCombatantCard, creatureRole } from "../encounters/EncounterCombatantCard";
+import { CombatantCard } from "../encounters/EncounterCombatantCard";
 import { EncounterDifficultyPanel } from "../encounters/EncounterDifficultyPanel";
 import type { EncounterBuilderPreview } from "./encounterBuilderGenerator";
 
@@ -20,30 +20,48 @@ export function RandomPreviewPanel({
 }) {
   const difficulty = calculateEncounterDifficulty(players, previewCombatants(preview));
   return (
-    <aside className="grid gap-3 rounded-md border border-border bg-card p-3">
+    <aside className="grid content-start gap-3 lg:-my-4 lg:border-l lg:border-border lg:pb-4 lg:pl-6 lg:pr-0.5 lg:pt-[1.375rem]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold">Encounter preview</h3>
           <p className="text-sm text-muted-foreground">{preview.estimatedXp} enemy XP generated</p>
         </div>
-        <Button type="button" icon={RefreshCw} size="sm" variant="secondary" onClick={onRegenerate}>
+        <Button
+          className="border-primary text-primary"
+          type="button"
+          icon={RefreshCw}
+          size="sm"
+          variant="outline"
+          onClick={onRegenerate}
+        >
           Regenerate
         </Button>
       </div>
-      <EncounterDifficultyPanel compact difficulty={difficulty} />
+      <div className="mt-2.5">
+        <EncounterDifficultyPanel compact difficulty={difficulty} />
+      </div>
       {preview.targetNotice ? <Callout tone="warning">{preview.targetNotice}</Callout> : null}
-      <div>
+      <div className="mt-2.5">
         <h4 className="font-semibold">{preview.title}</h4>
         <p className="mt-1 text-sm text-muted-foreground">{preview.summary}</p>
       </div>
-      <PreviewParty allyCount={allyCount} players={players} />
-      <div className="grid gap-2 text-sm">
+      <div className="mt-[1.0625rem]">
+        <PreviewParty allyCount={allyCount} players={players} />
+      </div>
+      <div className="mt-0.5 grid gap-2 text-sm">
         {preview.enemies.map((enemy) => (
-          <CreatureCombatantCard
+          <CombatantCard
+            avatarSrc={avatarImageSrc(enemy.creature.imageAssetId, enemy.creature.avatarUrl)}
+            compact
+            fallback={enemy.creature.name.slice(0, 2).toUpperCase()}
             key={enemy.id}
-            creature={enemy.creature}
+            meta={`${[enemy.creature.size, enemy.creature.creatureType || "Creature"]
+              .filter(Boolean)
+              .join(" · ")} · CR ${enemy.creature.challengeRating || "0"}`}
+            name={enemy.creature.name}
             quantity={`Qty ${enemy.quantity}`}
-            role={creatureRole(enemy.creature)}
+            stats={[]}
+            tone="enemy"
           />
         ))}
       </div>
@@ -62,7 +80,7 @@ function PreviewParty({ allyCount, players }: { allyCount: number; players: Play
       )
     : 0;
   return (
-    <section className="grid gap-2 rounded-md border border-border bg-background p-2.5">
+    <section className="grid gap-4 rounded-md border border-border bg-background px-3.5 pb-[0.8125rem] pt-4">
       <div className="text-xs font-semibold uppercase text-muted-foreground">Party</div>
       {players.length ? (
         <p className="text-sm">

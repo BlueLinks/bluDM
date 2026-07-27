@@ -29,17 +29,17 @@ export function BuilderProgress({
   );
   return (
     <nav className="border-b border-border pb-3" aria-label="Encounter builder progress">
-      <ol className="flex flex-wrap gap-2 text-sm">
+      <ol className="flex flex-wrap gap-2 text-sm sm:grid sm:grid-cols-[10.75rem_10.9375rem_10.9375rem] sm:gap-2.5">
         {steps.map((item, index) => {
           const active = item === step;
           const completed = index < furthestIndex;
           const reachable = index <= furthestIndex;
           return (
-            <li key={item}>
+            <li className="min-w-0" key={item}>
               <button
                 aria-current={active ? "step" : undefined}
                 className={[
-                  "inline-flex items-center gap-2 rounded-md border px-3 py-2 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-50",
+                  "inline-flex w-full items-center gap-2 rounded-md border px-3 py-1.5 font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 disabled:cursor-not-allowed disabled:opacity-50",
                   active
                     ? "border-primary bg-primary text-primary-foreground shadow-sm"
                     : completed
@@ -90,7 +90,7 @@ export function Toggle({
   return (
     <label className="inline-flex items-center gap-2">
       <input
-        className="h-4 w-4"
+        className="h-4 w-4 accent-primary"
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
@@ -218,6 +218,7 @@ function PlayerDraftList({
     <div className="grid gap-2">
       {players.map((player) => (
         <PlayerCombatantCard
+          compact
           key={player.id}
           player={player}
           actions={
@@ -244,6 +245,7 @@ function AllyDraftList({
     <div className="grid gap-2">
       {drafts.map((draft) => (
         <CreatureCombatantCard
+          compact
           key={draft.id}
           creature={draft.creature}
           badge={<Badge tone="shared">Friendly</Badge>}

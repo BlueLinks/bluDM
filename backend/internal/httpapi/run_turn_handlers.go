@@ -4,6 +4,7 @@ import (
 	"bludm/backend/internal/models"
 	"bludm/backend/internal/store"
 	"context"
+	"errors"
 	// nosemgrep: go.lang.security.audit.crypto.math_random.math-random-used -- Initiative rolls are gameplay randomness, not security-sensitive tokens or secrets.
 	mrand "math/rand/v2"
 	"net/http"
@@ -72,14 +73,42 @@ func (s *Server) setInitiativeCommand(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	if err := s.stores.Runs.SetInitiative(r.Context(), runID, strings.TrimSpace(req.CombatantID), req.Initiative); store.IsNotFound(err) {
+	var err error
+	if req.Initiative == nil {
+		err = s.stores.Runs.ClearInitiative(r.Context(), runID, strings.TrimSpace(req.CombatantID))
+	} else {
+		err = s.stores.Runs.SetInitiative(r.Context(), runID, strings.TrimSpace(req.CombatantID), *req.Initiative)
+	}
+	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "combatant not found")
 		return
 	} else if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not set initiative")
 		return
 	}
-	_ = s.appendCombatLogEvent(r.Context(), runID, "initiative_set", "", req.CombatantID, map[string]any{"initiative": req.Initiative})
+	eventType := "initiative_set"
+	payload := map[string]any{}
+	if req.Initiative == nil {
+		eventType = "initiative_cleared"
+	} else {
+		payload["initiative"] = *req.Initiative
+	}
+	_ = s.appendCombatLogEvent(r.Context(), runID, eventType, "", req.CombatantID, payload)
+	run, _ := s.encounterRunByID(r.Context(), runID)
+	writeJSON(w, http.StatusOK, map[string]any{"run": run})
+}
+
+func (s *Server) clearInitiativeCommand(w http.ResponseWriter, r *http.Request) {
+	runID := strings.TrimSpace(r.PathValue("runID"))
+	if _, err := s.encounterRunByID(r.Context(), runID); err != nil {
+		writeError(w, http.StatusNotFound, "encounter run not found")
+		return
+	}
+	if err := s.stores.Runs.ClearInitiatives(r.Context(), runID); err != nil {
+		writeError(w, http.StatusInternalServerError, "could not clear initiative")
+		return
+	}
+	_ = s.appendCombatLogEvent(r.Context(), runID, "initiative_cleared", "", "", map[string]any{})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
 }
@@ -109,12 +138,11 @@ func (s *Server) beginEncounterRunCommand(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusNotFound, "encounter run not found")
 		return
 	}
-	if err := s.stores.Runs.Begin(r.Context(), runID); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not begin combat")
+	if err := s.stores.Runs.Begin(r.Context(), runID); errors.Is(err, store.ErrUnresolvedInitiative) {
+		writeError(w, http.StatusConflict, err.Error())
 		return
-	}
-	if err := s.sortRunInitiative(r.Context(), runID); err != nil {
-		writeError(w, http.StatusInternalServerError, "could not sort initiative")
+	} else if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not begin combat")
 		return
 	}
 	_ = s.appendCombatLogEvent(r.Context(), runID, "combat_began", "", "", map[string]any{})

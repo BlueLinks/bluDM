@@ -15,8 +15,11 @@ export type CombatantCardStat = {
 
 export function CombatantCard({
   actions,
+  avatarClassName = "",
   avatarSrc,
   badge,
+  className = "",
+  compact = false,
   fallback,
   meta,
   name,
@@ -24,11 +27,15 @@ export function CombatantCard({
   role,
   selected = false,
   stats,
+  statsClassName = "",
   tone = "neutral",
 }: {
   actions?: ReactNode;
+  avatarClassName?: string;
   avatarSrc?: string;
   badge?: ReactNode;
+  className?: string;
+  compact?: boolean;
   fallback: string;
   meta: string;
   name: string;
@@ -36,33 +43,48 @@ export function CombatantCard({
   role?: string;
   selected?: boolean;
   stats: CombatantCardStat[];
+  statsClassName?: string;
   tone?: "neutral" | "player" | "friendly" | "enemy";
 }) {
   return (
     <article
       className={[
-        "combatant-row grid min-w-0 gap-3 rounded-md border bg-background p-3 text-sm",
+        "combatant-row grid min-w-0 rounded-md border bg-background text-sm",
+        compact ? "gap-2 p-2" : "gap-3 p-3",
         selected ? "border-primary bg-primary/10" : toneBorder(tone),
+        className,
       ].join(" ")}
     >
-      <div className="grid min-w-0 gap-3">
+      <div
+        className={[
+          "grid min-w-0",
+          compact ? "gap-2 sm:grid-cols-[minmax(11rem,1fr)_auto] sm:items-center" : "gap-3",
+        ].join(" ")}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <InitialsAvatar name={name || fallback} src={avatarSrc} />
+          <InitialsAvatar
+            className={avatarClassName}
+            name={name || fallback}
+            size={compact ? "sm" : "md"}
+            src={avatarSrc}
+          />
           <div className="min-w-0">
             <div className="truncate font-semibold">{name}</div>
             <div className="text-xs text-muted-foreground">{meta}</div>
           </div>
         </div>
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <div className={["flex min-w-0 flex-wrap items-center gap-2", statsClassName].join(" ")}>
           {stats.map((stat, index) => (
-            <CombatantStat key={`${stat.label}-${index}`} stat={stat} />
+            <CombatantStat key={`${stat.label}-${index}`} compact={compact} stat={stat} />
           ))}
+          {role ? (
+            <StatChip className={compact ? "py-0.5" : ""} label={role} tone="custom" />
+          ) : null}
           {typeof quantity === "string" || typeof quantity === "number" ? (
             <StatChip label={quantity} tone="metadata" />
           ) : quantity ? (
             quantity
           ) : null}
-          {role ? <StatChip label={role} tone="custom" /> : null}
           {badge}
           {actions}
         </div>
@@ -71,11 +93,20 @@ export function CombatantCard({
   );
 }
 
-export function PlayerCombatantCard({ player, actions }: { player: Player; actions?: ReactNode }) {
+export function PlayerCombatantCard({
+  player,
+  actions,
+  compact = false,
+}: {
+  player: Player;
+  actions?: ReactNode;
+  compact?: boolean;
+}) {
   return (
     <CombatantCard
       actions={actions}
       avatarSrc={avatarImageSrc(player.avatarAssetId, player.avatarUrl)}
+      compact={compact}
       fallback={initials(player.characterName)}
       meta={playerClassLevel(player)}
       name={player.characterName}
@@ -96,27 +127,40 @@ export function CreatureCombatantCard({
   creature,
   actions,
   badge,
+  className = "",
+  compact = false,
   quantity,
   role,
+  showChallengeRating = true,
+  statsClassName = "",
 }: {
   creature: Creature;
   actions?: ReactNode;
   badge?: ReactNode;
+  className?: string;
+  compact?: boolean;
   quantity?: ReactNode;
   role?: string;
+  showChallengeRating?: boolean;
+  statsClassName?: string;
 }) {
   return (
     <CombatantCard
       actions={actions}
       avatarSrc={avatarImageSrc(creature.imageAssetId, creature.avatarUrl)}
       badge={badge}
+      className={className}
+      compact={compact}
       fallback={creature.name.slice(0, 2).toUpperCase()}
       meta={creatureMeta(creature)}
       name={creature.name}
       quantity={quantity}
       role={role ?? creatureRole(creature)}
+      statsClassName={statsClassName}
       stats={[
-        { icon: Sparkles, label: "CR", value: creature.challengeRating || "0" },
+        ...(showChallengeRating
+          ? [{ icon: Sparkles, label: "CR", value: creature.challengeRating || "0" }]
+          : []),
         { icon: Shield, label: "AC", value: creature.armorClass },
         { icon: HeartPulse, label: "HP", value: creature.hitPoints },
       ]}
@@ -141,28 +185,35 @@ export function EncounterCombatantCard({
       actions={
         onEdit || onRemove ? (
           <CombatantActions
+            ghost
             onEdit={onEdit ? () => onEdit(combatant) : undefined}
             onRemove={onRemove ? () => onRemove(combatant) : undefined}
           />
         ) : null
       }
+      avatarClassName="h-10 w-10"
       avatarSrc={combatant.avatarUrl}
+      className={[
+        sideTone === "enemy"
+          ? "min-h-14 border-l-2 border-l-destructive"
+          : sideTone === "friendly"
+            ? "min-h-[3.5625rem]"
+            : "min-h-[3.6875rem]",
+        "sm:[&>div]:grid-cols-[minmax(11rem,1fr)_16.5625rem]",
+      ].join(" ")}
+      compact
       fallback={combatant.displayName.slice(0, 2).toUpperCase()}
       meta={combatantSubtitle(combatant, sideTone)}
       name={combatant.displayName}
-      quantity={sideTone === "enemy" ? "Qty 1" : undefined}
-      role={sideTone === "enemy" ? combatantRole(combatant) : undefined}
       stats={[
         { icon: Shield, label: "AC", value: combatant.armorClass },
         {
           icon: HeartPulse,
           label: "HP",
-          value: `${combatant.currentHitPoints}/${combatant.maxHitPoints}`,
+          value: `${combatant.currentHitPoints} / ${combatant.maxHitPoints}`,
         },
-        ...(sideTone === "enemy"
-          ? [{ icon: Sparkles, label: "CR", value: combatantChallenge(combatant) }]
-          : []),
       ]}
+      statsClassName="!gap-6 [&>span.rounded-full]:px-2.5"
       tone={sideTone}
     />
   );
@@ -189,10 +240,12 @@ export function RunTargetCombatantCard({ combatant }: { combatant: EncounterRunC
 }
 
 export function CombatantQuantityControl({
+  compact = false,
   label = "Qty",
   value,
   onChange,
 }: {
+  compact?: boolean;
   label?: string;
   value: number;
   onChange: (value: number) => void;
@@ -200,10 +253,15 @@ export function CombatantQuantityControl({
   const update = (next: number) => onChange(Math.max(1, next));
   return (
     <span className="inline-flex items-center overflow-hidden rounded-md border border-border bg-card text-xs">
-      <span className="px-2 text-muted-foreground">{label}</span>
+      <span className={compact ? "px-1.5 text-muted-foreground" : "px-2 text-muted-foreground"}>
+        {label}
+      </span>
       <button
         aria-label={`Decrease ${label.toLowerCase()}`}
-        className="grid h-8 w-8 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+        className={[
+          "grid place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+          compact ? "h-6 w-5" : "h-8 w-8",
+        ].join(" ")}
         type="button"
         onClick={() => update(value - 1)}
       >
@@ -211,7 +269,10 @@ export function CombatantQuantityControl({
       </button>
       <input
         aria-label={label}
-        className="h-8 w-10 border-x border-border bg-background text-center font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-primary/30"
+        className={[
+          "border-x border-border bg-background text-center font-semibold outline-none focus:ring-2 focus:ring-inset focus:ring-primary/30",
+          compact ? "h-6 w-6" : "h-8 w-10",
+        ].join(" ")}
         min={1}
         type="number"
         value={value}
@@ -219,7 +280,10 @@ export function CombatantQuantityControl({
       />
       <button
         aria-label={`Increase ${label.toLowerCase()}`}
-        className="grid h-8 w-8 place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+        className={[
+          "grid place-items-center text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
+          compact ? "h-6 w-5" : "h-8 w-8",
+        ].join(" ")}
         type="button"
         onClick={() => update(value + 1)}
       >
@@ -231,24 +295,38 @@ export function CombatantQuantityControl({
 
 export function RolledHpToggle({
   checked,
+  compact = false,
   onChange,
 }: {
   checked: boolean;
+  compact?: boolean;
   onChange: (checked: boolean) => void;
 }) {
-  return <Checkbox label="Roll HP" checked={checked} onChange={onChange} />;
+  return (
+    <Checkbox label="Roll HP at start" checked={checked} compact={compact} onChange={onChange} />
+  );
 }
 
 export function CombatantActions({
+  compact = false,
+  ghost = false,
   onEdit,
   onRemove,
 }: {
+  compact?: boolean;
+  ghost?: boolean;
   onEdit?: () => void;
   onRemove?: () => void;
 }) {
   return (
     <details className="relative">
-      <summary className="inline-flex h-8 cursor-pointer list-none items-center gap-1 rounded-md border border-border bg-surface px-2 text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 [&::-webkit-details-marker]:hidden">
+      <summary
+        className={[
+          "inline-flex cursor-pointer list-none items-center gap-1 rounded-md px-2 text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35 [&::-webkit-details-marker]:hidden",
+          compact ? "h-7" : "h-8",
+          ghost ? "border border-transparent bg-transparent" : "border border-border bg-surface",
+        ].join(" ")}
+      >
         <MoreHorizontal className="h-4 w-4" />
         <span className="sr-only">Actions</span>
       </summary>
@@ -299,9 +377,10 @@ export function SelectedBadge() {
   );
 }
 
-function CombatantStat({ stat }: { stat: CombatantCardStat }) {
+function CombatantStat({ compact, stat }: { compact: boolean; stat: CombatantCardStat }) {
   return (
     <StatChip
+      className={compact ? "py-0.5" : ""}
       icon={stat.icon}
       label={stat.label}
       tone={combatantStatTone(stat.label)}
@@ -344,8 +423,13 @@ function combatantSubtitle(
     const record = creature as Record<string, unknown>;
     return [
       typeof record.size === "string" ? record.size : "",
-      typeof record.creatureType === "string" ? record.creatureType : "",
-      typeof record.challengeRating === "string" ? `CR ${record.challengeRating}` : "",
+      typeof (record.creatureType ?? record.creature_type) === "string"
+        ? String(record.creatureType ?? record.creature_type)
+        : "",
+      sideTone === "enemy" &&
+      typeof (record.challengeRating ?? record.challenge_rating) === "string"
+        ? `CR ${String(record.challengeRating ?? record.challenge_rating)}`
+        : "",
     ]
       .filter(Boolean)
       .join(" · ");
@@ -373,17 +457,6 @@ export function creatureRole(creature: Creature) {
     return "Skirmisher";
   }
   return "Foe";
-}
-
-function combatantChallenge(combatant: EncounterCombatant) {
-  const creature = combatant.snapshot?.creature;
-  if (creature && typeof creature === "object") {
-    const record = creature as Record<string, unknown>;
-    return typeof record.challengeRating === "string" && record.challengeRating.trim()
-      ? record.challengeRating
-      : "0";
-  }
-  return "0";
 }
 
 function initials(name: string) {

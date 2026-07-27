@@ -136,7 +136,7 @@ export function CombatantList({
     return <EmptyMini copy={empty} />;
   }
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-0 [&>article]:rounded-none [&>article:first-child]:rounded-t-md [&>article:last-child]:rounded-b-md">
       {combatants.map((combatant) => (
         <EncounterCombatantCard
           key={combatant.id}

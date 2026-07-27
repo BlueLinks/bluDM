@@ -23,9 +23,9 @@ func (s DemoStore) SeedFixture(ctx context.Context, ownerUserID string) (string,
 		campaignID = id
 
 		players := []demoPlayer{
-			{name: "Mira Thornvale", player: "Alex", ac: 16, hp: 38, className: "Ranger", level: 4, species: "Wood elf", str: 10, dex: 18, con: 14, intScore: 11, wis: 15, cha: 10},
-			{name: "Borin Ashmantle", player: "Sam", ac: 18, hp: 44, className: "Cleric", level: 4, species: "Hill dwarf", str: 14, dex: 10, con: 16, intScore: 10, wis: 17, cha: 12},
-			{name: "Nyx Underbough", player: "Jess", ac: 15, hp: 27, className: "Wizard", level: 4, species: "Lightfoot halfling", str: 8, dex: 14, con: 13, intScore: 18, wis: 12, cha: 11},
+			{name: "Mira Thornvale", player: "Alex", ac: 16, hp: 38, className: "Wizard", level: 4, species: "Wood elf", str: 10, dex: 18, con: 14, intScore: 11, wis: 15, cha: 10},
+			{name: "Borin Ashmantle", player: "Sam", ac: 18, hp: 44, className: "Fighter", level: 4, species: "Hill dwarf", str: 14, dex: 10, con: 16, intScore: 10, wis: 17, cha: 12},
+			{name: "Nyx Underbough", player: "Jess", ac: 15, hp: 27, className: "Ranger", level: 4, species: "Lightfoot halfling", str: 8, dex: 14, con: 13, intScore: 18, wis: 12, cha: 11},
 		}
 		for _, player := range players {
 			if err := seedDemoPlayer(ctx, tx, ownerUserID, campaignID, player); err != nil {
@@ -34,8 +34,10 @@ func (s DemoStore) SeedFixture(ctx context.Context, ownerUserID string) (string,
 		}
 
 		templates := []demoAction{
+			{name: "Shortsword", description: "Melee weapon attack with a short blade.", actionType: "melee_weapon", attack: 4, reach: 5, actionRange: 0, damageType: "piercing", diceCount: 1, dieSize: 6, fixed: 2},
 			{name: "Shortbow", description: "Ranged weapon attack fired from cover or open ground.", actionType: "ranged_weapon", attack: 4, reach: 0, actionRange: 80, damageType: "piercing", diceCount: 1, dieSize: 6, fixed: 2},
 			{name: "Scimitar", description: "Fast curved blade attack.", actionType: "melee_weapon", attack: 4, reach: 5, actionRange: 0, damageType: "slashing", diceCount: 1, dieSize: 6, fixed: 2},
+			{name: "Nimble Escape", description: "Disengage or Hide as a bonus action.", actionType: "feature", attack: 0, reach: 0, actionRange: 0, damageType: "", diceCount: 0, dieSize: 0, fixed: 0},
 			{name: "Club", description: "Heavy brute-force melee strike.", actionType: "melee_weapon", attack: 6, reach: 5, actionRange: 0, damageType: "bludgeoning", diceCount: 2, dieSize: 8, fixed: 4},
 			{name: "Rusty Shortsword", description: "Simple thrusting weapon attack.", actionType: "melee_weapon", attack: 4, reach: 5, actionRange: 0, damageType: "piercing", diceCount: 1, dieSize: 6, fixed: 2},
 			{name: "Healing Word", description: "A compact healing spell for testing healing rolls.", actionType: "healing", attack: 0, reach: 0, actionRange: 60, damageType: "healing", diceCount: 1, dieSize: 4, fixed: 3},
@@ -50,9 +52,11 @@ func (s DemoStore) SeedFixture(ctx context.Context, ownerUserID string) (string,
 		}
 
 		creatures := []demoCreature{
-			{name: "Tamsin Reed, Road Warden", description: "A local scout who can join as a friendly NPC.", size: "Medium", creatureType: "Humanoid", alignment: "Neutral good", ac: 15, hp: 22, hitDice: "4d8+4", cr: "1/2", xp: 100, friendly: true, str: 12, dex: 16, con: 12, intScore: 11, wis: 14, cha: 10, actions: []string{"Shortbow", "Scimitar"}},
+			{name: "Tamsin Reed, Road Warden", description: "A local scout who can join as a friendly NPC.", size: "Medium", creatureType: "Human", alignment: "Neutral good", ac: 15, hp: 22, hitDice: "4d8+4", cr: "1/2", xp: 100, friendly: true, str: 10, dex: 10, con: 10, intScore: 10, wis: 10, cha: 10, actions: []string{"Shortbow", "Scimitar"}},
 			{name: "Brother Caldus", description: "A travelling priest with a small reserve of magic.", size: "Medium", creatureType: "Humanoid", alignment: "Lawful good", ac: 13, hp: 18, hitDice: "4d8", cr: "1/4", xp: 50, friendly: true, str: 10, dex: 10, con: 11, intScore: 12, wis: 16, cha: 14, actions: []string{"Healing Word"}},
-			{name: "Goblin Thornrunner", description: "Small ambusher inspired by classic goblin skirmishers.", size: "Small", creatureType: "Humanoid", alignment: "Neutral evil", ac: 15, hp: 7, hitDice: "2d6", cr: "1/4", xp: 50, str: 8, dex: 14, con: 10, intScore: 10, wis: 8, cha: 8, actions: []string{"Shortbow", "Scimitar"}},
+			{name: "Goblin Thornrunner", description: "Small ambusher inspired by classic goblin skirmishers.", size: "Small", creatureType: "Fey", alignment: "Neutral evil", ac: 15, hp: 7, hitDice: "2d6", cr: "0", xp: 50, str: 10, dex: 10, con: 10, intScore: 10, wis: 10, cha: 10, actions: []string{"Shortsword", "Shortbow", "Nimble Escape"}},
+			{name: "Gnoll Warrior", description: "A disciplined gnoll skirmisher used by the deterministic encounter builder demo.", size: "Medium", creatureType: "Fiend", alignment: "Chaotic evil", ac: 15, hp: 27, hitDice: "5d8+5", cr: "1/2", xp: 150, str: 10, dex: 10, con: 10, intScore: 10, wis: 10, cha: 10, actions: []string{"Shortsword", "Shortbow"}},
+			{name: "Goblin Boss", description: "A compact goblin leader used by the deterministic encounter builder demo.", size: "Small", creatureType: "Fey", alignment: "Neutral evil", ac: 17, hp: 21, hitDice: "6d6", cr: "1", xp: 200, str: 10, dex: 10, con: 10, intScore: 10, wis: 10, cha: 10, actions: []string{"Shortsword", "Shortbow", "Nimble Escape"}},
 			{name: "Bone-Rattle Archer", description: "Undead ranged attacker inspired by familiar skeletal archers.", size: "Medium", creatureType: "Undead", alignment: "Lawful evil", ac: 13, hp: 13, hitDice: "2d8+4", cr: "1/4", xp: 50, str: 10, dex: 14, con: 15, intScore: 6, wis: 8, cha: 5, actions: []string{"Shortbow", "Rusty Shortsword"}},
 			{name: "Hill Ogre Bruiser", description: "Large club-wielding brute for testing high HP enemies.", size: "Large", creatureType: "Giant", alignment: "Chaotic evil", ac: 11, hp: 59, hitDice: "7d10+21", cr: "2", xp: 450, str: 19, dex: 8, con: 16, intScore: 5, wis: 7, cha: 7, actions: []string{"Club"}},
 		}
@@ -159,6 +163,9 @@ func seedDemoActionTemplate(ctx context.Context, tx *gorm.DB, ownerUserID string
 	`, ownerUserID, action.name, action.description, action.actionType, action.attack, action.reach, action.actionRange).Row().Scan(&id); err != nil {
 		return "", err
 	}
+	if action.diceCount <= 0 && action.fixed <= 0 {
+		return id, nil
+	}
 	err = tx.WithContext(ctx).Exec(`
 		insert into action_template_roll_parts (action_template_id, sort_order, roll_kind, damage_type, dice_count, die_size, fixed_value)
 		values (?, 0, ?, ?, ?, ?, ?)
@@ -256,14 +263,14 @@ func seedDemoEncounter(ctx context.Context, tx *gorm.DB, campaignID string, crea
 	if err == sql.ErrNoRows {
 		if err := tx.WithContext(ctx).Raw(`
 			insert into encounters (campaign_id, name, description, status)
-			values (?, 'Roadside Trouble', 'A mixed encounter for testing player, friendly, and enemy setup.', 'ready')
+			values (?, 'Roadside Trouble', 'A mixed encounter for testing player, friendly, and enemy setup.', 'planned')
 			returning id
 		`, campaignID).Row().Scan(&encounterID); err != nil {
 			return err
 		}
 	}
 	if gateID := locationIDs["gate"]; gateID != "" {
-		if err := tx.WithContext(ctx).Exec(`update encounters set status = 'ready', location_id = ?, location = 'North Road Gate', room_number = 'Gate road' where id = ?`, gateID, encounterID).Error; err != nil {
+		if err := tx.WithContext(ctx).Exec(`update encounters set status = 'planned', location_id = ?, location = 'North Road Gate', room_number = 'Gate road' where id = ?`, gateID, encounterID).Error; err != nil {
 			return err
 		}
 	}
