@@ -253,6 +253,12 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Revocable expiring API tokens and versioned external REST endpoints support trusted local tools without exposing session cookies.
   - The read-only local Vault bridge previews full or selected Vault scans, requires explicit `import --yes`, and never modifies source files.
   - Encounter Markdown export, schema documentation, and an AI authoring prompt support a practical round trip.
+- AI authoring and Markdown campaign bridge expansion:
+  - Random encounter and Dungeon Studio generation now run behind preview-only backend endpoints while preserving the existing editable review flows.
+  - Version 1 `bludm-npc` and `bludm-dungeon` blocks import custom NPCs, location relationships, dungeons, floors, image maps, generated Studio maps, and linked Studio rooms.
+  - Browser and read-only local Vault flows preview all supported block types and can attach referenced portraits and map images.
+  - Stable Vault-relative paths and block IDs update source-managed records transactionally; removed source floors, maps, rooms, and assets are reconciled without deleting unrelated manual records.
+  - REST remains the integration surface; MCP stays deferred until real agent use demonstrates a discovery or orchestration gap.
 
 ## In Progress
 
@@ -268,13 +274,11 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 - Monitor Dungeon Studio use for concrete follow-ups around per-tile theme painting, generator add-to-current-layer UX, backend-backed reusable asset storage, generated/artist-made asset policy, and create-floor-from-stair convenience.
 - Add backend-backed shop price rules/markup, restock cadence, and transaction history if real shop play needs richer stock modelling.
-- Add backend/AI generation for town starter content and random encounters if local deterministic placeholders prove too limited.
+- Add backend/AI generation for town starter content if local deterministic placeholders prove too limited.
 - Continue mockup-comparison passes until the major Campaign World screens are recognisably in the same design language as the saved refactor mockups, with special attention to authored map/placeholder visuals and any remaining light-theme rough edges.
 - Normalize demo/seed map coverage so region, town, floor, and room examples consistently exercise the intended Studio or image preview paths rather than fallback placeholders.
 - After the mockup-alignment pass is structurally accepted, continue real-table polish around richer authored/generated map art for locations without uploaded maps and stronger NPC portrait-first profile routes if NPC-heavy play needs them.
 - Continue Encounter Builder polish against `docs/encounter-creation/`, especially richer creature matching and temporary custom allies/summons as first-class records.
-- Extend the Markdown/REST boundary to NPCs or map references only when those records are needed for table runtime; keep authored campaign prose and map source files in the Vault.
-- Consider server-side random encounter or dungeon generation that returns the same previewable versioned documents before introducing another persistence workflow.
 
 ## Deferred
 

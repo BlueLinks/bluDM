@@ -27,9 +27,11 @@ import { actionTemplateApi } from "./actionTemplates";
 import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
 import { encounterRunApi } from "./encounterRuns";
+import { generationApi } from "./generation";
 import { importExportApi } from "./importExport";
 import { journeyApi } from "./journeys";
 import { markdownEncounterApi } from "./markdownEncounters";
+import { markdownWorldApi } from "./markdownWorld";
 import { rollTableApi } from "./rollTables";
 import {
   actionPayload,
@@ -44,9 +46,11 @@ export const api = {
   ...apiTokenApi,
   ...campaignWorldApi,
   ...encounterRunApi,
+  ...generationApi,
   ...importExportApi,
   ...journeyApi,
   ...markdownEncounterApi,
+  ...markdownWorldApi,
   ...rollTableApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>

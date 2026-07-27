@@ -1,13 +1,13 @@
-# Markdown Encounter Bridge
+# Markdown Campaign Bridge
 
-bluDM can turn small structured blocks inside ordinary Markdown notes into encounters that use the
-normal editor, initiative setup, and combat tracker.
+bluDM can turn small structured blocks inside ordinary Markdown notes into encounters, campaign
+NPCs, and Dungeon Studio-backed World locations and maps.
 
 The boundary is intentional:
 
-- Markdown remains the source of truth for campaign prose, secrets, locations, NPC writing, maps,
+- Markdown remains the source of truth for campaign prose, secrets, NPC writing, map source files,
   and session prep.
-- bluDM stores the structured roster and runtime state needed to prepare and run combat.
+- bluDM stores only the structured NPC, World/map, roster, and runtime state used at the table.
 - The bridge reads Vault files. It never edits them.
 - REST is the integration surface. An MCP server is deferred until real usage shows that endpoint
   discovery alone is not enough.
@@ -50,19 +50,19 @@ roster. It does not create a duplicate.
 
 ## Fields
 
-| Field         | Required | Meaning                                                                |
-| ------------- | -------- | ---------------------------------------------------------------------- | ---------------------------- |
-| `version`     | Yes      | Schema version. The current and only supported version is `1`.         |
-| `id`          | Yes      | Stable lowercase ID using letters, numbers, `.`, `_`, or `-`.          |
-| `name`        | Yes      | Encounter name shown in bluDM.                                         |
-| `description` | No       | Table-facing encounter description. YAML `                             | ` is useful for longer text. |
-| `status`      | No       | `planned`, `completed`, or `skipped`; defaults to `planned`.           |
-| `location`    | No       | Exact Campaign World location name or free text.                       |
-| `location_id` | No       | Unambiguous bluDM location ID. Prefer this only when names collide.    |
-| `room`        | No       | Room number or short room label.                                       |
-| `loot`        | No       | Loot and reward notes.                                                 |
-| `add_party`   | No       | Adds every current player in the target campaign.                      |
-| `combatants`  | No       | Players, library creatures, or inline combatants to add to the roster. |
+| Field         | Required | Meaning                                                                     |
+| ------------- | -------- | --------------------------------------------------------------------------- |
+| `version`     | Yes      | Schema version. The current and only supported version is `1`.              |
+| `id`          | Yes      | Stable lowercase ID using letters, numbers, `.`, `_`, or `-`.               |
+| `name`        | Yes      | Encounter name shown in bluDM.                                              |
+| `description` | No       | Table-facing encounter description. YAML `\|` is useful for longer text.    |
+| `status`      | No       | `planned`, `completed`, or `skipped`; defaults to `planned`.                |
+| `location`    | No       | Exact Campaign World location name or free text.                            |
+| `location_id` | No       | Unambiguous bluDM location ID. Prefer this only when names collide.         |
+| `room`        | No       | Room number or short room label.                                            |
+| `loot`        | No       | Loot and reward notes.                                                      |
+| `add_party`   | No       | Adds every current player in the target campaign.                           |
+| `combatants`  | No       | Players, library creatures, or inline combatants to add to the roster.      |
 
 The preview rejects unknown fields. This is useful with AI-generated YAML because a plausible typo
 cannot silently disappear.
@@ -110,13 +110,109 @@ Optional combatant fields are:
 One encounter may expand to at most 100 combatants, and one Markdown file may contain at most 50
 encounter blocks.
 
+## NPC block
+
+`bludm-npc` creates or updates a custom creature and links it to the selected campaign. Optional
+location fields use the existing Campaign World NPC/location relationship. An NPC may refer to a
+dungeon or floor declared in the same note.
+
+````markdown
+```bludm-npc
+version: 1
+id: keeper-voss
+name: Keeper Voss
+description: |
+  The keeper of the flooded archive.
+size: Medium
+creature_type: humanoid
+alignment: lawful neutral
+armor_class: 13
+hit_points: 22
+hit_dice: 4d8+4
+challenge_rating: "1"
+xp: 200
+disposition: neutral
+location: The Sunken Keep
+location_role: keeper
+visibility: dm
+location_notes: Knows which stair remains safe.
+avatar: Assets/keeper-voss.webp
+stat_block:
+  abilityScores:
+    strength: 10
+    dexterity: 12
+    constitution: 12
+    intelligence: 15
+    wisdom: 14
+    charisma: 16
+```
+````
+
+Required fields are `version`, `id`, `name`, `armor_class`, and `hit_points`. `disposition` accepts
+`friendly`, `neutral`, or `hostile`. `visibility` accepts `dm` or `public`. `stat_block` is stored on
+the normal custom creature and can contain the same reusable sheet data used by bluDM.
+
+`avatar` may be an HTTP(S) URL or a Vault-relative image path. The local bridge reads a referenced
+PNG, JPEG, GIF, or WebP without altering it and sends the bytes with the import. The browser flow
+allows those images to be selected alongside the note.
+
+## Dungeon block
+
+`bludm-dungeon` creates or updates a Campaign World Dungeon. Floors become child Floor locations.
+Each map may reference an existing image, ask the backend generator for an editable Studio document,
+or contain a complete version 1 `dungeon-studio` document.
+
+````markdown
+```bludm-dungeon
+version: 1
+id: sunken-keep
+name: The Sunken Keep
+summary: A drowned border fortress above an older archive.
+parent_location: Brindleford
+tags: [ruin, flooded]
+floors:
+  - id: upper-keep
+    name: Upper Keep
+    map:
+      generator:
+        type: classic
+        seed: sunken-keep-upper
+        tileset: ruins
+        width: 36
+        height: 28
+        room_count: 7
+        density: 45
+        create_rooms: true
+        add_furniture: true
+        add_stairs: true
+  - id: drowned-archive
+    name: Drowned Archive
+    map:
+      image: Maps/sunken-archive.webp
+      width: 1800
+      height: 1200
+      scale_distance_per_pixel: 0.25
+      scale_distance_unit: feet
+```
+````
+
+Generated maps are preview-only documents until import. They are stored in the existing
+`CampaignMap.metadata.studio` format and remain fully editable in Dungeon Studio. Generated Studio
+room regions create and link source-managed World Room locations. Re-import updates those rooms and
+removes only source-managed floors, maps, rooms, and uploaded assets no longer present in the
+structured block. Manually created World records are not reconciled as source content.
+
+An image map requires `image`; width/height default to 1000×700 if omitted. A structured map uses
+either `generator` or `studio`, never both. The same Vault-relative path + block ID identity rule
+applies to the dungeon, its floors, maps, and generated rooms.
+
 ## Browser workflow
 
-1. Open **Import / Export → Markdown**, or use **Import Markdown** in a campaign's Encounters card.
-2. Choose the target campaign and a Markdown note.
+1. Open **Import / Export → Markdown**, or use **Import Markdown** in a campaign.
+2. Choose the target campaign, a Markdown note, and any referenced images.
 3. Preview. No data is written during this step.
 4. Review create/update operations, resolved roster entries, warnings, and errors.
-5. Import, then open the encounter in the normal editor.
+5. Import, then open the encounter, NPC, or dungeon in its normal bluDM editor.
 
 An exported encounter is available at `GET /api/encounters/{encounterId}/markdown`. Export produces
 a reusable encounter block; it does not modify the source note.
@@ -125,11 +221,12 @@ a reusable encounter block; it does not modify the source note.
 
 This short prompt is suitable for an AI working inside a Vault:
 
-> Keep all existing Markdown prose and frontmatter. Add or update a fenced `bludm-encounter` YAML
-> block for each encounter that should run in bluDM. Use schema version 1, a stable lowercase ID,
-> exact creature/player names when known, inline `armor_class` and `hit_points` only for unique
-> combatants, and `add_party: true` when the full campaign party should be present. Do not invent
-> bluDM IDs. Do not alter unrelated campaign writing.
+> Keep all existing Markdown prose and frontmatter. Add or update version 1 fenced
+> `bludm-encounter`, `bludm-npc`, or `bludm-dungeon` YAML blocks only for records needed by bluDM at
+> the table. Use stable lowercase IDs and exact existing names. Prefer a seeded dungeon `generator`
+> over writing a full Studio cell document by hand. Use Vault-relative paths for images. Do not
+> invent bluDM IDs, copy ordinary prose into structured fields unnecessarily, or alter unrelated
+> campaign writing.
 
 The AI can write normal campaign material freely and only needs to produce a small deterministic
 runtime block where bluDM is useful.
@@ -164,8 +261,7 @@ node scripts/bludm-vault.mjs import \
 ```
 
 The command previews every selected file first. If any file has a blocking error, none of the import
-requests begin. Each file is transactionally imported by the server, and stable source IDs make a
-retry safe.
+requests begin. Each endpoint import is transactional, and stable source IDs make a retry safe.
 
 Export writes Markdown to standard output, never into the Vault:
 
@@ -177,29 +273,39 @@ node scripts/bludm-vault.mjs export --encounter ENCOUNTER_ID
 
 External endpoints require `Authorization: Bearer bludm_v1_...`.
 
-| Method | Endpoint                                                              |
-| ------ | --------------------------------------------------------------------- |
-| `GET`  | `/api/external/v1/campaigns`                                          |
-| `POST` | `/api/external/v1/campaigns/{campaignId}/encounters/markdown/preview` |
-| `POST` | `/api/external/v1/campaigns/{campaignId}/encounters/markdown/import`  |
-| `GET`  | `/api/external/v1/encounters/{encounterId}/markdown`                  |
+| Method | Endpoint                                                                 |
+| ------ | ------------------------------------------------------------------------ |
+| `GET`  | `/api/external/v1/campaigns`                                             |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/encounters/markdown/preview`    |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/encounters/markdown/import`     |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/content/markdown/preview`       |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/content/markdown/import`        |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/generation/encounter-preview`  |
+| `POST` | `/api/external/v1/campaigns/{campaignId}/generation/dungeon-preview`    |
+| `GET`  | `/api/external/v1/encounters/{encounterId}/markdown`                     |
 
 Preview and import accept:
 
 ```json
 {
   "sourcePath": "Triboar Trail/Cairncut Survey Camp.md",
-  "markdown": "# The complete note, including one or more encounter blocks"
+  "markdown": "# The complete note, including one or more bluDM blocks",
+  "assets": [
+    {
+      "path": "Triboar Trail/Maps/camp.webp",
+      "filename": "camp.webp",
+      "contentType": "image/webp",
+      "dataBase64": "..."
+    }
+  ]
 }
 ```
 
-The browser uses equivalent session-authenticated endpoints under
-`/api/campaigns/{campaignId}/encounters/markdown`.
+The browser uses equivalent session-authenticated endpoints without `/external/v1`.
 
-## Deliberate follow-ups
+Generation endpoints never persist. Encounter generation accepts `options`, `playerIds`,
+`locationId`, and `roll`; dungeon generation accepts the same `settings` object used in a dungeon
+block. The returned versioned preview is what the existing UI reviews and, for dungeons, edits.
 
-The versioned REST boundary can later add NPC or map-reference blocks without making bluDM the home
-for campaign prose. Server-side random encounter and dungeon generation can also return the same
-previewable documents. MCP should remain optional: it becomes worthwhile only if agents need tool
-discovery and multi-step orchestration that the documented REST endpoints and local bridge do not
-provide.
+MCP remains optional: it becomes worthwhile only if agents need tool discovery and multi-step
+orchestration that the documented REST endpoints and local bridge do not provide.

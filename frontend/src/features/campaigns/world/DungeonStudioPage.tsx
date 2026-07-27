@@ -34,7 +34,6 @@ import {
   type DungeonStudioDocument,
 } from "./dungeonStudioDocument";
 import { isBlankDungeonStudioDocument } from "./dungeonStudioDocumentState";
-import { generateDungeonStudioDocument } from "./dungeonStudioGenerator";
 import {
   planStudioRoomLocationSync,
   studioRoomAnchor,
@@ -420,8 +419,8 @@ export function DungeonStudioPage() {
       studioError={studioError}
       studioStarted={studioStarted}
       undoCount={undoStack.length}
-      onAcceptGenerated={(settings) => {
-        applyDocumentChange(() => generateDungeonStudioDocument(settings), null);
+      onAcceptGenerated={(generatedDocument) => {
+        applyDocumentChange(() => generatedDocument, null);
         setStudioStarted(true);
       }}
       onBackToCampaigns={() => void navigate("/campaigns")}

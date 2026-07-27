@@ -2,13 +2,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../lib/api";
-import type { Campaign } from "../types";
+import type { Campaign, Creature } from "../types";
 import { MarkdownEncounterTab } from "./ImportPageMarkdown";
 
 vi.mock("../lib/api", () => ({
   api: {
     importMarkdownEncounters: vi.fn(),
+    importMarkdownWorld: vi.fn(),
     previewMarkdownEncounters: vi.fn(),
+    previewMarkdownWorld: vi.fn(),
   },
 }));
 
@@ -108,10 +110,116 @@ describe("MarkdownEncounterTab", () => {
       sourcePath: "Cairncut Survey Camp.md",
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Import encounters" }));
+    fireEvent.click(screen.getByRole("button", { name: "Import content" }));
     expect((await screen.findByRole("link", { name: "Open encounter" })).getAttribute("href")).toBe(
       "/campaigns/campaign-1/encounters/encounter-1/edit",
     );
     await waitFor(() => expect(api.importMarkdownEncounters).toHaveBeenCalled());
   });
+
+  it("previews and imports NPC and dungeon blocks through the same flow", async () => {
+    const worldPreview = {
+      sourcePath: "The Sunken Keep.md",
+      canImport: true,
+      npcs: [
+        {
+          blockId: "keeper-voss",
+          line: 4,
+          name: "Keeper Voss",
+          operation: "create" as const,
+          location: "The Sunken Keep",
+          locationId: "location-1",
+          warnings: [],
+          errors: [],
+        },
+      ],
+      dungeons: [
+        {
+          blockId: "sunken-keep",
+          line: 16,
+          name: "The Sunken Keep",
+          operation: "create" as const,
+          floorCount: 1,
+          maps: [
+            {
+              name: "The Sunken Keep Studio Map",
+              kind: "dungeon-studio" as const,
+              roomCount: 4,
+            },
+          ],
+          warnings: [],
+          errors: [],
+        },
+      ],
+    };
+    vi.mocked(api.previewMarkdownWorld).mockResolvedValue({ preview: worldPreview });
+    vi.mocked(api.importMarkdownWorld).mockResolvedValue({
+      preview: worldPreview,
+      import: {
+        npcs: [{ creature: importedCreature(), operation: "create" }],
+        dungeons: [
+          {
+            location: {
+              id: "dungeon-1",
+              campaignId: "campaign-1",
+              name: "The Sunken Keep",
+              locationType: "dungeon",
+              notes: "",
+            },
+            mapIds: ["map-1"],
+            operation: "create",
+          },
+        ],
+      },
+    });
+    render(
+      <MemoryRouter>
+        <MarkdownEncounterTab campaigns={[campaign]} initialCampaignID="campaign-1" />
+      </MemoryRouter>,
+    );
+    const markdown =
+      "```bludm-npc\nversion: 1\nid: keeper-voss\n```\n```bludm-dungeon\nversion: 1\nid: sunken-keep\n```";
+    const file = {
+      name: "The Sunken Keep.md",
+      text: vi.fn().mockResolvedValue(markdown),
+      webkitRelativePath: "",
+    } as unknown as File;
+    fireEvent.change(screen.getByLabelText("Vault note"), { target: { files: [file] } });
+    await screen.findByText("The Sunken Keep.md");
+
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+    expect(await screen.findByText("Keeper Voss")).toBeTruthy();
+    expect(screen.getByText(/4 rooms/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Import content" }));
+    expect((await screen.findByRole("link", { name: "Open NPC" })).getAttribute("href")).toBe(
+      "/npcs/npc-1/edit",
+    );
+    expect(screen.getByRole("link", { name: "Open dungeon" }).getAttribute("href")).toBe(
+      "/campaigns/campaign-1/world/location/dungeon-1",
+    );
+  });
 });
+
+function importedCreature(): Creature {
+  return {
+    id: "npc-1",
+    name: "Keeper Voss",
+    description: "",
+    size: "Medium",
+    creatureType: "humanoid",
+    alignment: "neutral",
+    armorClass: 13,
+    hitPoints: 22,
+    hitDice: "4d8+4",
+    challengeRating: "1",
+    xp: 200,
+    avatarUrl: "",
+    librarySource: "user",
+    readOnly: false,
+    sourceKey: "",
+    sourceLabel: "",
+    statBlock: {},
+    createdAt: "",
+    updatedAt: "",
+  };
+}

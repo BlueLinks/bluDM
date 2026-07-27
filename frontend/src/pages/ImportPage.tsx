@@ -256,7 +256,7 @@ export function ImportPage() {
       <PageHeader
         eyebrow="Data management"
         title="Import / Export"
-        copy="Bring runnable encounters in from Markdown, or create portable bluDM bundles for full data transfer and recovery."
+        copy="Bring encounters, NPCs, and dungeons in from Markdown, or create portable bluDM bundles for full data transfer and recovery."
         action={<ImportHelpButton onClick={() => setActiveTab("settings")} />}
       />
 

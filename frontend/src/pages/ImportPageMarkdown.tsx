@@ -9,7 +9,17 @@ import type {
   MarkdownEncounterImport,
   MarkdownEncounterPreview,
 } from "../lib/api/markdownEncounters";
+import type {
+  MarkdownAssetPayload,
+  MarkdownWorldImport,
+  MarkdownWorldPreview,
+} from "../lib/api/markdownWorld";
 import type { Campaign } from "../types";
+import {
+  markdownAssetFromFile,
+  MarkdownWorldPreviewPanel,
+  MarkdownWorldResultPanel,
+} from "./ImportPageMarkdownWorld";
 
 type MarkdownSource = {
   markdown: string;
@@ -26,8 +36,11 @@ export function MarkdownEncounterTab({
 }) {
   const [campaignID, setCampaignID] = useState(initialCampaignID);
   const [source, setSource] = useState<MarkdownSource | null>(null);
+  const [assets, setAssets] = useState<MarkdownAssetPayload[]>([]);
   const [preview, setPreview] = useState<MarkdownEncounterPreview | null>(null);
+  const [worldPreview, setWorldPreview] = useState<MarkdownWorldPreview | null>(null);
   const [result, setResult] = useState<MarkdownEncounterImport | null>(null);
+  const [worldResult, setWorldResult] = useState<MarkdownWorldImport | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const selectedCampaignID = campaigns.some((campaign) => campaign.id === campaignID)
@@ -36,7 +49,9 @@ export function MarkdownEncounterTab({
 
   async function chooseFile(file: File | null) {
     setPreview(null);
+    setWorldPreview(null);
     setResult(null);
+    setWorldResult(null);
     setError("");
     if (!file) {
       setSource(null);
@@ -54,38 +69,94 @@ export function MarkdownEncounterTab({
     }
   }
 
+  async function chooseAssets(files: FileList | null) {
+    setAssets([]);
+    setPreview(null);
+    setWorldPreview(null);
+    setResult(null);
+    setWorldResult(null);
+    setError("");
+    if (!files?.length) return;
+    try {
+      setAssets(await Promise.all([...files].map(markdownAssetFromFile)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not read the related image files");
+    }
+  }
+
   async function runPreview() {
     if (!source || !selectedCampaignID) return;
     setBusy(true);
     setError("");
     setResult(null);
+    setWorldResult(null);
     try {
-      const payload = await api.previewMarkdownEncounters(selectedCampaignID, {
-        markdown: source.markdown,
-        sourcePath: source.sourcePath,
-      });
-      setPreview(payload.preview);
+      const hasEncounters = source.markdown.includes("bludm-encounter");
+      const hasWorldContent =
+        source.markdown.includes("bludm-npc") || source.markdown.includes("bludm-dungeon");
+      if (!hasEncounters && !hasWorldContent) {
+        throw new Error(
+          "No bludm-encounter, bludm-npc, or bludm-dungeon blocks were found in this note",
+        );
+      }
+      const [encounterPayload, worldPayload] = await Promise.all([
+        hasEncounters
+          ? api.previewMarkdownEncounters(selectedCampaignID, {
+              markdown: source.markdown,
+              sourcePath: source.sourcePath,
+            })
+          : null,
+        hasWorldContent
+          ? api.previewMarkdownWorld(selectedCampaignID, {
+              markdown: source.markdown,
+              sourcePath: source.sourcePath,
+              assets,
+            })
+          : null,
+      ]);
+      setPreview(encounterPayload?.preview ?? null);
+      setWorldPreview(worldPayload?.preview ?? null);
     } catch (err) {
       setPreview(null);
-      setError(err instanceof Error ? err.message : "Could not preview the Markdown encounters");
+      setError(err instanceof Error ? err.message : "Could not preview the Markdown content");
     } finally {
       setBusy(false);
     }
   }
 
   async function runImport() {
-    if (!source || !selectedCampaignID || !preview?.canImport) return;
+    if (
+      !source ||
+      !selectedCampaignID ||
+      (preview && !preview.canImport) ||
+      (worldPreview && !worldPreview.canImport) ||
+      (!preview && !worldPreview)
+    )
+      return;
     setBusy(true);
     setError("");
     try {
-      const payload = await api.importMarkdownEncounters(selectedCampaignID, {
-        markdown: source.markdown,
-        sourcePath: source.sourcePath,
-      });
-      setPreview(payload.preview);
-      setResult(payload.import);
+      const [encounterPayload, worldPayload] = await Promise.all([
+        preview
+          ? api.importMarkdownEncounters(selectedCampaignID, {
+              markdown: source.markdown,
+              sourcePath: source.sourcePath,
+            })
+          : null,
+        worldPreview
+          ? api.importMarkdownWorld(selectedCampaignID, {
+              markdown: source.markdown,
+              sourcePath: source.sourcePath,
+              assets,
+            })
+          : null,
+      ]);
+      setPreview(encounterPayload?.preview ?? null);
+      setResult(encounterPayload?.import ?? null);
+      setWorldPreview(worldPayload?.preview ?? null);
+      setWorldResult(worldPayload?.import ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not import the Markdown encounters");
+      setError(err instanceof Error ? err.message : "Could not import the Markdown content");
     } finally {
       setBusy(false);
     }
@@ -94,24 +165,33 @@ export function MarkdownEncounterTab({
   return (
     <ContentStack>
       <Callout>
-        Keep your campaign writing in Markdown. bluDM reads only fenced <code>bludm-encounter</code>{" "}
-        blocks and imports their runnable combat state.
+        Keep your campaign writing in Markdown. bluDM imports only fenced{" "}
+        <code>bludm-encounter</code>, <code>bludm-npc</code>, and <code>bludm-dungeon</code> blocks;
+        the rest of each Vault note remains in your Vault.
       </Callout>
       <ResponsiveGrid variant="equal2">
         <MarkdownFilePanel
           campaigns={campaigns}
           campaignID={selectedCampaignID}
           filename={source?.filename ?? ""}
+          assetCount={assets.length}
           onCampaignChange={(value) => {
             setCampaignID(value);
             setPreview(null);
+            setWorldPreview(null);
             setResult(null);
+            setWorldResult(null);
           }}
+          onChooseAssets={(files) => void chooseAssets(files)}
           onChooseFile={(file) => void chooseFile(file)}
         />
         <MarkdownImportActions
           busy={busy}
-          canImport={Boolean(preview?.canImport)}
+          canImport={Boolean(
+            (preview || worldPreview) &&
+            (!preview || preview.canImport) &&
+            (!worldPreview || worldPreview.canImport),
+          )}
           ready={Boolean(source && selectedCampaignID)}
           onImport={() => void runImport()}
           onPreview={() => void runPreview()}
@@ -119,7 +199,11 @@ export function MarkdownEncounterTab({
       </ResponsiveGrid>
       {error && <Callout tone="danger">{error}</Callout>}
       {preview && <MarkdownPreviewPanel preview={preview} />}
+      {worldPreview && <MarkdownWorldPreviewPanel preview={worldPreview} />}
       {result && <MarkdownImportResultPanel campaignID={selectedCampaignID} result={result} />}
+      {worldResult && (
+        <MarkdownWorldResultPanel campaignID={selectedCampaignID} result={worldResult} />
+      )}
     </ContentStack>
   );
 }
@@ -128,13 +212,17 @@ function MarkdownFilePanel({
   campaigns,
   campaignID,
   filename,
+  assetCount,
   onCampaignChange,
+  onChooseAssets,
   onChooseFile,
 }: {
   campaigns: Campaign[];
   campaignID: string;
   filename: string;
+  assetCount: number;
   onCampaignChange: (value: string) => void;
+  onChooseAssets: (files: FileList | null) => void;
   onChooseFile: (file: File | null) => void;
 }) {
   return (
@@ -159,8 +247,20 @@ function MarkdownFilePanel({
             onChange={(event) => onChooseFile(event.target.files?.[0] ?? null)}
           />
         </Field>
+        <Field label="Related images (optional)">
+          <input
+            className="block w-full text-sm text-muted-foreground file:mr-3 file:rounded-md file:border file:border-border file:bg-surface file:px-3 file:py-2 file:font-semibold file:text-foreground hover:file:bg-card"
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/gif,image/webp"
+            onChange={(event) => onChooseAssets(event.target.files)}
+          />
+        </Field>
         <p className="text-sm text-muted-foreground">
-          {filename || "Choose one Markdown note. Preview never writes encounter data."}
+          {filename || "Choose one Markdown note. Preview never writes campaign data."}
+          {assetCount > 0
+            ? ` ${assetCount} related image${assetCount === 1 ? "" : "s"} ready.`
+            : ""}
         </p>
       </div>
     </SectionPanel>
@@ -192,7 +292,7 @@ function MarkdownImportActions({
             {busy ? "Working..." : "Preview"}
           </Button>
           <Button type="button" disabled={!canImport || busy} onClick={onImport}>
-            Import encounters
+            Import content
           </Button>
         </ActionRow>
       </div>

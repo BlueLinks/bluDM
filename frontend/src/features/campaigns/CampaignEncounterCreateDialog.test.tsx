@@ -23,6 +23,7 @@ vi.mock("../../lib/api", () => ({
     addEncounterCombatants: vi.fn().mockResolvedValue({ combatants: [] }),
     createEncounter: vi.fn(),
     creatures: vi.fn(),
+    previewGeneratedEncounter: vi.fn(),
   },
 }));
 
@@ -55,6 +56,24 @@ describe("CampaignEncounterCreateDialog", () => {
       ],
     });
     vi.mocked(api.createEncounter).mockResolvedValue({ encounter: encounter() });
+    vi.mocked(api.previewGeneratedEncounter).mockResolvedValue({
+      preview: {
+        title: "Monsters at Copper Kettle",
+        difficulty: "Medium",
+        estimatedXp: 100,
+        targetNotice: "",
+        summary: "Monsters tuned as medium difficulty.",
+        enemies: [
+          {
+            id: "generated-goblin-1-0",
+            creature: creature(),
+            quantity: 2,
+            rolledHp: false,
+            side: "enemy",
+          },
+        ],
+      },
+    });
   });
 
   it("renders only the revised three step headings", () => {

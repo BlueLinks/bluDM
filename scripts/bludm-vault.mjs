@@ -6,7 +6,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 
 const ignoredDirectories = new Set([".git", ".obsidian", "node_modules"]);
-const encounterMarker = "bludm-encounter";
+const contentMarkers = ["bludm-encounter", "bludm-npc", "bludm-dungeon"];
 
 export function parseArgs(argv) {
   const [command = "help", ...values] = argv;
@@ -106,15 +106,19 @@ async function loadVaultDocuments(options) {
   const documents = [];
   for (const filename of files) {
     const markdown = await readFile(filename, "utf8");
-    if (!markdown.includes(encounterMarker)) continue;
+    const kinds = contentMarkers.filter((marker) => markdown.includes(marker));
+    if (kinds.length === 0) continue;
+    const sourcePath = path.relative(root, filename).split(path.sep).join("/");
     documents.push({
       filename,
       markdown,
-      sourcePath: path.relative(root, filename).split(path.sep).join("/"),
+      sourcePath,
+      kinds,
+      assets: await loadReferencedAssets(root, filename, markdown),
     });
   }
   if (documents.length === 0) {
-    throw new Error("No Markdown files containing bludm-encounter blocks were found");
+    throw new Error("No Markdown files containing bluDM content blocks were found");
   }
   return documents;
 }
@@ -123,26 +127,39 @@ async function previewDocuments(baseURL, token, campaignID, documents) {
   const previews = [];
   for (const document of documents) {
     try {
-      const response = await request(
-        baseURL,
-        token,
-        `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/encounters/markdown/preview`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            markdown: document.markdown,
-            sourcePath: document.sourcePath,
-          }),
+      const [encounter, world] = await Promise.all([
+        document.kinds.includes("bludm-encounter")
+          ? requestJSON(
+              baseURL,
+              token,
+              `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/encounters/markdown/preview`,
+              markdownRequest(document),
+            )
+          : null,
+        document.kinds.some((kind) => kind === "bludm-npc" || kind === "bludm-dungeon")
+          ? requestJSON(
+              baseURL,
+              token,
+              `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/content/markdown/preview`,
+              markdownRequest(document),
+            )
+          : null,
+      ]);
+      previews.push({
+        document,
+        preview: {
+          sourcePath: document.sourcePath,
+          canImport:
+            (!encounter || encounter.preview.canImport) && (!world || world.preview.canImport),
+          encounter: encounter?.preview,
+          world: world?.preview,
         },
-      );
-      const payload = await response.json();
-      previews.push({ document, preview: payload.preview });
+      });
     } catch (error) {
       previews.push({
         document,
         preview: {
           canImport: false,
-          encounters: [],
           sourcePath: document.sourcePath,
           requestError: error.message,
         },
@@ -155,19 +172,25 @@ async function previewDocuments(baseURL, token, campaignID, documents) {
 async function importDocuments(baseURL, token, campaignID, previews) {
   const results = [];
   for (const item of previews) {
-    const response = await request(
-      baseURL,
-      token,
-      `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/encounters/markdown/import`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          markdown: item.document.markdown,
-          sourcePath: item.document.sourcePath,
-        }),
-      },
-    );
-    results.push({ sourcePath: item.document.sourcePath, payload: await response.json() });
+    const [encounter, world] = await Promise.all([
+      item.preview.encounter
+        ? requestJSON(
+            baseURL,
+            token,
+            `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/encounters/markdown/import`,
+            markdownRequest(item.document),
+          )
+        : null,
+      item.preview.world
+        ? requestJSON(
+            baseURL,
+            token,
+            `/api/external/v1/campaigns/${encodeURIComponent(campaignID)}/content/markdown/import`,
+            markdownRequest(item.document),
+          )
+        : null,
+    ]);
+    results.push({ sourcePath: item.document.sourcePath, encounter, world });
   }
   return results;
 }
@@ -180,18 +203,23 @@ function printPreview(previews) {
       console.error(`✗ ${document.sourcePath}: ${preview.requestError}`);
       continue;
     }
-    const creates = preview.encounters.filter((item) => item.operation === "create").length;
-    const updates = preview.encounters.filter((item) => item.operation === "update").length;
-    const warnings = preview.encounters.flatMap((item) => item.warnings);
-    const errors = preview.encounters.flatMap((item) => item.errors);
+    const changes = [
+      ...(preview.encounter?.encounters ?? []),
+      ...(preview.world?.npcs ?? []),
+      ...(preview.world?.dungeons ?? []),
+    ];
+    const creates = changes.filter((item) => item.operation === "create").length;
+    const updates = changes.filter((item) => item.operation === "update").length;
+    const warnings = changes.flatMap((item) => item.warnings);
+    const errors = changes.flatMap((item) => item.errors);
     if (!preview.canImport) ready = false;
     console.log(
       `${preview.canImport ? "✓" : "✗"} ${document.sourcePath}: ${creates} create, ${updates} update, ${warnings.length} warning, ${errors.length} error`,
     );
-    for (const encounter of preview.encounters) {
-      console.log(`  ${encounter.operation === "create" ? "+" : "~"} ${encounter.name}`);
-      for (const warning of encounter.warnings) console.log(`    warning: ${warning}`);
-      for (const error of encounter.errors) console.error(`    error: ${error}`);
+    for (const change of changes) {
+      console.log(`  ${change.operation === "create" ? "+" : "~"} ${change.name}`);
+      for (const warning of change.warnings) console.log(`    warning: ${warning}`);
+      for (const error of change.errors) console.error(`    error: ${error}`);
     }
   }
   return ready;
@@ -266,9 +294,16 @@ async function run(options) {
       ),
     );
   } else {
-    const count = results.reduce((sum, item) => sum + item.payload.import.encounters.length, 0);
+    const counts = results.reduce(
+      (total, item) => ({
+        encounters: total.encounters + (item.encounter?.import.encounters.length ?? 0),
+        npcs: total.npcs + (item.world?.import.npcs.length ?? 0),
+        dungeons: total.dungeons + (item.world?.import.dungeons.length ?? 0),
+      }),
+      { encounters: 0, npcs: 0, dungeons: 0 },
+    );
     console.log(
-      `Imported ${count} encounter${count === 1 ? "" : "s"} from ${results.length} file${results.length === 1 ? "" : "s"}.`,
+      `Imported ${counts.encounters} encounter${counts.encounters === 1 ? "" : "s"}, ${counts.npcs} NPC${counts.npcs === 1 ? "" : "s"}, and ${counts.dungeons} dungeon${counts.dungeons === 1 ? "" : "s"} from ${results.length} file${results.length === 1 ? "" : "s"}.`,
     );
   }
 }
@@ -290,8 +325,93 @@ Environment:
   BLUDM_URL     bluDM web URL (default http://localhost:3080)
   BLUDM_TOKEN   revocable API token created in bluDM Settings
 
-The bridge reads Markdown and sends encounter blocks to bluDM. It never changes Vault files.
+The bridge reads Markdown plus referenced NPC/map images and sends fenced bluDM content blocks
+to bluDM. It never changes Vault files.
 Repeat --file to select multiple notes. Omit --file to scan the Vault recursively.`;
+}
+
+async function requestJSON(baseURL, token, endpoint, payload) {
+  const response = await request(baseURL, token, endpoint, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return response.json();
+}
+
+function markdownRequest(document) {
+  return {
+    markdown: document.markdown,
+    sourcePath: document.sourcePath,
+    assets: document.assets,
+  };
+}
+
+export async function loadReferencedAssets(vaultRoot, markdownFile, markdown) {
+  const references = markdownAssetReferences(markdown);
+  const assets = [];
+  for (const reference of references) {
+    if (/^https?:\/\//i.test(reference)) continue;
+    const fromNote = safeVaultPath(vaultRoot, path.resolve(path.dirname(markdownFile), reference));
+    let filename = fromNote;
+    let data;
+    try {
+      data = await readFile(filename);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      filename = safeVaultPath(vaultRoot, reference);
+      data = await readFile(filename);
+    }
+    if (data.length === 0 || data.length > 5 * 1024 * 1024) {
+      throw new Error(`Referenced image must be between 1 byte and 5 MB: ${reference}`);
+    }
+    const contentType = imageContentType(filename);
+    if (!contentType) throw new Error(`Referenced asset is not a supported image: ${reference}`);
+    assets.push({
+      path: path.relative(vaultRoot, filename).split(path.sep).join("/"),
+      filename: path.basename(filename),
+      contentType,
+      dataBase64: data.toString("base64"),
+    });
+  }
+  return assets;
+}
+
+export function markdownAssetReferences(markdown) {
+  const references = new Set();
+  let active = false;
+  for (const line of markdown.replaceAll("\r\n", "\n").split("\n")) {
+    const trimmed = line.trim();
+    if (/^(```|~~~)bludm-(npc|dungeon)$/i.test(trimmed)) {
+      active = true;
+      continue;
+    }
+    if (active && /^(```|~~~)$/.test(trimmed)) {
+      active = false;
+      continue;
+    }
+    if (!active) continue;
+    const match = trimmed.match(/^(?:avatar|image):\s*(.+)$/i);
+    if (!match) continue;
+    const value = match[1].trim().replace(/^['"]|['"]$/g, "");
+    if (value) references.add(value);
+  }
+  return [...references];
+}
+
+function imageContentType(filename) {
+  switch (path.extname(filename).toLowerCase()) {
+    case ".png":
+      return "image/png";
+    case ".jpg":
+    case ".jpeg":
+      return "image/jpeg";
+    case ".gif":
+      return "image/gif";
+    case ".webp":
+      return "image/webp";
+    default:
+      return "";
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

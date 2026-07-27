@@ -16,7 +16,6 @@ import {
   type DungeonStudioSelection,
   type DungeonStudioTool,
 } from "./dungeonStudioEditing";
-import type { DungeonStudioGeneratorSettings } from "./dungeonStudioGenerator";
 import type { CampaignLocation, CampaignMap } from "./travelTypes";
 
 type ApplyDocumentChange = (
@@ -99,7 +98,7 @@ export function DungeonStudioPageView({
   studioError: string;
   studioStarted: boolean;
   undoCount: number;
-  onAcceptGenerated: (settings: DungeonStudioGeneratorSettings) => void;
+  onAcceptGenerated: (document: DungeonStudioDocument) => void;
   onBackToCampaigns: () => void;
   onBrushShapeChange: (shape: DungeonStudioBrushShape) => void;
   onCancelExit: () => void;
@@ -155,6 +154,7 @@ export function DungeonStudioPageView({
         <MutedPanel>Preparing the studio map…</MutedPanel>
       ) : !studioStarted && isBlankDungeonStudioDocument(document) ? (
         <DungeonStudioStartScreen
+          campaignId={detail.campaign.id}
           locationName={location.name}
           onStartCustom={onStartStudio}
           onAcceptGenerated={onAcceptGenerated}
