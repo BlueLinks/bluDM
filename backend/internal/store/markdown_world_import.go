@@ -250,6 +250,9 @@ func upsertMarkdownLocationTx(
 	anchor := copyMap(input.MapAnchor)
 	applyMarkdownMetadata(anchor, sourceKey, sourcePath, blockID, contentHash)
 	input.MapAnchor = anchor
+	if input.Tags == nil {
+		input.Tags = []string{}
+	}
 	entity := locationEntityFromInput(campaignID, input)
 	if operation == "update" {
 		entity.ID = existing.ID
