@@ -51,7 +51,7 @@ jobs:
         run: node scripts/check-file-size.mjs
 
       - name: Dependency audit
-        run: npm audit --audit-level=high
+        run: npm run audit:security
 
   backend:
     name: Backend

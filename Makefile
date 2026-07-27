@@ -36,7 +36,7 @@ verify: lint test
 	docker compose config
 
 verify-security:
-	cd frontend && npm audit --audit-level=high
+	cd frontend && npm run audit:security
 	cd backend && GOTOOLCHAIN=$(GO_TOOLCHAIN) go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 	cd backend && GOTOOLCHAIN=$(GO_TOOLCHAIN) go run github.com/securego/gosec/v2/cmd/gosec@latest -exclude=G404 ./...
 
