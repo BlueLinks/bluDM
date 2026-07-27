@@ -220,6 +220,13 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Regenerate preserves selected party and random options while rerolling the generated enemy preview.
   - Focused regression tests cover icon metadata/rendering, stepper behavior, preview AC/HP/CR/quantity, party avatars, difficulty reuse, regenerate persistence, and theme-token rendering.
   - Browser QA contact sheet covers Random setup, archetype icons, stepper, generated preview after regenerations, accepted preview transition, desktop/tablet, and light/dark modes.
+- DM-only encounter flow refresh:
+  - Custom/random builder steps now use compact combatant cards, clearer selected-archetype contrast, a sticky generated preview, and a persistent review action row.
+  - Encounter Edit is a roster-and-review workspace with Party/Allies/Enemies context, details and DM notes, readiness cues, and one Run/Test action location.
+  - Physical initiative setup keeps player rolls manual, supports NPC/ally generation and overrides, accepts zero/negative values, clears values back to unresolved, previews turn order, and preserves explicit tie ordering.
+  - Encounter runs cannot begin while any initiative remains unresolved; the backend guard and clear paths are covered by store integration tests.
+  - The live tracker now prioritizes the active actor, action picker, target, turn order, compact target rows, and progressively disclosed Overview/Actions/Defenses details.
+  - Focused frontend tests cover builder, editor, initiative, action selection, tracker hierarchy, target treatment, and progressive combat sheets.
 - Campaign World dungeon information-density cleanup:
   - Dungeon overview now uses the floor/room navigation card as the single dungeon hierarchy surface instead of repeating a separate Dungeon structure card.
   - Prep Overview stays on overview scenes while encounters, people, notes, and connections tabs render only their relevant detail cards.
@@ -257,7 +264,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Continue mockup-comparison passes until the major Campaign World screens are recognisably in the same design language as the saved refactor mockups, with special attention to authored map/placeholder visuals and any remaining light-theme rough edges.
 - Normalize demo/seed map coverage so region, town, floor, and room examples consistently exercise the intended Studio or image preview paths rather than fallback placeholders.
 - After the mockup-alignment pass is structurally accepted, continue real-table polish around richer authored/generated map art for locations without uploaded maps and stronger NPC portrait-first profile routes if NPC-heavy play needs them.
-- Continue Encounter Builder polish against `docs/encounter-creation/`, especially richer creature matching, temporary custom allies/summons as first-class records, tighter mockup fidelity, and targeted browser QA across desktop/tablet/light/dark.
+- Continue Encounter Builder polish against `docs/encounter-creation/`, especially richer creature matching and temporary custom allies/summons as first-class records.
 
 ## Deferred
 

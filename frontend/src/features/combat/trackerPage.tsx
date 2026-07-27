@@ -369,13 +369,14 @@ export function CombatTrackerPage() {
   const breadcrumbs = combatTrackerBreadcrumbs(encounter?.name);
 
   return (
-    <Page size="wide" className="combat-tracker-page gap-2 sm:gap-4">
+    <Page size="wide" className="combat-tracker-page gap-2">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
       <Breadcrumbs items={breadcrumbs} />
-      <div className="combat-stack grid gap-2 sm:gap-4">
+      <div className="combat-stack grid gap-2">
         <CombatStatusBar
           combatantCount={combatants.length}
           elapsed={elapsed}
+          encounterName={encounter?.name ?? ""}
           run={run}
           showMeters={showMeters}
           onEnd={goToSummary}

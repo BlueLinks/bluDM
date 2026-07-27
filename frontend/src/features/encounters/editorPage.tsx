@@ -1,7 +1,8 @@
-import { FlaskConical, MapPin, Play, ScrollText, Swords, UsersRound } from "lucide-react";
+import { CircleCheck, MapPin, ScrollText, Swords, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
+import { ContentStack, SidebarDetailLayout } from "../../components/layout";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import { Button, Callout, MutedPanel, Page, ToastViewport, useToasts } from "../../components/ui";
 import { api } from "../../lib/api";
@@ -19,11 +20,9 @@ import { EncounterAddCombatantDialog } from "./EncounterAddCombatantDialog";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
 import {
   EncounterDetailsSection,
-  EncounterEditNav,
   EncounterNotesSection,
   EncounterRosterSections,
   EncounterRunningSection,
-  EncounterSummaryPanel,
 } from "./EncounterEditorSections";
 import {
   combatantChanged,
@@ -32,7 +31,6 @@ import {
   encounterDirty,
   encounterMetaChanged,
 } from "./domain";
-import "../campaigns/world/campaignWorldExperience.scss";
 
 export function EncounterEditPage() {
   const { campaignID, encounterID } = useParams();
@@ -94,13 +92,16 @@ export function EncounterEditPage() {
         includeStandard: true,
         source: allowedSources,
       });
+      const encounterStatus = String(encounterPayload.encounter.status);
+      const normalizedStatus =
+        encounterStatus === "ready" ? "planned" : encounterPayload.encounter.status;
       setCreatureSources(allowedSources);
       setDetail(campaignPayload);
-      setEncounter(encounterPayload.encounter);
+      setEncounter({ ...encounterPayload.encounter, status: normalizedStatus });
       setEncounterMeta({
         name: encounterPayload.encounter.name,
         description: encounterPayload.encounter.description,
-        status: encounterPayload.encounter.status,
+        status: normalizedStatus,
         location: encounterPayload.encounter.location,
         locationId: encounterPayload.encounter.locationId ?? "",
         roomNumber: encounterPayload.encounter.roomNumber,
@@ -281,61 +282,40 @@ export function EncounterEditPage() {
 
   return (
     <div className={dirty ? "pb-28" : ""}>
-      <Page className="campaign-world-experience px-3 py-3 md:px-4 md:py-4 2xl:px-5" size="full">
+      <Page size="full" spacing="tight" className="gap-[0.5625rem]">
         <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
         <BackButton to={`/campaigns/${detail.campaign.id}`}>Back to campaign</BackButton>
         <Breadcrumbs
           items={[
             { label: "Campaigns", to: "/campaigns" },
             { label: detail.campaign.name, to: `/campaigns/${detail.campaign.id}` },
+            { label: "Encounters", to: `/campaigns/${detail.campaign.id}#campaign-encounters` },
             { label: encounter.name },
-            { label: "Edit" },
           ]}
         />
-        <section className="rounded-md border border-border bg-card p-4">
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(28rem,0.9fr)] xl:items-start">
-            <div className="flex min-w-0 items-start gap-4">
-              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md border border-destructive/25 bg-destructive/10 text-destructive">
-                <Swords className="h-6 w-6" />
-              </span>
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
-                  {encounterMeta.name || encounter.name}
-                </h1>
-                <div className="mt-2 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-4 w-4" />
-                    {encounterMeta.location || "No location"}
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <UsersRound className="h-4 w-4" />
-                    {playerCombatants.length} party
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <ScrollText className="h-4 w-4" />
-                    {encounterMeta.status}
-                  </span>
-                </div>
+        <section className="rounded-md border border-border bg-card px-4 pb-3 pt-[0.8125rem]">
+          <div className="flex min-w-0 items-start gap-7">
+            <span className="grid h-[3.125rem] w-[3.125rem] shrink-0 place-items-center rounded-md border border-destructive/25 bg-destructive/10 text-destructive">
+              <Swords className="h-6 w-6" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
+                {encounterMeta.name || encounter.name}
+              </h1>
+              <div className="mt-1.5 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  {encounterMeta.location || "No location"}
+                </span>
+                <span className="inline-flex items-center gap-1 capitalize">
+                  <ScrollText className="h-4 w-4" />
+                  {encounterMeta.status}
+                </span>
+                <span className="inline-flex items-center gap-1">
+                  <UsersRound className="h-4 w-4" />
+                  {playerCombatants.length} players
+                </span>
               </div>
-            </div>
-            <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
-              <Button
-                type="button"
-                icon={Play}
-                disabled={saving}
-                onClick={() => void saveAndStart(false)}
-              >
-                {saving ? "Saving..." : "Run encounter"}
-              </Button>
-              <Button
-                type="button"
-                icon={FlaskConical}
-                variant="tertiary"
-                disabled={saving}
-                onClick={() => void saveAndStart(true)}
-              >
-                Test
-              </Button>
             </div>
           </div>
         </section>
@@ -346,9 +326,8 @@ export function EncounterEditPage() {
             filters include sources outside the campaign set.
           </Callout>
         ) : null}
-        <EncounterDifficultyPanel difficulty={difficulty} />
-        <EncounterEditNav />
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)]">
+        <EncounterDifficultyPanel dense difficulty={difficulty} />
+        <SidebarDetailLayout variant="editor" className="min-h-0 items-start">
           <EncounterRosterSections
             availablePlayers={availablePlayers}
             enemyCombatants={enemyCombatants}
@@ -361,22 +340,39 @@ export function EncounterEditPage() {
             onEdit={setEditing}
             onRemove={removeCombatant}
           />
-          <div className="grid content-start gap-4">
-            <EncounterSummaryPanel
-              createdAt={encounter.createdAt}
-              enemyCount={enemyCombatants.length}
-              meta={encounterMeta}
-              partyCount={playerCombatants.length}
-            />
-            <EncounterDetailsSection meta={encounterMeta} onChange={setEncounterMeta} />
-            <EncounterNotesSection meta={encounterMeta} onChange={setEncounterMeta} />
-            <EncounterRunningSection
-              saving={saving}
-              onSaveAndRun={() => void saveAndStart(false)}
-              onSaveAndTest={() => void saveAndStart(true)}
-            />
-          </div>
-        </div>
+          <aside className="min-h-0 rounded-md border border-border bg-card p-3 xl:sticky xl:top-3 xl:max-h-[calc(100svh-1.5rem)] xl:overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="font-semibold">Encounter setup</h2>
+              <span
+                className={[
+                  "inline-flex items-center gap-1 text-xs",
+                  dirty ? "text-muted-foreground" : "text-success",
+                ].join(" ")}
+              >
+                {dirty ? "Unsaved changes" : "All changes saved"}
+                {!dirty ? <CircleCheck className="h-3.5 w-3.5" /> : null}
+              </span>
+            </div>
+            <ContentStack className="mt-1 gap-1">
+              <EncounterDetailsSection nested meta={encounterMeta} onChange={setEncounterMeta} />
+              <EncounterNotesSection
+                className="-mt-1"
+                nested
+                meta={encounterMeta}
+                onChange={setEncounterMeta}
+              />
+              <EncounterRunningSection
+                allyCount={friendlyCombatants.length}
+                enemyCount={enemyCombatants.length}
+                nested
+                partyCount={playerCombatants.length}
+                saving={saving}
+                onSaveAndRun={() => void saveAndStart(false)}
+                onSaveAndTest={() => void saveAndStart(true)}
+              />
+            </ContentStack>
+          </aside>
+        </SidebarDetailLayout>
         <EncounterAddCombatantDialog
           campaignCreatureIds={campaignCreatureIds}
           creatures={creatures}

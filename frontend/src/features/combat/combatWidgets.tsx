@@ -16,6 +16,7 @@ import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 export function CombatStatusBar({
   combatantCount,
   elapsed,
+  encounterName,
   run,
   showMeters,
   onEnd,
@@ -25,6 +26,7 @@ export function CombatStatusBar({
 }: {
   combatantCount: number;
   elapsed: number;
+  encounterName: string;
   run: EncounterRun;
   showMeters: boolean;
   onEnd: () => void;
@@ -33,52 +35,76 @@ export function CombatStatusBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="combat-panel grid gap-2 rounded-lg border border-border bg-card p-2 md:grid-cols-[1fr_auto_1fr] md:items-center xl:p-3">
-      <div />
+    <div className="combat-panel sticky top-0 z-20 grid gap-2 rounded-lg border border-border bg-card px-4 py-2 md:grid-cols-[1fr_auto_1.15fr] md:items-center">
+      <div className="min-w-0">
+        <div className="truncate font-semibold">{encounterName || "Encounter run"}</div>
+        <div className="text-xs text-muted-foreground">
+          {run.isTest ? "Test run" : "Encounter Run"}
+        </div>
+      </div>
       <div className="flex items-stretch justify-center gap-1 sm:gap-2">
         <Button
-          className="self-stretch px-4 text-lg"
+          className="self-stretch px-3 text-base"
+          size="sm"
           variant="secondary"
           onClick={() => void onMove("previous")}
           title="Previous turn"
+          aria-label="Previous turn"
         >
           &larr;
         </Button>
         <div className="grid min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-border bg-background text-center">
-          <div className="px-2 py-2 sm:px-4">
-            <div className="text-xs font-bold uppercase text-muted-foreground">Round</div>
-            <div className="text-lg font-black">{run.currentRound}</div>
+          <div className="px-2 py-1 sm:px-5">
+            <div className="text-xs font-semibold text-muted-foreground">Round</div>
+            <div className="text-base font-black tabular-nums">{run.currentRound}</div>
           </div>
-          <div className="border-x border-border px-2 py-2 sm:px-4">
-            <div className="text-xs font-bold uppercase text-muted-foreground">Turn</div>
-            <div className="text-lg font-black">
-              {run.currentTurnIndex + 1}/{combatantCount}
+          <div className="border-x border-border px-2 py-1 sm:px-5">
+            <div className="text-xs font-semibold text-muted-foreground">Turn</div>
+            <div className="text-base font-black tabular-nums">
+              {run.currentTurnIndex + 1} / {combatantCount}
             </div>
           </div>
-          <div className="px-2 py-2 sm:px-4">
-            <div className="text-xs font-bold uppercase text-muted-foreground">Timer</div>
-            <div className="text-lg font-black">
+          <div className="px-2 py-1 sm:px-5">
+            <div className="text-xs font-semibold text-muted-foreground">Timer</div>
+            <div className="text-base font-black tabular-nums">
               {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
             </div>
           </div>
         </div>
         <Button
-          className="self-stretch px-4 text-lg"
+          className="self-stretch px-3 text-base"
+          size="sm"
           variant="secondary"
           onClick={() => void onMove("next")}
           title="Next turn"
+          aria-label="Next turn"
         >
           &rarr;
         </Button>
       </div>
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="secondary" onClick={onUndo}>
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button
+          className="border-primary px-[0.8125rem] !py-[0.1875rem] text-primary"
+          size="sm"
+          variant="outline"
+          onClick={onUndo}
+        >
           Undo
         </Button>
-        <Button variant="secondary" onClick={onMeters}>
+        <Button
+          className="border-primary px-[0.6875rem] !py-[0.1875rem] text-primary"
+          size="sm"
+          variant="outline"
+          onClick={onMeters}
+        >
           {showMeters ? "Hide meters" : "Meters"}
         </Button>
-        <Button variant="danger" onClick={onEnd}>
+        <Button
+          className="w-[7.375rem] px-1.5 !py-[0.1875rem]"
+          size="sm"
+          variant="danger"
+          onClick={onEnd}
+        >
           Finish Combat
         </Button>
       </div>

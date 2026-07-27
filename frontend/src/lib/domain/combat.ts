@@ -162,11 +162,25 @@ export function effectiveMaxHP(combatant: EncounterRunCombatant) {
     : Math.max(1, combatant.maxHitPoints + combatant.maxHitPointsModifier);
 }
 
-export function combatantSheet(combatant: EncounterRunCombatant) {
+export function combatantSheet(combatant: EncounterRunCombatant): Record<string, unknown> {
   const source = (combatant.snapshot.player ??
     combatant.snapshot.creature ??
     combatant.snapshot) as Record<string, unknown>;
-  return ((source.characterSheet ?? source.statBlock ?? source) as Record<string, unknown>) || {};
+  const raw =
+    ((source.characterSheet ??
+      source.character_sheet ??
+      source.statBlock ??
+      source.stat_block ??
+      source) as Record<string, unknown>) || {};
+  return {
+    ...raw,
+    abilityScores: raw.abilityScores ?? raw.ability_scores,
+    className: raw.className ?? raw.class_name,
+    proficiencyBonus: raw.proficiencyBonus ?? raw.proficiency_bonus,
+    savingThrowProficiencies: raw.savingThrowProficiencies ?? raw.saving_throw_proficiencies,
+    skillBonuses: raw.skillBonuses ?? raw.skill_bonuses,
+    walkSpeed: raw.walkSpeed ?? raw.walk_speed,
+  };
 }
 
 export function sheetRecord(value: unknown) {

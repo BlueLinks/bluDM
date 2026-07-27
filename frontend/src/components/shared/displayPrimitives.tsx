@@ -75,7 +75,7 @@ export function InitialsAvatar({
   return (
     <span
       className={[
-        "grid shrink-0 place-items-center overflow-hidden rounded-md border font-bold uppercase shadow-sm",
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-md border font-bold uppercase shadow-sm",
         toneClasses[tone],
         avatarSizes[size],
         className,
@@ -83,11 +83,18 @@ export function InitialsAvatar({
         .filter(Boolean)
         .join(" ")}
     >
+      {initials(name)}
       {src ? (
-        <img className="h-full w-full object-cover" src={src} alt={alt} loading="lazy" />
-      ) : (
-        initials(name)
-      )}
+        <img
+          className="absolute inset-0 h-full w-full object-cover"
+          src={src}
+          alt={alt}
+          loading="lazy"
+          onError={(event) => {
+            event.currentTarget.hidden = true;
+          }}
+        />
+      ) : null}
     </span>
   );
 }
@@ -104,13 +111,29 @@ export function CharacterMetadataChip({
 
 export function AbilityScoreCard({
   label,
+  layout = "inline",
   modifier,
   score,
 }: {
   label: React.ReactNode;
+  layout?: "inline" | "stacked";
   modifier: React.ReactNode;
   score: React.ReactNode;
 }) {
+  if (layout === "stacked") {
+    return (
+      <span
+        className={[
+          "grid min-w-0 justify-items-center gap-0.5 rounded-md border px-1 py-1.5 text-xs shadow-sm shadow-primary/10",
+          toneClasses.secondary,
+        ].join(" ")}
+      >
+        <span className="font-black uppercase">{label}</span>
+        <span className="font-semibold text-foreground">{score}</span>
+        <span className="font-black text-secondary">{modifier}</span>
+      </span>
+    );
+  }
   return (
     <span
       className={[
@@ -126,12 +149,14 @@ export function AbilityScoreCard({
 }
 
 export function VitalStatCard({
+  className = "",
   icon: Icon,
   label,
   size = "md",
   tone = "primary",
   value,
 }: {
+  className?: string;
   icon?: React.ElementType;
   label: React.ReactNode;
   size?: "sm" | "md";
@@ -143,7 +168,9 @@ export function VitalStatCard({
       ? "grid justify-items-center gap-0.5 px-1 py-1 text-center xl:px-1.5 xl:py-1.5"
       : "px-2 py-2 text-center";
   return (
-    <div className={["rounded-lg border shadow-sm", sizeClass, toneClasses[tone]].join(" ")}>
+    <div
+      className={["rounded-lg border shadow-sm", sizeClass, toneClasses[tone], className].join(" ")}
+    >
       <div className="flex items-center justify-center gap-1 text-xs font-bold uppercase">
         {Icon ? <Icon className="h-3.5 w-3.5" /> : null}
         {label}

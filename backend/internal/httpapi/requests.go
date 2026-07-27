@@ -213,7 +213,7 @@ type rollInitiativeRequest struct {
 
 type setInitiativeRequest struct {
 	CombatantID string `json:"combatantId"`
-	Initiative  int    `json:"initiative"`
+	Initiative  *int   `json:"initiative"`
 }
 
 type reorderInitiativeRequest struct {

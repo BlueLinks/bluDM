@@ -33,7 +33,7 @@ export function Button({
       "border-transparent bg-transparent text-surface-foreground hover:border-border hover:bg-surface hover:text-foreground active:bg-surface/80 active:text-surface-foreground active:shadow-none",
     info: "border-transparent bg-info text-info-foreground shadow-[0_1px_0_hsl(0_0%_100%/0.14),0_12px_24px_hsl(var(--info)/0.2)] hover:bg-info/95 hover:text-info-foreground active:bg-info/90 active:text-info-foreground active:shadow-none",
     success:
-      "border-transparent bg-success text-success-foreground shadow-[0_1px_0_hsl(0_0%_100%/0.14),0_12px_24px_hsl(var(--success)/0.2)] hover:bg-success/95 hover:text-success-foreground active:bg-success/90 active:text-success-foreground active:shadow-none",
+      "border-transparent bg-success text-success-foreground shadow-[0_1px_0_hsl(0_0%_100%/0.14),0_12px_24px_hsl(var(--success)/0.2)] hover:bg-success/95 hover:text-success-foreground active:bg-success/90 active:text-success-foreground active:shadow-none dark:border-success/45 dark:bg-success/25 dark:text-foreground dark:hover:bg-success/35 dark:hover:text-foreground",
     warning:
       "border-transparent bg-warning text-warning-foreground shadow-[0_1px_0_hsl(0_0%_100%/0.14),0_12px_24px_hsl(var(--warning)/0.2)] hover:bg-warning/95 hover:text-warning-foreground active:bg-warning/90 active:text-warning-foreground active:shadow-none",
     danger:

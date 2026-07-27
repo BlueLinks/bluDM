@@ -130,6 +130,7 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /api/encounter-runs/{runID}", s.requireAuth(http.HandlerFunc(s.getEncounterRun)))
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/roll-initiative", s.requireAuth(http.HandlerFunc(s.rollInitiativeCommand)))
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/set-initiative", s.requireAuth(http.HandlerFunc(s.setInitiativeCommand)))
+	mux.Handle("POST /api/encounter-runs/{runID}/commands/clear-initiative", s.requireAuth(http.HandlerFunc(s.clearInitiativeCommand)))
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/reorder-initiative", s.requireAuth(http.HandlerFunc(s.reorderInitiativeCommand)))
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/begin", s.requireAuth(http.HandlerFunc(s.beginEncounterRunCommand)))
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/next-turn", s.requireAuth(http.HandlerFunc(s.nextTurnCommand)))

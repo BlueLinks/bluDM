@@ -1,8 +1,18 @@
-import { HeartPulse, ListChecks, ShieldCheck, WandSparkles, X } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowRight,
+  HeartPulse,
+  ListChecks,
+  MoreHorizontal,
+  Shield,
+  ShieldCheck,
+  Swords,
+  WandSparkles,
+  X,
+} from "lucide-react";
 import { damageTypeOptions } from "../../components/shared/damageTypes";
+import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
 import { Button, Input, Select } from "../../components/ui";
-import { effectiveMaxHP } from "../../lib/domain/combat";
+import { effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
 import type { CreatureAction, CreatureSpell, EncounterRunCombatant } from "../../types";
 import { CombatActionPicker } from "./CombatActionPicker";
 import { DeathSaveControls } from "./combatWidgets";
@@ -31,6 +41,7 @@ export function CombatContextPanel({
   onManual,
   onManualResolution,
   onOpenManualSlots,
+  onOpenCombatLog,
   onOpenSpells,
   onRequestSave,
   onRemoveTarget,
@@ -58,11 +69,13 @@ export function CombatContextPanel({
   onManual: (mode: "damage" | "healing" | "temporary") => void;
   onManualResolution: () => void;
   onOpenManualSlots: () => void;
+  onOpenCombatLog: () => void;
   onOpenSpells: (spell?: CreatureSpell) => void;
   onRequestSave: () => void;
   onRemoveTarget: (id: string) => void;
 }) {
   const targets = combatants.filter((combatant) => targetIDs.includes(combatant.id));
+  const hasTargets = targets.length > 0;
   const actionDisabledReason =
     targets.length === 0
       ? "Select one target before choosing an attack."
@@ -73,90 +86,158 @@ export function CombatContextPanel({
   return (
     <section
       aria-label="Turn actions"
-      className="combat-panel rounded-lg border border-border bg-card p-2 xl:p-3"
+      className="combat-panel rounded-lg border border-border bg-card px-3 pb-[0.6875rem] pt-2.5"
     >
-      <div className="grid gap-3">
-        <div className="grid gap-3 border-b border-border pb-3 lg:grid-cols-2">
-          <ActorControl
-            actor={actor}
-            combatants={combatants}
-            currentTurn={currentTurn}
-            onActorChange={onActorChange}
-          />
-          <TargetSummary
-            targets={targets}
-            onClearTargets={onClearTargets}
-            onRemoveTarget={onRemoveTarget}
-          />
-        </div>
-
+      <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(17rem,0.92fr)_2.5rem_minmax(30rem,1.45fr)_2.5rem_minmax(18rem,1.05fr)] xl:items-center">
+        <CombatantSummary
+          combatant={actor}
+          detail={`Initiative ${actor.initiativeSet ? actor.initiative : "—"}`}
+        />
+        <FlowArrow />
         {actorNeedsDeathSaves ? (
           <DeathSaveControls combatant={actor} onDeathSave={onDeathSave} />
         ) : (
-          <div className="grid gap-3 lg:grid-cols-2 lg:items-start">
-            <QuickHpForm
-              amount={hpAmount}
-              damageType={damageType}
-              multiplier={hpMultiplier}
-              targets={targets}
-              onAmountChange={onAmountChange}
-              onDamageTypeChange={onDamageTypeChange}
-              onMultiplierChange={onHpMultiplierChange}
-              onSubmit={onManual}
-            />
-            <ResolutionActionControls
-              actions={actions}
-              actionDisabledReason={actionDisabledReason}
-              hasTargets={targets.length > 0}
-              spells={spells}
-              spellSlotsTracked={spellSlotsTracked}
-              onAction={onAction}
-              onManualResolution={onManualResolution}
-              onOpenManualSlots={onOpenManualSlots}
-              onOpenSpells={onOpenSpells}
-              onRequestSave={onRequestSave}
-            />
+          <div className="-ml-0.5 grid w-[32.75rem] max-w-full min-w-0 gap-2.5">
+            <div className="grid min-w-0 gap-2.5 sm:grid-cols-[5.875rem_minmax(12rem,1.2fr)_minmax(9rem,1fr)]">
+              <Input
+                aria-label="HP adjustment amount"
+                className="!min-h-9 !py-1.5 text-center font-semibold tabular-nums"
+                inputMode="numeric"
+                min={0}
+                placeholder="Amount"
+                type="number"
+                value={hpAmount}
+                onChange={(event) => onAmountChange(event.target.value)}
+              />
+              <CombatActionPicker
+                actions={actions}
+                actionDisabledReason={actionDisabledReason}
+                spells={spells}
+                triggerLabel={actions[0]?.name || spells[0]?.spellName || "Choose action"}
+                onAction={onAction}
+                onSpell={onOpenSpells}
+              />
+              <Select
+                className="!min-h-9 !py-1.5"
+                value={damageType}
+                placeholder="Damage type"
+                options={damageTypeOptions()}
+                onValueChange={onDamageTypeChange}
+              />
+            </div>
+            <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-[0.92fr_1.03fr_1.08fr_0.8fr]">
+              <Button
+                className="!h-[2.3125rem] whitespace-nowrap px-2 !py-1 text-xs"
+                type="button"
+                icon={Swords}
+                variant="danger"
+                disabled={!hasTargets}
+                onClick={() => onManual("damage")}
+              >
+                Damage
+              </Button>
+              <Button
+                className="!h-[2.3125rem] whitespace-nowrap px-2 !py-1 text-xs"
+                type="button"
+                icon={HeartPulse}
+                variant="success"
+                disabled={!hasTargets}
+                onClick={() => onManual("healing")}
+              >
+                Heal
+              </Button>
+              <Button
+                className="!h-[2.3125rem] whitespace-nowrap px-2 !py-1 text-xs"
+                type="button"
+                icon={ShieldCheck}
+                variant="outline"
+                disabled={!hasTargets}
+                onClick={onRequestSave}
+              >
+                Request save
+              </Button>
+              <MoreActions
+                actor={actor}
+                combatants={combatants}
+                currentTurn={currentTurn}
+                hasTargets={hasTargets}
+                hpMultiplier={hpMultiplier}
+                spellSlotsTracked={spellSlotsTracked}
+                spells={spells}
+                onActorChange={onActorChange}
+                onHpMultiplierChange={onHpMultiplierChange}
+                onManualResolution={onManualResolution}
+                onOpenCombatLog={onOpenCombatLog}
+                onOpenManualSlots={onOpenManualSlots}
+                onOpenSpells={onOpenSpells}
+                onTemporary={() => onManual("temporary")}
+              />
+            </div>
           </div>
         )}
+        <FlowArrow />
+        <TargetSummary
+          targets={targets}
+          onClearTargets={onClearTargets}
+          onRemoveTarget={onRemoveTarget}
+        />
       </div>
     </section>
   );
 }
 
-function ActorControl({
-  actor,
-  combatants,
-  currentTurn,
-  onActorChange,
+function CombatantSummary({
+  combatant,
+  detail,
+  removable = false,
+  onRemove,
 }: {
-  actor: EncounterRunCombatant;
-  combatants: EncounterRunCombatant[];
-  currentTurn: EncounterRunCombatant;
-  onActorChange: (id: string) => void;
+  combatant: EncounterRunCombatant;
+  detail: string;
+  removable?: boolean;
+  onRemove?: () => void;
 }) {
-  const outOfTurn = actor.id !== currentTurn.id;
   return (
-    <div className="grid min-w-0 gap-1.5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <label className="text-sm font-semibold" htmlFor="encounter-acting-combatant">
-          Acting combatant
-        </label>
-        <span className="text-xs text-muted-foreground">
-          {outOfTurn ? `Current turn: ${currentTurn.displayName}` : "Matches current turn"}
-        </span>
+    <div className="flex min-w-0 items-center gap-3 rounded-md border border-border bg-background px-4 py-3.5">
+      <InitialsAvatar
+        className="h-16 w-16 rounded-md text-base"
+        name={combatant.displayName}
+        size="md"
+        src={combatant.avatarUrl}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-semibold">{combatant.displayName}</div>
+        <div className="text-xs text-muted-foreground">{detail}</div>
+        <div className="mt-1 flex min-w-0 flex-wrap gap-1.5">
+          <StatChip icon={Shield} label="AC" tone="primary" value={effectiveAC(combatant)} />
+          <StatChip
+            icon={HeartPulse}
+            label="HP"
+            tone="tertiary"
+            value={`${combatant.currentHitPoints} / ${effectiveMaxHP(combatant)}`}
+          />
+        </div>
       </div>
-      <div id="encounter-acting-combatant">
-        <Select
-          value={actor.id}
-          placeholder="Choose combatant"
-          options={combatants.map((combatant) => ({
-            value: combatant.id,
-            label: `${combatant.displayName} · ${sideLabel(combatant.side)}`,
-          }))}
-          onValueChange={onActorChange}
-        />
-      </div>
+      {removable ? (
+        <button
+          type="button"
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-muted-foreground transition hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+          aria-label={`Remove ${combatant.displayName} from targets`}
+          onClick={onRemove}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      ) : null}
     </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <ArrowRight
+      className="mx-auto hidden h-5 w-5 text-muted-foreground xl:block"
+      aria-hidden="true"
+    />
   );
 }
 
@@ -169,268 +250,142 @@ function TargetSummary({
   onClearTargets: () => void;
   onRemoveTarget: (id: string) => void;
 }) {
-  return (
-    <div className="grid min-w-0 gap-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-sm font-semibold">
-          {targets.length === 0
-            ? "No targets selected"
-            : `${targets.length} selected target${targets.length === 1 ? "" : "s"}`}
-        </div>
-        {targets.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={onClearTargets}>
-            Clear
-          </Button>
-        )}
+  if (targets.length === 0) {
+    return (
+      <div className="grid min-h-20 place-items-center rounded-md border border-dashed border-border bg-background px-3 py-2 text-center text-sm text-muted-foreground">
+        Select a target from the turn order
       </div>
-      {targets.length === 0 ? (
-        <div className="rounded-md border border-dashed border-border bg-surface px-3 py-2 text-sm text-muted-foreground">
-          Use the target control in initiative. Opening a sheet does not change targets.
-        </div>
-      ) : (
-        <div className="flex min-w-0 flex-wrap gap-1.5">
-          {targets.map((target) => (
-            <div
-              key={target.id}
-              className="flex w-full min-w-0 items-center gap-2 rounded-md border border-border bg-surface px-2 py-1.5 text-sm sm:w-auto sm:flex-1"
-            >
-              <span className="min-w-0 flex-1 truncate font-medium">{target.displayName}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                AC {target.armorClassOverride || target.armorClass + target.armorClassBonus} · HP{" "}
-                {target.currentHitPoints}/{effectiveMaxHP(target)}
-              </span>
-              <button
-                type="button"
-                className="rounded p-1 text-muted-foreground hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label={`Remove ${target.displayName} from targets`}
-                onClick={() => onRemoveTarget(target.id)}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+    );
+  }
+  const target = targets[0];
+  return (
+    <div className="relative min-w-0">
+      <CombatantSummary
+        combatant={target}
+        detail={targets.length > 1 ? `Targeting · +${targets.length - 1}` : "Targeting"}
+        removable={targets.length > 1}
+        onRemove={() => onRemoveTarget(target.id)}
+      />
+      {targets.length > 1 ? (
+        <button
+          type="button"
+          className="absolute right-2 top-1 text-[0.65rem] font-semibold text-muted-foreground hover:text-foreground"
+          onClick={onClearTargets}
+        >
+          Clear all
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function ResolutionActionControls({
-  actions,
-  actionDisabledReason,
+function MoreActions({
+  actor,
+  combatants,
+  currentTurn,
   hasTargets,
-  spells,
+  hpMultiplier,
   spellSlotsTracked,
-  onAction,
+  spells,
+  onActorChange,
+  onHpMultiplierChange,
   onManualResolution,
+  onOpenCombatLog,
   onOpenManualSlots,
   onOpenSpells,
-  onRequestSave,
+  onTemporary,
 }: {
-  actions: CreatureAction[];
-  actionDisabledReason?: string;
+  actor: EncounterRunCombatant;
+  combatants: EncounterRunCombatant[];
+  currentTurn: EncounterRunCombatant;
   hasTargets: boolean;
-  spells: CreatureSpell[];
+  hpMultiplier: HpMultiplier;
   spellSlotsTracked: boolean;
-  onAction: (action: CreatureAction, event?: React.MouseEvent) => void;
+  spells: CreatureSpell[];
+  onActorChange: (id: string) => void;
+  onHpMultiplierChange: (multiplier: HpMultiplier) => void;
   onManualResolution: () => void;
+  onOpenCombatLog: () => void;
   onOpenManualSlots: () => void;
   onOpenSpells: (spell?: CreatureSpell) => void;
-  onRequestSave: () => void;
+  onTemporary: () => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <div className="col-span-2 text-sm font-semibold">Attacks, spells, and saves</div>
-      {(actions.length > 0 || spells.length > 0) && (
-        <CombatActionPicker
-          actions={actions}
-          actionDisabledReason={actionDisabledReason}
-          spells={spells}
-          onAction={onAction}
-          onSpell={onOpenSpells}
-        />
-      )}
-      <Button
-        type="button"
-        variant="secondary"
-        icon={ShieldCheck}
-        disabled={!hasTargets}
-        onClick={onRequestSave}
-      >
-        Request save
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        icon={ListChecks}
-        disabled={!hasTargets}
-        onClick={onManualResolution}
-      >
-        Manual result
-      </Button>
-      {spellSlotsTracked && (
-        <Button
-          className="col-span-2"
-          type="button"
-          variant="ghost"
-          icon={WandSparkles}
-          onClick={onOpenManualSlots}
-        >
-          Manage spell slots
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function QuickHpForm({
-  amount: rawAmount,
-  damageType,
-  multiplier,
-  targets,
-  onAmountChange,
-  onDamageTypeChange,
-  onMultiplierChange,
-  onSubmit,
-}: {
-  amount: string;
-  damageType: string;
-  multiplier: HpMultiplier;
-  targets: EncounterRunCombatant[];
-  onAmountChange: (value: string) => void;
-  onDamageTypeChange: (value: string) => void;
-  onMultiplierChange: (value: HpMultiplier) => void;
-  onSubmit: (mode: "damage" | "healing" | "temporary") => void;
-}) {
-  const [mode, setMode] = useState<"damage" | "healing" | "temporary">("damage");
-  const amount = adjustedAmount(rawAmount, multiplier);
-  const canApply = targets.length > 0 && amount > 0;
-  const apply = () => canApply && onSubmit(mode);
-
-  return (
-    <form
-      className="grid gap-2"
-      onSubmit={(event) => {
-        event.preventDefault();
-        apply();
-      }}
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold">Quick damage and healing</div>
-          <div className="text-xs text-muted-foreground">Enter applies to selected targets.</div>
-        </div>
-        {mode === "damage" && (
-          <div className="w-full sm:w-48">
-            <Select
-              value={damageType}
-              placeholder="Damage type"
-              options={damageTypeOptions()}
-              onValueChange={onDamageTypeChange}
-            />
-          </div>
-        )}
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+    <details className="group relative">
+      <summary className="inline-flex h-[2.3125rem] min-h-0 w-full cursor-pointer list-none items-center justify-center gap-2 rounded-md border border-border bg-background px-3 py-1.5 text-sm font-semibold transition hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35">
+        <MoreHorizontal className="h-4 w-4" />
+        More
+      </summary>
+      <div className="absolute right-0 top-12 z-30 grid w-80 gap-3 rounded-lg border border-border bg-card p-3 shadow-xl">
+        <label className="grid gap-1 text-xs font-semibold text-muted-foreground">
+          Acting combatant
+          <Select
+            value={actor.id}
+            placeholder="Choose combatant"
+            options={combatants.map((combatant) => ({
+              value: combatant.id,
+              label: `${combatant.displayName}${combatant.id === currentTurn.id ? " · current turn" : ""}`,
+            }))}
+            onValueChange={onActorChange}
+          />
+        </label>
         <div className="grid grid-cols-3 gap-1 rounded-md border border-border bg-surface p-1">
-          <ModeButton active={mode === "damage"} onClick={() => setMode("damage")}>
-            Damage
-          </ModeButton>
-          <ModeButton active={mode === "healing"} onClick={() => setMode("healing")}>
-            Healing
-          </ModeButton>
-          <ModeButton active={mode === "temporary"} onClick={() => setMode("temporary")}>
-            Temp HP
-          </ModeButton>
-        </div>
-        <Input
-          aria-label="HP adjustment amount"
-          autoComplete="off"
-          className="text-center text-lg font-semibold tabular-nums"
-          inputMode="numeric"
-          min={0}
-          placeholder="Amount"
-          type="number"
-          value={rawAmount}
-          onChange={(event) => onAmountChange(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            apply();
-          }}
-        />
-        <div className="grid grid-cols-3 gap-1">
           {(["half", "full", "double"] as const).map((option) => (
             <button
               key={option}
               type="button"
-              aria-pressed={multiplier === option}
+              aria-pressed={hpMultiplier === option}
               className={[
-                "rounded-md border px-2 py-1.5 text-sm font-semibold capitalize transition",
-                multiplier === option
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-background text-foreground hover:bg-surface",
+                "rounded px-2 py-1.5 text-xs font-semibold capitalize transition",
+                hpMultiplier === option
+                  ? "bg-primary text-primary-foreground"
+                  : "text-surface-foreground hover:bg-card hover:text-foreground",
               ].join(" ")}
-              onClick={() => onMultiplierChange(option)}
+              onClick={() => onHpMultiplierChange(option)}
             >
               {option}
             </button>
           ))}
         </div>
-        <Button
-          type="submit"
-          disabled={!canApply}
-          icon={HeartPulse}
-          variant={mode === "damage" ? "danger" : mode === "healing" ? "success" : "primary"}
-        >
-          {mode === "temporary" ? "Grant temporary HP" : `Apply ${mode}`}
-          {targets.length > 1 ? ` to ${targets.length}` : ""}
-        </Button>
-      </div>
-      {targets.length > 0 && amount > 0 && (
-        <div className="text-xs text-muted-foreground">
-          Adjusted amount: {amount} · {targets.length} target{targets.length === 1 ? "" : "s"}
+        <div className="grid gap-1">
+          <Button type="button" icon={ListChecks} variant="ghost" onClick={onOpenCombatLog}>
+            Combat log
+          </Button>
+          <Button
+            type="button"
+            icon={ListChecks}
+            variant="ghost"
+            disabled={!hasTargets}
+            onClick={onManualResolution}
+          >
+            Manual result
+          </Button>
+          <Button
+            type="button"
+            icon={HeartPulse}
+            variant="ghost"
+            disabled={!hasTargets}
+            onClick={onTemporary}
+          >
+            Grant temporary HP
+          </Button>
+          {spells.length > 0 ? (
+            <Button
+              type="button"
+              icon={WandSparkles}
+              variant="ghost"
+              onClick={() => onOpenSpells()}
+            >
+              Browse spells
+            </Button>
+          ) : null}
+          {spellSlotsTracked ? (
+            <Button type="button" icon={WandSparkles} variant="ghost" onClick={onOpenManualSlots}>
+              Manage spell slots
+            </Button>
+          ) : null}
         </div>
-      )}
-    </form>
+      </div>
+    </details>
   );
-}
-
-function ModeButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={active}
-      className={[
-        "rounded px-2 py-1.5 text-sm font-semibold transition",
-        active
-          ? "bg-card text-foreground shadow-sm"
-          : "text-surface-foreground hover:bg-card hover:text-foreground",
-      ].join(" ")}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-function adjustedAmount(value: string, multiplier: HpMultiplier) {
-  const amount = Math.max(0, Number(value) || 0);
-  if (multiplier === "half") return Math.floor(amount / 2);
-  if (multiplier === "double") return amount * 2;
-  return amount;
-}
-
-function sideLabel(side: EncounterRunCombatant["side"]) {
-  if (side === "player") return "Player";
-  if (side === "friendly") return "Friendly";
-  return "Enemy";
 }
