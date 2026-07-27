@@ -44,6 +44,12 @@ func (s *Server) withCSRF(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/api/external/") {
+			if _, ok := bearerToken(r); ok {
+				next.ServeHTTP(w, r)
+				return
+			}
+		}
 		if !s.sameOrigin(r, r.Header.Get("Origin")) && !s.sameOrigin(r, r.Header.Get("Referer")) {
 			writeError(w, http.StatusForbidden, "request origin is not allowed")
 			return

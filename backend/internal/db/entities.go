@@ -382,7 +382,7 @@ type EncounterRunEntity struct {
 	EncounterID      string `gorm:"type:uuid;not null;index"`
 	Status           string `gorm:"not null;default:'setup'"`
 	IsTest           bool   `gorm:"not null;default:false"`
-	CurrentRound     int    `gorm:"not null;default:1"`
+	CurrentRound     int    `gorm:"not null;default:0"`
 	CurrentTurnIndex int    `gorm:"not null;default:0"`
 	StartedAt        time.Time
 	EndedAt          *time.Time

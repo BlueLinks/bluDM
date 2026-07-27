@@ -24,10 +24,12 @@ import type {
   User,
 } from "../../types";
 import { actionTemplateApi } from "./actionTemplates";
+import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
 import { encounterRunApi } from "./encounterRuns";
 import { importExportApi } from "./importExport";
 import { journeyApi } from "./journeys";
+import { markdownEncounterApi } from "./markdownEncounters";
 import { rollTableApi } from "./rollTables";
 import {
   actionPayload,
@@ -39,10 +41,12 @@ import {
 import { request } from "./request";
 export const api = {
   ...actionTemplateApi,
+  ...apiTokenApi,
   ...campaignWorldApi,
   ...encounterRunApi,
   ...importExportApi,
   ...journeyApi,
+  ...markdownEncounterApi,
   ...rollTableApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>

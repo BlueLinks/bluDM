@@ -1,4 +1,4 @@
-import { CircleCheck, MapPin, ScrollText, Swords, UsersRound } from "lucide-react";
+import { CircleCheck, Download, MapPin, ScrollText, Swords, UsersRound } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
@@ -294,29 +294,36 @@ export function EncounterEditPage() {
           ]}
         />
         <section className="rounded-md border border-border bg-card px-4 pb-3 pt-[0.8125rem]">
-          <div className="flex min-w-0 items-start gap-7">
-            <span className="grid h-[3.125rem] w-[3.125rem] shrink-0 place-items-center rounded-md border border-destructive/25 bg-destructive/10 text-destructive">
-              <Swords className="h-6 w-6" />
-            </span>
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
-                {encounterMeta.name || encounter.name}
-              </h1>
-              <div className="mt-1.5 flex flex-wrap gap-3 text-sm text-muted-foreground">
-                <span className="inline-flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {encounterMeta.location || "No location"}
-                </span>
-                <span className="inline-flex items-center gap-1 capitalize">
-                  <ScrollText className="h-4 w-4" />
-                  {encounterMeta.status}
-                </span>
-                <span className="inline-flex items-center gap-1">
-                  <UsersRound className="h-4 w-4" />
-                  {playerCombatants.length} players
-                </span>
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 items-start gap-7">
+              <span className="grid h-[3.125rem] w-[3.125rem] shrink-0 place-items-center rounded-md border border-destructive/25 bg-destructive/10 text-destructive">
+                <Swords className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold tracking-tight [overflow-wrap:anywhere]">
+                  {encounterMeta.name || encounter.name}
+                </h1>
+                <div className="mt-1.5 flex flex-wrap gap-3 text-sm text-muted-foreground">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {encounterMeta.location || "No location"}
+                  </span>
+                  <span className="inline-flex items-center gap-1 capitalize">
+                    <ScrollText className="h-4 w-4" />
+                    {encounterMeta.status}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <UsersRound className="h-4 w-4" />
+                    {playerCombatants.length} players
+                  </span>
+                </div>
               </div>
             </div>
+            <a download href={api.encounterMarkdownUrl(encounter.id)}>
+              <Button type="button" icon={Download} size="sm" variant="secondary">
+                Export Markdown
+              </Button>
+            </a>
           </div>
         </section>
         {error && <Callout tone="danger">{error}</Callout>}

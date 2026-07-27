@@ -10,6 +10,7 @@ import type {
   ImportExportPreview,
 } from "../lib/api/importExport";
 import type { Campaign } from "../types";
+import { MarkdownEncounterTab } from "./ImportPageMarkdown";
 import { ExportTab, OverviewTab } from "./ImportPageOverviewExport";
 import { HistoryTab, ImportTab, SettingsTab } from "./ImportPageImportHistorySettings";
 import {
@@ -29,7 +30,10 @@ import {
 import { exportObjectChoices } from "./importPageExportObjects";
 
 export function ImportPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("overview");
+  const [requestedCampaignID] = useState(
+    () => new URLSearchParams(window.location.search).get("campaign") ?? "",
+  );
+  const [activeTab, setActiveTab] = useState<TabKey>(initialImportTab);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignError, setCampaignError] = useState("");
   const [selectedBundle, setSelectedBundle] = useState<ImportExportBundleType>("everything");
@@ -61,7 +65,12 @@ export function ImportPage() {
         if (!cancelled) {
           setCampaigns(payload.campaigns);
           setSelectedCampaignIDs((current) =>
-            current.length ? current : payload.campaigns.slice(0, 1).map((campaign) => campaign.id),
+            current.length
+              ? current
+              : requestedCampaignID &&
+                  payload.campaigns.some((campaign) => campaign.id === requestedCampaignID)
+                ? [requestedCampaignID]
+                : payload.campaigns.slice(0, 1).map((campaign) => campaign.id),
           );
         }
       })
@@ -69,7 +78,7 @@ export function ImportPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [requestedCampaignID]);
 
   useEffect(() => {
     void loadHistory();
@@ -247,17 +256,8 @@ export function ImportPage() {
       <PageHeader
         eyebrow="Data management"
         title="Import / Export"
-        copy="Create portable bluDM bundles, preview imports before anything is written, and clone campaign data safely into the current account."
-        action={
-          <Button
-            type="button"
-            icon={Info}
-            variant="secondary"
-            onClick={() => setActiveTab("settings")}
-          >
-            How it works
-          </Button>
-        }
+        copy="Bring runnable encounters in from Markdown, or create portable bluDM bundles for full data transfer and recovery."
+        action={<ImportHelpButton onClick={() => setActiveTab("settings")} />}
       />
 
       <nav
@@ -293,6 +293,12 @@ export function ImportPage() {
           lastExport={lastExport}
           onExport={() => setActiveTab("export")}
           onImport={() => setActiveTab("import")}
+        />
+      )}
+      {activeTab === "markdown" && (
+        <MarkdownEncounterTab
+          campaigns={campaigns}
+          initialCampaignID={requestedCampaignID || selectedCampaignIDs[0] || ""}
         />
       )}
       {activeTab === "export" && (
@@ -367,5 +373,18 @@ export function ImportPage() {
         />
       )}
     </Page>
+  );
+}
+
+function initialImportTab(): TabKey {
+  const tab = new URLSearchParams(window.location.search).get("tab");
+  return tabs.some((candidate) => candidate.key === tab) ? (tab as TabKey) : "overview";
+}
+
+function ImportHelpButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button type="button" icon={Info} variant="secondary" onClick={onClick}>
+      How it works
+    </Button>
   );
 }

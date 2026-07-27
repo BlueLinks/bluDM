@@ -67,9 +67,11 @@ export function CampaignEncountersSection({
           onCreated={onCreated}
           onOpenChange={onOpenChange}
         />
-        <Button type="button" variant="secondary" disabled>
-          Import encounter
-        </Button>
+        <Link to={`/import?tab=markdown&campaign=${encodeURIComponent(campaignID)}`}>
+          <Button type="button" variant="secondary">
+            Import Markdown
+          </Button>
+        </Link>
       </div>
     </SectionPanel>
   );

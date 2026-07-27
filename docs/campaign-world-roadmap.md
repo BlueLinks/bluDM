@@ -245,6 +245,14 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Campaign World page rows remain content-sized so headers and navigation do not stretch across unused viewport height.
   - Focused tabs render a single available section at full width without a repeated tab heading, empty second column, or duplicate outer padding.
   - The location browser is one rounded, clipped surface, and tablet shell breadcrumbs no longer wrap inside the fixed-height top bar.
+- Markdown encounter bridge:
+  - Ordinary Vault notes can contain one or more versioned `bludm-encounter` blocks without moving campaign prose into bluDM.
+  - Strict preview resolves players, custom creatures, enabled standard creatures, inline combatants, and Campaign World locations before any write.
+  - Stable file-path and block IDs make re-imports update the existing encounter and replace its roster transactionally.
+  - The browser import flow opens imported encounters in the existing editor and combat-tracking workflow.
+  - Revocable expiring API tokens and versioned external REST endpoints support trusted local tools without exposing session cookies.
+  - The read-only local Vault bridge previews full or selected Vault scans, requires explicit `import --yes`, and never modifies source files.
+  - Encounter Markdown export, schema documentation, and an AI authoring prompt support a practical round trip.
 
 ## In Progress
 
@@ -265,6 +273,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 - Normalize demo/seed map coverage so region, town, floor, and room examples consistently exercise the intended Studio or image preview paths rather than fallback placeholders.
 - After the mockup-alignment pass is structurally accepted, continue real-table polish around richer authored/generated map art for locations without uploaded maps and stronger NPC portrait-first profile routes if NPC-heavy play needs them.
 - Continue Encounter Builder polish against `docs/encounter-creation/`, especially richer creature matching and temporary custom allies/summons as first-class records.
+- Extend the Markdown/REST boundary to NPCs or map references only when those records are needed for table runtime; keep authored campaign prose and map source files in the Vault.
+- Consider server-side random encounter or dungeon generation that returns the same previewable versioned documents before introducing another persistence workflow.
 
 ## Deferred
 
@@ -276,6 +286,8 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Rationale: Encounters already have existing campaign flows and are contextual from Dungeon/Floor/Room pages. A World-specific encounter workspace should wait for clear review/prep pain.
 - Major backend redesigns.
   - Rationale: Current UX phases use existing models and APIs adequately. Backend changes should be driven by specific limitations.
+- MCP for Vault integration.
+  - Rationale: the versioned REST API and local bridge cover current AI-assisted authoring and encounter import needs. Revisit MCP only if real agent use needs tool discovery or multi-step orchestration beyond these endpoints.
 - Embedded encounter editing inside World profile cards.
   - Rationale: Dungeon/Room pages now surface running cues, creation entry points, and links to existing encounter editing. More editing UI should wait for specific prep friction rather than duplicating existing encounter flows.
 - Full map editor redesign.

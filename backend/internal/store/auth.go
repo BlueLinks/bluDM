@@ -147,6 +147,10 @@ func (s AuthStore) DeleteUser(ctx context.Context, userID string) error {
 				args:      []any{userID},
 			},
 			{
+				statement: `delete from api_tokens where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
 				statement: `delete from auth_identities where user_id = ?`,
 				args:      []any{userID},
 			},

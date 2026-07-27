@@ -298,6 +298,7 @@ func testSchemaEntities() []any {
 		&dbmodels.AuthIdentityEntity{},
 		&dbmodels.OAuthStateEntity{},
 		&dbmodels.SessionEntity{},
+		&dbmodels.APITokenEntity{},
 		&dbmodels.CampaignEntity{},
 		&dbmodels.UploadedAssetEntity{},
 		&dbmodels.CreatureEntity{},

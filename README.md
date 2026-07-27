@@ -21,6 +21,13 @@ The first implementation slice includes:
 
 See [ENCOUNTER_TRACKER_PLAN.md](ENCOUNTER_TRACKER_PLAN.md) for the product plan.
 
+## Markdown Encounter Bridge
+
+Campaign prose can stay in an Obsidian-style Vault while fenced encounter blocks are previewed and
+imported into the normal bluDM encounter tracker. The browser workflow, revocable external API
+tokens, read-only local bridge, schema, and AI authoring prompt are documented in
+[docs/markdown-encounters.md](docs/markdown-encounters.md).
+
 ## Local Development
 
 Start PostgreSQL:

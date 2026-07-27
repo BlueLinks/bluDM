@@ -5,6 +5,7 @@ import { InitialsAvatar } from "../components/shared/displayPrimitives";
 import { Button, DashboardCard, Page, PageHeader, SectionPanel } from "../components/ui";
 import { api } from "../lib/api";
 import type { AccountInfo, AuthProvider } from "../types";
+import { APITokenSettings } from "./APITokenSettings";
 import { DeleteAccountSettings, PasswordSettings, UnlinkProvider } from "./settingsComponents";
 
 export function SettingsPage() {
@@ -158,6 +159,8 @@ export function SettingsPage() {
               </div>
             </div>
           </SectionPanel>
+
+          <APITokenSettings />
 
           <SectionPanel title="Danger zone" icon={Trash2}>
             <DeleteAccountSettings account={account} />

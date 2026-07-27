@@ -359,7 +359,7 @@ func databaseURLWithArchiveSearchPath(t *testing.T, databaseURL, schemaName stri
 
 func archiveTestSchemaEntities() []any {
 	return []any{
-		&dbmodels.UserEntity{}, &dbmodels.AuthIdentityEntity{}, &dbmodels.OAuthStateEntity{}, &dbmodels.SessionEntity{},
+		&dbmodels.UserEntity{}, &dbmodels.AuthIdentityEntity{}, &dbmodels.OAuthStateEntity{}, &dbmodels.SessionEntity{}, &dbmodels.APITokenEntity{},
 		&dbmodels.CampaignEntity{}, &dbmodels.UploadedAssetEntity{}, &dbmodels.CreatureEntity{}, &dbmodels.SpellEntity{},
 		&dbmodels.SpellProjectileScalingEntity{}, &dbmodels.SpellActionEntity{}, &dbmodels.SpellActionRollPartEntity{},
 		&dbmodels.ActionTemplateEntity{}, &dbmodels.ActionTemplateRollPartEntity{}, &dbmodels.CreatureActionEntity{},
