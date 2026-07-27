@@ -175,8 +175,9 @@ export function buildRandomEncounterPreview({
   const archetype = archetypeOptions.find((option) => option.value === options.archetype);
   const candidates = matchingCreatures(creatures, archetype?.terms ?? []);
   const count = enemyCount(options);
+  const selectionCount = generatedGroupCount(count, options);
   const pool = candidates.length ? candidates : creatures;
-  const result = selectTargetedEnemies(pool, count, options, players, roll);
+  const result = selectTargetedEnemies(pool, selectionCount, options, players, roll);
   const enemies = result.enemies;
   const place = location?.name ?? "the campaign";
   const terrain = options.terrain === "location-theme" ? "local terrain" : options.terrain;
@@ -214,20 +215,43 @@ export function buildRandomEncounterPreview({
 }
 
 function matchingCreatures(creatures: Creature[], terms: string[]) {
-  if (terms.length === 0) return creatures;
-  return creatures.filter((creature) => {
-    const haystack =
-      `${creature.name} ${creature.creatureType} ${creature.description}`.toLowerCase();
-    return terms.some((term) => haystack.includes(term));
-  });
+  const matching =
+    terms.length === 0
+      ? creatures
+      : creatures.filter((creature) => {
+          const haystack =
+            `${creature.name} ${creature.creatureType} ${creature.description}`.toLowerCase();
+          return terms.some((term) => haystack.includes(term));
+        });
+  const byName = new Map<string, Creature>();
+  for (const creature of matching) {
+    const key = creature.name.trim().toLowerCase();
+    const existing = byName.get(key);
+    if (
+      !existing ||
+      (existing.librarySource === "standard" && creature.librarySource !== "standard")
+    ) {
+      byName.set(key, creature);
+    }
+  }
+  return [...byName.values()];
 }
 
 function selectCreatures(creatures: Creature[], count: number, roll: number) {
   if (creatures.length === 0) return [];
-  return Array.from({ length: Math.min(count, creatures.length) }, (_, index) => {
-    const creatureIndex = Math.abs(hash(`${roll}-${index}`)) % creatures.length;
-    return creatures[(creatureIndex + index) % creatures.length];
-  });
+  const selected: Creature[] = [];
+  const selectedIds = new Set<string>();
+  for (let index = 0; index < Math.min(count, creatures.length); index += 1) {
+    const start = Math.abs(hash(`${roll}-${index}`)) % creatures.length;
+    for (let offset = 0; offset < creatures.length; offset += 1) {
+      const creature = creatures[(start + index + offset) % creatures.length];
+      if (selectedIds.has(creature.id)) continue;
+      selected.push(creature);
+      selectedIds.add(creature.id);
+      break;
+    }
+  }
+  return selected;
 }
 
 function selectTargetedEnemies(
@@ -247,17 +271,27 @@ function selectTargetedEnemies(
     };
   }
 
-  const attempts = Math.min(80, Math.max(24, creatures.length * 3));
-  const scored = Array.from({ length: attempts }, (_, attempt) => {
-    const selected = selectCreatures(creatures, count, roll + attempt);
-    const enemies = createEnemyDrafts(selected, options, roll + attempt);
-    const difficulty = calculateEncounterDifficulty(players, previewCombatantsFromDrafts(enemies));
-    return {
-      difficulty,
-      enemies,
-      score: challengeScore(options.challenge, difficulty),
-    };
-  }).sort((left, right) => left.score - right.score);
+  const selections = candidateSelections(creatures, count, roll);
+  const scored = selections
+    .map((selected, attempt) => {
+      const enemies = createEnemyDrafts(selected, options, roll + attempt);
+      const difficulty = calculateEncounterDifficulty(
+        players,
+        previewCombatantsFromDrafts(enemies),
+      );
+      return {
+        difficulty,
+        enemies,
+        score: challengeScore(options.challenge, difficulty),
+        standardCount: selected.filter((creature) => creature.librarySource === "standard").length,
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.score - right.score ||
+        left.standardCount - right.standardCount ||
+        enemySelectionKey(left.enemies).localeCompare(enemySelectionKey(right.enemies)),
+    );
   const best = scored[0];
   const targetLabel = capitalize(options.challenge);
   return {
@@ -269,12 +303,31 @@ function selectTargetedEnemies(
   };
 }
 
+function candidateSelections(creatures: Creature[], count: number, roll: number) {
+  if (count === 2 && creatures.length >= 2 && creatures.length <= 80) {
+    return creatures.flatMap((first, firstIndex) =>
+      creatures.slice(firstIndex + 1).map((second) => [first, second]),
+    );
+  }
+  const attempts = Math.min(160, Math.max(48, creatures.length * 4));
+  return Array.from({ length: attempts }, (_, attempt) =>
+    selectCreatures(creatures, count, roll + attempt),
+  );
+}
+
+function enemySelectionKey(enemies: EncounterBuilderCreatureDraft[]) {
+  return enemies.map((enemy) => enemy.creature.name).join("|");
+}
+
 function createEnemyDrafts(
   selected: Creature[],
   options: EncounterBuilderRandomOptions,
   roll: number,
 ): EncounterBuilderCreatureDraft[] {
-  return selected.map((creature, index) => ({
+  const ordered = options.includeMinions
+    ? [...selected].sort((left, right) => left.xp - right.xp)
+    : selected;
+  return ordered.map((creature, index) => ({
     id: `generated-${creature.id}-${roll}-${index}`,
     creature,
     quantity: options.includeBoss && index === 0 ? 1 : minionQuantity(options, index),
@@ -352,9 +405,14 @@ function enemyCount(options: EncounterBuilderRandomOptions) {
   return Math.max(enemyCountMin, Math.min(enemyCountMax, options.enemyCount || enemyCountMin));
 }
 
+function generatedGroupCount(count: number, options: EncounterBuilderRandomOptions) {
+  return options.includeMinions && count > 1 ? count - 1 : count;
+}
+
 function minionQuantity(options: EncounterBuilderRandomOptions, index: number) {
   if (options.archetype === "large-monster" && index === 0) return 1;
   if (!options.includeMinions) return 1;
+  if (options.includeBoss) return index === 1 ? 2 : 1;
   return index === 0 ? 2 : 1;
 }
 

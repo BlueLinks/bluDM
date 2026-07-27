@@ -26,11 +26,7 @@ export function useCombatElapsed(startedAt: string) {
 }
 
 export function combatTrackerBreadcrumbs(encounterName?: string) {
-  return [
-    { label: "Campaigns", to: "/campaigns" },
-    { label: encounterName || "Encounter" },
-    { label: "Combat" },
-  ];
+  return [{ label: "Encounter Runs", to: "/campaigns" }, { label: encounterName || "Encounter" }];
 }
 
 export function hasLivingEnemies(combatants: EncounterRunCombatant[]) {

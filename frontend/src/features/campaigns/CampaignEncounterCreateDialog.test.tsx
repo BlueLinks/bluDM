@@ -95,6 +95,9 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(screen.getByTestId("archetype-icon-monsters")).toBeTruthy();
     expect(screen.getByTestId("archetype-icon-humanoids")).toBeTruthy();
     expect(screen.getByTestId("archetype-icon-custom-mix")).toBeTruthy();
+    expect(screen.getByText("Goblins, kobolds, orcs, gnolls, bugbears").className).toContain(
+      "text-primary-foreground",
+    );
     for (const label of ["Easy", "Medium", "Hard", "Deadly"]) {
       expect(screen.getByRole("button", { name: new RegExp(label, "i") })).toBeTruthy();
     }
@@ -119,6 +122,7 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(screen.getAllByText(/HP \d+/).length).toBeGreaterThan(0);
     expect(document.body.textContent).toContain("CR");
     expect(document.body.textContent).toContain("Qty");
+    expect(screen.getAllByLabelText("Roll HP at start").length).toBeGreaterThan(0);
   });
 
   it("opens aligned Add Ally and Add Enemy menus in the three-step flow", async () => {

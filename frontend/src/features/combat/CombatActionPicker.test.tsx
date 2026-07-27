@@ -8,7 +8,7 @@ afterEach(() => {
 });
 
 describe("CombatActionPicker", () => {
-  it("shows only populated categories, searches, and opens a selected spell", () => {
+  it("groups actions into focused tabs, searches, and opens a selected spell", () => {
     const onSpell = vi.fn();
     render(
       <CombatActionPicker
@@ -19,15 +19,16 @@ describe("CombatActionPicker", () => {
       />,
     );
     fireEvent.click(screen.getByText("Choose attack or spell"));
-    expect(screen.getByRole("heading", { name: "Attacks" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Reactions" })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Spells" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Features" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Attacks" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Bite/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^Parry/ })).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText("Search actions and spells"), {
       target: { value: "fire" },
     });
     expect(screen.queryByRole("button", { name: /^Bite/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Spells" }));
+    expect(screen.getByRole("region", { name: "Spells" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /^Fireball/ }));
     expect(onSpell).toHaveBeenCalledWith(expect.objectContaining({ spellId: "fireball" }));
   });

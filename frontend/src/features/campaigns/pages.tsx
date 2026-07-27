@@ -251,12 +251,16 @@ export function CampaignDetailPage() {
       <CampaignTravelTool
         campaignId={detail.campaign.id}
         editingJourney={editingJourney}
+        hidden={encounterOpen}
         locations={locations}
         onEditComplete={() => setEditingJourney(null)}
         onJourneySaved={loadCampaign}
       />
-      <BackButton to="/campaigns">Back to campaigns</BackButton>
+      <BackButton hidden={encounterOpen} to="/campaigns">
+        Back to campaigns
+      </BackButton>
       <Breadcrumbs
+        hidden={encounterOpen}
         items={[{ label: "Campaigns", to: "/campaigns" }, { label: detail.campaign.name }]}
       />
       <WorkspaceBanner

@@ -9,6 +9,7 @@ import type { CampaignJourney, CampaignLocation } from "./world/travelTypes";
 export function CampaignTravelTool({
   campaignId,
   editingJourney,
+  hidden = false,
   locations,
   openRequestKey = 0,
   planningLocation,
@@ -17,6 +18,7 @@ export function CampaignTravelTool({
 }: {
   campaignId: string;
   editingJourney: CampaignJourney | null;
+  hidden?: boolean;
   locations: CampaignLocation[];
   openRequestKey?: number;
   planningLocation?: CampaignLocation | null;
@@ -43,7 +45,7 @@ export function CampaignTravelTool({
     ),
     [campaignId, onEditComplete],
   );
-  useTopBarActions(action);
+  useTopBarActions(hidden ? null : action);
 
   useEffect(() => {
     if (editingJourney) setOpen(true);

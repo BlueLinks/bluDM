@@ -1,52 +1,32 @@
-import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Pencil, Play, UsersRound } from "lucide-react";
+import type { DragEndEvent } from "@dnd-kit/core";
+import { Pencil, Swords } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { ResponsiveGrid } from "../../components/layout";
-import {
-  Button,
-  Callout,
-  EmptyMini,
-  Input,
-  MutedPanel,
-  Page,
-  PageHeader,
-  SectionPanel,
-  StatPill,
-} from "../../components/ui";
+import { ActionRow, SidebarDetailLayout } from "../../components/layout";
+import { Button, Callout, MutedPanel, Page } from "../../components/ui";
 import { api } from "../../lib/api";
 import { calculateRunEncounterDifficulty } from "../../lib/domain/combat";
 import type { Encounter, EncounterRun, EncounterRunCombatant } from "../../types";
-import { DifficultyPill } from "../encounters/DifficultyPill";
-import { RunCombatantAvatar } from "./RunCombatantAvatar";
+import {
+  InitiativeEntryPanel,
+  InitiativePreviewPanel,
+  orderInitiativePreview,
+  reorderTiedInitiative,
+  type InitiativeDrafts,
+  type InitiativeGroups,
+} from "./InitiativeSetupPanels";
+
+export { orderInitiativePreview, reorderTiedInitiative } from "./InitiativeSetupPanels";
 
 export function EncounterInitiativePage() {
   const { runID } = useParams();
   const navigate = useNavigate();
   const [run, setRun] = useState<EncounterRun | null>(null);
   const [encounter, setEncounter] = useState<Encounter | null>(null);
+  const [drafts, setDrafts] = useState<InitiativeDrafts>({});
   const [error, setError] = useState("");
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const [busy, setBusy] = useState(false);
 
   async function load() {
     if (!runID) return;
@@ -64,224 +44,199 @@ export function EncounterInitiativePage() {
     void load();
   }, [runID]);
 
+  useEffect(() => {
+    if (!run) return;
+    setDrafts(
+      Object.fromEntries(
+        (run.combatants ?? []).map((combatant) => [
+          combatant.id,
+          combatant.initiativeSet ? String(combatant.initiative) : "",
+        ]),
+      ),
+    );
+  }, [run]);
+
   async function command(fn: () => Promise<{ run: EncounterRun }>) {
-    if (!runID) return;
+    if (!runID) return null;
+    setBusy(true);
     try {
-      setRun((await fn()).run);
+      const payload = await fn();
+      setRun(payload.run);
       setError("");
+      return payload.run;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not update initiative");
+      return null;
+    } finally {
+      setBusy(false);
     }
   }
 
+  async function commitInitiative(combatant: EncounterRunCombatant, draft: string) {
+    if (!runID) return;
+    const raw = draft.trim();
+    if (raw === "") {
+      if (combatant.initiativeSet) {
+        await command(() => api.setInitiative(runID, combatant.id, null));
+      }
+      return;
+    }
+    const initiative = Number(raw);
+    if (!Number.isFinite(initiative) || !Number.isInteger(initiative)) {
+      setError("Initiative must be a whole number, or empty when unresolved.");
+      return;
+    }
+    if (combatant.initiativeSet && initiative === combatant.initiative) return;
+    await command(() => api.setInitiative(runID, combatant.id, initiative));
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
-    const combatants = run?.combatants ?? [];
-    if (!event.over || event.active.id === event.over.id || !runID) return;
-    const oldIndex = combatants.findIndex((combatant) => combatant.id === event.active.id);
-    const newIndex = combatants.findIndex((combatant) => combatant.id === event.over?.id);
-    if (oldIndex < 0 || newIndex < 0) return;
-    const reordered = arrayMove(combatants, oldIndex, newIndex);
-    setRun(run ? { ...run, combatants: reordered } : run);
+    if (!runID || !run || !event.over || event.active.id === event.over.id) return;
+    const reordered = reorderTiedInitiative(
+      orderInitiativePreview(run.combatants ?? []),
+      String(event.active.id),
+      String(event.over.id),
+    );
+    if (!reordered) {
+      setError("Only combatants with the same initiative can be reordered.");
+      return;
+    }
+    const optimistic = reordered.map((combatant, index) => ({ ...combatant, sortOrder: index }));
+    setRun({ ...run, combatants: optimistic });
     await command(() =>
       api.reorderInitiative(
         runID,
-        reordered.map((combatant) => combatant.id),
+        optimistic.map((combatant) => combatant.id),
       ),
     );
   }
 
-  if (!run) {
-    return <MutedPanel>{error || "Loading initiative..."}</MutedPanel>;
+  async function beginCombat() {
+    if (!run || !allInitiativeReady(run.combatants ?? [])) return;
+    const next = await command(() => api.beginEncounterRun(run.id));
+    if (next) void navigate(`/encounter-runs/${run.id}`);
   }
 
+  if (!run) return <MutedPanel>{error || "Loading initiative..."}</MutedPanel>;
+
   const combatants = run.combatants ?? [];
-  const grouped = {
-    player: combatants.filter((combatant) => combatant.side === "player"),
-    friendly: combatants.filter((combatant) => combatant.side === "friendly"),
-    enemy: combatants.filter((combatant) => combatant.side === "enemy"),
-  };
-  const difficulty = calculateRunEncounterDifficulty(combatants);
+  const groups = groupCombatants(combatants);
+  const ordered = orderInitiativePreview(combatants);
+  const readyCount = combatants.filter((combatant) => combatant.initiativeSet).length;
+  const unresolvedCount = combatants.length - readyCount;
+  const ready = allInitiativeReady(combatants);
 
   return (
-    <Page>
+    <Page size="wide" className="gap-3">
       <BackButton to={encounter ? `/campaigns/${encounter.campaignId}` : "/campaigns"}>
         Back to campaign
       </BackButton>
       <Breadcrumbs
         items={[
-          { label: "Campaigns", to: "/campaigns" },
+          { label: "Encounter runs", to: "/campaigns" },
           ...(encounter ? [{ label: encounter.name }] : [{ label: "Encounter" }]),
           { label: "Initiative" },
         ]}
       />
-      <PageHeader
-        eyebrow={run.isTest ? "Test Run" : "Encounter Run"}
-        title="Set initiative"
-        copy="Roll the table into order before the first round begins. Players can stay manual while NPC groups are rolled together."
-        action={
-          <div className="flex flex-wrap gap-2">
-            {encounter && (
-              <Button
-                variant="secondary"
-                icon={Pencil}
-                onClick={() =>
-                  void navigate(
-                    `/campaigns/${encounter.campaignId}/encounters/${encounter.id}/edit`,
-                  )
-                }
-              >
-                Edit Encounter
-              </Button>
-            )}
-            <Button
-              icon={Play}
-              onClick={() => {
-                void command(() => api.beginEncounterRun(run.id)).then(
-                  () => void navigate(`/encounter-runs/${run.id}`),
-                );
-              }}
-            >
-              Begin Combat
-            </Button>
-          </div>
-        }
+      <InitiativePageHeader
+        combatants={combatants}
+        encounter={encounter}
+        groups={groups}
+        onEdit={(path) => void navigate(path)}
       />
-      {error && <Callout tone="danger">{error}</Callout>}
-      <div className="grid gap-3 rounded-lg border border-border bg-card p-4 md:grid-cols-[180px_repeat(4,1fr)_auto] md:items-center">
-        <DifficultyPill difficulty={difficulty} />
-        <StatPill label="Enemy XP" value={difficulty.enemyXP} />
-        <StatPill label="Adjusted XP" value={difficulty.adjustedXP} />
-        <StatPill label="Multiplier" value={`${difficulty.multiplier}x`} />
-        <StatPill label="Enemies" value={grouped.enemy.length} />
-        <Button
-          variant="secondary"
-          onClick={() => command(() => api.rollInitiative(run.id, ["friendly", "enemy"]))}
-        >
-          Roll All Non-Players
-        </Button>
-      </div>
-      <DndContext collisionDetection={closestCenter} sensors={sensors} onDragEnd={handleDragEnd}>
-        <SortableContext
-          items={combatants.map((combatant) => combatant.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <ResponsiveGrid variant="equal3">
-            <InitiativeGroup
-              title="Players"
-              combatants={grouped.player}
-              runID={run.id}
-              onUpdate={setRun}
-              onRoll={() => command(() => api.rollInitiative(run.id, ["player"]))}
-            />
-            <InitiativeGroup
-              title="Friendlies"
-              combatants={grouped.friendly}
-              runID={run.id}
-              onUpdate={setRun}
-              onRoll={() => command(() => api.rollInitiative(run.id, ["friendly"]))}
-            />
-            <InitiativeGroup
-              title="Enemies"
-              combatants={grouped.enemy}
-              runID={run.id}
-              onUpdate={setRun}
-              onRoll={() => command(() => api.rollInitiative(run.id, ["enemy"]))}
-            />
-          </ResponsiveGrid>
-        </SortableContext>
-      </DndContext>
+      {error ? <Callout tone="danger">{error}</Callout> : null}
+      <SidebarDetailLayout variant="initiative" className="-mt-1 min-h-0 items-stretch">
+        <InitiativeEntryPanel
+          busy={busy}
+          drafts={drafts}
+          groups={groups}
+          readyCount={readyCount}
+          onClear={() => void command(() => api.clearInitiative(run.id))}
+          onCommit={commitInitiative}
+          onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}
+          onRoll={(sides) => void command(() => api.rollInitiative(run.id, sides))}
+        />
+        <InitiativePreviewPanel
+          busy={busy}
+          combatantCount={combatants.length}
+          ordered={ordered}
+          ready={ready}
+          readyCount={readyCount}
+          unresolvedCount={unresolvedCount}
+          onBegin={() => void beginCombat()}
+          onDragEnd={(event) => void handleDragEnd(event)}
+        />
+      </SidebarDetailLayout>
     </Page>
   );
 }
 
-function InitiativeGroup({
-  title,
+function InitiativePageHeader({
   combatants,
-  runID,
-  onUpdate,
-  onRoll,
+  encounter,
+  groups,
+  onEdit,
 }: {
-  title: string;
   combatants: EncounterRunCombatant[];
-  runID: string;
-  onUpdate: (run: EncounterRun) => void;
-  onRoll?: () => void;
+  encounter: Encounter | null;
+  groups: InitiativeGroups;
+  onEdit: (path: string) => void;
 }) {
+  const difficulty = calculateRunEncounterDifficulty(combatants);
   return (
-    <SectionPanel title={title} icon={UsersRound}>
-      <div className="grid gap-2">
-        {onRoll && (
-          <Button type="button" variant="secondary" size="sm" onClick={onRoll}>
-            Roll {title}
-          </Button>
-        )}
-        {combatants.length === 0 && <EmptyMini copy="No combatants in this group." />}
-        {combatants.map((combatant) => (
-          <SortableInitiativeRow
-            key={combatant.id}
-            combatant={combatant}
-            runID={runID}
-            onUpdate={onUpdate}
-          />
-        ))}
+    <header className="relative top-[0.1875rem] flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-tight">Set initiative</h1>
+        <p className="mt-1.5 max-w-3xl text-sm text-muted-foreground">
+          Enter the rolls your players call out. Roll NPCs and allies here, or override any
+          generated result manually.
+        </p>
+        <ActionRow className="mt-2.5 text-sm text-muted-foreground">
+          <Swords className="h-4 w-4 shrink-0 text-foreground" />
+          <strong className="text-foreground">{encounter?.name ?? "Encounter run"}</strong>
+          <span aria-hidden="true">·</span>
+          <span className="font-medium text-warning">{difficulty.label}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {groups.player.length} player{groups.player.length === 1 ? "" : "s"}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {groups.friendly.length} all{groups.friendly.length === 1 ? "y" : "ies"}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>
+            {groups.enemy.length} enem{groups.enemy.length === 1 ? "y" : "ies"}
+          </span>
+        </ActionRow>
       </div>
-    </SectionPanel>
+      {encounter ? (
+        <Button
+          className="mt-3.5 !h-[2.375rem] border-primary text-primary"
+          type="button"
+          variant="outline"
+          icon={Pencil}
+          onClick={() =>
+            onEdit(`/campaigns/${encounter.campaignId}/encounters/${encounter.id}/edit`)
+          }
+        >
+          Edit encounter
+        </Button>
+      ) : null}
+    </header>
   );
 }
 
-function SortableInitiativeRow({
-  combatant,
-  runID,
-  onUpdate,
-}: {
-  combatant: EncounterRunCombatant;
-  runID: string;
-  onUpdate: (run: EncounterRun) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
-    id: combatant.id,
-  });
-  const style = { transform: CSS.Transform.toString(transform), transition };
-  const tone =
-    combatant.side === "enemy"
-      ? "border-destructive/30 bg-destructive/10"
-      : combatant.side === "friendly"
-        ? "border-companion-shared/30 bg-companion-shared/10"
-        : "border-info/25 bg-info/10";
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={[
-        "grid grid-cols-[auto_auto_1fr_88px] items-center gap-2 rounded-lg border p-2",
-        tone,
-      ].join(" ")}
-    >
-      <button
-        type="button"
-        className="cursor-grab rounded-md p-2 text-muted-foreground hover:bg-muted"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <RunCombatantAvatar combatant={combatant} />
-      <div className="min-w-0">
-        <div className="truncate font-semibold">{combatant.displayName}</div>
-        <div className="text-xs capitalize text-muted-foreground">{combatant.side}</div>
-      </div>
-      <Input
-        className="text-center font-semibold"
-        type="number"
-        value={combatant.initiativeSet ? combatant.initiative : ""}
-        placeholder="Init"
-        onChange={(event) => {
-          const initiative = Number(event.target.value) || 0;
-          void api
-            .setInitiative(runID, combatant.id, initiative)
-            .then((payload) => onUpdate(payload.run));
-        }}
-      />
-    </div>
-  );
+function groupCombatants(combatants: EncounterRunCombatant[]): InitiativeGroups {
+  const byName = (left: EncounterRunCombatant, right: EncounterRunCombatant) =>
+    left.displayName.localeCompare(right.displayName, undefined, { numeric: true });
+  return {
+    player: combatants.filter((combatant) => combatant.side === "player").sort(byName),
+    friendly: combatants.filter((combatant) => combatant.side === "friendly").sort(byName),
+    enemy: combatants.filter((combatant) => combatant.side === "enemy").sort(byName),
+  };
+}
+
+function allInitiativeReady(combatants: EncounterRunCombatant[]) {
+  return combatants.length > 0 && combatants.every((combatant) => combatant.initiativeSet);
 }

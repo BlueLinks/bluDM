@@ -161,6 +161,28 @@ func (s RunStore) SetInitiative(ctx context.Context, runID, combatantID string, 
 	return nil
 }
 
+func (s RunStore) ClearInitiative(ctx context.Context, runID, combatantID string) error {
+	result := s.db.WithContext(ctx).
+		Model(&dbmodels.EncounterRunCombatantEntity{}).
+		Where("encounter_run_id = ? and id = ?", strings.TrimSpace(runID), strings.TrimSpace(combatantID)).
+		Updates(map[string]any{"initiative": nil, "initiative_set": false})
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func (s RunStore) ClearInitiatives(ctx context.Context, runID string) error {
+	return s.db.WithContext(ctx).
+		Model(&dbmodels.EncounterRunCombatantEntity{}).
+		Where("encounter_run_id = ?", strings.TrimSpace(runID)).
+		Updates(map[string]any{"initiative": nil, "initiative_set": false}).
+		Error
+}
+
 func (s RunStore) ReorderInitiative(ctx context.Context, runID string, combatantIDs []string) error {
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		for index, id := range combatantIDs {
@@ -175,9 +197,28 @@ func (s RunStore) ReorderInitiative(ctx context.Context, runID string, combatant
 }
 
 func (s RunStore) Begin(ctx context.Context, runID string) error {
-	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunEntity{}).
-		Where("id = ?", strings.TrimSpace(runID)).
-		Updates(map[string]any{"status": "active", "current_round": 1, "current_turn_index": 0}).Error
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var combatants []dbmodels.EncounterRunCombatantEntity
+		if err := tx.
+			Where("encounter_run_id = ?", strings.TrimSpace(runID)).
+			Order("initiative desc nulls last, sort_order asc, display_name asc").
+			Find(&combatants).Error; err != nil {
+			return err
+		}
+		for index, combatant := range combatants {
+			if !combatant.InitiativeSet {
+				return ErrUnresolvedInitiative
+			}
+			if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
+				Where("id = ?", combatant.ID).
+				Update("sort_order", index).Error; err != nil {
+				return err
+			}
+		}
+		return tx.Model(&dbmodels.EncounterRunEntity{}).
+			Where("id = ?", strings.TrimSpace(runID)).
+			Updates(map[string]any{"status": "active", "current_round": 1, "current_turn_index": 0}).Error
+	})
 }
 
 func (s RunStore) SetTurnPosition(ctx context.Context, runID string, round, turnIndex int) error {
