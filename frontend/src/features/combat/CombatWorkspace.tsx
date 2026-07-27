@@ -1,6 +1,5 @@
-import { ListChecks, ShieldCheck } from "lucide-react";
 import { useState, type MouseEvent } from "react";
-import { Button } from "../../components/ui";
+import { Modal } from "../../components/ui";
 import type {
   CreatureAction,
   CreatureSpell,
@@ -8,9 +7,8 @@ import type {
   EncounterRunAlert,
   EncounterRunCombatant,
 } from "../../types";
-import { CombatActiveTurnPanel } from "./CombatActiveTurnPanel";
 import { CombatBoard } from "./CombatBoard";
-import type { HpMultiplier } from "./CombatContextPanel";
+import { CombatContextPanel, type HpMultiplier } from "./CombatContextPanel";
 import { CombatLog } from "./CombatLog";
 import { ConcentrationAlerts } from "./ConcentrationAlerts";
 import { ManualResolutionDialog } from "./ManualResolutionDialog";
@@ -29,6 +27,7 @@ export function CombatWorkspace({
   damageType,
   downEnemies,
   hpAmount,
+  hpMultiplier,
   orderedCombatants,
   run,
   showMeters,
@@ -36,6 +35,7 @@ export function CombatWorkspace({
   spellSlotsTracked,
   targetIDs,
   onAction,
+  onActorChange,
   onAddTarget,
   onAmountChange,
   onClearTargets,
@@ -43,9 +43,11 @@ export function CombatWorkspace({
   onDamageTypeChange,
   onDeathSave,
   onEdit,
+  onHpMultiplierChange,
   onManual,
   onOpenManualSlots,
   onOpenSpells,
+  onRemoveTarget,
   onApplyResolution,
   onRoll,
   onSelectSheet,
@@ -99,6 +101,7 @@ export function CombatWorkspace({
     concentrationAlert?: EncounterRunAlert;
   } | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
+  const [combatLogOpen, setCombatLogOpen] = useState(false);
 
   return (
     <>
@@ -119,57 +122,40 @@ export function CombatWorkspace({
         }}
         onResolve={onConcentrationResolve}
       />
-      <div
-        aria-label="Current turn controls"
-        className="combat-panel rounded-lg border border-border bg-card p-2 sm:p-3"
-      >
-        <CombatActiveTurnPanel
-          actions={actions}
-          active={acting}
-          activeNeedsDeathSaves={actorNeedsDeathSaves}
-          damageType={damageType}
-          hpAmount={hpAmount}
-          selected={selected}
-          spellSlotsTracked={spellSlotsTracked}
-          spells={spells}
-          onAction={onAction}
-          onAmountChange={onAmountChange}
-          onDamageTypeChange={onDamageTypeChange}
-          onDeathSave={(action) => onDeathSave(acting, action)}
-          onManual={(mode) => onManual(mode)}
-          onOpenManualSlots={onOpenManualSlots}
-          onOpenSpells={() => onOpenSpells()}
-        />
-        {selected && !actorNeedsDeathSaves && (
-          <div className="mt-2 flex flex-wrap justify-end gap-2 border-t border-border pt-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              icon={ShieldCheck}
-              onClick={() =>
-                setSaveRequest({
-                  actor: acting,
-                  targets: selectedTargets,
-                  ability: "dex",
-                  sourceName: "Manual save",
-                })
-              }
-            >
-              Request save
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              icon={ListChecks}
-              onClick={() => setManualOpen(true)}
-            >
-              Manual result
-            </Button>
-          </div>
-        )}
-      </div>
+      <CombatContextPanel
+        actions={actions}
+        actor={acting}
+        actorNeedsDeathSaves={actorNeedsDeathSaves}
+        combatants={combatants}
+        currentTurn={active}
+        damageType={damageType}
+        hpAmount={hpAmount}
+        hpMultiplier={hpMultiplier}
+        spellSlotsTracked={spellSlotsTracked}
+        spells={spells}
+        targetIDs={targetIDs}
+        onAction={onAction}
+        onActorChange={onActorChange}
+        onAmountChange={onAmountChange}
+        onClearTargets={onClearTargets}
+        onDamageTypeChange={onDamageTypeChange}
+        onDeathSave={(action) => onDeathSave(acting, action)}
+        onHpMultiplierChange={onHpMultiplierChange}
+        onManual={onManual}
+        onManualResolution={() => setManualOpen(true)}
+        onOpenManualSlots={onOpenManualSlots}
+        onOpenCombatLog={() => setCombatLogOpen(true)}
+        onOpenSpells={onOpenSpells}
+        onRemoveTarget={onRemoveTarget}
+        onRequestSave={() =>
+          setSaveRequest({
+            actor: acting,
+            targets: selectedTargets,
+            ability: "dex",
+            sourceName: "Manual save",
+          })
+        }
+      />
       <CombatBoard
         active={active}
         activeEffects={run.activeEffects ?? []}
@@ -183,6 +169,7 @@ export function CombatWorkspace({
         onAddTarget={onAddTarget}
         onDeathSave={onDeathSave}
         onEdit={onEdit}
+        onRemoveTarget={onRemoveTarget}
         onRoll={onRoll}
         onSelect={(id) => {
           onSelectSheet(id);
@@ -191,7 +178,14 @@ export function CombatWorkspace({
           onToggleTarget(id);
         }}
       />
-      <CombatLog combatants={combatants} events={run.events ?? []} startedAt={combatStartedAt} />
+      <Modal
+        className="max-w-5xl"
+        open={combatLogOpen}
+        title="Combat log"
+        onOpenChange={setCombatLogOpen}
+      >
+        <CombatLog combatants={combatants} events={run.events ?? []} startedAt={combatStartedAt} />
+      </Modal>
       <SaveResolutionDialog
         actor={saveRequest?.actor ?? null}
         initialAbility={saveRequest?.ability}

@@ -5,9 +5,10 @@ import type { Creature, DraftCombatant, Player } from "../../types";
 import { EncounterAddCombatantDialog } from "./EncounterAddCombatantDialog";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
 import {
-  EncounterEditNav,
+  EncounterDetailsSection,
+  EncounterNotesSection,
   EncounterRosterSections,
-  EncounterSummaryPanel,
+  EncounterRunningSection,
 } from "./EncounterEditorSections";
 import { CombatantList } from "./editorComponents";
 
@@ -27,7 +28,7 @@ describe("Encounter edit workflow polish", () => {
     expect(screen.getByText("Crossed")).toBeTruthy();
   });
 
-  it("renders richer combatant rows with portraits, stats, role, and contextual actions", () => {
+  it("renders compact combatant rows with identity, stats, and contextual actions", () => {
     const onEdit = vi.fn();
     const onRemove = vi.fn();
     const { container } = render(
@@ -43,10 +44,8 @@ describe("Encounter edit workflow polish", () => {
     expect(container.querySelector("img")).toBeTruthy();
     expect(screen.getByText("Goblin Captain")).toBeTruthy();
     expect(screen.getByText("AC 15")).toBeTruthy();
-    expect(screen.getByText("HP 7/7")).toBeTruthy();
-    expect(screen.getByText("CR 1/4")).toBeTruthy();
-    expect(screen.getByText("Qty 1")).toBeTruthy();
-    expect(screen.getByText("Leader")).toBeTruthy();
+    expect(screen.getByText("HP 7 / 7")).toBeTruthy();
+    expect(screen.getByText(/Small.*goblinoid.*CR 1\/4/)).toBeTruthy();
 
     fireEvent.click(container.querySelector("summary") as HTMLElement);
     fireEvent.click(screen.getByRole("button", { name: "Edit" }));
@@ -58,27 +57,23 @@ describe("Encounter edit workflow polish", () => {
     );
   });
 
-  it("shows the edit workflow sections in the same order as the mockup", () => {
+  it("keeps the roster in one workspace and run actions in one review location", () => {
     const onAddAllPlayers = vi.fn();
     const onAddAlly = vi.fn();
     const onAddEnemy = vi.fn();
+    const onSaveAndRun = vi.fn();
+    const onSaveAndTest = vi.fn();
+    const meta = {
+      name: "Ambush at the Ford",
+      description: "Bandits wait below the bridge.",
+      status: "planned",
+      location: "Old Ford",
+      locationId: "loc-1",
+      roomNumber: "2",
+    };
 
     render(
       <>
-        <EncounterEditNav />
-        <EncounterSummaryPanel
-          createdAt="2026-07-03T10:00:00Z"
-          enemyCount={1}
-          meta={{
-            name: "Ambush at the Ford",
-            description: "",
-            status: "planned",
-            location: "Old Ford",
-            locationId: "loc-1",
-            roomNumber: "2",
-          }}
-          partyCount={1}
-        />
         <EncounterRosterSections
           availablePlayers={[player()]}
           enemyCombatants={[combatant()]}
@@ -91,20 +86,39 @@ describe("Encounter edit workflow polish", () => {
           onEdit={vi.fn()}
           onRemove={vi.fn()}
         />
+        <aside aria-label="Encounter review">
+          <EncounterDetailsSection meta={meta} onChange={vi.fn()} />
+          <EncounterNotesSection meta={meta} onChange={vi.fn()} />
+          <EncounterRunningSection
+            allyCount={0}
+            enemyCount={1}
+            partyCount={1}
+            saving={false}
+            onSaveAndRun={onSaveAndRun}
+            onSaveAndTest={onSaveAndTest}
+          />
+        </aside>
       </>,
     );
 
-    for (const label of ["Overview", "Party", "Allies", "Enemies", "Details", "Notes", "Running"]) {
-      expect(screen.getByRole("link", { name: new RegExp(label, "i") })).toBeTruthy();
-    }
-    expect(screen.getByText("Encounter summary")).toBeTruthy();
-    expect(screen.getByText("Old Ford")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Add all players" }));
+    expect(screen.queryByRole("navigation", { name: "Encounter sections" })).toBeNull();
+    expect(screen.getByText("Party (0)")).toBeTruthy();
+    expect(screen.getByText("Allies (0)")).toBeTruthy();
+    expect(screen.getByText("Enemies (1)")).toBeTruthy();
+    expect(screen.getByDisplayValue("Old Ford")).toBeTruthy();
+    expect(screen.getByText("Ready to run")).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /^Run encounter/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: "Test run" })).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Add player" }));
     fireEvent.click(screen.getByRole("button", { name: "Add ally" }));
     fireEvent.click(screen.getByRole("button", { name: "Add enemy" }));
+    fireEvent.click(screen.getByRole("button", { name: /^Run encounter/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Test run" }));
     expect(onAddAllPlayers).toHaveBeenCalled();
     expect(onAddAlly).toHaveBeenCalled();
     expect(onAddEnemy).toHaveBeenCalled();
+    expect(onSaveAndRun).toHaveBeenCalled();
+    expect(onSaveAndTest).toHaveBeenCalled();
   });
 
   it("supports searchable add enemy flow with preview and quantity stepper", () => {

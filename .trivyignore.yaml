@@ -1,0 +1,11 @@
+vulnerabilities:
+  - id: GHSA-qwww-vcr4-c8h2
+    paths:
+      - "frontend/package-lock.json"
+    purls:
+      - "pkg:npm/react-router@7.18.1"
+    statement: >-
+      bluDM is a client-rendered Vite SPA and does not use React Router RSC
+      mode or server actions. Remove this exception when a patched stable
+      React Router release is available.
+    expired_at: 2026-08-31

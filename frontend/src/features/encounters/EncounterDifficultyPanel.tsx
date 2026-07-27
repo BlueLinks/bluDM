@@ -1,26 +1,38 @@
-import { Skull } from "lucide-react";
+import { Shield, Skull } from "lucide-react";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
 
 export function EncounterDifficultyPanel({
   compact = false,
+  dense = false,
   difficulty,
 }: {
   compact?: boolean;
+  dense?: boolean;
   difficulty: ReturnType<typeof calculateEncounterDifficulty>;
 }) {
   const tone = difficultyTone(difficulty.label);
   const crossed = crossedThreshold(difficulty);
+  const Icon = dense ? Shield : Skull;
   return (
-    <section className="rounded-md border border-border bg-card">
+    <section
+      className={["rounded-md border border-border bg-card", dense ? "min-h-[4.5625rem]" : ""].join(
+        " ",
+      )}
+    >
       <div
         className={[
           "grid min-w-0 gap-0",
-          compact ? "sm:grid-cols-2" : "md:grid-cols-[1.15fr_repeat(5,minmax(0,0.8fr))]",
+          compact
+            ? "sm:grid-cols-2"
+            : dense
+              ? "md:grid-cols-[1.45fr_repeat(4,minmax(0,1fr))]"
+              : "md:grid-cols-[1.15fr_repeat(5,minmax(0,0.8fr))]",
         ].join(" ")}
       >
         <div
           className={[
-            "flex min-w-0 items-center gap-3 p-4",
+            "flex min-w-0 items-center gap-3",
+            dense ? "p-3.5" : compact ? "p-3" : "p-4",
             compact ? "sm:col-span-2" : "",
             tone.surface,
           ].join(" ")}
@@ -28,41 +40,61 @@ export function EncounterDifficultyPanel({
           <span
             className={[
               "grid shrink-0 place-items-center rounded-md border",
-              compact ? "h-9 w-9" : "h-10 w-10",
+              compact || dense ? "h-9 w-9" : "h-10 w-10",
               tone.icon,
             ].join(" ")}
           >
-            <Skull className="h-5 w-5" />
+            <Icon className="h-5 w-5" />
           </span>
           <div className="min-w-0">
             <h2 className="text-xs font-semibold uppercase text-muted-foreground">Difficulty</h2>
-            <div className={["text-lg font-semibold", tone.text].join(" ")}>{difficulty.label}</div>
-            <div className="text-xs text-muted-foreground">
-              Threshold: {crossed.value.toLocaleString()} XP
+            <div
+              className={[dense ? "text-base" : "text-lg", "font-semibold", tone.text].join(" ")}
+            >
+              {difficulty.label}
             </div>
+            {!dense ? (
+              <div className="text-xs text-muted-foreground">
+                Threshold: {crossed.value.toLocaleString()} XP
+              </div>
+            ) : null}
           </div>
         </div>
+        {dense ? (
+          <DifficultyMetric
+            dense
+            label="Threshold"
+            value={`${crossed.value.toLocaleString()} XP`}
+          />
+        ) : null}
         <DifficultyMetric
           compact={compact}
+          dense={dense}
           label="Enemy XP"
           value={difficulty.enemyXP.toLocaleString()}
         />
         <DifficultyMetric
           compact={compact}
+          dense={dense}
           label="Adjusted XP"
           value={difficulty.adjustedXP.toLocaleString()}
         />
         <DifficultyMetric
           compact={compact}
+          dense={dense}
           label="Multiplier"
           value={`${difficulty.multiplier}x`}
         />
-        <DifficultyMetric
-          compact={compact}
-          label="Threshold"
-          value={`${crossed.value.toLocaleString()} XP`}
-        />
-        <DifficultyMetric compact={compact} label="Crossed" value={crossed.label} />
+        {!dense ? (
+          <>
+            <DifficultyMetric
+              compact={compact}
+              label="Threshold"
+              value={`${crossed.value.toLocaleString()} XP`}
+            />
+            <DifficultyMetric compact={compact} label="Crossed" value={crossed.label} />
+          </>
+        ) : null}
       </div>
     </section>
   );
@@ -70,10 +102,12 @@ export function EncounterDifficultyPanel({
 
 function DifficultyMetric({
   compact = false,
+  dense = false,
   label,
   value,
 }: {
   compact?: boolean;
+  dense?: boolean;
   label: string;
   value: string;
 }) {
@@ -81,11 +115,15 @@ function DifficultyMetric({
     <div
       className={[
         "grid content-center border-t border-border",
-        compact ? "p-3 sm:border-l sm:border-t-0" : "p-4 md:border-l md:border-t-0",
+        compact
+          ? "p-[0.6875rem] sm:border-l sm:border-t-0"
+          : dense
+            ? "p-3 md:border-l md:border-t-0"
+            : "p-4 md:border-l md:border-t-0",
       ].join(" ")}
     >
       <div className="text-xs font-semibold uppercase text-muted-foreground">{label}</div>
-      <div className={["mt-1 font-semibold", compact ? "text-base" : "text-xl"].join(" ")}>
+      <div className={["mt-1 font-semibold", compact || dense ? "text-base" : "text-xl"].join(" ")}>
         {value}
       </div>
     </div>

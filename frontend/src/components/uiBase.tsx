@@ -15,13 +15,22 @@ export function Page({
   children,
   className = "",
   size = "default",
+  spacing = "default",
 }: {
   children: React.ReactNode;
   className?: string;
   size?: keyof typeof pageSizeClasses;
+  spacing?: "default" | "tight";
 }) {
   return (
-    <div className={["mx-auto grid w-full gap-6", pageSizeClasses[size], className].join(" ")}>
+    <div
+      className={[
+        "mx-auto grid w-full",
+        spacing === "tight" ? "gap-2" : "gap-6",
+        pageSizeClasses[size],
+        className,
+      ].join(" ")}
+    >
       {children}
     </div>
   );
@@ -381,16 +390,25 @@ export function Textarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
 export function Checkbox({
   label,
   checked,
+  compact = false,
   onChange,
 }: {
   label: string;
   checked: boolean;
+  compact?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm">
+    <label
+      className={[
+        "flex items-center",
+        compact
+          ? "gap-1.5 bg-transparent text-xs"
+          : "gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm",
+      ].join(" ")}
+    >
       <input
-        className="h-4 w-4 accent-primary"
+        className={compact ? "h-3.5 w-3.5 accent-primary" : "h-4 w-4 accent-primary"}
         checked={checked}
         type="checkbox"
         onChange={(event) => onChange(event.target.checked)}

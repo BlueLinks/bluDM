@@ -92,6 +92,9 @@ export function FieldGrid({
 const sidebarDetailClasses = {
   catalog: "grid lg:grid-cols-[250px_minmax(0,1fr)]",
   compact: "grid gap-4 xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] xl:items-stretch",
+  editor: "grid gap-2 xl:grid-cols-[minmax(0,1.29fr)_minmax(28rem,0.71fr)] xl:items-start",
+  initiative:
+    "grid gap-[1.125rem] xl:grid-cols-[minmax(0,1.435fr)_minmax(22rem,1fr)] xl:items-stretch",
   summary: "grid gap-4 xl:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] xl:items-start",
   workspace: "grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]",
 };

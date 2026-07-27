@@ -6,7 +6,10 @@ import (
 	"gorm.io/gorm"
 )
 
-var ErrNotFound = errors.New("not found")
+var (
+	ErrNotFound             = errors.New("not found")
+	ErrUnresolvedInitiative = errors.New("all combatants must have initiative before combat begins")
+)
 
 type Stores struct {
 	db           *gorm.DB

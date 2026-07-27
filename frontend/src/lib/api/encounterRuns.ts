@@ -17,10 +17,14 @@ export const encounterRunApi = {
       method: "POST",
       body: JSON.stringify({ sides }),
     }),
-  setInitiative: (runId: string, combatantId: string, initiative: number) =>
+  setInitiative: (runId: string, combatantId: string, initiative: number | null) =>
     request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/set-initiative`, {
       method: "POST",
       body: JSON.stringify({ combatantId, initiative }),
+    }),
+  clearInitiative: (runId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/clear-initiative`, {
+      method: "POST",
     }),
   reorderInitiative: (runId: string, combatantIds: string[]) =>
     request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/reorder-initiative`, {

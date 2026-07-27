@@ -5,13 +5,17 @@ import React from "react";
 const EMPTY_SELECT_VALUE = "__bludm_empty_select_value__";
 
 export function Select({
+  className = "",
   value,
   placeholder,
   options,
+  size = "md",
   onValueChange,
 }: {
+  className?: string;
   value: string;
   placeholder: string;
+  size?: "sm" | "md";
   options: Array<{
     label: string;
     value: string;
@@ -27,7 +31,13 @@ export function Select({
       value={value === "" ? EMPTY_SELECT_VALUE : value}
       onValueChange={(next) => onValueChange(next === EMPTY_SELECT_VALUE ? "" : next)}
     >
-      <SelectPrimitive.Trigger className="inline-flex min-h-10 w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-left text-sm text-surface-foreground outline-none ring-primary/30 transition hover:border-primary/20 hover:bg-card hover:text-foreground focus-visible:ring-2">
+      <SelectPrimitive.Trigger
+        className={[
+          "inline-flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-surface text-left text-sm text-surface-foreground outline-none ring-primary/30 transition hover:border-primary/20 hover:bg-card hover:text-foreground focus-visible:ring-2",
+          size === "sm" ? "min-h-8 px-2 py-1" : "min-h-10 px-3 py-2",
+          className,
+        ].join(" ")}
+      >
         <span className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
           {SelectedIcon && (
             <SelectedIcon
