@@ -72,9 +72,9 @@ export function EncounterInitiativePage() {
     }
   }
 
-  async function commitInitiative(combatant: EncounterRunCombatant) {
+  async function commitInitiative(combatant: EncounterRunCombatant, draft: string) {
     if (!runID) return;
-    const raw = (drafts[combatant.id] ?? "").trim();
+    const raw = draft.trim();
     if (raw === "") {
       if (combatant.initiativeSet) {
         await command(() => api.setInitiative(runID, combatant.id, null));

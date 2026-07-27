@@ -53,7 +53,7 @@ export function InitiativeEntryPanel({
   groups: InitiativeGroups;
   readyCount: number;
   onClear: () => void;
-  onCommit: (combatant: EncounterRunCombatant) => void;
+  onCommit: (combatant: EncounterRunCombatant, value: string) => void;
   onDraftChange: (id: string, value: string) => void;
   onRoll: (sides: Array<"friendly" | "enemy">) => void;
 }) {
@@ -221,7 +221,7 @@ function InitiativeGroup({
   drafts: InitiativeDrafts;
   rollAction?: ReactNode;
   onDraftChange: (id: string, value: string) => void;
-  onCommit: (combatant: EncounterRunCombatant) => void;
+  onCommit: (combatant: EncounterRunCombatant, value: string) => void;
 }) {
   return (
     <section
@@ -264,7 +264,7 @@ function InitiativeGroup({
               combatant={combatant}
               value={drafts[combatant.id] ?? ""}
               onChange={(value) => onDraftChange(combatant.id, value)}
-              onCommit={() => onCommit(combatant)}
+              onCommit={(value) => onCommit(combatant, value)}
               onReset={() =>
                 onDraftChange(
                   combatant.id,
@@ -289,7 +289,7 @@ function InitiativeInputRow({
   combatant: EncounterRunCombatant;
   value: string;
   onChange: (value: string) => void;
-  onCommit: () => void;
+  onCommit: (value: string) => void;
   onReset: () => void;
 }) {
   return (
@@ -318,12 +318,12 @@ function InitiativeInputRow({
           step={1}
           type="number"
           value={value}
-          onBlur={onCommit}
+          onBlur={(event) => onCommit(event.currentTarget.value)}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              onCommit();
+              onCommit(event.currentTarget.value);
             }
             if (event.key === "Escape") {
               event.preventDefault();
