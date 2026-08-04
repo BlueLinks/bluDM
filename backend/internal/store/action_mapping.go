@@ -20,6 +20,7 @@ func actionTemplateEntityFromInput(ownerUserID string, input ActionInput) dbmode
 		AOEType:         input.AOEType,
 		AOESize:         input.AOESize,
 		ActionType:      input.ActionType,
+		DisplaySection:  normalizedDisplaySection(input.DisplaySection),
 		AttackModifier:  input.AttackModifier,
 		MissEffect:      input.MissEffect,
 		HitSpecialEvent: input.HitSpecialEvent,
@@ -46,6 +47,7 @@ func creatureActionEntityFromInput(creatureID, sourceTemplateID string, sortOrde
 		AOEType:          input.AOEType,
 		AOESize:          input.AOESize,
 		ActionType:       input.ActionType,
+		DisplaySection:   normalizedDisplaySection(input.DisplaySection),
 		AttackModifier:   input.AttackModifier,
 		MissEffect:       input.MissEffect,
 		HitSpecialEvent:  input.HitSpecialEvent,
@@ -70,6 +72,7 @@ func actionTemplateFromEntity(entity dbmodels.ActionTemplateEntity) models.Actio
 		AOEType:         entity.AOEType,
 		AOESize:         entity.AOESize,
 		ActionType:      entity.ActionType,
+		DisplaySection:  normalizedDisplaySection(entity.DisplaySection),
 		AttackModifier:  entity.AttackModifier,
 		MissEffect:      entity.MissEffect,
 		HitSpecialEvent: entity.HitSpecialEvent,
@@ -100,6 +103,7 @@ func creatureActionFromEntity(entity dbmodels.CreatureActionEntity) models.Creat
 		AOEType:          entity.AOEType,
 		AOESize:          entity.AOESize,
 		ActionType:       entity.ActionType,
+		DisplaySection:   entity.DisplaySection,
 		AttackModifier:   entity.AttackModifier,
 		MissEffect:       entity.MissEffect,
 		HitSpecialEvent:  entity.HitSpecialEvent,
@@ -111,6 +115,15 @@ func creatureActionFromEntity(entity dbmodels.CreatureActionEntity) models.Creat
 		Rolls:            []models.ActionRollPart{},
 		CreatedAt:        entity.CreatedAt,
 		UpdatedAt:        entity.UpdatedAt,
+	}
+}
+
+func normalizedDisplaySection(value string) string {
+	switch strings.TrimSpace(value) {
+	case "trait", "action", "bonus_action", "reaction", "legendary_action", "mythic_action", "lair_action":
+		return strings.TrimSpace(value)
+	default:
+		return "action"
 	}
 }
 

@@ -10,12 +10,13 @@ import (
 	"testing"
 	"time"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/config"
 	"bludm/backend/internal/store"
 )
 
 func TestExternalMarkdownWorldPreviewImportAndStableUpdate(t *testing.T) {
-	_, stores := newImportExportArchiveTestStores(t)
+	db, stores := newImportExportArchiveTestStores(t)
 	ctx := context.Background()
 	owner, err := stores.Auth.CreateUser(ctx, uniqueArchiveEmail("markdown-world-api"), "hash")
 	requireArchiveNoError(t, err)
@@ -32,6 +33,7 @@ func TestExternalMarkdownWorldPreviewImportAndStableUpdate(t *testing.T) {
 	requireArchiveNoError(t, err)
 	server := &Server{
 		cfg: config.Config{PublicAppURL: "http://example.test"}, stores: stores,
+		app: appdomain.NewService(db, "http://example.test"),
 		log: slog.New(slog.NewTextHandler(io.Discard, nil)),
 	}
 	payload := markdownWorldRequest{
@@ -103,5 +105,45 @@ map:
 		secondBody.Import.NPCs[0].Creature.ID != npcID ||
 		secondBody.Import.Dungeons[0].Location.ID != dungeonID {
 		t.Fatalf("expected stable update, got %d %+v", second.Code, secondBody.Import)
+	}
+
+	scopedSecret := apiTokenPrefix + strings.Repeat("d", 32)
+	_, err = stores.Auth.CreateScopedAPIToken(ctx, store.APITokenCreateInput{
+		UserID: owner.ID, Name: "Scoped world bridge", TokenHash: hashToken(scopedSecret),
+		TokenPrefix: scopedSecret[:displayedTokenLength],
+		Scopes: []string{
+			string(appdomain.ScopeContentImport), string(appdomain.ScopeWorldWrite),
+			string(appdomain.ScopeLibraryWrite), string(appdomain.ScopeEncountersWrite),
+		},
+		CampaignRestrictionMode: "all", AuthenticationVersion: 2, ExpiresAt: &expiresAt,
+	})
+	requireArchiveNoError(t, err)
+	scopedPayload := markdownWorldRequest{
+		SourcePath: "Locations/Scoped Tower.md",
+		Markdown: "```bludm-npc\n" + `version: 1
+id: scoped-keeper
+name: Scoped Keeper
+armor_class: 12
+hit_points: 18
+` + "```\n",
+	}
+	scopedFirst := serveMarkdownAPIRequest(
+		t, server, scopedSecret, http.MethodPost,
+		"/api/external/v1/campaigns/"+campaign.ID+"/content/markdown/import", scopedPayload,
+	)
+	scopedSecond := serveMarkdownAPIRequest(
+		t, server, scopedSecret, http.MethodPost,
+		"/api/external/v1/campaigns/"+campaign.ID+"/content/markdown/import", scopedPayload,
+	)
+	var scopedFirstBody, scopedSecondBody struct {
+		Import appdomain.WorldMarkdownImportResult `json:"import"`
+	}
+	requireArchiveNoError(t, json.Unmarshal(scopedFirst.Body.Bytes(), &scopedFirstBody))
+	requireArchiveNoError(t, json.Unmarshal(scopedSecond.Body.Bytes(), &scopedSecondBody))
+	if scopedFirst.Code != http.StatusCreated || scopedSecond.Code != http.StatusCreated ||
+		scopedFirstBody.Import.IdempotencyReplay || !scopedSecondBody.Import.IdempotencyReplay ||
+		scopedFirstBody.Import.NPCs[0].Creature.ID != scopedSecondBody.Import.NPCs[0].Creature.ID ||
+		scopedSecondBody.Import.NPCs[0].Operation != "create" {
+		t.Fatalf("scoped world import was not replay-safe: first=%+v second=%+v", scopedFirstBody, scopedSecondBody)
 	}
 }

@@ -85,6 +85,11 @@ func (s EncounterStore) ImportMarkdown(
 					return err
 				}
 			}
+			if err := recordEncounterRevision(
+				ctx, tx, entity, ownerUserID, "Markdown encounter "+operation,
+			); err != nil {
+				return err
+			}
 			pending = append(pending, pendingResult{id: entity.ID, operation: operation})
 		}
 		return nil
@@ -141,10 +146,14 @@ func upsertMarkdownEncounterTx(
 		First(&entity).Error
 	operation := "update"
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		entity = dbmodels.EncounterEntity{CampaignID: strings.TrimSpace(campaignID)}
+		entity = dbmodels.EncounterEntity{
+			CampaignID: strings.TrimSpace(campaignID), Revision: 1,
+		}
 		operation = "create"
 	} else if err != nil {
 		return dbmodels.EncounterEntity{}, "", err
+	} else {
+		entity.Revision++
 	}
 
 	if input.Encounter.LocationID != "" {

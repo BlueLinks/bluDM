@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/models"
 	"bludm/backend/internal/store"
 )
@@ -12,7 +13,7 @@ import (
 const markdownEncounterRequestLimit = 6 << 20
 
 func (s *Server) previewMarkdownEncounters(w http.ResponseWriter, r *http.Request) {
-	request, ok := decodeMarkdownEncounterRequest(w, r)
+	request, ok := s.decodeMarkdownEncounterRequest(w, r)
 	if !ok {
 		return
 	}
@@ -22,35 +23,50 @@ func (s *Server) previewMarkdownEncounters(w http.ResponseWriter, r *http.Reques
 		request,
 	)
 	if err != nil {
-		writeMarkdownPreparationError(w, err)
+		s.writeMarkdownPreparationError(w, r, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"preview": prepared.Preview})
 }
 
 func (s *Server) importMarkdownEncounters(w http.ResponseWriter, r *http.Request) {
-	request, ok := decodeMarkdownEncounterRequest(w, r)
+	request, ok := s.decodeMarkdownEncounterRequest(w, r)
 	if !ok {
 		return
 	}
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
 	prepared, err := s.prepareMarkdownImport(r.Context(), campaignID, request)
 	if err != nil {
-		writeMarkdownPreparationError(w, err)
+		s.writeMarkdownPreparationError(w, r, err)
 		return
 	}
 	if !prepared.Preview.CanImport {
+		if isExternalRequest(r) {
+			writeExternalError(w, r, appdomain.NewError(
+				appdomain.CodeUnsupported, "Markdown preview contains blocking errors",
+				map[string]any{"preview": prepared.Preview},
+			))
+			return
+		}
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
 			"error":   "Markdown preview contains blocking errors",
 			"preview": prepared.Preview,
 		})
 		return
 	}
+	if isScopedExternalRequest(r) {
+		result, err := s.app.ImportMarkdownEncounters(
+			r.Context(), campaignID, idempotencyKey(r, ""), prepared.Inputs,
+		)
+		if err != nil {
+			writeExternalError(w, r, err)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"import": result, "preview": prepared.Preview})
+		return
+	}
 	results, err := s.stores.Encounters.ImportMarkdown(
-		r.Context(),
-		currentUserIDMust(r.Context()),
-		campaignID,
-		prepared.Inputs,
+		r.Context(), currentUserIDMust(r.Context()), campaignID, prepared.Inputs,
 	)
 	if err != nil {
 		if store.IsNotFound(err) {
@@ -75,31 +91,62 @@ func (s *Server) importMarkdownEncounters(w http.ResponseWriter, r *http.Request
 }
 
 func (s *Server) listExternalCampaigns(w http.ResponseWriter, r *http.Request) {
-	campaigns, err := s.stores.Campaigns.List(r.Context(), currentUserIDMust(r.Context()))
+	campaigns, err := s.app.ListCampaigns(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not list campaigns")
+		writeExternalError(w, r, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"campaigns": campaigns})
+	start, end, page, err := pageBounds(r, len(campaigns))
+	if err != nil {
+		writeExternalError(w, r, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"campaigns": campaigns[start:end],
+		"page":      page,
+	})
 }
 
-func decodeMarkdownEncounterRequest(
+func (s *Server) decodeMarkdownEncounterRequest(
 	w http.ResponseWriter,
 	r *http.Request,
 ) (markdownEncounterRequest, bool) {
-	r.Body = http.MaxBytesReader(w, r.Body, markdownEncounterRequestLimit)
 	var request markdownEncounterRequest
-	if !decodeJSON(w, r, &request) {
+	ok := false
+	if isExternalRequest(r) {
+		ok = decodeExternalJSONLimit(w, r, &request, markdownEncounterRequestLimit)
+	} else {
+		r.Body = http.MaxBytesReader(w, r.Body, markdownEncounterRequestLimit)
+		ok = decodeJSON(w, r, &request)
+	}
+	if !ok {
 		return markdownEncounterRequest{}, false
 	}
 	if strings.TrimSpace(request.Markdown) == "" {
-		writeError(w, http.StatusBadRequest, "markdown is required")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, appdomain.ValidationError("missing_markdown", "markdown is required", nil))
+		} else {
+			writeError(w, http.StatusBadRequest, "markdown is required")
+		}
 		return markdownEncounterRequest{}, false
 	}
 	return request, true
 }
 
-func writeMarkdownPreparationError(w http.ResponseWriter, err error) {
+func (s *Server) writeMarkdownPreparationError(w http.ResponseWriter, r *http.Request, err error) {
+	if isExternalRequest(r) {
+		if store.IsNotFound(err) {
+			writeExternalError(w, r, appdomain.NewError(appdomain.CodeNotFound, "campaign not found", nil))
+			return
+		}
+		if errors.Is(err, errInvalidMarkdownEncounter) {
+			message := strings.TrimSpace(strings.TrimPrefix(err.Error(), errInvalidMarkdownEncounter.Error()+":"))
+			writeExternalError(w, r, appdomain.ValidationError("invalid_markdown", message, nil))
+			return
+		}
+		writeExternalError(w, r, err)
+		return
+	}
 	if store.IsNotFound(err) {
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return

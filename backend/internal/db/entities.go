@@ -208,6 +208,7 @@ type ActionTemplateEntity struct {
 	AOEType         string  `gorm:"column:aoe_type;not null;default:''"`
 	AOESize         int     `gorm:"column:aoe_size;not null;default:0"`
 	ActionType      string  `gorm:"not null;default:'melee_weapon'"`
+	DisplaySection  string  `gorm:"not null;default:'action'"`
 	AttackModifier  int     `gorm:"not null;default:0"`
 	MissEffect      string  `gorm:"not null;default:'none'"`
 	HitSpecialEvent string  `gorm:"not null;default:'none'"`
@@ -251,6 +252,7 @@ type CreatureActionEntity struct {
 	AOEType          string  `gorm:"column:aoe_type;not null;default:''"`
 	AOESize          int     `gorm:"column:aoe_size;not null;default:0"`
 	ActionType       string  `gorm:"not null;default:'melee_weapon'"`
+	DisplaySection   string  `gorm:"not null;default:'action'"`
 	AttackModifier   int     `gorm:"not null;default:0"`
 	MissEffect       string  `gorm:"not null;default:'none'"`
 	HitSpecialEvent  string  `gorm:"not null;default:'none'"`
@@ -349,6 +351,7 @@ type EncounterEntity struct {
 	LootNotes         string  `gorm:"not null;default:''"`
 	BackgroundAssetID *string `gorm:"type:uuid"`
 	Metadata          JSONMap `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
+	Revision          int     `gorm:"not null;default:1"`
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 }

@@ -12,11 +12,18 @@ import {
 } from "../components/ui";
 import { api } from "../lib/api";
 import type { APIToken } from "../lib/api/apiTokens";
+import type { Campaign } from "../types";
+import { APITokenAccessFields, tokenPresets } from "./APITokenAccessFields";
 
 export function APITokenSettings() {
   const [tokens, setTokens] = useState<APIToken[]>([]);
-  const [name, setName] = useState("Obsidian Vault bridge");
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [name, setName] = useState("Codex read-only");
   const [expiryDays, setExpiryDays] = useState("90");
+  const [preset, setPreset] = useState<keyof typeof tokenPresets>("read_only");
+  const [scopes, setScopes] = useState<string[]>([...tokenPresets.read_only]);
+  const [campaignMode, setCampaignMode] = useState<"all" | "selected">("all");
+  const [campaignIds, setCampaignIds] = useState<string[]>([]);
   const [secret, setSecret] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -35,6 +42,12 @@ export function APITokenSettings() {
           setError(err instanceof Error ? err.message : "Could not load API tokens");
         }
       });
+    void api
+      .campaigns()
+      .then((payload) => {
+        if (!cancelled) setCampaigns(payload.campaigns);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
@@ -46,7 +59,11 @@ export function APITokenSettings() {
     setMessage("");
     setSecret("");
     try {
-      const payload = await api.createAPIToken(name, Number(expiryDays));
+      const payload = await api.createAPIToken(name, Number(expiryDays), {
+        scopes,
+        campaignRestrictionMode: campaignMode,
+        allowedCampaignIds: campaignMode === "selected" ? campaignIds : [],
+      });
       setTokens((current) => [payload.token, ...current]);
       setSecret(payload.secret);
       setMessage("Token created. Copy it now; bluDM will not show it again.");
@@ -112,11 +129,27 @@ export function APITokenSettings() {
               />
             </Field>
           </ResponsiveGrid>
+          <APITokenAccessFields
+            preset={preset}
+            scopes={scopes}
+            campaignMode={campaignMode}
+            campaigns={campaigns}
+            campaignIds={campaignIds}
+            onPresetChange={setPreset}
+            onScopesChange={setScopes}
+            onCampaignModeChange={setCampaignMode}
+            onCampaignIdsChange={setCampaignIds}
+          />
           <ActionRow>
             <Button
               type="button"
               icon={Plus}
-              disabled={busy || !name.trim()}
+              disabled={
+                busy ||
+                !name.trim() ||
+                scopes.length === 0 ||
+                (campaignMode === "selected" && campaignIds.length === 0)
+              }
               onClick={() => void createToken()}
             >
               Create token
@@ -177,6 +210,20 @@ function APITokenRow({ token, onRevoke }: { token: APIToken; onRevoke: () => voi
           <code>{token.tokenPrefix}…</code> · expires {formatTokenDate(token.expiresAt)}
           {token.lastUsedAt ? ` · last used ${formatTokenDate(token.lastUsedAt)}` : " · never used"}
         </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {token.authenticationVersion < 2 || token.campaignRestrictionMode === "legacy_all"
+            ? "Legacy token · existing bridge access only · MCP writes disabled"
+            : `${token.scopes.length} capabilities · ${
+                token.campaignRestrictionMode === "selected"
+                  ? `${token.allowedCampaignIds.length} selected campaigns`
+                  : "all campaigns"
+              }`}
+        </div>
+        {token.authenticationVersion >= 2 && token.campaignRestrictionMode !== "legacy_all" && (
+          <div className="mt-1 break-words text-xs text-muted-foreground">
+            Scopes: {token.scopes.join(", ")}
+          </div>
+        )}
       </div>
       <Button type="button" icon={Trash2} size="sm" variant="danger" onClick={onRevoke}>
         Revoke

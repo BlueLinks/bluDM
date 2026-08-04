@@ -101,6 +101,13 @@ func TestAPITokensStoreOnlyHashesAndEnforceExpiry(t *testing.T) {
 	if authenticated.ID != owner.ID {
 		t.Fatalf("expected token owner, got %+v", authenticated)
 	}
+	legacyAuthentication, err := stores.Auth.AuthenticateAPIToken(ctx, "hashed-secret")
+	requireNoError(t, err)
+	if legacyAuthentication.Token.AuthenticationVersion != 1 ||
+		legacyAuthentication.Token.CampaignRestrictionMode != "legacy_all" ||
+		len(legacyAuthentication.Token.Scopes) != 0 {
+		t.Fatalf("existing-style token silently gained scoped access: %+v", legacyAuthentication.Token)
+	}
 
 	expired := time.Now().Add(-time.Hour)
 	_, err = stores.Auth.CreateAPIToken(
@@ -114,5 +121,37 @@ func TestAPITokensStoreOnlyHashesAndEnforceExpiry(t *testing.T) {
 	requireNoError(t, err)
 	if _, err := stores.Auth.UserByAPITokenHash(ctx, "expired-hash"); !IsNotFound(err) {
 		t.Fatalf("expected expired token to be rejected, got %v", err)
+	}
+}
+
+func TestScopedAPITokensKeepCampaignRestrictionsAndSoftRevocation(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+	owner, err := stores.Auth.CreateUser(ctx, uniqueEmail("scoped-token-owner"), "hash")
+	requireNoError(t, err)
+	allowed, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Allowed"})
+	requireNoError(t, err)
+
+	expiresAt := time.Now().Add(time.Hour)
+	token, err := stores.Auth.CreateScopedAPIToken(ctx, APITokenCreateInput{
+		UserID: owner.ID, Name: "Encounter builder", TokenHash: "scoped-token-hash",
+		TokenPrefix: "bludm_v1_scoped", Scopes: []string{"campaigns:read", "encounters:write"},
+		CampaignRestrictionMode: "selected", AllowedCampaignIDs: []string{allowed.ID},
+		AuthenticationVersion: 2, ExpiresAt: &expiresAt,
+	})
+	requireNoError(t, err)
+	if token.AuthenticationVersion != 2 || len(token.AllowedCampaignIDs) != 1 ||
+		token.AllowedCampaignIDs[0] != allowed.ID {
+		t.Fatalf("unexpected scoped token: %+v", token)
+	}
+	authenticated, err := stores.Auth.AuthenticateAPIToken(ctx, "scoped-token-hash")
+	requireNoError(t, err)
+	if len(authenticated.Token.Scopes) != 2 ||
+		authenticated.Token.CampaignRestrictionMode != "selected" {
+		t.Fatalf("unexpected authentication result: %+v", authenticated.Token)
+	}
+	requireNoError(t, stores.Auth.DeleteAPIToken(ctx, owner.ID, token.ID))
+	if _, err := stores.Auth.AuthenticateAPIToken(ctx, "scoped-token-hash"); !IsNotFound(err) {
+		t.Fatalf("expected revoked token to be denied, got %v", err)
 	}
 }

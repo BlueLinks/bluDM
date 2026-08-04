@@ -22,6 +22,7 @@ type Config struct {
 	PublicAppURL     string
 	LocalAuthEnabled bool
 	OAuth            OAuthConfig
+	MCP              MCPConfig
 	SessionLifetime  time.Duration
 }
 
@@ -33,6 +34,20 @@ type OAuthConfig struct {
 type OAuthProviderConfig struct {
 	ClientID     string
 	ClientSecret string
+}
+
+type MCPConfig struct {
+	ResourceURL                 string
+	OIDCIssuer                  string
+	OIDCAudience                string
+	OIDCEnabled                 bool
+	TrustForwardedHeaders       bool
+	MaxRequestBytes             int64
+	ToolExecutionTimeout        time.Duration
+	ReadRequestsPerMinute       int
+	WriteRequestsPerMinute      int
+	GenerationRequestsPerMinute int
+	AuthFailuresPerMinute       int
 }
 
 func Load() (Config, error) {
@@ -57,7 +72,23 @@ func Load() (Config, error) {
 				ClientSecret: env("OAUTH_DISCORD_CLIENT_SECRET", ""),
 			},
 		},
+		MCP: MCPConfig{
+			ResourceURL:                 strings.TrimRight(env("MCP_RESOURCE_URL", ""), "/"),
+			OIDCIssuer:                  strings.TrimRight(env("MCP_OIDC_ISSUER", ""), "/"),
+			OIDCAudience:                env("MCP_OIDC_AUDIENCE", ""),
+			OIDCEnabled:                 envBool("MCP_OIDC_ENABLED", false),
+			TrustForwardedHeaders:       envBool("TRUST_FORWARDED_HEADERS", false),
+			MaxRequestBytes:             int64(envInt("MCP_MAX_REQUEST_BYTES", 4<<20)),
+			ToolExecutionTimeout:        time.Duration(envInt("MCP_TOOL_TIMEOUT_SECONDS", 60)) * time.Second,
+			ReadRequestsPerMinute:       envInt("MCP_READ_REQUESTS_PER_MINUTE", 240),
+			WriteRequestsPerMinute:      envInt("MCP_WRITE_REQUESTS_PER_MINUTE", 60),
+			GenerationRequestsPerMinute: envInt("MCP_GENERATION_REQUESTS_PER_MINUTE", 20),
+			AuthFailuresPerMinute:       envInt("MCP_AUTH_FAILURES_PER_MINUTE", 20),
+		},
 		SessionLifetime: 30 * 24 * time.Hour,
+	}
+	if cfg.MCP.ResourceURL == "" {
+		cfg.MCP.ResourceURL = cfg.PublicAppURL + "/mcp"
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -68,6 +99,14 @@ func Load() (Config, error) {
 	}
 	if cfg.AdminEmail != "" && len(cfg.AdminPassword) < 12 {
 		return Config{}, errors.New("ADMIN_PASSWORD must be at least 12 characters when ADMIN_EMAIL is set")
+	}
+	if cfg.MCP.OIDCEnabled && (cfg.MCP.OIDCIssuer == "" || cfg.MCP.OIDCAudience == "") {
+		return Config{}, errors.New("MCP_OIDC_ISSUER and MCP_OIDC_AUDIENCE are required when MCP_OIDC_ENABLED is true")
+	}
+	if cfg.MCP.OIDCEnabled &&
+		(!strings.HasPrefix(cfg.PublicAppURL, "https://") ||
+			!strings.HasPrefix(cfg.MCP.ResourceURL, "https://")) {
+		return Config{}, errors.New("PUBLIC_APP_URL and MCP_RESOURCE_URL must use HTTPS when MCP_OIDC_ENABLED is true")
 	}
 
 	return cfg, nil
@@ -115,6 +154,18 @@ func envBool(key string, fallback bool) bool {
 	}
 	parsed, err := strconv.ParseBool(value)
 	if err != nil {
+		return fallback
+	}
+	return parsed
+}
+
+func envInt(key string, fallback int) int {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback
+	}
+	parsed, err := strconv.Atoi(value)
+	if err != nil || parsed < 1 {
 		return fallback
 	}
 	return parsed

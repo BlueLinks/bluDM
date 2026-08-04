@@ -1,11 +1,19 @@
 package httpapi
 
-import "net/http"
+import (
+	"net/http"
+
+	appdomain "bludm/backend/internal/app"
+)
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", s.health)
+	mux.HandleFunc("GET /mcp/health", s.mcpHealth)
+	mux.Handle("POST /mcp", s.external(s.mcpHandler))
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource", s.oauthProtectedResourceMetadata)
+	mux.HandleFunc("GET /.well-known/oauth-protected-resource/mcp", s.oauthProtectedResourceMetadata)
 	mux.HandleFunc("GET /api/auth/status", s.authStatus)
 	mux.HandleFunc("GET /api/auth/providers", s.authProviders)
 	mux.HandleFunc("GET /api/auth/{provider}/start", s.oauthStart)
@@ -21,6 +29,9 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /api/auth/api-tokens", s.requireAuth(http.HandlerFunc(s.listAPITokens)))
 	mux.Handle("POST /api/auth/api-tokens", s.requireAuth(http.HandlerFunc(s.createAPIToken)))
 	mux.Handle("DELETE /api/auth/api-tokens/{tokenID}", s.requireAuth(http.HandlerFunc(s.deleteAPIToken)))
+	mux.Handle("GET /api/auth/oidc-links", s.requireAuth(http.HandlerFunc(s.listOIDCLinks)))
+	mux.Handle("POST /api/auth/oidc-links", s.requireAuth(http.HandlerFunc(s.createOIDCLink)))
+	mux.Handle("DELETE /api/auth/oidc-links/{linkID}", s.requireAuth(http.HandlerFunc(s.deleteOIDCLink)))
 	mux.Handle("GET /api/auth/{provider}/link/start", s.requireAuth(http.HandlerFunc(s.oauthLinkStart)))
 	mux.Handle("DELETE /api/auth/identities/{provider}", s.requireAuth(http.HandlerFunc(s.unlinkOAuthIdentity)))
 	mux.Handle("DELETE /api/auth/account", s.requireAuth(http.HandlerFunc(s.deleteAccount)))
@@ -162,14 +173,75 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("POST /api/encounter-runs/{runID}/commands/undo", s.requireAuth(http.HandlerFunc(s.undoCommand)))
 	mux.Handle("POST /api/encounter-runs/{runID}/end", s.requireAuth(http.HandlerFunc(s.endEncounterRun)))
 	mux.Handle("POST /api/dev/seed-test-data", s.requireAuth(http.HandlerFunc(s.seedTestData)))
-	mux.Handle("GET /api/external/v1/campaigns", s.requireExternalAuth(http.HandlerFunc(s.listExternalCampaigns)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/markdown/preview", s.requireExternalAuth(http.HandlerFunc(s.previewMarkdownEncounters)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/markdown/import", s.requireExternalAuth(http.HandlerFunc(s.importMarkdownEncounters)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/generation/encounter-preview", s.requireExternalAuth(http.HandlerFunc(s.previewGeneratedEncounter)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/generation/dungeon-preview", s.requireExternalAuth(http.HandlerFunc(s.previewGeneratedDungeon)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/markdown/preview", s.requireExternalAuth(http.HandlerFunc(s.previewMarkdownWorld)))
-	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/markdown/import", s.requireExternalAuth(http.HandlerFunc(s.importMarkdownWorld)))
-	mux.Handle("GET /api/external/v1/encounters/{encounterID}/markdown", s.requireExternalAuth(http.HandlerFunc(s.exportEncounterMarkdown)))
+	mux.Handle("GET /api/external/v1/campaigns", s.externalWithScopes(http.HandlerFunc(s.listExternalCampaigns), appdomain.ScopeCampaignsRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}", s.externalWithScopes(http.HandlerFunc(s.externalCampaignContext), appdomain.ScopeCampaignsRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/players", s.externalWithScopes(http.HandlerFunc(s.externalListPlayers), appdomain.ScopePartyRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/players/{playerID}", s.externalWithScopes(http.HandlerFunc(s.externalGetPlayer), appdomain.ScopePartyRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/locations", s.externalWithScopes(http.HandlerFunc(s.externalListLocations), appdomain.ScopeWorldRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/locations/{locationID}", s.externalWithScopes(http.HandlerFunc(s.externalGetLocation), appdomain.ScopeWorldRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/world-graph", s.externalWithScopes(http.HandlerFunc(s.externalWorldGraph), appdomain.ScopeWorldRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters", s.externalWithScopes(http.HandlerFunc(s.externalListEncounters), appdomain.ScopeEncountersRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}", s.externalWithScopes(http.HandlerFunc(s.externalGetEncounter), appdomain.ScopeEncountersRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/creatures", s.externalWithScopes(http.HandlerFunc(s.externalSearchCreatures), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/creatures/{creatureID}", s.externalWithScopes(http.HandlerFunc(s.externalGetCreature), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/entries", s.externalWithScopes(http.HandlerFunc(s.externalSearchLibrary), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/entries/{entryID}", s.externalWithScopes(http.HandlerFunc(s.externalGetLibraryEntry), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/search", s.externalWithScopes(http.HandlerFunc(s.externalSearchCampaignContent), appdomain.ScopeCampaignsRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/prep-gaps", s.externalWithScopes(http.HandlerFunc(s.externalPrepGaps), appdomain.ScopeCampaignsRead, appdomain.ScopeWorldRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/generation/encounter-evaluation", s.externalWithScopes(http.HandlerFunc(s.externalEvaluateEncounter), appdomain.ScopeGenerationRun))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/generate", s.externalWithScopes(http.HandlerFunc(s.externalGenerateEncounter), appdomain.ScopeEncountersWrite, appdomain.ScopeGenerationRun))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters", s.externalWithScopes(http.HandlerFunc(s.externalCreateEncounter), appdomain.ScopeEncountersWrite))
+	mux.Handle("PATCH /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}", s.externalWithScopes(http.HandlerFunc(s.externalUpdateEncounter), appdomain.ScopeEncountersWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/regenerate", s.externalWithScopes(http.HandlerFunc(s.externalRegenerateEncounter), appdomain.ScopeEncountersWrite, appdomain.ScopeGenerationRun))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/revisions", s.externalWithScopes(http.HandlerFunc(s.externalListEncounterRevisions), appdomain.ScopeEncountersRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/revisions/{revision}/restore", s.externalWithScopes(http.HandlerFunc(s.externalRestoreEncounterRevision), appdomain.ScopeEncountersWrite))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/creatures/{creatureID}/exports/fantasy-statblocks", s.externalWithScopes(http.HandlerFunc(s.externalCreatureStatblock), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/library/creatures/{creatureID}/exports/fantasy-statblocks/compatibility", s.externalWithScopes(http.HandlerFunc(s.externalCreatureStatblockCompatibility), appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/exports/fantasy-statblocks", s.externalWithScopes(http.HandlerFunc(s.externalEncounterStatblocks), appdomain.ScopeEncountersRead, appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/exports/fantasy-statblocks/compatibility", s.externalWithScopes(http.HandlerFunc(s.externalEncounterCompatibility), appdomain.ScopeEncountersRead, appdomain.ScopeLibraryRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/encounters/{encounterID}/exports/obsidian-bundle", s.externalWithScopes(http.HandlerFunc(s.externalEncounterStatblocks), appdomain.ScopeEncountersRead, appdomain.ScopeLibraryRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/locations", s.externalWithScopes(http.HandlerFunc(s.externalCreateLocation), appdomain.ScopeWorldWrite))
+	mux.Handle("PATCH /api/external/v1/campaigns/{campaignID}/locations/{locationID}", s.externalWithScopes(http.HandlerFunc(s.externalUpdateLocation), appdomain.ScopeWorldWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/npcs", s.externalWithScopes(http.HandlerFunc(s.externalCreateNPC), appdomain.ScopeLibraryWrite))
+	mux.Handle("PATCH /api/external/v1/campaigns/{campaignID}/npcs/{npcID}", s.externalWithScopes(http.HandlerFunc(s.externalUpdateNPC), appdomain.ScopeLibraryWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/npc-location-links", s.externalWithScopes(http.HandlerFunc(s.externalLinkNPC), appdomain.ScopeWorldWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/location-links", s.externalWithScopes(http.HandlerFunc(s.externalCreateLocationLink), appdomain.ScopeWorldWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/roll-tables", s.externalWithScopes(http.HandlerFunc(s.externalCreateRollTable), appdomain.ScopeWorldWrite))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/roll-tables", s.externalWithScopes(http.HandlerFunc(s.externalListRollTables), appdomain.ScopeWorldRead))
+	mux.Handle("PATCH /api/external/v1/campaigns/{campaignID}/roll-tables/{tableID}", s.externalWithScopes(http.HandlerFunc(s.externalUpdateRollTable), appdomain.ScopeWorldWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/roll-tables/{tableID}/roll", s.externalWithScopes(http.HandlerFunc(s.externalRollOnTable), appdomain.ScopeWorldRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/travel/calculate", s.externalWithScopes(http.HandlerFunc(s.externalCalculateTravel), appdomain.ScopeWorldRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/journeys", s.externalWithScopes(http.HandlerFunc(s.externalCreateJourney), appdomain.ScopeWorldWrite))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/dungeons/preview", s.externalWithScopes(http.HandlerFunc(s.externalDungeonPreview), appdomain.ScopeWorldRead, appdomain.ScopeGenerationRun))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/dungeons", s.externalWithScopes(http.HandlerFunc(s.externalSaveDungeon), appdomain.ScopeWorldWrite, appdomain.ScopeGenerationRun))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/completed-runs/{runID}", s.externalWithScopes(http.HandlerFunc(s.externalCompletedRun), appdomain.ScopeSessionsRead))
+	mux.Handle("GET /api/external/v1/campaigns/{campaignID}/continuity", s.externalWithScopes(http.HandlerFunc(s.externalContinuityContext), appdomain.ScopeCampaignsRead, appdomain.ScopeWorldRead, appdomain.ScopeEncountersRead, appdomain.ScopeSessionsRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/shop-stock/preview", s.externalWithScopes(http.HandlerFunc(s.externalPreviewShopStock), appdomain.ScopeWorldWrite, appdomain.ScopeLibraryRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/shop-stock/apply", s.externalWithScopes(http.HandlerFunc(s.externalApplyShopStock), appdomain.ScopeWorldWrite, appdomain.ScopeLibraryRead))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/changes/preview", s.externalWithScopes(http.HandlerFunc(s.externalPreviewChanges), appdomain.ScopeContentImport))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/changes/apply", s.externalWithScopes(http.HandlerFunc(s.externalApplyChanges), appdomain.ScopeContentImport))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/markdown/preview", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.previewMarkdownEncounters), appdomain.ScopeContentImport,
+	)))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/encounters/markdown/import", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.importMarkdownEncounters), appdomain.ScopeContentImport, appdomain.ScopeEncountersWrite,
+	)))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/generation/encounter-preview", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.previewGeneratedEncounter), appdomain.ScopeGenerationRun,
+	)))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/generation/dungeon-preview", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.previewGeneratedDungeon), appdomain.ScopeGenerationRun,
+	)))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/markdown/preview", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.previewMarkdownWorld), appdomain.ScopeContentImport,
+	)))
+	mux.Handle("POST /api/external/v1/campaigns/{campaignID}/content/markdown/import", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.importMarkdownWorld), appdomain.ScopeContentImport,
+		appdomain.ScopeWorldWrite, appdomain.ScopeLibraryWrite, appdomain.ScopeEncountersWrite,
+	)))
+	mux.Handle("GET /api/external/v1/encounters/{encounterID}/markdown", s.external(s.withExternalAuthorization(
+		http.HandlerFunc(s.exportEncounterMarkdown), appdomain.ScopeEncountersRead,
+	)))
 
 	return s.withCSRF(withJSON(withRecover(s.log, mux)))
 }

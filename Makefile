@@ -44,11 +44,14 @@ verify-docker:
 	docker compose config
 	docker compose build web api migrate
 	@set -e; \
+	BLUDM_E2E_EMAIL=e2e-dm@example.test; \
+	BLUDM_E2E_PASSWORD=e2e-admin-password-123; \
+	export ADMIN_EMAIL=$$BLUDM_E2E_EMAIL ADMIN_PASSWORD=$$BLUDM_E2E_PASSWORD; \
 	trap 'status=$$?; if [ $$status -ne 0 ]; then docker compose logs --no-color || true; fi; docker compose down -v; exit $$status' EXIT; \
 	docker compose up -d postgres api web; \
 	timeout 90 sh -c 'until curl -fsS http://localhost:$${WEB_PORT:-3080}/health; do sleep 2; done'; \
 	timeout 90 sh -c 'until curl -fsS http://localhost:$${WEB_PORT:-3080}/api/health; do sleep 2; done'; \
-	cd frontend && E2E_BASE_URL=http://localhost:$${WEB_PORT:-3080} npm run test:e2e; \
+	cd frontend && E2E_BASE_URL=http://localhost:$${WEB_PORT:-3080} E2E_ADMIN_EMAIL=$$BLUDM_E2E_EMAIL E2E_ADMIN_PASSWORD=$$BLUDM_E2E_PASSWORD npm run test:e2e; \
 	trap - EXIT; \
 	docker compose down -v
 

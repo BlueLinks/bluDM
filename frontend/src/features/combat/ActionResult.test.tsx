@@ -61,6 +61,7 @@ function action(): CreatureAction {
     createdAt: "",
     creatureId: "goblin",
     description: "",
+    displaySection: "action",
     hitSpecialEvent: "",
     iconAttribution: "",
     iconKey: "",

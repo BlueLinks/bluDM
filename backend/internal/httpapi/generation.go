@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/generation"
-	"bludm/backend/internal/models"
-	"bludm/backend/internal/store"
 )
 
 type encounterGenerationRequest struct {
@@ -17,106 +16,67 @@ type encounterGenerationRequest struct {
 }
 
 func (s *Server) previewGeneratedEncounter(w http.ResponseWriter, r *http.Request) {
-	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
-	campaign, err := s.campaignByID(r.Context(), campaignID)
-	if err != nil {
-		writeError(w, http.StatusNotFound, "campaign not found")
-		return
-	}
 	var request encounterGenerationRequest
-	if !decodeJSON(w, r, &request) {
+	ok := false
+	if isExternalRequest(r) {
+		ok = decodeExternalJSON(s, w, r, &request)
+	} else {
+		ok = decodeJSON(w, r, &request)
+	}
+	if !ok {
 		return
 	}
-	players, err := s.playersForCampaign(r.Context(), campaignID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load campaign players")
-		return
-	}
-	players = selectedGenerationPlayers(players, request.PlayerIDs)
-	creatures, err := s.stores.Creatures.List(
-		r.Context(),
-		currentUserIDMust(r.Context()),
-		"",
-		true,
-		true,
-		campaign.AllowedStandardSources,
+	preview, err := s.app.PreviewGeneratedEncounter(
+		r.Context(), r.PathValue("campaignID"), appdomain.GenerateEncounterCommand{
+			PlayerIDs: request.PlayerIDs, LocationID: request.LocationID,
+			Options: request.Options, Seed: request.Roll,
+		},
 	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load creature library")
-		return
-	}
-	location, err := s.generationLocation(r, campaignID, request.LocationID)
-	if err != nil {
-		if store.IsNotFound(err) {
-			writeError(w, http.StatusNotFound, "campaign location not found")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, err)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "could not load campaign location")
+		info := appdomain.ErrorInfo(err)
+		status := http.StatusBadRequest
+		if info.Code == appdomain.CodeNotFound {
+			status = http.StatusNotFound
+		} else if info.Code == appdomain.CodeForbidden {
+			status = http.StatusForbidden
+		} else if info.Code == appdomain.CodeInternal {
+			status = http.StatusInternalServerError
+		}
+		writeError(w, status, info.Message)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"preview": generation.GenerateEncounter(
-			creatures,
-			location,
-			request.Options,
-			players,
-			request.Roll,
-		),
+		"preview": preview, "previewFingerprint": appdomain.EncounterPreviewFingerprint(preview),
 	})
 }
 
 func (s *Server) previewGeneratedDungeon(w http.ResponseWriter, r *http.Request) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
 	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
-		writeError(w, http.StatusNotFound, "campaign not found")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, appdomain.NewError(appdomain.CodeNotFound, "campaign not found", nil))
+		} else {
+			writeError(w, http.StatusNotFound, "campaign not found")
+		}
 		return
 	}
 	var request struct {
 		Settings generation.DungeonSettings `json:"settings"`
 	}
-	if !decodeJSON(w, r, &request) {
+	ok := false
+	if isExternalRequest(r) {
+		ok = decodeExternalJSON(s, w, r, &request)
+	} else {
+		ok = decodeJSON(w, r, &request)
+	}
+	if !ok {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"document": generation.GenerateDungeon(request.Settings),
 	})
-}
-
-func selectedGenerationPlayers(players []models.Player, playerIDs []string) []models.Player {
-	selected := map[string]bool{}
-	for _, playerID := range playerIDs {
-		selected[strings.TrimSpace(playerID)] = true
-	}
-	result := make([]models.Player, 0, len(playerIDs))
-	for _, player := range players {
-		if selected[player.ID] {
-			result = append(result, player)
-		}
-	}
-	return result
-}
-
-func (s *Server) generationLocation(
-	r *http.Request,
-	campaignID string,
-	locationID string,
-) (*models.CampaignLocation, error) {
-	locationID = strings.TrimSpace(locationID)
-	if locationID == "" {
-		return nil, nil
-	}
-	locations, err := s.stores.Travel.LocationsForCampaign(
-		r.Context(),
-		currentUserIDMust(r.Context()),
-		campaignID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	for index := range locations {
-		if locations[index].ID == locationID {
-			return &locations[index], nil
-		}
-	}
-	return nil, store.ErrNotFound
 }

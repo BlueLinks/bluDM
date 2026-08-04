@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/models"
 	"bludm/backend/internal/store"
 
@@ -195,6 +196,10 @@ func (s *Server) requireAuth(next http.Handler) http.Handler {
 			return
 		}
 		ctx := context.WithValue(r.Context(), userContextKey{}, user)
+		ctx = appdomain.WithPrincipal(ctx, appdomain.Principal{
+			UserID: user.ID, AuthenticationMethod: appdomain.AuthenticationSession,
+			Scopes: appdomain.AllScopes, CampaignRestrictionMode: "all",
+		})
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

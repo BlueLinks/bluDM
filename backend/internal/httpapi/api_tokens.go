@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/store"
 )
 
@@ -16,8 +17,11 @@ const (
 )
 
 type createAPITokenRequest struct {
-	Name       string `json:"name"`
-	ExpiryDays int    `json:"expiryDays"`
+	Name                    string   `json:"name"`
+	ExpiryDays              int      `json:"expiryDays"`
+	Scopes                  []string `json:"scopes"`
+	CampaignRestrictionMode string   `json:"campaignRestrictionMode"`
+	AllowedCampaignIDs      []string `json:"allowedCampaignIds"`
 }
 
 func (s *Server) listAPITokens(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +50,30 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "expiryDays must be between 1 and 365")
 		return
 	}
+	if len(req.Scopes) == 0 {
+		req.Scopes = appdomain.ScopeStrings(appdomain.ReadOnlyScopes)
+	}
+	scopes, err := appdomain.ParseScopes(req.Scopes)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "one or more scopes are invalid")
+		return
+	}
+	req.CampaignRestrictionMode = strings.TrimSpace(req.CampaignRestrictionMode)
+	if req.CampaignRestrictionMode == "" {
+		req.CampaignRestrictionMode = "all"
+	}
+	if req.CampaignRestrictionMode != "all" && req.CampaignRestrictionMode != "selected" {
+		writeError(w, http.StatusBadRequest, "campaignRestrictionMode must be all or selected")
+		return
+	}
+	if req.CampaignRestrictionMode == "selected" && len(req.AllowedCampaignIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "select at least one campaign")
+		return
+	}
+	if req.CampaignRestrictionMode == "all" && len(req.AllowedCampaignIDs) > 0 {
+		writeError(w, http.StatusBadRequest, "allowedCampaignIds requires selected campaign access")
+		return
+	}
 
 	random, err := randomToken()
 	if err != nil {
@@ -54,15 +82,18 @@ func (s *Server) createAPIToken(w http.ResponseWriter, r *http.Request) {
 	}
 	secret := apiTokenPrefix + random
 	expiresAt := time.Now().Add(time.Duration(req.ExpiryDays) * 24 * time.Hour)
-	token, err := s.stores.Auth.CreateAPIToken(
-		r.Context(),
-		currentUserIDMust(r.Context()),
-		req.Name,
-		hashToken(secret),
-		secret[:displayedTokenLength],
-		&expiresAt,
-	)
+	token, err := s.stores.Auth.CreateScopedAPIToken(r.Context(), store.APITokenCreateInput{
+		UserID: currentUserIDMust(r.Context()), Name: req.Name, TokenHash: hashToken(secret),
+		TokenPrefix: secret[:displayedTokenLength], Scopes: appdomain.ScopeStrings(scopes),
+		CampaignRestrictionMode: req.CampaignRestrictionMode,
+		AllowedCampaignIDs:      req.AllowedCampaignIDs, AuthenticationVersion: 2,
+		ExpiresAt: &expiresAt,
+	})
 	if err != nil {
+		if store.IsNotFound(err) {
+			writeError(w, http.StatusBadRequest, "one or more selected campaigns are unavailable")
+			return
+		}
 		writeError(w, http.StatusInternalServerError, "could not create API token")
 		return
 	}

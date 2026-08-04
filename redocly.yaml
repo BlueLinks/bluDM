@@ -1,0 +1,6 @@
+extends:
+  - recommended
+
+rules:
+  # Every operation uses a typed default error response for all 4xx and 5xx outcomes.
+  operation-4xx-response: off

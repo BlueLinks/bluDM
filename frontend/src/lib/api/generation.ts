@@ -16,7 +16,7 @@ export const generationApi = {
       roll: number;
     },
   ) =>
-    request<{ preview: EncounterBuilderPreview }>(
+    request<{ preview: EncounterBuilderPreview; previewFingerprint: string }>(
       `/api/campaigns/${campaignId}/generation/encounter-preview`,
       {
         method: "POST",

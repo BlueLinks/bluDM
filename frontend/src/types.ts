@@ -354,6 +354,11 @@ export type CommonWeapon = {
   reach: number;
 };
 
+export type CreatureFeatureFormState = {
+  name: string;
+  description: string;
+};
+
 export type CreatureFormState = {
   imageAssetId: string;
   avatarUrl: string;
@@ -387,6 +392,9 @@ export type CreatureFormState = {
   damageResistances: string[];
   damageImmunities: string[];
   conditionImmunities: string[];
+  traits: CreatureFeatureFormState[];
+  legendaryDescription: string;
+  mythicDescription: string;
   senses: Record<SenseName, { enabled: boolean; range: string }>;
   spellcastingAbility: string;
   innateSpellcastingAbility: string;

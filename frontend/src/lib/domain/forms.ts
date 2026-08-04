@@ -56,6 +56,7 @@ export function blankAction(): ActionFormState {
     aoeType: "",
     aoeSize: "",
     actionType: "melee_weapon",
+    displaySection: "action",
     attackModifier: "",
     missEffect: "none",
     hitSpecialEvent: "none",
@@ -111,6 +112,7 @@ export function actionFormFromTemplate(template: ActionTemplate): ActionFormStat
     aoeType: template.aoeType,
     aoeSize: String(template.aoeSize),
     actionType: template.actionType || "melee_weapon",
+    displaySection: template.displaySection || "action",
     attackModifier: String(template.attackModifier),
     missEffect: template.missEffect || "none",
     hitSpecialEvent: template.hitSpecialEvent || "none",
@@ -139,6 +141,7 @@ export function actionFormFromCreatureAction(action: CreatureAction): ActionForm
     ...actionFormFromTemplate(action),
     id: action.id,
     sourceTemplateId: action.sourceTemplateId ?? "",
+    displaySection: action.displaySection || "action",
   };
 }
 
@@ -209,6 +212,21 @@ export function creatureToForm(
       : emptyCreatureForm.senses;
   const asStrings = (value: unknown) =>
     Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const asFeatures = (value: unknown): CreatureFormState["traits"] =>
+    Array.isArray(value)
+      ? value.flatMap((item) => {
+          if (!item || typeof item !== "object") return [];
+          const feature = item as Record<string, unknown>;
+          const name = typeof feature.name === "string" ? feature.name : "";
+          const description =
+            typeof feature.description === "string"
+              ? feature.description
+              : typeof feature.desc === "string"
+                ? feature.desc
+                : "";
+          return name || description ? [{ name, description }] : [];
+        })
+      : [];
   return {
     ...emptyCreatureForm,
     imageAssetId: creature.imageAssetId ?? "",
@@ -251,6 +269,10 @@ export function creatureToForm(
     damageResistances: asStrings(stat.damageResistances),
     damageImmunities: asStrings(stat.damageImmunities),
     conditionImmunities: asStrings(stat.conditionImmunities),
+    traits: asFeatures(stat.traits),
+    legendaryDescription:
+      typeof stat.legendaryDescription === "string" ? stat.legendaryDescription : "",
+    mythicDescription: typeof stat.mythicDescription === "string" ? stat.mythicDescription : "",
     senses,
     spellcastingAbility:
       typeof stat.spellcastingAbility === "string" ? stat.spellcastingAbility : "",

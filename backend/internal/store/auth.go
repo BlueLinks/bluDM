@@ -143,6 +143,26 @@ func (s AuthStore) DeleteUser(ctx context.Context, userID string) error {
 		}
 		steps := []deleteStep{
 			{
+				statement: `delete from external_audit_records where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from authoring_previews where principal_key like ?`,
+				args:      []any{"user:" + userID + "%"},
+			},
+			{
+				statement: `delete from idempotency_records where principal_key like ?`,
+				args:      []any{"user:" + userID + "%"},
+			},
+			{
+				statement: `delete from oidc_subject_links where user_id = ?`,
+				args:      []any{userID},
+			},
+			{
+				statement: `delete from encounter_revisions where actor_user_id = ?`,
+				args:      []any{userID},
+			},
+			{
 				statement: `delete from sessions where user_id = ?`,
 				args:      []any{userID},
 			},

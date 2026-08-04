@@ -18,7 +18,7 @@ func newMergeEntityFramework() mergeEntityFramework {
 	return mergeEntityFramework{
 		mergeFieldMergeKinds: map[string]mergeFieldMergeSpec{
 			"campaign":   {ignoredFields: mergeIgnoreFields("ID", "OwnerUserID", "ArchivedAt", "CreatedAt", "UpdatedAt")},
-			"encounter":  {ignoredFields: mergeIgnoreFields("ID", "CampaignID", "LocationID", "BackgroundAssetID", "CreatedAt", "UpdatedAt")},
+			"encounter":  {ignoredFields: mergeIgnoreFields("ID", "CampaignID", "LocationID", "BackgroundAssetID", "Revision", "CreatedAt", "UpdatedAt")},
 			"npc":        {ignoredFields: mergeIgnoreFields("ID", "OwnerUserID", "ImageAssetID", "CreatedAt", "UpdatedAt")},
 			"item":       {ignoredFields: mergeIgnoreFields("ID", "OwnerUserID", "CreatedAt", "UpdatedAt")},
 			"spell":      {ignoredFields: mergeIgnoreFields("ID", "OwnerUserID", "CreatedAt", "UpdatedAt")},

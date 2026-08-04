@@ -47,8 +47,12 @@ func (s CampaignStore) CreateEncounter(ctx context.Context, ownerUserID, campaig
 			Location:    input.Location,
 			LocationID:  optionalString(input.LocationID),
 			RoomNumber:  input.RoomNumber,
+			Revision:    1,
 		}
-		return tx.Create(&entity).Error
+		if err := tx.Create(&entity).Error; err != nil {
+			return err
+		}
+		return recordEncounterRevision(ctx, tx, entity, ownerUserID, "browser encounter created")
 	})
 	if err != nil {
 		return models.Encounter{}, err
@@ -280,6 +284,8 @@ func encounterFromCounts(entity dbmodels.EncounterEntity, combatantCount, enemyC
 		LocationID:     entity.LocationID,
 		RoomNumber:     entity.RoomNumber,
 		LootNotes:      entity.LootNotes,
+		Metadata:       map[string]any(entity.Metadata),
+		Revision:       entity.Revision,
 		CombatantCount: combatantCount,
 		EnemyCount:     enemyCount,
 		CreatedAt:      entity.CreatedAt,

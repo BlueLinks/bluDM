@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/markdownencounter"
 	"bludm/backend/internal/models"
 )
@@ -21,7 +22,11 @@ func (s *Server) exportEncounterMarkdown(w http.ResponseWriter, r *http.Request)
 		encounterID,
 	)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "encounter not found")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, appdomain.NewError(appdomain.CodeNotFound, "encounter not found", nil))
+		} else {
+			writeError(w, http.StatusNotFound, "encounter not found")
+		}
 		return
 	}
 	combatants, err := s.stores.Encounters.Combatants(
@@ -30,7 +35,11 @@ func (s *Server) exportEncounterMarkdown(w http.ResponseWriter, r *http.Request)
 		encounterID,
 	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load encounter combatants")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, err)
+		} else {
+			writeError(w, http.StatusInternalServerError, "could not load encounter combatants")
+		}
 		return
 	}
 	blockID, _, err := s.stores.Encounters.MarkdownSourceInfo(
@@ -39,13 +48,21 @@ func (s *Server) exportEncounterMarkdown(w http.ResponseWriter, r *http.Request)
 		encounterID,
 	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not load encounter source details")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, err)
+		} else {
+			writeError(w, http.StatusInternalServerError, "could not load encounter source details")
+		}
 		return
 	}
 	document := markdownDocumentFromEncounter(encounter, combatants, blockID)
 	rendered, err := markdownencounter.Render(document)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "could not render encounter Markdown")
+		if isExternalRequest(r) {
+			writeExternalError(w, r, err)
+		} else {
+			writeError(w, http.StatusInternalServerError, "could not render encounter Markdown")
+		}
 		return
 	}
 

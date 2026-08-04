@@ -32,6 +32,22 @@ func TestGenerateDungeonIsDeterministicAndEditable(t *testing.T) {
 	}
 }
 
+func TestOneBodyConstraintDoesNotCreateTwoMinions(t *testing.T) {
+	creatures := []models.Creature{{
+		ID: "goblin", Name: "Goblin", CreatureType: "humanoid", XP: 50,
+	}}
+	preview := GenerateEncounter(
+		creatures, nil,
+		EncounterOptions{
+			Archetype: "monsters", Challenge: "easy", EnemyCount: 1, IncludeMinions: true,
+		},
+		[]models.Player{{CharacterSheet: map[string]any{"level": 1}}}, 7,
+	)
+	if preview.DifficultyEvidence.EnemyCount != 1 || len(preview.Enemies) != 1 || preview.Enemies[0].Quantity != 1 {
+		t.Fatalf("one-body request produced extra minions: %+v", preview)
+	}
+}
+
 func TestGenerateEncounterUsesLibraryAndPartyInputs(t *testing.T) {
 	creatures := []models.Creature{
 		{ID: "goblin", Name: "Goblin", CreatureType: "goblinoid", XP: 50, LibrarySource: "standard"},
@@ -48,7 +64,8 @@ func TestGenerateEncounterUsesLibraryAndPartyInputs(t *testing.T) {
 	if !reflect.DeepEqual(first, second) {
 		t.Fatal("expected encounter preview to be deterministic for the same roll")
 	}
-	if first.Version != 1 || len(first.Enemies) == 0 || first.EstimatedXP == 0 {
+	if first.Version != 2 || first.GeneratorVersion != EncounterGeneratorVersion ||
+		len(first.Enemies) == 0 || first.EstimatedXP == 0 {
 		t.Fatalf("unexpected encounter preview: %+v", first)
 	}
 	for _, enemy := range first.Enemies {

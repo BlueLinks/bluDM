@@ -55,6 +55,8 @@ func main() {
 		Addr:              cfg.Addr,
 		Handler:           api.Routes(),
 		ReadHeaderTimeout: 5 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20,
 	}
 
 	go func() {

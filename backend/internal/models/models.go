@@ -39,6 +39,8 @@ type Encounter struct {
 	Combatants     []EncounterCombatant `json:"combatants,omitempty"`
 	CombatantCount int                  `json:"combatantCount"`
 	EnemyCount     int                  `json:"enemyCount"`
+	Revision       int                  `json:"revision"`
+	Metadata       map[string]any       `json:"metadata"`
 	CreatedAt      time.Time            `json:"createdAt"`
 	UpdatedAt      time.Time            `json:"updatedAt"`
 }
@@ -237,6 +239,7 @@ type ActionTemplate struct {
 	AOEType         string           `json:"aoeType"`
 	AOESize         int              `json:"aoeSize"`
 	ActionType      string           `json:"actionType"`
+	DisplaySection  string           `json:"displaySection"`
 	AttackModifier  int              `json:"attackModifier"`
 	MissEffect      string           `json:"missEffect"`
 	HitSpecialEvent string           `json:"hitSpecialEvent"`
@@ -265,6 +268,7 @@ type CreatureAction struct {
 	AOEType          string           `json:"aoeType"`
 	AOESize          int              `json:"aoeSize"`
 	ActionType       string           `json:"actionType"`
+	DisplaySection   string           `json:"displaySection"`
 	AttackModifier   int              `json:"attackModifier"`
 	MissEffect       string           `json:"missEffect"`
 	HitSpecialEvent  string           `json:"hitSpecialEvent"`

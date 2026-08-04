@@ -20,6 +20,9 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {
+	if writer, ok := w.(*auditResponseWriter); ok {
+		writer.captureAuthoringMetadata(payload)
+	}
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }

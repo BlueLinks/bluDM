@@ -55,8 +55,10 @@ export function CampaignEncounterCreateDialog({
     useState<EncounterBuilderRandomOptions>(defaultRandomOptions);
   const [previewRoll, setPreviewRoll] = useState(1);
   const [acceptedPreview, setAcceptedPreview] = useState<EncounterBuilderPreview | null>(null);
+  const [acceptedPreviewFingerprint, setAcceptedPreviewFingerprint] = useState("");
   const [generatedPreview, setGeneratedPreview] =
     useState<EncounterBuilderPreview>(emptyEncounterPreview);
+  const [generatedPreviewFingerprint, setGeneratedPreviewFingerprint] = useState("");
   const [generatingPreview, setGeneratingPreview] = useState(false);
   const [generationError, setGenerationError] = useState("");
   const [addDialogMode, setAddDialogMode] = useState<AddDialogMode | null>(null);
@@ -91,7 +93,9 @@ export function CampaignEncounterCreateDialog({
     setRandomOptions(defaultRandomOptions);
     setPreviewRoll(1);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
     setGeneratedPreview(emptyEncounterPreview);
+    setGeneratedPreviewFingerprint("");
     setGeneratingPreview(false);
     setGenerationError("");
     setAddDialogMode(null);
@@ -114,8 +118,11 @@ export function CampaignEncounterCreateDialog({
         locationId: meta.locationId,
         roll: previewRoll,
       })
-      .then(({ preview }) => {
-        if (!cancelled) setGeneratedPreview(preview);
+      .then(({ preview, previewFingerprint }) => {
+        if (!cancelled) {
+          setGeneratedPreview(preview);
+          setGeneratedPreviewFingerprint(previewFingerprint);
+        }
       })
       .catch((err) => {
         if (!cancelled) {
@@ -143,11 +150,13 @@ export function CampaignEncounterCreateDialog({
     setRandomOptions(options);
     setEnemies([]);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
   }
 
   function regenerate() {
     setEnemies([]);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
     setPreviewRoll((current) => current + 1);
   }
 
@@ -180,6 +189,7 @@ export function CampaignEncounterCreateDialog({
 
   function acceptCurrentPreview() {
     setAcceptedPreview(setupPreview);
+    setAcceptedPreviewFingerprint(enemies.length === 0 ? generatedPreviewFingerprint : "");
     setEnemies(setupPreview.enemies);
     setMeta((current) => ({
       ...current,
@@ -194,34 +204,32 @@ export function CampaignEncounterCreateDialog({
     setSaving(true);
     setError("");
     try {
+      const combatants = [
+        ...selectedPlayerIds.map((playerId) => ({
+          sourceType: "player" as const,
+          playerId,
+          side: "ally" as const,
+        })),
+        ...[...allies, ...enemies].flatMap((draft) =>
+          Array.from({ length: draft.quantity }, () => ({
+            sourceType: "creature" as const,
+            creatureId: draft.creature.id,
+            side: draft.side === "enemy" ? ("enemy" as const) : ("ally" as const),
+            rolledHp: draft.rolledHp,
+          })),
+        ),
+      ];
       const payload = await api.createEncounter(campaignId, {
+        idempotencyKey: crypto.randomUUID(),
+        previewFingerprint: acceptedPreviewFingerprint || undefined,
         name: meta.name.trim(),
         description: composedDescription(meta),
         status: meta.status,
         location: meta.location,
         locationId: meta.locationId || undefined,
         roomNumber: meta.roomNumber,
+        combatants,
       });
-      await Promise.all([
-        ...selectedPlayerIds.map((playerId) =>
-          api.addEncounterCombatants(payload.encounter.id, {
-            sourceType: "player",
-            playerId,
-            side: "player",
-          }),
-        ),
-        ...[...allies, ...enemies].map((draft) =>
-          api.addEncounterCombatants(payload.encounter.id, {
-            sourceType: "creature",
-            creatureId: draft.creature.librarySource === "standard" ? undefined : draft.creature.id,
-            standardCreatureId:
-              draft.creature.librarySource === "standard" ? draft.creature.id : undefined,
-            side: draft.side,
-            quantity: draft.quantity,
-            rolledHp: draft.rolledHp,
-          }),
-        ),
-      ]);
       await onCreated?.();
       onOpenChange(false);
       void navigate(`/campaigns/${campaignId}/encounters/${payload.encounter.id}/edit`);

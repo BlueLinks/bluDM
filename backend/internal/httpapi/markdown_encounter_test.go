@@ -11,7 +11,7 @@ import (
 	"bludm/backend/internal/store"
 )
 
-func TestBearerTokenRequiresExternalTokenPrefix(t *testing.T) {
+func TestBearerTokenAcceptsOpaqueAndOIDCCredentials(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/api/external/v1/campaigns", nil)
 	request.Header.Set("Authorization", "Bearer bludm_v1_secret")
 	if token, ok := bearerToken(request); !ok || token != "bludm_v1_secret" {
@@ -19,8 +19,12 @@ func TestBearerTokenRequiresExternalTokenPrefix(t *testing.T) {
 	}
 
 	request.Header.Set("Authorization", "Bearer ordinary-session-token")
+	if token, ok := bearerToken(request); !ok || token != "ordinary-session-token" {
+		t.Fatal("expected an OIDC bearer candidate to be accepted for verification")
+	}
+	request.Header.Set("Authorization", "Basic secret")
 	if _, ok := bearerToken(request); ok {
-		t.Fatal("expected non-API token to be rejected")
+		t.Fatal("expected a non-bearer credential to be rejected")
 	}
 }
 

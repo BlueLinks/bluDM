@@ -145,6 +145,15 @@ export const api = {
       location?: string;
       locationId?: string;
       roomNumber?: string;
+      idempotencyKey?: string;
+      previewFingerprint?: string;
+      combatants?: Array<{
+        sourceType: "player" | "creature" | "inline";
+        playerId?: string;
+        creatureId?: string;
+        side: "ally" | "enemy";
+        rolledHp?: boolean;
+      }>;
     },
   ) =>
     request<{ encounter: Encounter }>(`/api/campaigns/${campaignId}/encounters`, {

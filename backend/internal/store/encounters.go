@@ -51,6 +51,8 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 		LocationID     *string
 		RoomNumber     string
 		LootNotes      string
+		Metadata       dbmodels.JSONMap
+		Revision       int
 		CombatantCount int
 		EnemyCount     int
 		CreatedAt      time.Time
@@ -68,6 +70,8 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 			encounters.location_id,
 			encounters.room_number,
 			encounters.loot_notes,
+			encounters.metadata,
+			encounters.revision,
 			count(encounter_combatants.id)::int as combatant_count,
 			count(encounter_combatants.id) filter (where encounter_combatants.side = 'enemy')::int as enemy_count,
 			encounters.created_at,
@@ -94,6 +98,8 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 		LocationID:     row.LocationID,
 		RoomNumber:     row.RoomNumber,
 		LootNotes:      row.LootNotes,
+		Metadata:       map[string]any(row.Metadata),
+		Revision:       row.Revision,
 		CombatantCount: row.CombatantCount,
 		EnemyCount:     row.EnemyCount,
 		CreatedAt:      row.CreatedAt,
@@ -138,7 +144,11 @@ func (s EncounterStore) Update(ctx context.Context, ownerUserID, encounterID str
 		}
 		entity.LocationID = optionalString(input.LocationID)
 		entity.RoomNumber = input.RoomNumber
-		return tx.Save(&entity).Error
+		entity.Revision++
+		if err := tx.Save(&entity).Error; err != nil {
+			return err
+		}
+		return recordEncounterRevision(ctx, tx, entity, ownerUserID, "browser encounter updated")
 	})
 	if err != nil {
 		return models.Encounter{}, err
@@ -181,6 +191,7 @@ func (s EncounterStore) Clone(ctx context.Context, ownerUserID, encounterID stri
 			LocationID:  source.LocationID,
 			RoomNumber:  source.RoomNumber,
 			LootNotes:   source.LootNotes,
+			Revision:    1,
 		}
 		if err := tx.Create(&clone).Error; err != nil {
 			return err
@@ -192,7 +203,7 @@ func (s EncounterStore) Clone(ctx context.Context, ownerUserID, encounterID stri
 				return err
 			}
 		}
-		return nil
+		return recordEncounterRevision(ctx, tx, clone, ownerUserID, "encounter cloned")
 	})
 	if err != nil {
 		return models.Encounter{}, err
@@ -203,7 +214,8 @@ func (s EncounterStore) Clone(ctx context.Context, ownerUserID, encounterID stri
 func (s EncounterStore) AddCombatant(ctx context.Context, ownerUserID, encounterID string, input EncounterCombatantInput) (models.EncounterCombatant, error) {
 	var entity dbmodels.EncounterCombatantEntity
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if _, err := encounterEntityForOwner(ctx, tx, ownerUserID, encounterID); err != nil {
+		encounter, err := encounterEntityForOwner(ctx, tx, ownerUserID, encounterID)
+		if err != nil {
 			return err
 		}
 		var nextOrder int
@@ -214,7 +226,14 @@ func (s EncounterStore) AddCombatant(ctx context.Context, ownerUserID, encounter
 			return err
 		}
 		entity = encounterCombatantEntityFromInput(encounterID, nextOrder, input)
-		return tx.Create(&entity).Error
+		if err := tx.Create(&entity).Error; err != nil {
+			return err
+		}
+		encounter.Revision++
+		if err := tx.Save(&encounter).Error; err != nil {
+			return err
+		}
+		return recordEncounterRevision(ctx, tx, encounter, ownerUserID, "combatant added")
 	})
 	if err != nil {
 		return models.EncounterCombatant{}, err
@@ -241,36 +260,62 @@ func (s EncounterStore) ExistingPlayerIDs(ctx context.Context, ownerUserID, enco
 }
 
 func (s EncounterStore) UpdateCombatant(ctx context.Context, ownerUserID, combatantID string, input EncounterCombatantInput) (models.EncounterCombatant, error) {
-	entity, err := encounterCombatantEntityForOwner(ctx, s.db, ownerUserID, combatantID)
+	var entity dbmodels.EncounterCombatantEntity
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		found, err := encounterCombatantEntityForOwner(ctx, tx, ownerUserID, combatantID)
+		if err != nil {
+			return err
+		}
+		entity = found
+		entity.Side = input.Side
+		entity.DisplayName = input.DisplayName
+		entity.ColorLabel = input.ColorLabel
+		entity.AvatarURL = input.AvatarURL
+		entity.ArmorClass = input.ArmorClass
+		entity.MaxHitPoints = input.MaxHitPoints
+		entity.CurrentHitPoints = input.CurrentHitPoints
+		if err := tx.Save(&entity).Error; err != nil {
+			return err
+		}
+		encounter, err := encounterEntityForOwner(ctx, tx, ownerUserID, entity.EncounterID)
+		if err != nil {
+			return err
+		}
+		encounter.Revision++
+		if err := tx.Save(&encounter).Error; err != nil {
+			return err
+		}
+		return recordEncounterRevision(ctx, tx, encounter, ownerUserID, "combatant updated")
+	})
 	if err != nil {
-		return models.EncounterCombatant{}, err
-	}
-	entity.Side = input.Side
-	entity.DisplayName = input.DisplayName
-	entity.ColorLabel = input.ColorLabel
-	entity.AvatarURL = input.AvatarURL
-	entity.ArmorClass = input.ArmorClass
-	entity.MaxHitPoints = input.MaxHitPoints
-	entity.CurrentHitPoints = input.CurrentHitPoints
-	if err := s.db.WithContext(ctx).Save(&entity).Error; err != nil {
 		return models.EncounterCombatant{}, err
 	}
 	return encounterCombatantFromEntity(entity), nil
 }
 
 func (s EncounterStore) DeleteCombatant(ctx context.Context, ownerUserID, combatantID string) error {
-	entity, err := encounterCombatantEntityForOwner(ctx, s.db, ownerUserID, combatantID)
-	if err != nil {
-		return err
-	}
-	result := s.db.WithContext(ctx).Where("id = ?", entity.ID).Delete(&dbmodels.EncounterCombatantEntity{})
-	if result.Error != nil {
-		return result.Error
-	}
-	if result.RowsAffected == 0 {
-		return ErrNotFound
-	}
-	return nil
+	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		entity, err := encounterCombatantEntityForOwner(ctx, tx, ownerUserID, combatantID)
+		if err != nil {
+			return err
+		}
+		result := tx.Where("id = ?", entity.ID).Delete(&dbmodels.EncounterCombatantEntity{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrNotFound
+		}
+		encounter, err := encounterEntityForOwner(ctx, tx, ownerUserID, entity.EncounterID)
+		if err != nil {
+			return err
+		}
+		encounter.Revision++
+		if err := tx.Save(&encounter).Error; err != nil {
+			return err
+		}
+		return recordEncounterRevision(ctx, tx, encounter, ownerUserID, "combatant removed")
+	})
 }
 
 func encounterEntityForOwner(ctx context.Context, db *gorm.DB, ownerUserID, encounterID string) (dbmodels.EncounterEntity, error) {

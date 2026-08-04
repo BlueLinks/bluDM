@@ -1,10 +1,12 @@
 package httpapi
 
 import (
-	"bludm/backend/internal/models"
 	"context"
 	"errors"
 	"strings"
+
+	appdomain "bludm/backend/internal/app"
+	"bludm/backend/internal/models"
 )
 
 func (s *Server) campaignByID(ctx context.Context, campaignID string) (models.Campaign, error) {
@@ -61,12 +63,15 @@ type campaignRequest struct {
 }
 
 type encounterRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Status      string `json:"status"`
-	Location    string `json:"location"`
-	LocationID  string `json:"locationId"`
-	RoomNumber  string `json:"roomNumber"`
+	IdempotencyKey     string                                `json:"idempotencyKey"`
+	PreviewFingerprint string                                `json:"previewFingerprint"`
+	Name               string                                `json:"name"`
+	Description        string                                `json:"description"`
+	Status             string                                `json:"status"`
+	Location           string                                `json:"location"`
+	LocationID         string                                `json:"locationId"`
+	RoomNumber         string                                `json:"roomNumber"`
+	Combatants         []appdomain.EncounterCombatantCommand `json:"combatants"`
 }
 
 type campaignCreatureRequest struct {
