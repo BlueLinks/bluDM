@@ -31,6 +31,7 @@ export function actionPayload(action: ActionFormState) {
     aoeType: action.aoeType,
     aoeSize: Number(action.aoeSize) || 0,
     actionType: action.actionType,
+    displaySection: action.displaySection,
     attackModifier: Number(action.attackModifier) || 0,
     missEffect: action.missEffect,
     hitSpecialEvent: action.hitSpecialEvent,
@@ -452,6 +453,14 @@ export function creaturePayload(payload: CreatureFormState) {
       damageResistances: payload.damageResistances,
       damageImmunities: payload.damageImmunities,
       conditionImmunities: payload.conditionImmunities,
+      traits: payload.traits
+        .map((trait) => ({
+          name: trait.name.trim(),
+          description: trait.description.trim(),
+        }))
+        .filter((trait) => trait.name || trait.description),
+      legendaryDescription: payload.legendaryDescription.trim(),
+      mythicDescription: payload.mythicDescription.trim(),
       senses: payload.senses,
       spellcastingAbility: payload.spellcastingAbility,
       innateSpellcastingAbility: payload.innateSpellcastingAbility,

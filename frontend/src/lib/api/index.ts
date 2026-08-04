@@ -24,10 +24,14 @@ import type {
   User,
 } from "../../types";
 import { actionTemplateApi } from "./actionTemplates";
+import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
 import { encounterRunApi } from "./encounterRuns";
+import { generationApi } from "./generation";
 import { importExportApi } from "./importExport";
 import { journeyApi } from "./journeys";
+import { markdownEncounterApi } from "./markdownEncounters";
+import { markdownWorldApi } from "./markdownWorld";
 import { rollTableApi } from "./rollTables";
 import {
   actionPayload,
@@ -39,10 +43,14 @@ import {
 import { request } from "./request";
 export const api = {
   ...actionTemplateApi,
+  ...apiTokenApi,
   ...campaignWorldApi,
   ...encounterRunApi,
+  ...generationApi,
   ...importExportApi,
   ...journeyApi,
+  ...markdownEncounterApi,
+  ...markdownWorldApi,
   ...rollTableApi,
   status: () => request<AuthStatus>("/api/auth/status"),
   authProviders: () =>
@@ -137,6 +145,15 @@ export const api = {
       location?: string;
       locationId?: string;
       roomNumber?: string;
+      idempotencyKey?: string;
+      previewFingerprint?: string;
+      combatants?: Array<{
+        sourceType: "player" | "creature" | "inline";
+        playerId?: string;
+        creatureId?: string;
+        side: "ally" | "enemy";
+        rolledHp?: boolean;
+      }>;
     },
   ) =>
     request<{ encounter: Encounter }>(`/api/campaigns/${campaignId}/encounters`, {

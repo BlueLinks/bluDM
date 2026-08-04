@@ -7,3 +7,20 @@ condition = "AND"
 regexTarget = "match"
 paths = ['''^docs/import-export/manifest-schema\.md$''']
 regexes = ['''key": "lost-mine-a1b2c3d4"''']
+
+[[allowlists]]
+description = "Scoped API token prefix used by the auth store integration test"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^backend/internal/store/markdown_encounter_integration_test\.go$''']
+regexes = ['''TokenPrefix: "bludm_v1_scoped"''']
+
+[[allowlists]]
+description = "Non-secret idempotency keys in external API request examples"
+condition = "AND"
+regexTarget = "match"
+paths = ['''^docs/api/external-v1\.openapi\.yaml$''']
+regexes = [
+  '''idempotencyKey: journey-ashen-pass-01''',
+  '''idempotencyKey: dungeon-broken-gate-01''',
+]

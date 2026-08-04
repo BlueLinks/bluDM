@@ -24,9 +24,11 @@ FIELD_RE = re.compile(
     r"^(AC|HP|Speed|Skills|Vulnerabilities|Resistances|Immunities|Gear|Senses|Languages|CR)\b",
 )
 SECTION_RE = re.compile(r"^(Traits|Actions|Bonus Actions|Reactions|Legendary Actions|Mythic Actions)$")
-ABILITY_RE = re.compile(r"\b(Str|Dex|Con|Int|WIS|Cha)\s+(\d+)\s+([+−-]\d+)\s+([+−-]\d+)")
+ABILITY_RE = re.compile(r"\b(Str|Dex|Con|Int|WIS|Cha)\s+(\d+)\s+([+−-]?\d+)\s+([+−-]?\d+)")
 DAMAGE_RE = re.compile(r"(\d+)\s*\(([^)]+)\)\s+([A-Z][A-Za-z]+) damage")
-CR_RE = re.compile(r"^CR\s+([^\s]+)\s+\(XP\s+([0-9,]+).*?PB\s+([+−-]\d+)\)")
+CR_RE = re.compile(
+    r"^CR\s+([^\s]+)\s+\((?:XP\s+([0-9,]+)|([0-9,]+)\s+XP).*?PB\s+([+−-]\d+)\)",
+)
 DAMAGE_LEAD_RE = re.compile(
     r"^(Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder) damage\b",
 )
@@ -169,8 +171,8 @@ def parse_block(block: list[str]) -> dict[str, Any]:
         elif line.startswith("CR "):
             if match := CR_RE.match(line):
                 data["challengeRating"] = match.group(1)
-                data["xp"] = int(match.group(2).replace(",", ""))
-                data["proficiencyBonus"] = signed_int(match.group(3))
+                data["xp"] = int((match.group(2) or match.group(3)).replace(",", ""))
+                data["proficiencyBonus"] = signed_int(match.group(4))
         elif section in {"Traits", "Actions", "Bonus Actions", "Reactions", "Legendary Actions"}:
             target = {
                 "Traits": "traits",

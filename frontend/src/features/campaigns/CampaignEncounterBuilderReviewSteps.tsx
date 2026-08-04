@@ -153,6 +153,7 @@ function ReviewList({ children, title }: { children: ReactNode; title: string })
 }
 
 export function FooterActions({
+  canAdvance,
   canSave,
   saving,
   step,
@@ -161,6 +162,7 @@ export function FooterActions({
   onNext,
   onSave,
 }: {
+  canAdvance: boolean;
   canSave: boolean;
   saving: boolean;
   step: EncounterBuilderStep;
@@ -190,6 +192,7 @@ export function FooterActions({
             className="w-[11.125rem] whitespace-nowrap !py-1"
             size="sm"
             type="button"
+            disabled={!canAdvance}
             onClick={onNext}
           >
             {step === "party" ? "Next: Encounter Setup" : "Next: Review & Create"}

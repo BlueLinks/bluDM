@@ -27,6 +27,7 @@ type ActionInput struct {
 	AOEType          string
 	AOESize          int
 	ActionType       string
+	DisplaySection   string
 	AttackModifier   int
 	MissEffect       string
 	HitSpecialEvent  string

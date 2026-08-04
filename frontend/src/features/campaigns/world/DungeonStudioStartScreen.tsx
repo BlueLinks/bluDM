@@ -1,27 +1,58 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionRow, CardSection, ResponsiveGrid, SectionHeader } from "../../../components/layout";
-import { Button, Field, Input } from "../../../components/ui";
+import { Button, Callout, Field, Input, MutedPanel } from "../../../components/ui";
 import { Select } from "../../../components/uiSelect";
+import { api } from "../../../lib/api";
 import { DungeonStudioMapThumbnail } from "./DungeonStudioMapThumbnail";
+import { createDungeonStudioDocument, type DungeonStudioDocument } from "./dungeonStudioDocument";
 import {
   defaultDungeonStudioGeneratorSettings,
-  generateDungeonStudioDocument,
   type DungeonStudioGeneratorSettings,
 } from "./dungeonStudioGenerator";
 import { dungeonStudioThemeOptions } from "./dungeonStudioThemes";
 
 export function DungeonStudioStartScreen({
+  campaignId,
   locationName,
   onAcceptGenerated,
   onStartCustom,
 }: {
+  campaignId: string;
   locationName: string;
-  onAcceptGenerated: (settings: DungeonStudioGeneratorSettings) => void;
+  onAcceptGenerated: (document: DungeonStudioDocument) => void;
   onStartCustom: () => void;
 }) {
   const [mode, setMode] = useState<"choice" | "random">("choice");
   const [settings, setSettings] = useState(defaultDungeonStudioGeneratorSettings);
-  const preview = useMemo(() => generateDungeonStudioDocument(settings), [settings]);
+  const [preview, setPreview] = useState<DungeonStudioDocument>(() =>
+    createDungeonStudioDocument(),
+  );
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (mode !== "random") return;
+    let cancelled = false;
+    setLoadingPreview(true);
+    setError("");
+    api
+      .previewGeneratedDungeon(campaignId, settings)
+      .then(({ document }) => {
+        if (!cancelled) setPreview(document);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Could not generate dungeon preview");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPreview(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, mode, settings]);
+
   if (mode === "random") {
     return (
       <CardSection className="grid gap-4">
@@ -88,9 +119,14 @@ export function DungeonStudioStartScreen({
             />
           </Field>
         </ResponsiveGrid>
-        <div className="min-h-72">
-          <DungeonStudioMapThumbnail document={preview} label="Generated dungeon preview" />
-        </div>
+        {error ? <Callout tone="danger">{error}</Callout> : null}
+        {loadingPreview ? (
+          <MutedPanel>Generating dungeon preview…</MutedPanel>
+        ) : (
+          <div className="min-h-72">
+            <DungeonStudioMapThumbnail document={preview} label="Generated dungeon preview" />
+          </div>
+        )}
         <ActionRow justify="end">
           <Button type="button" variant="secondary" onClick={() => setMode("choice")}>
             Back
@@ -98,7 +134,11 @@ export function DungeonStudioStartScreen({
           <Button type="button" variant="secondary" onClick={() => update({ seed: randomSeed() })}>
             Regenerate seed
           </Button>
-          <Button type="button" onClick={() => onAcceptGenerated(settings)}>
+          <Button
+            type="button"
+            disabled={loadingPreview || Boolean(error)}
+            onClick={() => onAcceptGenerated(preview)}
+          >
             Accept and edit
           </Button>
         </ActionRow>

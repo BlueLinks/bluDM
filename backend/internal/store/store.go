@@ -12,23 +12,24 @@ var (
 )
 
 type Stores struct {
-	db           *gorm.DB
-	Auth         AuthStore
-	Assets       AssetStore
-	Campaigns    CampaignStore
-	Creatures    CreatureStore
-	Players      PlayerStore
-	Items        ItemStore
-	Library      LibraryStore
-	RollTables   RollTableStore
-	Travel       TravelStore
-	Spells       SpellStore
-	Actions      ActionStore
-	Spellcasts   SpellcastingStore
-	Encounters   EncounterStore
-	Runs         RunStore
-	Demo         DemoStore
-	ImportExport ImportExportStore
+	db            *gorm.DB
+	Auth          AuthStore
+	Assets        AssetStore
+	Campaigns     CampaignStore
+	Creatures     CreatureStore
+	Players       PlayerStore
+	Items         ItemStore
+	Library       LibraryStore
+	RollTables    RollTableStore
+	Travel        TravelStore
+	Spells        SpellStore
+	Actions       ActionStore
+	Spellcasts    SpellcastingStore
+	Encounters    EncounterStore
+	Runs          RunStore
+	Demo          DemoStore
+	ImportExport  ImportExportStore
+	MarkdownWorld MarkdownWorldStore
 }
 
 func New(db *gorm.DB) *Stores {
@@ -49,6 +50,7 @@ func New(db *gorm.DB) *Stores {
 	stores.Runs = RunStore{db: db}
 	stores.Demo = DemoStore{db: db}
 	stores.ImportExport = ImportExportStore{db: db}
+	stores.MarkdownWorld = MarkdownWorldStore{db: db}
 	return stores
 }
 

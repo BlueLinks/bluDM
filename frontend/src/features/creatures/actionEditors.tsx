@@ -26,6 +26,7 @@ import { formatRolls } from "../../lib/domain/forms";
 import type { ActionFormState, ActionTemplate, CommonWeapon, CreatureAction } from "../../types";
 import { ActionNumberInput } from "./ActionNumberInput";
 import { ActionRollEditor } from "./ActionRollEditor";
+import { ActionSectionField } from "./ActionSectionField";
 
 export function ActionMiniFields({
   value,
@@ -44,6 +45,10 @@ export function ActionMiniFields({
       />
       <ActionIconPicker value={value} onChange={(next) => onChange({ ...value, ...next })} />
       <div className="grid gap-4 md:grid-cols-3">
+        <ActionSectionField
+          value={value.displaySection}
+          onChange={(displaySection) => onChange({ ...value, displaySection })}
+        />
         <Field label="Action type">
           <Select
             options={actionTypes}
@@ -378,7 +383,11 @@ function ActionTypeFields({
   onChange: (action: ActionFormState) => void;
 }) {
   return (
-    <div className="grid gap-3 md:grid-cols-3">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <ActionSectionField
+        value={action.displaySection}
+        onChange={(displaySection) => onChange({ ...action, displaySection })}
+      />
       <Field label="Type of action">
         <Select
           options={actionTypes}

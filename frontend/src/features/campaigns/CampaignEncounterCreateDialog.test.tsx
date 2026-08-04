@@ -23,6 +23,7 @@ vi.mock("../../lib/api", () => ({
     addEncounterCombatants: vi.fn().mockResolvedValue({ combatants: [] }),
     createEncounter: vi.fn(),
     creatures: vi.fn(),
+    previewGeneratedEncounter: vi.fn(),
   },
 }));
 
@@ -55,6 +56,25 @@ describe("CampaignEncounterCreateDialog", () => {
       ],
     });
     vi.mocked(api.createEncounter).mockResolvedValue({ encounter: encounter() });
+    vi.mocked(api.previewGeneratedEncounter).mockResolvedValue({
+      previewFingerprint: "accepted-preview-fingerprint",
+      preview: {
+        title: "Monsters at Copper Kettle",
+        difficulty: "Medium",
+        estimatedXp: 100,
+        targetNotice: "",
+        summary: "Monsters tuned as medium difficulty.",
+        enemies: [
+          {
+            id: "generated-goblin-1-0",
+            creature: creature(),
+            quantity: 2,
+            rolledHp: false,
+            side: "enemy",
+          },
+        ],
+      },
+    });
   });
 
   it("renders only the revised three step headings", () => {
@@ -167,24 +187,22 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(document.body.textContent).not.toMatch(/Goblin x\d/);
 
     fireEvent.click(screen.getByRole("button", { name: "Create encounter" }));
-    await waitFor(() =>
-      expect(api.createEncounter).toHaveBeenCalledWith(
-        "campaign-1",
-        expect.objectContaining({
-          location: "Brindleford / Copper Kettle",
-          locationId: "shop-1",
-          name: "Encounter at Copper Kettle",
-        }),
-      ),
+    await waitFor(() => expect(api.createEncounter).toHaveBeenCalled());
+    const submitted = vi.mocked(api.createEncounter).mock.calls[0]?.[1];
+    expect(submitted).toMatchObject({
+      location: "Brindleford / Copper Kettle",
+      locationId: "shop-1",
+      name: "Encounter at Copper Kettle",
+      previewFingerprint: "accepted-preview-fingerprint",
+    });
+    expect(submitted?.combatants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ playerId: "player-1", side: "ally" }),
+        expect.objectContaining({ side: "enemy" }),
+      ]),
     );
-    expect(api.addEncounterCombatants).toHaveBeenCalledWith(
-      "encounter-1",
-      expect.objectContaining({ playerId: "player-1", side: "player" }),
-    );
-    expect(api.addEncounterCombatants).toHaveBeenCalledWith(
-      "encounter-1",
-      expect.objectContaining({ side: "enemy" }),
-    );
+    expect(typeof submitted?.idempotencyKey).toBe("string");
+    expect(api.addEncounterCombatants).not.toHaveBeenCalled();
     expect(onCreated).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/campaigns/campaign-1/encounters/encounter-1/edit");
   });

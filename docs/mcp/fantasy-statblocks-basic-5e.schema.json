@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bludm.example/schemas/fantasy-statblocks-basic-5e-1.json",
+  "title": "bluDM Fantasy Statblocks Basic 5e profile",
+  "description": "YAML object inside a Fantasy Statblocks 4.10.3 statblock fence.",
+  "type": "object",
+  "required": [
+    "layout",
+    "name",
+    "size",
+    "type",
+    "ac",
+    "hp",
+    "hit_dice",
+    "speed",
+    "stats",
+    "cr",
+    "traits",
+    "actions"
+  ],
+  "properties": {
+    "layout": { "const": "Basic 5e Layout" },
+    "image": {
+      "description": "A normal path/URL or the nested single-item sequence produced when the plugin's documented unquoted [[Vault Link]] syntax is parsed as YAML.",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "array",
+              "prefixItems": [{ "type": "string", "minLength": 1 }],
+              "minItems": 1,
+              "maxItems": 1
+            }
+          ],
+          "minItems": 1,
+          "maxItems": 1
+        }
+      ]
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "source": { "type": "string" },
+    "size": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "minLength": 1 },
+    "subtype": {
+      "description": "The documented Basic 5e example includes an explicitly empty subtype, which standard YAML represents as null.",
+      "oneOf": [{ "type": "string" }, { "type": "null" }]
+    },
+    "alignment": { "type": "string" },
+    "ac": {
+      "oneOf": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "string", "minLength": 1 }
+      ]
+    },
+    "hp": { "type": "integer", "minimum": 1 },
+    "hit_dice": { "type": "string", "minLength": 1 },
+    "speed": { "type": "string", "minLength": 1 },
+    "stats": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 }
+      ],
+      "minItems": 6,
+      "maxItems": 6
+    },
+    "saves": { "$ref": "#/$defs/bonuses" },
+    "skillsaves": { "$ref": "#/$defs/bonuses" },
+    "damage_vulnerabilities": { "type": "string" },
+    "damage_resistances": { "type": "string" },
+    "damage_immunities": { "type": "string" },
+    "condition_immunities": { "type": "string" },
+    "senses": { "type": "string" },
+    "languages": { "type": "string" },
+    "cr": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        { "type": "number", "minimum": 0 }
+      ]
+    },
+    "spells": { "type": "array", "items": { "type": "string" } },
+    "spellsNotes": { "type": "string" },
+    "traits": { "$ref": "#/$defs/features" },
+    "actions": { "$ref": "#/$defs/features" },
+    "bonus_actions": { "$ref": "#/$defs/features" },
+    "reactions": { "$ref": "#/$defs/features" },
+    "legendary_description": { "type": "string" },
+    "legendary_actions": { "$ref": "#/$defs/features" },
+    "mythic_description": { "type": "string" },
+    "mythic_actions": { "$ref": "#/$defs/features" },
+    "lair_actions": { "$ref": "#/$defs/features" },
+    "regional_effects": { "$ref": "#/$defs/features" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "feature": {
+      "type": "object",
+      "required": ["name", "desc"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "desc": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "features": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/feature" }
+    },
+    "bonuses": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": { "type": "integer" }
+          }
+        }
+      ]
+    }
+  },
+  "x-bludm-profile": "fantasy-statblocks-basic-5e@1",
+  "x-plugin-version": "4.10.3",
+  "x-plugin-source-commit": "f248f4af8a3d748c2f64534f15e01c2d846e8b12",
+  "x-layout-version": 9
+}

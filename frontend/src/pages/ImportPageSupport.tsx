@@ -2,6 +2,7 @@ import {
   Boxes,
   DatabaseBackup,
   Download,
+  FileText,
   FolderArchive,
   History,
   Import,
@@ -25,7 +26,7 @@ import type {
   ImportExportPreview,
 } from "../lib/api/importExport";
 
-export type TabKey = "overview" | "import" | "export" | "history" | "settings";
+export type TabKey = "overview" | "markdown" | "import" | "export" | "history" | "settings";
 
 export type BundleOption = {
   key: ImportExportBundleType;
@@ -43,6 +44,7 @@ export type ExportObjectChoice = {
 
 export const tabs: Array<{ key: TabKey; label: string; icon: ElementType }> = [
   { key: "overview", label: "Overview", icon: DatabaseBackup },
+  { key: "markdown", label: "Markdown", icon: FileText },
   { key: "import", label: "Import", icon: Import },
   { key: "export", label: "Export", icon: Download },
   { key: "history", label: "History", icon: History },

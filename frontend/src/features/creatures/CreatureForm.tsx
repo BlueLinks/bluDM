@@ -26,6 +26,7 @@ import type {
   Spell,
 } from "../../types";
 import { CreatureActionsSection } from "./CreatureActionsSection";
+import { CreatureFeatureSections } from "./CreatureFeatureSections";
 import {
   CreatureFormFooter,
   CreatureSpellcastingSection,
@@ -74,6 +75,9 @@ const emptyCreatureForm: CreatureFormState = {
   damageResistances: [],
   damageImmunities: [],
   conditionImmunities: [],
+  traits: [],
+  legendaryDescription: "",
+  mythicDescription: "",
   senses: {
     Blindsight: { enabled: false, range: "" },
     Darkvision: { enabled: false, range: "" },
@@ -313,6 +317,7 @@ export function CreatureForm({
     <form className="grid gap-5" data-creature-form="true" onSubmit={handleCreate}>
       <CreatureIdentitySections form={form} setForm={setForm} />
       <CreatureTraitSections form={form} setForm={setForm} toggleList={toggleList} />
+      <CreatureFeatureSections form={form} setForm={setForm} />
       <CreatureSpellcastingSection
         form={form}
         setForm={setForm}

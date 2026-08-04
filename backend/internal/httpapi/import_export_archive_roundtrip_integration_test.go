@@ -359,12 +359,15 @@ func databaseURLWithArchiveSearchPath(t *testing.T, databaseURL, schemaName stri
 
 func archiveTestSchemaEntities() []any {
 	return []any{
-		&dbmodels.UserEntity{}, &dbmodels.AuthIdentityEntity{}, &dbmodels.OAuthStateEntity{}, &dbmodels.SessionEntity{},
-		&dbmodels.CampaignEntity{}, &dbmodels.UploadedAssetEntity{}, &dbmodels.CreatureEntity{}, &dbmodels.SpellEntity{},
+		&dbmodels.UserEntity{}, &dbmodels.AuthIdentityEntity{}, &dbmodels.OAuthStateEntity{}, &dbmodels.SessionEntity{}, &dbmodels.APITokenEntity{},
+		&dbmodels.OIDCSubjectLinkEntity{}, &dbmodels.CampaignEntity{}, &dbmodels.APITokenCampaignEntity{},
+		&dbmodels.UploadedAssetEntity{}, &dbmodels.CreatureEntity{}, &dbmodels.SpellEntity{},
 		&dbmodels.SpellProjectileScalingEntity{}, &dbmodels.SpellActionEntity{}, &dbmodels.SpellActionRollPartEntity{},
 		&dbmodels.ActionTemplateEntity{}, &dbmodels.ActionTemplateRollPartEntity{}, &dbmodels.CreatureActionEntity{},
 		&dbmodels.CreatureActionRollPartEntity{}, &dbmodels.CreatureSpellcastingProfileEntity{}, &dbmodels.CreatureSpellEntity{},
 		&dbmodels.PlayerEntity{}, &dbmodels.CampaignCreatureEntity{}, &dbmodels.EncounterEntity{}, &dbmodels.EncounterCombatantEntity{},
+		&dbmodels.EncounterRevisionEntity{}, &dbmodels.IdempotencyRecordEntity{}, &dbmodels.AuthoringPreviewEntity{},
+		&dbmodels.ExternalAuditRecordEntity{},
 		&dbmodels.EncounterRunEntity{}, &dbmodels.EncounterRunCombatantEntity{}, &dbmodels.EncounterRunSpellSlotEntity{},
 		&dbmodels.EncounterRunActiveEffectEntity{}, &dbmodels.EncounterRunAlertEntity{}, &dbmodels.CombatLogEventEntity{},
 		&dbmodels.ItemEntity{}, &dbmodels.CampaignLocationEntity{}, &dbmodels.CampaignLocationLinkEntity{},
@@ -489,11 +492,4 @@ func ensureArchiveTestStandardReferenceTables(db *gorm.DB) error {
 
 func uniqueArchiveEmail(prefix string) string {
 	return fmt.Sprintf("%s-%d@example.test", prefix, time.Now().UnixNano())
-}
-
-func requireArchiveNoError(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatal(err)
-	}
 }

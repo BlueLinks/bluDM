@@ -76,13 +76,28 @@ func (s LibraryStore) EquipmentEntries(ctx context.Context, sources []string) ([
 }
 
 func (s LibraryStore) EquipmentEntryByID(ctx context.Context, entryID string) (models.StandardLibraryEntry, error) {
+	return s.EntryByID(ctx, entryID, "equipment", nil)
+}
+
+func (s LibraryStore) EntryByID(
+	ctx context.Context,
+	entryID string,
+	category string,
+	sources []string,
+) (models.StandardLibraryEntry, error) {
 	var entity standardLibraryEntryEntity
-	err := s.db.WithContext(ctx).
+	query := s.db.WithContext(ctx).
 		Table("standard_library_entries").
 		Select(standardLibraryEntrySelect(false)).
 		Joins("join standard_sources on standard_sources.source_key = standard_library_entries.source_key").
-		Where("standard_library_entries.id = ? and standard_library_entries.category = ?", strings.TrimSpace(entryID), "equipment").
-		First(&entity).Error
+		Where("standard_library_entries.id = ?", strings.TrimSpace(entryID))
+	if category = strings.TrimSpace(category); category != "" && category != "all" {
+		query = query.Where("standard_library_entries.category = ?", category)
+	}
+	if allowed := normalizeStringFilters(sources); len(allowed) > 0 {
+		query = query.Where("standard_library_entries.source_key in ?", allowed)
+	}
+	err := query.First(&entity).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return models.StandardLibraryEntry{}, ErrNotFound
 	}

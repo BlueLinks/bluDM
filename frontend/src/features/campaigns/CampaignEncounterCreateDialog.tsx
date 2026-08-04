@@ -8,7 +8,6 @@ import { BuilderProgress, PartyAlliesStep } from "./CampaignEncounterBuilderStep
 import { FooterActions, ReviewCreateStep } from "./CampaignEncounterBuilderReviewSteps";
 import { EncounterSetupStep } from "./CampaignEncounterRandomSetup";
 import {
-  buildRandomEncounterPreview,
   defaultRandomOptions,
   type EncounterBuilderCreatureDraft,
   type EncounterBuilderMetaDraft,
@@ -56,35 +55,29 @@ export function CampaignEncounterCreateDialog({
     useState<EncounterBuilderRandomOptions>(defaultRandomOptions);
   const [previewRoll, setPreviewRoll] = useState(1);
   const [acceptedPreview, setAcceptedPreview] = useState<EncounterBuilderPreview | null>(null);
+  const [acceptedPreviewFingerprint, setAcceptedPreviewFingerprint] = useState("");
+  const [generatedPreview, setGeneratedPreview] =
+    useState<EncounterBuilderPreview>(emptyEncounterPreview);
+  const [generatedPreviewFingerprint, setGeneratedPreviewFingerprint] = useState("");
+  const [generatingPreview, setGeneratingPreview] = useState(false);
+  const [generationError, setGenerationError] = useState("");
   const [addDialogMode, setAddDialogMode] = useState<AddDialogMode | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const selectedLocation = locations.find((location) => location.id === meta.locationId) ?? null;
   const selectedPlayers = players.filter((player) => selectedPlayerIds.includes(player.id));
-  const randomPreview = useMemo(
-    () =>
-      buildRandomEncounterPreview({
-        creatures,
-        location: selectedLocation,
-        options: randomOptions,
-        players: selectedPlayers,
-        roll: previewRoll,
-      }),
-    [creatures, previewRoll, randomOptions, selectedLocation, selectedPlayers],
-  );
   const setupPreview = useMemo(
     () =>
       enemies.length
         ? {
-            ...randomPreview,
+            ...generatedPreview,
             estimatedXp: enemies.reduce(
               (total, enemy) => total + enemy.creature.xp * enemy.quantity,
               0,
             ),
             enemies,
           }
-        : randomPreview,
-    [enemies, randomPreview],
+        : generatedPreview,
+    [enemies, generatedPreview],
   );
   const availablePlayers = players.filter((player) => !selectedPlayerIds.includes(player.id));
   const campaignCreatureIds = useMemo(() => new Set(npcs.map((npc) => npc.id)), [npcs]);
@@ -100,6 +93,11 @@ export function CampaignEncounterCreateDialog({
     setRandomOptions(defaultRandomOptions);
     setPreviewRoll(1);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
+    setGeneratedPreview(emptyEncounterPreview);
+    setGeneratedPreviewFingerprint("");
+    setGeneratingPreview(false);
+    setGenerationError("");
     setAddDialogMode(null);
     setError("");
     api
@@ -108,7 +106,41 @@ export function CampaignEncounterCreateDialog({
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creatures"));
   }, [initialLocationId, locations, open, players]);
 
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setGeneratingPreview(true);
+    setGenerationError("");
+    api
+      .previewGeneratedEncounter(campaignId, {
+        options: randomOptions,
+        playerIds: selectedPlayerIds,
+        locationId: meta.locationId,
+        roll: previewRoll,
+      })
+      .then(({ preview, previewFingerprint }) => {
+        if (!cancelled) {
+          setGeneratedPreview(preview);
+          setGeneratedPreviewFingerprint(previewFingerprint);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setGenerationError(
+            err instanceof Error ? err.message : "Could not generate encounter preview",
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setGeneratingPreview(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaignId, meta.locationId, open, previewRoll, randomOptions, selectedPlayerIds]);
+
   function goToStep(next: EncounterBuilderStep) {
+    if (next === "review" && (generatingPreview || generationError)) return;
     if (next === "review") acceptCurrentPreview();
     setStep(next);
     setFurthestStep((current) => furthestBuilderStep(current, next));
@@ -118,11 +150,13 @@ export function CampaignEncounterCreateDialog({
     setRandomOptions(options);
     setEnemies([]);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
   }
 
   function regenerate() {
     setEnemies([]);
     setAcceptedPreview(null);
+    setAcceptedPreviewFingerprint("");
     setPreviewRoll((current) => current + 1);
   }
 
@@ -155,6 +189,7 @@ export function CampaignEncounterCreateDialog({
 
   function acceptCurrentPreview() {
     setAcceptedPreview(setupPreview);
+    setAcceptedPreviewFingerprint(enemies.length === 0 ? generatedPreviewFingerprint : "");
     setEnemies(setupPreview.enemies);
     setMeta((current) => ({
       ...current,
@@ -169,34 +204,32 @@ export function CampaignEncounterCreateDialog({
     setSaving(true);
     setError("");
     try {
+      const combatants = [
+        ...selectedPlayerIds.map((playerId) => ({
+          sourceType: "player" as const,
+          playerId,
+          side: "ally" as const,
+        })),
+        ...[...allies, ...enemies].flatMap((draft) =>
+          Array.from({ length: draft.quantity }, () => ({
+            sourceType: "creature" as const,
+            creatureId: draft.creature.id,
+            side: draft.side === "enemy" ? ("enemy" as const) : ("ally" as const),
+            rolledHp: draft.rolledHp,
+          })),
+        ),
+      ];
       const payload = await api.createEncounter(campaignId, {
+        idempotencyKey: crypto.randomUUID(),
+        previewFingerprint: acceptedPreviewFingerprint || undefined,
         name: meta.name.trim(),
         description: composedDescription(meta),
         status: meta.status,
         location: meta.location,
         locationId: meta.locationId || undefined,
         roomNumber: meta.roomNumber,
+        combatants,
       });
-      await Promise.all([
-        ...selectedPlayerIds.map((playerId) =>
-          api.addEncounterCombatants(payload.encounter.id, {
-            sourceType: "player",
-            playerId,
-            side: "player",
-          }),
-        ),
-        ...[...allies, ...enemies].map((draft) =>
-          api.addEncounterCombatants(payload.encounter.id, {
-            sourceType: "creature",
-            creatureId: draft.creature.librarySource === "standard" ? undefined : draft.creature.id,
-            standardCreatureId:
-              draft.creature.librarySource === "standard" ? draft.creature.id : undefined,
-            side: draft.side,
-            quantity: draft.quantity,
-            rolledHp: draft.rolledHp,
-          }),
-        ),
-      ]);
       await onCreated?.();
       onOpenChange(false);
       void navigate(`/campaigns/${campaignId}/encounters/${payload.encounter.id}/edit`);
@@ -221,6 +254,10 @@ export function CampaignEncounterCreateDialog({
         </div>
         <div className="encounter-builder-body min-h-0 overflow-y-auto px-[1.5625rem] py-3">
           {error ? <Callout tone="danger">{error}</Callout> : null}
+          {generationError ? <Callout tone="danger">{generationError}</Callout> : null}
+          {step === "setup" && generatingPreview ? (
+            <p className="text-sm text-muted-foreground">Generating encounter preview…</p>
+          ) : null}
           {step === "party" ? (
             <PartyAlliesStep
               allies={allies}
@@ -273,6 +310,7 @@ export function CampaignEncounterCreateDialog({
           )}
         </div>
         <FooterActions
+          canAdvance={step !== "setup" || (!generatingPreview && !generationError)}
           canSave={Boolean(meta.name.trim())}
           saving={saving}
           step={step}
@@ -347,3 +385,12 @@ function composedDescription(meta: EncounterBuilderMetaDraft) {
     .filter(Boolean)
     .join("\n\n");
 }
+
+const emptyEncounterPreview: EncounterBuilderPreview = {
+  title: "Generated encounter",
+  difficulty: "Medium",
+  estimatedXp: 0,
+  targetNotice: "",
+  summary: "Choose encounter settings to generate a preview.",
+  enemies: [],
+};

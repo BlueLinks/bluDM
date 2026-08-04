@@ -1,0 +1,858 @@
+openapi: 3.1.0
+info:
+  title: bluDM External Authoring API response schemas
+  version: 1.0.0
+components:
+  schemas:
+    StructuredResult:
+      type: object
+      minProperties: 1
+      description: A structured result; concrete operations reference a narrower schema.
+    PageInfo:
+      type: object
+      required: [limit]
+      properties:
+        limit: { type: integer, minimum: 1, maximum: 100 }
+        nextCursor: { type: string }
+      additionalProperties: false
+    WriteEvidence:
+      type: object
+      required: [operation, appUrl, warnings, idempotencyReplay]
+      properties:
+        operation: { enum: [created, updated, restored, created_or_updated] }
+        appUrl: { type: string }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean }
+    Campaign:
+      type: object
+      required: [id, name, description, allowedStandardSources, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        allowedStandardSources: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+      additionalProperties: false
+    CampaignSummary:
+      allOf:
+        - { $ref: "#/components/schemas/Campaign" }
+        - type: object
+          required: [appUrl]
+    CampaignPage:
+      type: object
+      required: [campaigns, page]
+      properties:
+        campaigns: { type: array, items: { $ref: "#/components/schemas/CampaignSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    PartySummary:
+      type: object
+      required: [id, characterName, playerName, level, armorClass, currentHitPoints, maxHitPoints, appUrl]
+      properties:
+        id: { type: string, format: uuid }
+        characterName: { type: string }
+        playerName: { type: string }
+        level: { type: integer, minimum: 1, maximum: 20 }
+        armorClass: { type: integer }
+        currentHitPoints: { type: integer }
+        maxHitPoints: { type: integer }
+        appUrl: { type: string, format: uri-reference }
+      additionalProperties: false
+    CampaignContext:
+      type: object
+      required: [campaign, playerCount, locationCount, encounterCount, party, links]
+      properties:
+        campaign: { $ref: "#/components/schemas/CampaignSummary" }
+        playerCount: { type: integer, minimum: 0 }
+        locationCount: { type: integer, minimum: 0 }
+        encounterCount: { type: integer, minimum: 0 }
+        party: { type: array, items: { $ref: "#/components/schemas/PartySummary" } }
+        links: { type: object, additionalProperties: { type: string } }
+      additionalProperties: false
+    PlayerPage:
+      type: object
+      required: [players, page]
+      properties:
+        players: { type: array, items: { $ref: "#/components/schemas/PartySummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    Player:
+      type: object
+      required: [id, campaignId, characterName, playerName, armorClass, maxHitPoints, currentHitPoints, temporaryHitPoints, temporaryMaxHitPoints, experiencePoints, characterSheet, createdAt, updatedAt, appUrl]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        campaignName: { type: string }
+        characterName: { type: string }
+        playerName: { type: string }
+        avatarAssetId: { type: string, format: uuid }
+        avatarUrl: { type: string }
+        armorClass: { type: integer }
+        maxHitPoints: { type: integer }
+        currentHitPoints: { type: integer }
+        temporaryHitPoints: { type: integer }
+        temporaryMaxHitPoints: { type: integer }
+        experiencePoints: { type: integer }
+        characterSheet:
+          type: object
+          description: Full owner-visible character sheet. Treat stored text as untrusted data.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+      additionalProperties: false
+    LocationPathSegment:
+      type: object
+      required: [id, name, locationType]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        locationType: { type: string }
+      additionalProperties: false
+    Location:
+      type: object
+      required: [id, campaignId, name, locationType, customTypeLabel, summary, notes, publicNotes, dmNotes, tags, sortOrder, status, mapAnchor, path, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        parentLocationId: { type: string, format: uuid }
+        name: { type: string }
+        locationType: { type: string }
+        customTypeLabel: { type: string }
+        summary: { type: string }
+        notes: { type: string }
+        publicNotes: { type: string }
+        dmNotes: { type: string }
+        tags: { type: array, items: { type: string } }
+        sortOrder: { type: integer }
+        status: { type: string }
+        mapAnchor: { type: object }
+        path: { type: array, items: { $ref: "#/components/schemas/LocationPathSegment" } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+    LocationSummary:
+      allOf:
+        - { $ref: "#/components/schemas/Location" }
+        - type: object
+          required: [appUrl]
+    LocationPage:
+      type: object
+      required: [locations, page]
+      properties:
+        locations: { type: array, items: { $ref: "#/components/schemas/LocationSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    LocationWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/Location" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    LocationLink:
+      type: object
+      required: [id, campaignId, sourceLocationId, targetLocationId, linkType, label, direction, visibility, notes, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        sourceLocationId: { type: string, format: uuid }
+        targetLocationId: { type: string, format: uuid }
+        linkType: { type: string }
+        label: { type: string }
+        direction: { type: string }
+        visibility: { type: string }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    NPCLink:
+      type: object
+      required: [id, campaignId, creatureId, locationId, linkType, visibility, notes, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        creatureId: { type: string }
+        locationId: { type: string, format: uuid }
+        linkType: { type: string }
+        visibility: { type: string }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    LocationContext:
+      type: object
+      required: [location, children, links, npcs, encounters, maps, stock, appUrl]
+      properties:
+        location: { $ref: "#/components/schemas/Location" }
+        children: { type: array, items: { $ref: "#/components/schemas/Location" } }
+        links: { type: array, items: { $ref: "#/components/schemas/LocationLink" } }
+        npcs: { type: array, items: { $ref: "#/components/schemas/NPCLink" } }
+        encounters: { type: array, items: { $ref: "#/components/schemas/Encounter" } }
+        maps: { type: array, items: { type: object } }
+        stock: { type: array, items: { type: object } }
+        appUrl: { type: string }
+      additionalProperties: false
+    WorldGraph:
+      type: object
+      required: [locations, links, appUrl]
+      properties:
+        locations: { type: array, items: { $ref: "#/components/schemas/LocationSummary" } }
+        links: { type: array, items: { $ref: "#/components/schemas/LocationLink" } }
+        appUrl: { type: string, format: uri-reference }
+      additionalProperties: false
+    SearchResult:
+      type: object
+      required: [entityType, id, name, excerpt, updatedAt, appUrl]
+      properties:
+        entityType: { enum: [location, npc, encounter, note, journey, roll_table] }
+        id: { type: string }
+        name: { type: string }
+        excerpt: { type: string }
+        path: { type: string }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string }
+      additionalProperties: false
+    SearchPage:
+      type: object
+      required: [results, page]
+      properties:
+        results: { type: array, items: { $ref: "#/components/schemas/SearchResult" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    PrepGap:
+      type: object
+      required: [kind, entityType, entityId, name, message, appUrl]
+      properties:
+        kind: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        name: { type: string }
+        message: { type: string }
+        appUrl: { type: string }
+      additionalProperties: false
+    PrepGapPage:
+      type: object
+      required: [gaps, page]
+      properties:
+        gaps: { type: array, items: { $ref: "#/components/schemas/PrepGap" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    Creature:
+      type: object
+      required: [id, name, description, size, creatureType, alignment, armorClass, hitPoints, hitDice, challengeRating, xp, avatarUrl, librarySource, readOnly, sourceKey, sourceLabel, statBlock, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        size: { type: string }
+        creatureType: { type: string }
+        alignment: { type: string }
+        armorClass: { type: integer }
+        hitPoints: { type: integer }
+        hitDice: { type: string }
+        challengeRating: { type: string }
+        xp: { type: integer }
+        imageAssetId: { type: string }
+        avatarUrl: { type: string }
+        librarySource: { enum: [user, standard] }
+        readOnly: { type: boolean }
+        sourceKey: { type: string }
+        sourceLabel: { type: string }
+        statBlock: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+    CreatureSummary:
+      allOf:
+        - { $ref: "#/components/schemas/Creature" }
+        - type: object
+          required: [appUrl]
+    CreaturePage:
+      type: object
+      required: [creatures, page]
+      properties:
+        creatures: { type: array, items: { $ref: "#/components/schemas/CreatureSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    CreatureDetails:
+      type: object
+      required: [creature, actions, spellcasting, campaignIds, appUrl]
+      properties:
+        creature: { $ref: "#/components/schemas/Creature" }
+        actions: { type: array, items: { type: object } }
+        spellcasting: { type: object }
+        campaignIds: { type: array, items: { type: string, format: uuid } }
+        appUrl: { type: string }
+      additionalProperties: false
+    NPCWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/Creature" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    NPCLinkWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/NPCLink" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    LocationLinkWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/LocationLink" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    LibrarySearch:
+      type: object
+      required: [page]
+      properties:
+        creatures: { type: array, items: { $ref: "#/components/schemas/CreatureSummary" } }
+        spells: { type: array, items: { $ref: "#/components/schemas/LinkableLibrarySummary" } }
+        items: { type: array, items: { $ref: "#/components/schemas/LinkableLibrarySummary" } }
+        entries: { type: array, items: { $ref: "#/components/schemas/LinkableLibrarySummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    LinkableLibrarySummary:
+      type: object
+      required: [id, appUrl]
+      properties:
+        id: { type: string }
+        appUrl: { type: string, format: uri-reference }
+      additionalProperties: true
+    LibraryEntry:
+      type: object
+      required: [contentType, librarySource, appUrl]
+      properties:
+        contentType: { type: string }
+        librarySource: { enum: [user, standard] }
+        spell: { type: object }
+        item: { type: object }
+        entry: { type: object }
+        appUrl: { type: string }
+      additionalProperties: false
+    EncounterCombatant:
+      type: object
+      required: [id, encounterId, sourceType, side, displayName, colorLabel, avatarUrl, armorClass, maxHitPoints, currentHitPoints, rolledHp, sortOrder, snapshot, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        encounterId: { type: string, format: uuid }
+        sourceType: { enum: [player, creature, inline] }
+        playerId: { type: string, format: uuid }
+        creatureId: { type: string }
+        side: { enum: [enemy, ally] }
+        displayName: { type: string }
+        colorLabel: { type: string }
+        avatarUrl: { type: string }
+        armorClass: { type: integer }
+        maxHitPoints: { type: integer }
+        currentHitPoints: { type: integer }
+        rolledHp: { type: boolean }
+        sortOrder: { type: integer }
+        snapshot: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      additionalProperties: false
+    Encounter:
+      type: object
+      required: [id, campaignId, name, description, status, location, roomNumber, lootNotes, combatantCount, enemyCount, revision, metadata, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        status: { enum: [planned, completed, skipped] }
+        location: { type: string }
+        locationId: { type: string, format: uuid }
+        roomNumber: { type: string }
+        lootNotes: { type: string }
+        combatants: { type: array, items: { $ref: "#/components/schemas/EncounterCombatant" } }
+        combatantCount: { type: integer, minimum: 0 }
+        enemyCount: { type: integer, minimum: 0 }
+        revision: { type: integer, minimum: 1 }
+        metadata: { type: object }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+    EncounterSummary:
+      allOf:
+        - { $ref: "#/components/schemas/Encounter" }
+        - type: object
+          required: [appUrl]
+    EncounterPage:
+      type: object
+      required: [encounters, page]
+      properties:
+        encounters: { type: array, items: { $ref: "#/components/schemas/EncounterSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    Thresholds:
+      type: object
+      required: [easy, medium, hard, deadly]
+      properties:
+        easy: { type: integer, minimum: 0 }
+        medium: { type: integer, minimum: 0 }
+        hard: { type: integer, minimum: 0 }
+        deadly: { type: integer, minimum: 0 }
+      additionalProperties: false
+    DifficultyEvidence:
+      type: object
+      required: [ruleset, actualDifficulty, thresholds, rawXp, enemyCount, baseMultiplier, partySizeAdjustment, multiplier, adjustedXp, withinTarget, warnings]
+      properties:
+        ruleset: { type: string }
+        requestedDifficulty: { enum: [easy, medium, hard, deadly] }
+        actualDifficulty: { enum: [Trivial, Easy, Medium, Hard, Deadly, Over Deadly] }
+        thresholds: { $ref: "#/components/schemas/Thresholds" }
+        rawXp: { type: integer, minimum: 0 }
+        enemyCount: { type: integer, minimum: 0 }
+        baseMultiplier: { type: number, minimum: 0 }
+        partySizeAdjustment: { type: integer }
+        multiplier: { type: number, minimum: 0 }
+        adjustedXp: { type: integer, minimum: 0 }
+        targetMinimum: { type: integer, minimum: 0 }
+        targetMaximum: { type: integer, minimum: 0 }
+        withinTarget: { type: boolean }
+        warnings: { type: array, items: { type: string } }
+      additionalProperties: false
+    EncounterDetails:
+      type: object
+      required: [encounter, combatants, difficultyEvidence, appUrl]
+      properties:
+        encounter: { $ref: "#/components/schemas/Encounter" }
+        combatants: { type: array, items: { $ref: "#/components/schemas/EncounterCombatant" } }
+        difficultyEvidence: { $ref: "#/components/schemas/DifficultyEvidence" }
+        appUrl: { type: string }
+      additionalProperties: false
+    EncounterWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/Encounter" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+        - type: object
+          required: [exportLinks]
+          properties:
+            exportLinks: { type: object, additionalProperties: { type: string } }
+      unevaluatedProperties: false
+    EncounterEnemy:
+      type: object
+      required: [id, creature, quantity, rolledHp, side]
+      properties:
+        id: { type: string }
+        creature: { $ref: "#/components/schemas/Creature" }
+        quantity: { type: integer, minimum: 1 }
+        rolledHp: { type: boolean }
+        side: { type: string }
+      additionalProperties: false
+    EncounterPreview:
+      type: object
+      required: [version, generatorVersion, seed, title, difficulty, estimatedXp, targetNotice, summary, enemies, difficultyEvidence, candidatePoolSize, enemyCountSemantics, selectionReasons]
+      properties:
+        version: { type: integer }
+        generatorVersion: { type: string }
+        seed: { type: integer }
+        title: { type: string }
+        difficulty: { type: string }
+        estimatedXp: { type: integer }
+        targetNotice: { type: string }
+        summary: { type: string }
+        enemies: { type: array, items: { $ref: "#/components/schemas/EncounterEnemy" } }
+        difficultyEvidence: { $ref: "#/components/schemas/DifficultyEvidence" }
+        candidatePoolSize: { type: integer, minimum: 0 }
+        enemyCountSemantics: { type: string }
+        selectionReasons: { type: array, items: { type: string } }
+      additionalProperties: false
+    EncounterPreviewEnvelope:
+      type: object
+      required: [preview, previewFingerprint]
+      properties:
+        preview: { $ref: "#/components/schemas/EncounterPreview" }
+        previewFingerprint: { type: string }
+      additionalProperties: false
+    EncounterAuthoringResult:
+      type: object
+      required: [encounter, campaign, revision, appUrl, generatorVersion, seed, preview, difficultyEvidence, selectedParty, managedCombatantIds, createdCombatantCount, preservedCombatantCount, replacedCombatantCount, warnings, exportLinks, idempotencyReplay]
+      properties:
+        encounter: { $ref: "#/components/schemas/Encounter" }
+        campaign: { $ref: "#/components/schemas/IdentitySnapshot" }
+        location: { $ref: "#/components/schemas/IdentitySnapshot" }
+        revision: { type: integer, minimum: 1 }
+        appUrl: { type: string }
+        generatorVersion: { type: string }
+        seed: { type: integer }
+        preview: { $ref: "#/components/schemas/EncounterPreview" }
+        difficultyEvidence: { $ref: "#/components/schemas/DifficultyEvidence" }
+        selectedParty: { type: array, items: { $ref: "#/components/schemas/PartySummary" } }
+        managedCombatantIds: { type: array, items: { type: string, format: uuid } }
+        createdCombatantCount: { type: integer, minimum: 0 }
+        preservedCombatantCount: { type: integer, minimum: 0 }
+        replacedCombatantCount: { type: integer, minimum: 0 }
+        warnings: { type: array, items: { type: string } }
+        exportLinks: { type: object, additionalProperties: { type: string } }
+        idempotencyReplay: { type: boolean }
+      additionalProperties: false
+    IdentitySnapshot:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+      additionalProperties: false
+    RevisionSummary:
+      type: object
+      required: [revision, changeReason, generationInput, generationOutput, actorUserId, createdAt]
+      properties:
+        revision: { type: integer, minimum: 1 }
+        changeReason: { type: string }
+        generationInput: { type: object }
+        generationOutput: { type: object }
+        actorUserId: { type: string, format: uuid }
+        actorTokenId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+      additionalProperties: false
+    RevisionPage:
+      type: object
+      required: [revisions, page]
+      properties:
+        revisions: { type: array, items: { $ref: "#/components/schemas/RevisionSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    CampaignChangesPreview:
+      type: object
+      required: [previewToken, expiresAt, changes, warnings]
+      properties:
+        previewToken: { type: string }
+        expiresAt: { type: string, format: date-time }
+        changes: { type: array, items: { type: object } }
+        warnings: { type: array, items: { type: string } }
+      additionalProperties: false
+    CampaignChangesApplied:
+      type: object
+      required: [applied, operations, operationCount, operation, appUrl, warnings, idempotencyReplay]
+      properties:
+        applied: { const: true }
+        operations: { type: array, items: { type: object } }
+        operationCount: { type: integer, minimum: 1, maximum: 100 }
+        operation: { enum: [updated] }
+        appUrl: { type: string, format: uri }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean }
+      additionalProperties: false
+    RollTableRow:
+      type: object
+      required: [id, tableId, minRoll, maxRoll, label, resultText, notes, sortOrder]
+      properties:
+        id: { type: string, format: uuid }
+        tableId: { type: string, format: uuid }
+        minRoll: { type: integer, minimum: 1 }
+        maxRoll: { type: integer, minimum: 1 }
+        label: { type: string }
+        resultText: { type: string }
+        notes: { type: string }
+        sortOrder: { type: integer }
+      additionalProperties: false
+    RollTable:
+      type: object
+      required: [id, source, name, description, category, tags, dieExpression, rows, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        campaignId: { type: string, format: uuid }
+        source: { type: string }
+        name: { type: string }
+        description: { type: string }
+        category: { type: string }
+        tags: { type: array, items: { type: string } }
+        dieExpression: { type: string }
+        rows: { type: array, items: { $ref: "#/components/schemas/RollTableRow" } }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        appUrl: { type: string, format: uri-reference }
+    RollTableSummary:
+      allOf:
+        - { $ref: "#/components/schemas/RollTable" }
+        - type: object
+          required: [appUrl]
+    RollTablePage:
+      type: object
+      required: [tables, page]
+      properties:
+        tables: { type: array, items: { $ref: "#/components/schemas/RollTableSummary" } }
+        page: { $ref: "#/components/schemas/PageInfo" }
+      additionalProperties: false
+    RollTableWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/RollTable" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    RollResult:
+      type: object
+      required: [tableId, tableName, dieExpression, rolledValue, matchedRange, label, resultText, notes, rolledAt]
+      properties:
+        tableId: { type: string }
+        tableName: { type: string }
+        dieExpression: { type: string }
+        rolledValue: { type: integer }
+        matchedRange: { type: string }
+        label: { type: string }
+        resultText: { type: string }
+        notes: { type: string }
+        rolledAt: { type: string, format: date-time }
+      additionalProperties: false
+    TravelCalculation:
+      type: object
+      required: [distanceMiles, durationHours, durationDays, effectivePace, milesPerDay, terrainMaximumPace, encounterDistance, assumptions, ruleset]
+      properties:
+        distanceMiles: { type: number }
+        durationHours: { type: number }
+        durationDays: { type: number }
+        effectivePace: { type: string }
+        milesPerDay: { type: number }
+        terrainMaximumPace: { type: string }
+        encounterDistance: { type: string }
+        assumptions: { type: array, items: { type: string } }
+        ruleset: { type: string }
+      additionalProperties: false
+    Journey:
+      type: object
+      required: [id, campaignId, name, origin, destination, distance, distanceUnit, terrain, pace, goodRoads, weather, routeInputMode, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        campaignId: { type: string, format: uuid }
+        name: { type: string }
+        origin: { type: string }
+        destination: { type: string }
+        distance: { type: number }
+        distanceUnit: { type: string }
+        terrain: { type: string }
+        pace: { type: string }
+        goodRoads: { type: boolean }
+        encounterDistanceFeet: { type: integer }
+        weather: { type: object }
+        routeInputMode: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    JourneyWriteResult:
+      allOf:
+        - { $ref: "#/components/schemas/Journey" }
+        - { $ref: "#/components/schemas/WriteEvidence" }
+      unevaluatedProperties: false
+    DungeonPreview:
+      type: object
+      required: [document, warnings]
+      properties:
+        document: { type: object, description: Versioned deterministic Dungeon Studio document. }
+        warnings: { type: array, items: { type: string } }
+      additionalProperties: false
+    LegacyDungeonPreview:
+      type: object
+      required: [document]
+      properties:
+        document: { type: object, description: Versioned deterministic Dungeon Studio document. }
+      additionalProperties: false
+    SavedDungeon:
+      type: object
+      required: [location, rooms, map, document, appUrl, operation, warnings, idempotencyReplay]
+      properties:
+        location: { $ref: "#/components/schemas/Location" }
+        rooms: { type: array, items: { $ref: "#/components/schemas/Location" } }
+        map: { type: object }
+        document: { type: object }
+        appUrl: { type: string }
+        operation: { const: created }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean }
+      additionalProperties: false
+    CompletedRunSummary:
+      type: object
+      required: [run, encounter, appUrl]
+      properties:
+        run: { type: object, description: "Completed immutable run snapshot, outcomes, and log." }
+        encounter: { $ref: "#/components/schemas/Encounter" }
+        appUrl: { type: string }
+      additionalProperties: false
+    ContinuityContext:
+      type: object
+      required: [campaign, locations, links, npcPlacements, encounters, recentRuns, prepGaps]
+      properties:
+        campaign: { $ref: "#/components/schemas/CampaignContext" }
+        locations: { type: array, items: { $ref: "#/components/schemas/Location" } }
+        links: { type: array, items: { $ref: "#/components/schemas/LocationLink" } }
+        npcPlacements: { type: array, items: { $ref: "#/components/schemas/NPCLink" } }
+        encounters: { type: array, items: { $ref: "#/components/schemas/Encounter" } }
+        recentRuns: { type: array, items: { type: object } }
+        prepGaps: { type: array, items: { $ref: "#/components/schemas/PrepGap" } }
+      additionalProperties: false
+    ShopStockPreview:
+      type: object
+      required: [previewToken, expiresAt, stock, existing, warnings]
+      properties:
+        previewToken: { type: string }
+        expiresAt: { type: string, format: date-time }
+        stock: { type: array, items: { type: object } }
+        existing: { type: array, items: { type: object } }
+        warnings: { type: array, items: { type: string } }
+      additionalProperties: false
+    ShopStockApplied:
+      type: object
+      required: [applied, stock, operationCount, operation, appUrl, warnings, idempotencyReplay]
+      properties:
+        applied: { const: true }
+        stock: { type: array, items: { type: object } }
+        operationCount: { type: integer, minimum: 1, maximum: 100 }
+        operation: { enum: [updated] }
+        appUrl: { type: string, format: uri }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean }
+      additionalProperties: false
+    Feature:
+      type: object
+      required: [name, desc]
+      properties:
+        name: { type: string }
+        desc: { type: string }
+      additionalProperties: false
+    Canonical5eStatBlock:
+      type: object
+      required: [profile, sourceShape, entityId, name, size, type, armorClass, hitPoints, hitDice, speed, stats, saves, skillSaves, damageVulnerabilities, damageResistances, damageImmunities, conditionImmunities, senses, languages, challengeRating, traits, spells, actions, bonusActions, reactions, legendaryActions, mythicActions, lairActions, regionalEffects, adjacentMetadata, structuredMechanics]
+      properties:
+        profile: { const: fantasy-statblocks-basic-5e@1 }
+        sourceShape: { enum: [standard, custom, encounter-snapshot] }
+        entityId: { type: string }
+        name: { type: string }
+        image: { type: string }
+        source: { type: string }
+        size: { type: string }
+        type: { type: string }
+        subtype: { type: string }
+        alignment: { type: string }
+        armorClass: { type: integer }
+        armorClassNotes: { type: string }
+        hitPoints: { type: integer }
+        hitDice: { type: string }
+        speed: { type: string }
+        stats: { type: array, minItems: 6, maxItems: 6, items: { type: integer } }
+        saves: { type: object, additionalProperties: { type: integer } }
+        skillSaves: { type: object, additionalProperties: { type: integer } }
+        damageVulnerabilities: { type: string }
+        damageResistances: { type: string }
+        damageImmunities: { type: string }
+        conditionImmunities: { type: string }
+        senses: { type: string }
+        languages: { type: string }
+        challengeRating: { type: string }
+        traits: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        spells: { type: array, items: { type: string } }
+        spellsNotes: { type: string }
+        actions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        bonusActions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        reactions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        legendaryDescription: { type: string }
+        legendaryActions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        mythicDescription: { type: string }
+        mythicActions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        lairActions: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        regionalEffects: { type: array, items: { $ref: "#/components/schemas/Feature" } }
+        adjacentMetadata: { type: object }
+        structuredMechanics: { type: object }
+      additionalProperties: false
+    CompatibilityReport:
+      type: object
+      required: [status, profile, sourceShape, entityId, mappedFields, derivedFields, flattenedFields, adjacentOnlyFields, omittedFields, blockingFields, unmappedFields, missingFields, lossyFields, warnings, exportAllowed]
+      properties:
+        status: { enum: [complete, complete_with_warnings, unsupported] }
+        profile: { const: fantasy-statblocks-basic-5e@1 }
+        sourceShape: { type: string }
+        entityId: { type: string }
+        mappedFields: { type: array, items: { type: string } }
+        derivedFields: { type: array, items: { type: string } }
+        flattenedFields: { type: array, items: { type: string } }
+        adjacentOnlyFields: { type: array, items: { type: string } }
+        omittedFields: { type: array, items: { type: string } }
+        blockingFields: { type: array, items: { type: string } }
+        unmappedFields: { type: array, items: { type: string } }
+        missingFields: { type: array, items: { type: string } }
+        lossyFields: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+        exportAllowed: { type: boolean }
+      additionalProperties: false
+    CompatibilityList:
+      type: array
+      items: { $ref: "#/components/schemas/CompatibilityReport" }
+    StatblockResult:
+      type: object
+      required: [profile, output, canonical, compatibility]
+      properties:
+        profile: { const: fantasy-statblocks-basic-5e@1 }
+        output: { enum: [structured, yaml, markdown] }
+        appUrl: { type: string, format: uri }
+        exportUrl: { type: string, format: uri }
+        canonical: { $ref: "#/components/schemas/Canonical5eStatBlock" }
+        compatibility: { $ref: "#/components/schemas/CompatibilityReport" }
+        yaml: { type: string }
+        markdown: { type: string }
+      additionalProperties: false
+    EncounterExportRoster:
+      type: object
+      required: [creatureId, name, quantity, sides]
+      properties:
+        creatureId: { type: string }
+        name: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        sides: { type: object, additionalProperties: { type: integer, minimum: 1 } }
+      additionalProperties: false
+    EncounterExportOmission:
+      type: object
+      required: [combatantId, name, side, reason]
+      properties:
+        combatantId: { type: string }
+        name: { type: string }
+        side: { type: string }
+        reason: { type: string }
+      additionalProperties: false
+    EncounterExport:
+      type: object
+      required: [profile, output, appUrl, exportUrl, encounter, creatureData, roster, results, compatibility, omittedCombatants, warnings]
+      properties:
+        profile: { const: fantasy-statblocks-basic-5e@1 }
+        output: { enum: [structured, markdown, obsidian-bundle] }
+        appUrl: { type: string, format: uri }
+        exportUrl: { type: string, format: uri }
+        encounter: { $ref: "#/components/schemas/Encounter" }
+        creatureData: { enum: [snapshot, latest] }
+        roster: { type: array, items: { $ref: "#/components/schemas/EncounterExportRoster" } }
+        results: { type: array, items: { $ref: "#/components/schemas/StatblockResult" } }
+        compatibility: { type: array, items: { $ref: "#/components/schemas/CompatibilityReport" } }
+        omittedCombatants: { type: array, items: { $ref: "#/components/schemas/EncounterExportOmission" } }
+        warnings: { type: array, items: { type: string } }
+        markdown: { type: string }
+        encounterMarkdown: { type: string }
+        bundleMarkdown: { type: string }
+      additionalProperties: false
+    MarkdownPreviewEnvelope:
+      type: object
+      required: [preview]
+      properties:
+        preview: { type: object, description: "Parsed typed import plan, warnings, and conflicts." }
+      additionalProperties: false
+    EncounterMarkdownImportResult:
+      type: object
+      required: [encounters, operations, appUrls, warnings, idempotencyReplay]
+      properties:
+        encounters: { type: array, items: { $ref: "#/components/schemas/Encounter" } }
+        operations: { type: array, items: { enum: [create, update] } }
+        appUrls: { type: array, items: { type: string, format: uri } }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean, description: Present for scoped v2 tokens; legacy bridge tokens retain the historical response. }
+      additionalProperties: false
+    WorldMarkdownImportResult:
+      type: object
+      required: [npcs, dungeons, appUrls, warnings, idempotencyReplay]
+      properties:
+        npcs: { type: array, items: { type: object } }
+        dungeons: { type: array, items: { type: object } }
+        appUrls: { type: array, items: { type: string, format: uri } }
+        warnings: { type: array, items: { type: string } }
+        idempotencyReplay: { type: boolean, description: Present for scoped v2 tokens; legacy bridge tokens retain the historical response. }
+      additionalProperties: false
+    MarkdownImportResult:
+      type: object
+      required: [import, preview]
+      properties:
+        import:
+          oneOf:
+            - { $ref: "#/components/schemas/EncounterMarkdownImportResult" }
+            - { $ref: "#/components/schemas/WorldMarkdownImportResult" }
+        preview: { type: object }
+      additionalProperties: false

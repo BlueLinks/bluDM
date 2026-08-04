@@ -1,12 +1,14 @@
 package httpapi
 
 import (
-	"bludm/backend/internal/models"
-	"bludm/backend/internal/store"
 	"context"
 	"errors"
 	"net/http"
 	"strings"
+
+	appdomain "bludm/backend/internal/app"
+	"bludm/backend/internal/models"
+	"bludm/backend/internal/store"
 )
 
 func (s *Server) listCampaigns(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +159,33 @@ func (s *Server) createEncounter(w http.ResponseWriter, r *http.Request) {
 	req.RoomNumber = strings.TrimSpace(req.RoomNumber)
 	if req.Name == "" {
 		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	if req.IdempotencyKey != "" || len(req.Combatants) > 0 {
+		encounter, err := s.app.CreateEncounter(
+			r.Context(), campaignID, appdomain.EncounterCommand{
+				IdempotencyKey: req.IdempotencyKey, Name: req.Name,
+				PreviewFingerprint: req.PreviewFingerprint,
+				Description:        req.Description, Status: req.Status, Location: req.Location,
+				LocationID: req.LocationID, RoomNumber: req.RoomNumber,
+				Combatants: req.Combatants,
+			},
+		)
+		if err != nil {
+			info := appdomain.ErrorInfo(err)
+			status := http.StatusBadRequest
+			if info.Code == appdomain.CodeNotFound {
+				status = http.StatusNotFound
+			} else if info.Code == appdomain.CodeConflict ||
+				info.Code == appdomain.CodeIdempotencyConflict {
+				status = http.StatusConflict
+			} else if info.Code == appdomain.CodeInternal {
+				status = http.StatusInternalServerError
+			}
+			writeError(w, status, info.Message)
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"encounter": encounter})
 		return
 	}
 	encounter, err := s.stores.Campaigns.CreateEncounter(r.Context(), currentUserIDMust(r.Context()), campaignID, store.CampaignEncounterInput{

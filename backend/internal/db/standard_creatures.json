@@ -49225,7 +49225,10 @@
       "skills": {
         "stealth": 3
       },
-      "speed": {},
+      "speed": {
+        "walk": "10 ft.",
+        "fly": "30 ft."
+      },
       "senses": {
         "Blindsight": "60 ft.",
         "passivePerception": 10
@@ -56278,8 +56281,8 @@
     "armorClass": 17,
     "hitPoints": 60,
     "hitDice": "8d8 + 24",
-    "challengeRating": "",
-    "xp": 0,
+    "challengeRating": "3",
+    "xp": 700,
     "avatarUrl": "",
     "sourceLabel": "SRD 5.2.1",
     "sourceUrl": "https://www.dndbeyond.com/srd",
@@ -56322,7 +56325,7 @@
         "passivePerception": 14
       },
       "languages": "Draconic",
-      "proficiencyBonus": 0,
+      "proficiencyBonus": 2,
       "defenses": {
         "vulnerabilities": [],
         "resistances": [],
@@ -66893,7 +66896,10 @@
       "skills": {
         "perception": 5
       },
-      "speed": {},
+      "speed": {
+        "walk": "30 ft.",
+        "swim": "40 ft."
+      },
       "senses": {
         "Darkvision": "120 ft.",
         "passivePerception": 15
@@ -68042,8 +68048,8 @@
     "armorClass": 17,
     "hitPoints": 45,
     "hitDice": "6d8 + 18",
-    "challengeRating": "",
-    "xp": 0,
+    "challengeRating": "2",
+    "xp": 450,
     "avatarUrl": "",
     "sourceLabel": "SRD 5.2.1",
     "sourceUrl": "https://www.dndbeyond.com/srd",
@@ -68085,7 +68091,7 @@
         "passivePerception": 14
       },
       "languages": "Draconic",
-      "proficiencyBonus": 0,
+      "proficiencyBonus": 2,
       "defenses": {
         "vulnerabilities": [],
         "resistances": [],
@@ -70015,7 +70021,10 @@
         "insight": 5,
         "perception": 5
       },
-      "speed": {},
+      "speed": {
+        "walk": "30 ft.",
+        "fly": "60 ft."
+      },
       "senses": {
         "Darkvision": "60 ft.",
         "passivePerception": 15
@@ -74057,8 +74066,8 @@
     "armorClass": 16,
     "hitPoints": 32,
     "hitDice": "5d8 + 10",
-    "challengeRating": "",
-    "xp": 0,
+    "challengeRating": "2",
+    "xp": 450,
     "avatarUrl": "",
     "sourceLabel": "SRD 5.2.1",
     "sourceUrl": "https://www.dndbeyond.com/srd",
@@ -74102,7 +74111,7 @@
         "passivePerception": 14
       },
       "languages": "Draconic",
-      "proficiencyBonus": 0,
+      "proficiencyBonus": 2,
       "defenses": {
         "vulnerabilities": [],
         "resistances": [],
@@ -74992,7 +75001,10 @@
         "perception": 6,
         "stealth": 6
       },
-      "speed": {},
+      "speed": {
+        "walk": "20 ft.",
+        "burrow": "20 ft."
+      },
       "senses": {
         "Darkvision": "60 ft.",
         "Tremorsense": "60 ft.",
@@ -76117,8 +76129,8 @@
     "armorClass": 17,
     "hitPoints": 123,
     "hitDice": "13d10 + 52",
-    "challengeRating": "",
-    "xp": 0,
+    "challengeRating": "6",
+    "xp": 2300,
     "avatarUrl": "",
     "sourceLabel": "SRD 5.2.1",
     "sourceUrl": "https://www.dndbeyond.com/srd",
@@ -76134,6 +76146,7 @@
         "str": 18,
         "dex": 10,
         "con": 18,
+        "int": 6,
         "wis": 11,
         "cha": 12
       },
@@ -76160,7 +76173,7 @@
         "passivePerception": 16
       },
       "languages": "Common, Draconic",
-      "proficiencyBonus": 0,
+      "proficiencyBonus": 3,
       "defenses": {
         "vulnerabilities": [],
         "resistances": [],

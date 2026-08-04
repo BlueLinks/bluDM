@@ -1,0 +1,1238 @@
+openapi: 3.1.0
+info:
+  title: bluDM External Authoring API
+  version: 1.0.0
+  description: Versioned REST adapter over the same application services used by bluDM MCP.
+  license:
+    name: Proprietary
+    identifier: LicenseRef-Proprietary
+servers:
+  - url: https://{host}
+    description: Replace the host with the public or private bluDM deployment hostname.
+    variables:
+      host:
+        default: bludm.invalid
+security:
+  - bearerAuth: []
+x-bludm-scope-contract:
+  listCampaigns: [campaigns:read]
+  getCampaignContext: [campaigns:read]
+  listPlayers: [party:read]
+  getPlayer: [party:read]
+  listLocations: [world:read]
+  createLocation: [world:write]
+  getLocation: [world:read]
+  updateLocation: [world:write]
+  getWorldGraph: [world:read]
+  searchCampaignContent: [campaigns:read]
+  getPrepGaps: [campaigns:read, world:read]
+  searchCreatures: [library:read]
+  getCreature: [library:read]
+  searchLibrary: [library:read]
+  getLibraryEntry: [library:read]
+  listEncounters: [encounters:read]
+  createEncounter: [encounters:write]
+  getEncounter: [encounters:read]
+  updateEncounter: [encounters:write]
+  evaluateEncounter: [generation:run]
+  previewGeneratedEncounter: [generation:run]
+  previewGeneratedDungeonLegacy: [generation:run]
+  createGeneratedEncounter: [encounters:write, generation:run]
+  regenerateEncounter: [encounters:write, generation:run]
+  listEncounterRevisions: [encounters:read]
+  restoreEncounterRevision: [encounters:write]
+  createNpc: [library:write]
+  updateNpc: [library:write]
+  linkNpcToLocation: [world:write]
+  createLocationLink: [world:write]
+  previewCampaignChanges: [content:import]
+  applyCampaignChanges: [content:import]
+  listRollTables: [world:read]
+  createRollTable: [world:write]
+  updateRollTable: [world:write]
+  rollOnTable: [world:read]
+  calculateTravel: [world:read]
+  createJourney: [world:write]
+  generateDungeonPreview: [world:read, generation:run]
+  saveGeneratedDungeon: [world:write, generation:run]
+  getCompletedRunSummary: [sessions:read]
+  getCampaignContinuityContext: [campaigns:read, world:read, encounters:read, sessions:read]
+  previewShopStockChanges: [world:write, library:read]
+  applyShopStockChanges: [world:write, library:read]
+  exportCreatureStatblock: [library:read]
+  checkCreatureCompatibility: [library:read]
+  exportEncounterStatblocks: [encounters:read, library:read]
+  checkEncounterCompatibility: [encounters:read, library:read]
+  exportEncounterObsidianBundle: [encounters:read, library:read]
+  previewEncounterMarkdownImport: [content:import]
+  importEncounterMarkdown: [content:import, encounters:write]
+  previewWorldMarkdownImport: [content:import]
+  importWorldMarkdown: [content:import, world:write, library:write, encounters:write]
+  exportBluDMEncounterMarkdown: [encounters:read]
+tags:
+  - name: discovery
+    description: Campaign, party, world, encounter, and library discovery.
+  - name: encounters
+    description: Encounter evaluation, durable authoring, and revision recovery.
+  - name: world
+    description: Campaign World entities and relationships.
+  - name: export
+    description: Versioned Markdown, Obsidian, and Fantasy Statblocks exports.
+  - name: advanced
+    description: Roll tables, journeys, Dungeon Studio, continuity, and shop preparation.
+paths:
+  /api/external/v1/campaigns:
+    get:
+      operationId: listCampaigns
+      summary: List campaigns available to the credential.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/Limit" }, { $ref: "#/components/parameters/Cursor" }]
+      responses: { "200": { $ref: "#/components/responses/CampaignPage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}:
+    get:
+      operationId: getCampaignContext
+      summary: Get compact campaign context and navigation links.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/CampaignContext" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/players:
+    get:
+      operationId: listPlayers
+      summary: List campaign player characters.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/PlayerPage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/players/{playerId}:
+    get:
+      operationId: getPlayer
+      summary: Get one campaign player character.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/PlayerId" }]
+      responses: { "200": { $ref: "#/components/responses/Player" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/locations:
+    get:
+      operationId: listLocations
+      summary: List and filter Campaign World locations.
+      tags: [world]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: q, in: query, schema: { type: string }, description: Case-insensitive name and notes filter. }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: parentLocationId, in: query, schema: { type: string }, description: Empty string selects root locations. }
+        - { name: status, in: query, schema: { type: string } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses: { "200": { $ref: "#/components/responses/LocationPage" }, default: { $ref: "#/components/responses/Error" } }
+    post:
+      operationId: createLocation
+      summary: Create a Campaign World location.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/LocationCommand" }
+      responses: { "201": { $ref: "#/components/responses/LocationWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/locations/{locationId}:
+    get:
+      operationId: getLocation
+      summary: Get a location and its related campaign context.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/LocationId" }]
+      responses: { "200": { $ref: "#/components/responses/LocationContext" }, default: { $ref: "#/components/responses/Error" } }
+    patch:
+      operationId: updateLocation
+      summary: Update a location with optimistic concurrency.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/LocationId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/UpdateLocationCommand" }
+      responses: { "200": { $ref: "#/components/responses/LocationWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/world-graph:
+    get:
+      operationId: getWorldGraph
+      summary: Get the campaign location and connection graph.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/WorldGraph" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/search:
+    get:
+      operationId: searchCampaignContent
+      summary: Search campaign-authored content.
+      tags: [discovery]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: q, in: query, required: true, schema: { type: string } }
+        - name: entityType
+          in: query
+          description: Repeat or use a comma-separated list of location, npc, encounter, note, journey, or roll_table.
+          schema: { type: array, items: { enum: [location, npc, encounter, note, journey, roll_table] } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses: { "200": { $ref: "#/components/responses/SearchPage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/prep-gaps:
+    get:
+      operationId: getPrepGaps
+      summary: Find deterministic campaign preparation gaps.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/PrepGapPage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/creatures:
+    get:
+      operationId: searchCreatures
+      summary: Search campaign-compatible creatures.
+      tags: [discovery]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { type: string }, description: Exact creature type. }
+        - { name: minCr, in: query, schema: { type: number, minimum: 0 } }
+        - { name: maxCr, in: query, schema: { type: number, minimum: 0 } }
+        - { name: source, in: query, schema: { type: string }, description: Exact enabled source key. }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses: { "200": { $ref: "#/components/responses/CreaturePage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/creatures/{creatureId}:
+    get:
+      operationId: getCreature
+      summary: Get a complete creature record.
+      tags: [discovery]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/CreatureId" }]
+      responses: { "200": { $ref: "#/components/responses/CreatureDetails" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/entries:
+    get:
+      operationId: searchLibrary
+      summary: Search spells, items, rules, and other library entries.
+      tags: [discovery]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: type, in: query, schema: { type: string } }
+        - { name: q, in: query, schema: { type: string } }
+      responses: { "200": { $ref: "#/components/responses/LibrarySearch" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/entries/{entryId}:
+    get:
+      operationId: getLibraryEntry
+      summary: Get one typed library entry.
+      tags: [discovery]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: entryId, in: path, required: true, schema: { type: string } }
+        - { name: type, in: query, required: true, schema: { type: string } }
+        - { name: source, in: query, schema: { enum: [user, standard] } }
+      responses: { "200": { $ref: "#/components/responses/LibraryEntry" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters:
+    get:
+      operationId: listEncounters
+      summary: List and filter prepared encounters.
+      tags: [encounters]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: q, in: query, schema: { type: string }, description: "Name, description, location, or room text." }
+        - { name: status, in: query, schema: { enum: [planned, completed, skipped] } }
+        - { name: locationId, in: query, schema: { type: string, format: uuid } }
+        - { $ref: "#/components/parameters/Limit" }
+        - { $ref: "#/components/parameters/Cursor" }
+      responses: { "200": { $ref: "#/components/responses/EncounterPage" }, default: { $ref: "#/components/responses/Error" } }
+    post:
+      operationId: createEncounter
+      summary: Create an authored planned encounter atomically.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/EncounterCommand" }
+      responses: { "201": { $ref: "#/components/responses/EncounterWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}:
+    get:
+      operationId: getEncounter
+      summary: Get an encounter, roster, and difficulty evidence.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/EncounterId" }]
+      responses: { "200": { $ref: "#/components/responses/EncounterDetails" }, default: { $ref: "#/components/responses/Error" } }
+    patch:
+      operationId: updateEncounter
+      summary: Apply a targeted encounter update.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/EncounterId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/UpdateEncounter" }
+      responses: { "200": { $ref: "#/components/responses/EncounterWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/generation/encounter-evaluation:
+    post:
+      operationId: evaluateEncounter
+      summary: Evaluate an explicit encounter roster without saving.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/EvaluateEncounter" }
+      responses: { "200": { $ref: "#/components/responses/DifficultyEvidence" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/generation/encounter-preview:
+    post:
+      operationId: previewGeneratedEncounter
+      summary: Preview the legacy browser encounter generator.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/EncounterPreview" }
+      responses: { "200": { $ref: "#/components/responses/EncounterPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/generation/dungeon-preview:
+    post:
+      operationId: previewGeneratedDungeonLegacy
+      summary: Preview the legacy browser dungeon generator.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/LegacyDungeonPreview" }
+      responses: { "200": { $ref: "#/components/responses/LegacyDungeonPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/generate:
+    post:
+      operationId: createGeneratedEncounter
+      summary: Generate and durably create a planned encounter.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/GenerateEncounter" }
+      responses: { "201": { $ref: "#/components/responses/EncounterAuthoring" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/regenerate:
+    post:
+      operationId: regenerateEncounter
+      summary: Regenerate the managed roster on the same encounter.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/EncounterId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/RegenerateEncounter" }
+      responses: { "200": { $ref: "#/components/responses/EncounterAuthoring" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/revisions:
+    get:
+      operationId: listEncounterRevisions
+      summary: List recoverable encounter revisions.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/EncounterId" }]
+      responses: { "200": { $ref: "#/components/responses/RevisionPage" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/revisions/{revision}/restore:
+    post:
+      operationId: restoreEncounterRevision
+      summary: Restore a historical encounter state as a new revision.
+      tags: [encounters]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/EncounterId" }
+        - { name: revision, in: path, required: true, schema: { type: integer, minimum: 1 } }
+        - { $ref: "#/components/parameters/RequiredIdempotencyKey" }
+      requestBody: { $ref: "#/components/requestBodies/RestoreRevision" }
+      responses: { "200": { $ref: "#/components/responses/EncounterWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/npcs:
+    post:
+      operationId: createNpc
+      summary: Create a campaign-linked custom NPC.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/NPCCommand" }
+      responses: { "201": { $ref: "#/components/responses/NPCWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/npcs/{npcId}:
+    patch:
+      operationId: updateNpc
+      summary: Update an NPC with optimistic concurrency.
+      tags: [world]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: npcId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: "#/components/parameters/RequiredIdempotencyKey" }
+      requestBody: { $ref: "#/components/requestBodies/UpdateNPCCommand" }
+      responses: { "200": { $ref: "#/components/responses/NPCWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/npc-location-links:
+    post:
+      operationId: linkNpcToLocation
+      summary: Link an NPC to a campaign location.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/NPCLinkCommand" }
+      responses: { "201": { $ref: "#/components/responses/NPCLinkWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/location-links:
+    post:
+      operationId: createLocationLink
+      summary: Create a relationship between two locations.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/LocationLinkCommand" }
+      responses: { "201": { $ref: "#/components/responses/LocationLinkWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/content/changes/preview:
+    post:
+      operationId: previewCampaignChanges
+      summary: Validate and preview a connected campaign change set.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/CampaignChanges" }
+      responses: { "200": { $ref: "#/components/responses/CampaignChangesPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/content/changes/apply:
+    post:
+      operationId: applyCampaignChanges
+      summary: Apply an approved campaign change set transactionally.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/CampaignChanges" }
+      responses: { "200": { $ref: "#/components/responses/CampaignChangesApplied" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/roll-tables:
+    get:
+      operationId: listRollTables
+      summary: List campaign roll tables.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/RollTablePage" }, default: { $ref: "#/components/responses/Error" } }
+    post:
+      operationId: createRollTable
+      summary: Create a campaign roll table.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/RollTableCommand" }
+      responses: { "201": { $ref: "#/components/responses/RollTableWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/roll-tables/{tableId}:
+    patch:
+      operationId: updateRollTable
+      summary: Update a roll table with optimistic concurrency.
+      tags: [advanced]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: tableId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: "#/components/parameters/RequiredIdempotencyKey" }
+      requestBody: { $ref: "#/components/requestBodies/UpdateRollTableCommand" }
+      responses: { "200": { $ref: "#/components/responses/RollTableWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/roll-tables/{tableId}/roll:
+    post:
+      operationId: rollOnTable
+      summary: Deterministically roll on a campaign table.
+      tags: [advanced]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: tableId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                roll: { type: integer, minimum: 1 }
+                seed: { type: string, minLength: 1 }
+              description: Provide exactly one of roll or a caller-stable seed.
+              additionalProperties: false
+      responses: { "200": { $ref: "#/components/responses/RollResult" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/travel/calculate:
+    post:
+      operationId: calculateTravel
+      summary: Calculate a route using campaign travel rules.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/TravelCalculationCommand" }
+      responses: { "200": { $ref: "#/components/responses/TravelCalculation" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/journeys:
+    post:
+      operationId: createJourney
+      summary: Save a campaign journey.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/JourneyCommand" }
+      responses: { "201": { $ref: "#/components/responses/JourneyWrite" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/dungeons/preview:
+    post:
+      operationId: generateDungeonPreview
+      summary: Generate a deterministic Dungeon Studio preview.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/DungeonSettings" }
+      responses: { "200": { $ref: "#/components/responses/DungeonPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/dungeons:
+    post:
+      operationId: saveGeneratedDungeon
+      summary: Save an approved generated dungeon atomically.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/DungeonCommand" }
+      responses: { "201": { $ref: "#/components/responses/SavedDungeon" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/completed-runs/{runId}:
+    get:
+      operationId: getCompletedRunSummary
+      summary: Get a completed encounter-run summary.
+      tags: [advanced]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { name: runId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses: { "200": { $ref: "#/components/responses/CompletedRun" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/continuity:
+    get:
+      operationId: getCampaignContinuityContext
+      summary: Get compact campaign continuity facts.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      responses: { "200": { $ref: "#/components/responses/Continuity" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/shop-stock/preview:
+    post:
+      operationId: previewShopStockChanges
+      summary: Preview validated shop stock changes.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/ShopStockChangesCommand" }
+      responses: { "200": { $ref: "#/components/responses/ShopStockPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/shop-stock/apply:
+    post:
+      operationId: applyShopStockChanges
+      summary: Apply approved shop stock changes atomically.
+      tags: [advanced]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/ShopStockChangesCommand" }
+      responses: { "200": { $ref: "#/components/responses/ShopStockApplied" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/creatures/{creatureId}/exports/fantasy-statblocks:
+    get:
+      operationId: exportCreatureStatblock
+      summary: Export a Fantasy Statblocks-compatible creature.
+      tags: [export]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/CreatureId" }
+        - { $ref: "#/components/parameters/ExportProfile" }
+        - { $ref: "#/components/parameters/ExportLayout" }
+        - { $ref: "#/components/parameters/CreatureExportOutput" }
+        - { $ref: "#/components/parameters/ExportStrict" }
+        - { $ref: "#/components/parameters/AllowPartial" }
+        - { $ref: "#/components/parameters/VaultImagePath" }
+      responses: { "200": { $ref: "#/components/responses/StatblockResult" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/library/creatures/{creatureId}/exports/fantasy-statblocks/compatibility:
+    get:
+      operationId: checkCreatureCompatibility
+      summary: Check creature export compatibility without exporting.
+      tags: [export]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/CreatureId" }
+        - { $ref: "#/components/parameters/VaultImagePath" }
+      responses: { "200": { $ref: "#/components/responses/Compatibility" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/exports/fantasy-statblocks:
+    get:
+      operationId: exportEncounterStatblocks
+      summary: Export deduplicated encounter creature stat blocks.
+      tags: [export]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/EncounterId" }
+        - { name: creatureData, in: query, schema: { enum: [snapshot, latest], default: latest } }
+        - { $ref: "#/components/parameters/ExportProfile" }
+        - { $ref: "#/components/parameters/ExportLayout" }
+        - { $ref: "#/components/parameters/EncounterExportOutput" }
+        - { $ref: "#/components/parameters/ExportStrict" }
+        - { $ref: "#/components/parameters/AllowPartial" }
+      responses: { "200": { $ref: "#/components/responses/EncounterExport" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/exports/fantasy-statblocks/compatibility:
+    get:
+      operationId: checkEncounterCompatibility
+      summary: Check every distinct encounter creature for compatibility.
+      tags: [export]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/EncounterId" }
+        - { name: creatureData, in: query, schema: { enum: [snapshot, latest], default: latest } }
+      responses: { "200": { $ref: "#/components/responses/CompatibilityList" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/{encounterId}/exports/obsidian-bundle:
+    get:
+      operationId: exportEncounterObsidianBundle
+      summary: Export an encounter and deduplicated Obsidian stat blocks.
+      tags: [export]
+      parameters:
+        - { $ref: "#/components/parameters/CampaignId" }
+        - { $ref: "#/components/parameters/EncounterId" }
+        - { name: creatureData, in: query, schema: { enum: [snapshot, latest], default: latest } }
+        - { $ref: "#/components/parameters/ExportProfile" }
+        - { $ref: "#/components/parameters/ExportLayout" }
+        - { $ref: "#/components/parameters/ExportStrict" }
+        - { $ref: "#/components/parameters/AllowPartial" }
+      responses: { "200": { $ref: "#/components/responses/EncounterExport" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/markdown/preview:
+    post:
+      operationId: previewEncounterMarkdownImport
+      summary: Preview a bluDM encounter Markdown import.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/EncounterMarkdownImport" }
+      responses: { "200": { $ref: "#/components/responses/MarkdownPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/encounters/markdown/import:
+    post:
+      operationId: importEncounterMarkdown
+      summary: Import approved encounter Markdown atomically.
+      tags: [encounters]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/EncounterMarkdownImport" }
+      responses: { "201": { $ref: "#/components/responses/MarkdownImport" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/content/markdown/preview:
+    post:
+      operationId: previewWorldMarkdownImport
+      summary: Preview campaign-world Markdown changes.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }]
+      requestBody: { $ref: "#/components/requestBodies/WorldMarkdownImport" }
+      responses: { "200": { $ref: "#/components/responses/MarkdownPreview" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/campaigns/{campaignId}/content/markdown/import:
+    post:
+      operationId: importWorldMarkdown
+      summary: Import approved campaign-world Markdown atomically.
+      tags: [world]
+      parameters: [{ $ref: "#/components/parameters/CampaignId" }, { $ref: "#/components/parameters/RequiredIdempotencyKey" }]
+      requestBody: { $ref: "#/components/requestBodies/WorldMarkdownImport" }
+      responses: { "201": { $ref: "#/components/responses/MarkdownImport" }, default: { $ref: "#/components/responses/Error" } }
+  /api/external/v1/encounters/{encounterId}/markdown:
+    get:
+      operationId: exportBluDMEncounterMarkdown
+      summary: Export a versioned bluDM encounter Markdown block.
+      tags: [export]
+      parameters: [{ $ref: "#/components/parameters/EncounterId" }]
+      responses:
+        "200":
+          description: Round-trippable bluDM encounter Markdown.
+          content:
+            text/markdown: { schema: { type: string } }
+        default: { $ref: "#/components/responses/Error" }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Scoped bludm_v1_ API token or configured OIDC JWT access token.
+  parameters:
+    CampaignId: { name: campaignId, in: path, required: true, schema: { type: string, format: uuid } }
+    PlayerId: { name: playerId, in: path, required: true, schema: { type: string, format: uuid } }
+    LocationId: { name: locationId, in: path, required: true, schema: { type: string, format: uuid } }
+    EncounterId: { name: encounterId, in: path, required: true, schema: { type: string, format: uuid } }
+    CreatureId: { name: creatureId, in: path, required: true, schema: { type: string } }
+    Limit: { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+    Cursor: { name: cursor, in: query, schema: { type: string }, description: Opaque cursor from the previous page. }
+    RequiredIdempotencyKey: { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 8, maxLength: 256 } }
+    ExportProfile: { name: profile, in: query, schema: { const: fantasy-statblocks-basic-5e@1 }, description: Versioned compatibility profile. }
+    ExportLayout: { name: layout, in: query, schema: { const: Basic 5e Layout }, description: Fantasy Statblocks layout; only the portable Basic 5e Layout is supported. }
+    CreatureExportOutput: { name: output, in: query, schema: { enum: [structured, yaml, markdown], default: structured } }
+    EncounterExportOutput: { name: output, in: query, schema: { enum: [structured, markdown, obsidian-bundle], default: structured } }
+    ExportStrict: { name: strict, in: query, schema: { type: boolean, default: true }, description: Unsupported records fail without rendered output by default. }
+    AllowPartial: { name: allowPartial, in: query, schema: { type: boolean, default: false }, description: Explicit diagnostic partial-output opt-in; must be the inverse of strict when both are sent. }
+    VaultImagePath: { name: vaultImagePath, in: query, schema: { type: string }, description: Optional safe public URL or Vault-relative image path; authenticated bluDM URLs are never emitted. }
+  responses:
+    CampaignPage: { description: Campaign discovery page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CampaignPage" } } } }
+    CampaignContext: { description: Campaign context and capability links., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CampaignContext" } } } }
+    PlayerPage: { description: Compact party discovery page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/PlayerPage" } } } }
+    Player: { description: Full player character record., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/Player" } } } }
+    LocationPage: { description: Location discovery page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LocationPage" } } } }
+    LocationContext: { description: Location context and relationships., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LocationContext" } } } }
+    LocationWrite: { description: Saved location with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LocationWriteResult" } } } }
+    WorldGraph: { description: Campaign location graph., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/WorldGraph" } } } }
+    SearchPage: { description: Campaign content search page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/SearchPage" } } } }
+    PrepGapPage: { description: Deterministic preparation gaps., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/PrepGapPage" } } } }
+    CreaturePage: { description: Creature search page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CreaturePage" } } } }
+    CreatureDetails: { description: "Creature details, actions, and spellcasting.", content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CreatureDetails" } } } }
+    LibrarySearch: { description: Library search page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LibrarySearch" } } } }
+    LibraryEntry: { description: Typed library entry., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LibraryEntry" } } } }
+    EncounterPage: { description: Encounter discovery page., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterPage" } } } }
+    EncounterDetails: { description: Encounter roster and server-calculated difficulty., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterDetails" } } } }
+    EncounterWrite: { description: Saved authored encounter with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterWriteResult" } } } }
+    DifficultyEvidence: { description: Server-authoritative encounter difficulty evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/DifficultyEvidence" } } } }
+    EncounterPreview: { description: Unsaved deterministic encounter preview., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterPreviewEnvelope" } } } }
+    EncounterAuthoring: { description: Durable generated encounter and generation evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterAuthoringResult" } } } }
+    RevisionPage: { description: Recoverable encounter revision history., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/RevisionPage" } } } }
+    NPCWrite: { description: Saved NPC with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/NPCWriteResult" } } } }
+    NPCLinkWrite: { description: Saved NPC placement with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/NPCLinkWriteResult" } } } }
+    LocationLinkWrite: { description: Saved location link with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LocationLinkWriteResult" } } } }
+    CampaignChangesPreview: { description: Normalized connected change-set approval preview., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CampaignChangesPreview" } } } }
+    CampaignChangesApplied: { description: Transactional connected change-set result., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CampaignChangesApplied" } } } }
+    RollTablePage: { description: Campaign roll tables., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/RollTablePage" } } } }
+    RollTableWrite: { description: Saved roll table with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/RollTableWriteResult" } } } }
+    RollResult: { description: Deterministic roll-table result., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/RollResult" } } } }
+    TravelCalculation: { description: Deterministic travel calculation., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/TravelCalculation" } } } }
+    JourneyWrite: { description: Saved journey with write evidence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/JourneyWriteResult" } } } }
+    DungeonPreview: { description: Unsaved deterministic Dungeon Studio document., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/DungeonPreview" } } } }
+    LegacyDungeonPreview: { description: Browser-compatible deterministic Dungeon Studio document., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/LegacyDungeonPreview" } } } }
+    SavedDungeon: { description: "Atomically saved dungeon, rooms, and map.", content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/SavedDungeon" } } } }
+    CompletedRun: { description: Read-only completed encounter-run facts., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CompletedRunSummary" } } } }
+    Continuity: { description: Compact campaign continuity packet., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/ContinuityContext" } } } }
+    ShopStockPreview: { description: Normalized shop-stock approval preview., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/ShopStockPreview" } } } }
+    ShopStockApplied: { description: Transactional shop-stock apply result., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/ShopStockApplied" } } } }
+    StatblockResult:
+      description: Canonical stat block, field-level compatibility evidence, YAML, and fenced Markdown.
+      content:
+        application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/StatblockResult" } }
+        application/yaml: { schema: { type: string } }
+        text/markdown: { schema: { type: string } }
+    Compatibility: { description: Fantasy Statblocks field-level compatibility report., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CompatibilityReport" } } } }
+    CompatibilityList: { description: One compatibility report per distinct encounter creature., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/CompatibilityList" } } } }
+    EncounterExport:
+      description: Deduplicated encounter creature export with quantities and compatibility evidence.
+      content:
+        application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/EncounterExport" } }
+        text/markdown: { schema: { type: string } }
+    MarkdownPreview: { description: Parsed Markdown preview without persistence., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/MarkdownPreviewEnvelope" } } } }
+    MarkdownImport: { description: Durable Markdown import result., content: { application/json: { schema: { $ref: "./external-v1.schemas.yaml#/components/schemas/MarkdownImportResult" } } } }
+    Error:
+      description: Typed external API error.
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+          example:
+            error: { code: conflict, message: encounter revision changed, requestId: req-123 }
+  requestBodies:
+    LocationCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/LocationCommand" } } }
+    UpdateLocationCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/UpdateLocationCommand" } } }
+    EncounterCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/EncounterCommand" } } }
+    UpdateEncounter:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/UpdateEncounter" } } }
+    EvaluateEncounter:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/EvaluateEncounter" } } }
+    GenerateEncounter:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/GenerateEncounter" } } }
+    RegenerateEncounter:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/RegenerateEncounter" } } }
+    RestoreRevision:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/RestoreRevision" } } }
+    CampaignChanges:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/CampaignChanges" } } }
+    NPCCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/NPCCommand" } } }
+    UpdateNPCCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/UpdateNPCCommand" } } }
+    NPCLinkCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/NPCLinkCommand" } } }
+    LocationLinkCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/LocationLinkCommand" } } }
+    RollTableCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/RollTableCommand" } } }
+    UpdateRollTableCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/UpdateRollTableCommand" } } }
+    JourneyCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/JourneyCommand" } } }
+    TravelCalculationCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/TravelCalculationCommand" } } }
+    DungeonSettings:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/DungeonSettings" } } }
+    DungeonCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/DungeonCommand" } } }
+    ShopStockChangesCommand:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/ShopStockChangesCommand" } } }
+    EncounterPreview:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/EncounterPreviewCommand" } } }
+    LegacyDungeonPreview:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [settings]
+            properties: { settings: { $ref: "#/components/schemas/DungeonSettings" } }
+            additionalProperties: false
+    EncounterMarkdownImport:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/EncounterMarkdownImport" } } }
+    WorldMarkdownImport:
+      required: true
+      content: { application/json: { schema: { $ref: "#/components/schemas/WorldMarkdownImport" } } }
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties:
+            code: { enum: [unauthorized, forbidden, not_found, validation_failed, conflict, idempotency_conflict, rate_limited, timeout, unsupported, internal_error] }
+            message: { type: string }
+            details: { type: object }
+            requestId: { type: string }
+          additionalProperties: false
+      additionalProperties: false
+    LocationCommand:
+      type: object
+      required: [name, locationType]
+      properties:
+        idempotencyKey: { type: string }
+        expectedUpdatedAt: { type: string, format: date-time }
+        parentLocationId: { type: string, format: uuid }
+        name: { type: string, minLength: 1 }
+        locationType: { type: string }
+        summary: { type: string }
+        notes: { type: string }
+        publicNotes: { type: string }
+        dmNotes: { type: string }
+        tags: { type: array, items: { type: string } }
+        status: { type: string }
+      additionalProperties: false
+    UpdateLocationCommand:
+      allOf:
+        - { $ref: "#/components/schemas/LocationCommand" }
+        - { type: object, required: [expectedUpdatedAt] }
+    EncounterCommand:
+      type: object
+      required: [name]
+      properties:
+        idempotencyKey: { type: string }
+        previewFingerprint: { type: string, description: Optional browser preview/save parity evidence. }
+        expectedRevision: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { enum: [planned, completed, skipped] }
+        locationId: { type: string, format: uuid }
+        location: { type: string }
+        roomNumber: { type: string }
+        lootNotes: { type: string }
+        replaceRoster: { type: boolean }
+        combatants: { type: array, maxItems: 100, items: { $ref: "#/components/schemas/EncounterCombatantCommand" } }
+      additionalProperties: false
+    EncounterCombatantCommand:
+      type: object
+      required: [sourceType, side]
+      properties:
+        sourceType: { enum: [player, creature, inline] }
+        playerId: { type: string, format: uuid }
+        creatureId: { type: string }
+        side: { enum: [enemy, ally] }
+        displayName: { type: string }
+        avatarUrl: { type: string }
+        armorClass: { type: integer, minimum: 0 }
+        maxHitPoints: { type: integer, minimum: 0 }
+        currentHitPoints: { type: integer, minimum: 0 }
+        rolledHp: { type: boolean }
+        snapshot: { type: object }
+      additionalProperties: false
+    UpdateEncounter:
+      type: object
+      required: [idempotencyKey, expectedRevision]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        expectedRevision: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        status: { enum: [planned, completed, skipped] }
+        locationId: { type: string, format: uuid, description: An empty string clears the link. }
+        location: { type: string }
+        roomNumber: { type: string }
+        lootNotes: { type: string }
+        replaceRoster: { type: boolean, default: false }
+        combatants:
+          type: array
+          maxItems: 100
+          description: Full replacement roster; only valid with replaceRoster=true.
+          items: { $ref: "#/components/schemas/EncounterCombatantCommand" }
+        addCombatants:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/EncounterCombatantCommand" }
+        updateCombatants:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/EncounterCombatantPatch" }
+        removeCombatantIds:
+          type: array
+          maxItems: 100
+          uniqueItems: true
+          items: { type: string, format: uuid }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: encounter-quantity-edit-01
+          expectedRevision: 2
+          updateCombatants:
+            - combatantId: 33333333-3333-4333-8333-333333333333
+              displayName: Dire Wolf pack
+    EncounterCombatantPatch:
+      type: object
+      required: [combatantId]
+      properties:
+        combatantId: { type: string, format: uuid }
+        side: { enum: [enemy, ally] }
+        displayName: { type: string, minLength: 1 }
+        avatarUrl: { type: string }
+        armorClass: { type: integer, minimum: 0 }
+        maxHitPoints: { type: integer, minimum: 1 }
+        currentHitPoints: { type: integer, minimum: 0 }
+        rolledHp: { type: boolean }
+      additionalProperties: false
+    EvaluateEncounter:
+      type: object
+      required: [allCampaignPlayers, enemies, requestedDifficulty]
+      properties:
+        allCampaignPlayers: { type: boolean }
+        playerIds: { type: array, items: { type: string, format: uuid } }
+        enemies:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [creatureId, quantity]
+            properties:
+              creatureId: { type: string }
+              quantity: { type: integer, minimum: 1, maximum: 50 }
+            additionalProperties: false
+        requestedDifficulty: { enum: [easy, medium, hard, deadly] }
+      additionalProperties: false
+      examples:
+        - allCampaignPlayers: false
+          playerIds: [11111111-1111-4111-8111-111111111111]
+          enemies:
+            - creatureId: standard:dire-wolf
+              quantity: 3
+          requestedDifficulty: medium
+    GenerateEncounter:
+      type: object
+      required: [idempotencyKey, options]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        name: { type: string }
+        description: { type: string }
+        locationId: { type: string, format: uuid }
+        roomNumber: { type: string }
+        allCampaignPlayers: { type: boolean }
+        playerIds: { type: array, items: { type: string, format: uuid } }
+        addPlayersToRoster: { type: boolean, default: true }
+        options: { $ref: "#/components/schemas/EncounterOptions" }
+        seed: { type: integer }
+        requiredCreatureIds: { type: array, items: { type: string } }
+        forbiddenCreatureIds: { type: array, items: { type: string } }
+        allowedSourceKeys: { type: array, items: { type: string } }
+        minimumEnemyBodies: { type: integer, minimum: 0, maximum: 6, description: Zero or omitted means no explicit floor. }
+        maximumEnemyBodies: { type: integer, minimum: 0, maximum: 6, description: Zero or omitted means no explicit ceiling. }
+        narrativePurpose: { type: string }
+        roomTheme: { type: string }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: generate-room-12-01
+          name: Wolves at the Broken Gate
+          locationId: 22222222-2222-4222-8222-222222222222
+          roomNumber: "12"
+          playerIds: [11111111-1111-4111-8111-111111111111]
+          options:
+            archetype: beasts
+            challenge: medium
+            enemyCount: 3
+          seed: 4102
+    EncounterOptions:
+      type: object
+      properties:
+        archetype: { type: string }
+        challenge: { enum: [easy, medium, hard, deadly] }
+        enemyCount: { type: integer, minimum: 1, maximum: 6 }
+        includeBoss: { type: boolean }
+        includeHazards: { type: boolean }
+        includeMinions: { type: boolean }
+        terrain: { type: string }
+        useLocationTheme: { type: boolean }
+        useLocationNotes: { type: boolean }
+      additionalProperties: false
+    RegenerateEncounter:
+      type: object
+      required: [idempotencyKey, expectedRevision, options]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        expectedRevision: { type: integer, minimum: 1 }
+        options: { $ref: "#/components/schemas/EncounterOptions" }
+        seed: { type: integer }
+        freshSeed: { type: boolean }
+        preserveCombatantIds: { type: array, items: { type: string, format: uuid } }
+        preserveCreatureIds: { type: array, items: { type: string } }
+        replaceManagedCombatantsOnly: { type: boolean, default: true }
+        requiredCreatureIds: { type: array, items: { type: string } }
+        forbiddenCreatureIds: { type: array, items: { type: string } }
+        allowedSourceKeys: { type: array, items: { type: string } }
+        minimumEnemyBodies: { type: integer, minimum: 0, maximum: 6 }
+        maximumEnemyBodies: { type: integer, minimum: 0, maximum: 6 }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: reroll-room-12-01
+          expectedRevision: 1
+          options: { archetype: beasts, challenge: medium, enemyCount: 3 }
+          freshSeed: true
+          preserveCombatantIds: [33333333-3333-4333-8333-333333333333]
+          replaceManagedCombatantsOnly: true
+    EncounterPreviewCommand:
+      type: object
+      required: [options, playerIds]
+      properties:
+        options: { $ref: "#/components/schemas/EncounterOptions" }
+        playerIds: { type: array, minItems: 1, items: { type: string, format: uuid } }
+        locationId: { type: string, format: uuid }
+        roll: { type: integer }
+      additionalProperties: false
+    RestoreRevision:
+      type: object
+      required: [idempotencyKey, expectedRevision]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        expectedRevision: { type: integer, minimum: 1 }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: restore-room-12-revision-1
+          expectedRevision: 3
+    CampaignChanges:
+      type: object
+      required: [changes]
+      properties:
+        idempotencyKey: { type: string }
+        previewToken: { type: string }
+        changes:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            required: [operation, data]
+            properties:
+              operation: { enum: [create_location, create_npc, link_npc_to_location, create_location_link] }
+              clientRef:
+                type: string
+                description: Unique name assigned to a create operation; later ID fields may use ref:<clientRef>.
+              data: { type: object }
+            additionalProperties: false
+      additionalProperties: false
+      examples:
+        - changes:
+            - operation: create_location
+              clientRef: gatehouse
+              data: { name: Broken Gatehouse, locationType: room }
+            - operation: create_location
+              clientRef: vault
+              data: { name: Sunken Vault, locationType: room, parentLocationId: "ref:gatehouse" }
+            - operation: create_location_link
+              data:
+                sourceLocationId: "ref:gatehouse"
+                targetLocationId: "ref:vault"
+                linkType: passage
+    NPCCommand:
+      type: object
+      required: [name, size, creatureType, armorClass, hitPoints, hitDice, challengeRating, xp, statBlock]
+      properties:
+        idempotencyKey: { type: string }
+        expectedUpdatedAt: { type: string, format: date-time }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        size: { type: string }
+        creatureType: { type: string }
+        alignment: { type: string }
+        armorClass: { type: integer, minimum: 1 }
+        hitPoints: { type: integer, minimum: 1 }
+        hitDice: { type: string }
+        challengeRating: { type: string }
+        xp: { type: integer, minimum: 0 }
+        avatarUrl: { type: string }
+        statBlock: { type: object }
+        disposition: { type: string }
+      additionalProperties: false
+    UpdateNPCCommand:
+      allOf:
+        - { $ref: "#/components/schemas/NPCCommand" }
+        - { type: object, required: [expectedUpdatedAt] }
+    NPCLinkCommand:
+      type: object
+      required: [idempotencyKey, creatureId, locationId]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        creatureId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        linkType: { type: string }
+        visibility: { type: string }
+        notes: { type: string }
+      additionalProperties: false
+    LocationLinkCommand:
+      type: object
+      required: [idempotencyKey, sourceLocationId, targetLocationId, linkType]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        sourceLocationId: { type: string, format: uuid }
+        targetLocationId: { type: string, format: uuid }
+        linkType: { type: string }
+        label: { type: string }
+        direction: { type: string }
+        visibility: { type: string }
+        notes: { type: string }
+      additionalProperties: false
+    RollTableCommand:
+      type: object
+      required: [name, category, dieExpression, rows]
+      properties:
+        idempotencyKey: { type: string }
+        expectedUpdatedAt: { type: string, format: date-time }
+        name: { type: string, minLength: 1 }
+        description: { type: string }
+        category: { type: string }
+        tags: { type: array, items: { type: string } }
+        dieExpression: { type: string, pattern: "^1d[0-9]+$" }
+        rows:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [minRoll, maxRoll, label, resultText]
+            properties:
+              minRoll: { type: integer, minimum: 1 }
+              maxRoll: { type: integer, minimum: 1 }
+              label: { type: string }
+              resultText: { type: string }
+              notes: { type: string }
+            additionalProperties: false
+      additionalProperties: false
+      examples:
+        - name: Gatehouse Omens
+          category: encounter
+          dieExpression: 1d4
+          rows:
+            - { minRoll: 1, maxRoll: 2, label: Ravens, resultText: Three ravens watch in silence. }
+            - { minRoll: 3, maxRoll: 4, label: Bell, resultText: A buried bell sounds once. }
+    UpdateRollTableCommand:
+      allOf:
+        - { $ref: "#/components/schemas/RollTableCommand" }
+        - { type: object, required: [expectedUpdatedAt] }
+    TravelCalculationCommand:
+      type: object
+      required: [distance, distanceUnit, terrain, pace]
+      properties:
+        distance: { type: number, exclusiveMinimum: 0 }
+        distanceUnit: { enum: [miles, kilometers, hexes] }
+        terrain: { enum: [arctic, coastal, desert, forest, grassland, hill, mountain, swamp, underdark, urban, waterborne] }
+        pace: { enum: [slow, normal, fast] }
+        goodRoads: { type: boolean }
+      additionalProperties: false
+      examples:
+        - { distance: 24, distanceUnit: miles, terrain: mountain, pace: normal, goodRoads: false }
+    JourneyCommand:
+      type: object
+      required: [idempotencyKey, name, origin, destination, distance, distanceUnit, terrain, pace, weather]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        origin: { type: string }
+        destination: { type: string }
+        distance: { type: number, exclusiveMinimum: 0 }
+        distanceUnit: { enum: [miles, kilometers, hexes] }
+        terrain: { type: string }
+        pace: { enum: [slow, normal, fast] }
+        goodRoads: { type: boolean }
+        encounterDistanceFeet: { type: integer, minimum: 0 }
+        weather: { $ref: "#/components/schemas/TravelWeather" }
+        routeInputMode: { type: string }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: journey-ashen-pass-01
+          name: Across the Ashen Pass
+          origin: Broken Gatehouse
+          destination: Sunken Vault
+          distance: 24
+          distanceUnit: miles
+          terrain: mountain
+          pace: normal
+          goodRoads: false
+          weather: { temperature: cold, wind: moderate, precipitation: none }
+    TravelWeather:
+      type: object
+      properties:
+        temperature: { type: string }
+        temperatureDeltaF: { type: integer }
+        wind: { type: string }
+        precipitation: { type: string }
+        rolls:
+          type: object
+          properties:
+            temperatureD20: { type: integer }
+            temperatureD4: { type: integer }
+            windD20: { type: integer }
+            precipitationD20: { type: integer }
+          additionalProperties: false
+      additionalProperties: false
+    DungeonSettings:
+      type: object
+      properties:
+        type: { enum: [classic, cave] }
+        seed: { type: string }
+        tileset: { type: string }
+        width: { type: integer, minimum: 12, maximum: 80 }
+        height: { type: integer, minimum: 12, maximum: 80 }
+        roomCount: { type: integer, minimum: 1, maximum: 30 }
+        density: { type: integer, minimum: 1, maximum: 99 }
+        createRooms: { type: boolean }
+        addFurniture: { type: boolean }
+        addStairs: { type: boolean }
+      additionalProperties: false
+    DungeonCommand:
+      type: object
+      required: [idempotencyKey, name, settings]
+      properties:
+        idempotencyKey: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+        summary: { type: string }
+        parentLocationId: { type: string, format: uuid }
+        settings: { $ref: "#/components/schemas/DungeonSettings" }
+      additionalProperties: false
+      examples:
+        - idempotencyKey: dungeon-broken-gate-01
+          name: The Broken Gate
+          summary: A flooded border fort.
+          settings: { type: classic, seed: broken-gate-v1, width: 32, height: 32, roomCount: 8, createRooms: true }
+    ShopStockChangesCommand:
+      type: object
+      required: [stock]
+      properties:
+        idempotencyKey: { type: string }
+        previewToken: { type: string }
+        stock:
+          type: array
+          maxItems: 100
+          items:
+            type: object
+            required: [locationId, itemId, librarySource, quantity, priceAmount, priceUnit]
+            properties:
+              locationId: { type: string, format: uuid }
+              itemId: { type: string }
+              librarySource: { enum: [user, standard] }
+              quantity: { type: integer, minimum: 0 }
+              priceAmount: { type: integer, minimum: 0 }
+              priceUnit: { type: string }
+              availability: { type: string }
+              notes: { type: string }
+              sortOrder: { type: integer }
+            additionalProperties: false
+      additionalProperties: false
+      examples:
+        - stock:
+            - locationId: 22222222-2222-4222-8222-222222222222
+              itemId: standard:healing-potion
+              librarySource: standard
+              quantity: 2
+              priceAmount: 50
+              priceUnit: gp
+              availability: in_stock
+    EncounterMarkdownImport:
+      type: object
+      required: [markdown, sourcePath]
+      properties:
+        markdown: { type: string, minLength: 1, maxLength: 6291456 }
+        sourcePath: { type: string }
+      additionalProperties: false
+    WorldMarkdownImport:
+      type: object
+      required: [markdown, sourcePath]
+      properties:
+        markdown: { type: string, minLength: 1 }
+        sourcePath: { type: string }
+        assets:
+          type: array
+          items:
+            type: object
+            required: [path, dataBase64]
+            properties:
+              path: { type: string }
+              filename: { type: string }
+              contentType: { type: string }
+              dataBase64: { type: string }
+            additionalProperties: false
+      additionalProperties: false

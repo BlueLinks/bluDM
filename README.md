@@ -21,6 +21,25 @@ The first implementation slice includes:
 
 See [ENCOUNTER_TRACKER_PLAN.md](ENCOUNTER_TRACKER_PLAN.md) for the product plan.
 
+## Markdown Encounter Bridge
+
+Campaign prose can stay in an Obsidian-style Vault while fenced encounter blocks are previewed and
+imported into the normal bluDM encounter tracker. The browser workflow, revocable external API
+tokens, read-only local bridge, schema, and AI authoring prompt are documented in
+[docs/markdown-encounters.md](docs/markdown-encounters.md).
+
+## MCP And External Authoring
+
+bluDM exposes a scoped external REST API at `/api/external/v1` and an authenticated Streamable
+HTTP MCP endpoint at `/mcp`. Both use the same application services, authorization, durable
+encounter revisions, idempotency records, and audit trail.
+
+Start with [the MCP and external authoring guide](docs/mcp/README.md). The
+[OpenAPI contract](docs/api/external-v1.openapi.yaml), [tool catalogue](docs/mcp/tool-catalog.md),
+[encounter workflow](docs/mcp/encounter-authoring.md), and
+[Fantasy Statblocks compatibility guide](docs/mcp/fantasy-statblocks.md) are checked in with the
+implementation.
+
 ## Local Development
 
 Start PostgreSQL:

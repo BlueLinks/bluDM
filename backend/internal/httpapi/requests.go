@@ -49,6 +49,7 @@ type actionRequest struct {
 	AOEType          string                  `json:"aoeType"`
 	AOESize          int                     `json:"aoeSize"`
 	ActionType       string                  `json:"actionType"`
+	DisplaySection   string                  `json:"displaySection"`
 	AttackModifier   int                     `json:"attackModifier"`
 	MissEffect       string                  `json:"missEffect"`
 	HitSpecialEvent  string                  `json:"hitSpecialEvent"`
@@ -306,6 +307,10 @@ func (req *actionRequest) normalize() {
 	if req.ActionType == "" {
 		req.ActionType = "melee_weapon"
 	}
+	req.DisplaySection = strings.TrimSpace(req.DisplaySection)
+	if req.DisplaySection == "" {
+		req.DisplaySection = "action"
+	}
 	req.MissEffect = strings.TrimSpace(req.MissEffect)
 	if req.MissEffect == "" {
 		req.MissEffect = "none"
@@ -345,6 +350,11 @@ func (req actionRequest) validate() error {
 	}
 	if req.IconSource != "none" && req.IconSource != "game-icons" && req.IconSource != "asset" && req.IconSource != "url" {
 		return errors.New("iconSource must be none, game-icons, asset, or url")
+	}
+	switch req.DisplaySection {
+	case "trait", "action", "bonus_action", "reaction", "legendary_action", "mythic_action", "lair_action":
+	default:
+		return errors.New("displaySection is not a supported stat-block section")
 	}
 	return nil
 }

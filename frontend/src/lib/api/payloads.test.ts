@@ -9,6 +9,7 @@ describe("api payload builders", () => {
       aoeType: "none",
       attackModifier: "4",
       description: "A quick strike.",
+      displaySection: "action",
       hitSpecialEvent: "none",
       id: "action-1",
       iconAssetId: "",

@@ -245,6 +245,28 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Campaign World page rows remain content-sized so headers and navigation do not stretch across unused viewport height.
   - Focused tabs render a single available section at full width without a repeated tab heading, empty second column, or duplicate outer padding.
   - The location browser is one rounded, clipped surface, and tablet shell breadcrumbs no longer wrap inside the fixed-height top bar.
+- Markdown encounter bridge:
+  - Ordinary Vault notes can contain one or more versioned `bludm-encounter` blocks without moving campaign prose into bluDM.
+  - Strict preview resolves players, custom creatures, enabled standard creatures, inline combatants, and Campaign World locations before any write.
+  - Stable file-path and block IDs make re-imports update the existing encounter and replace its roster transactionally.
+  - The browser import flow opens imported encounters in the existing editor and combat-tracking workflow.
+  - Revocable expiring API tokens and versioned external REST endpoints support trusted local tools without exposing session cookies.
+  - The read-only local Vault bridge previews full or selected Vault scans, requires explicit `import --yes`, and never modifies source files.
+  - Encounter Markdown export, schema documentation, and an AI authoring prompt support a practical round trip.
+- AI authoring and Markdown campaign bridge expansion:
+  - Random encounter and Dungeon Studio generation now run behind preview-only backend endpoints while preserving the existing editable review flows.
+  - Version 1 `bludm-npc` and `bludm-dungeon` blocks import custom NPCs, location relationships, dungeons, floors, image maps, generated Studio maps, and linked Studio rooms.
+  - Browser and read-only local Vault flows preview all supported block types and can attach referenced portraits and map images.
+  - Stable Vault-relative paths and block IDs update source-managed records transactionally; removed source floors, maps, rooms, and assets are reconciled without deleting unrelated manual records.
+  - REST remained the initial integration surface while MCP was deferred pending a demonstrated discovery or orchestration gap. The planned MCP and external authoring API work below now supersedes that deferral.
+- MCP and external authoring API:
+  - Transport-neutral principals, scoped and campaign-restricted tokens, legacy-token migration rules, token presets, shared application services, and versioned external REST contracts now cover discovery and safe authoring.
+  - The nginx-served Streamable HTTP `/mcp` endpoint exposes 46 bounded, typed, audited tools for campaign discovery, encounter generation and revision recovery, Campaign World authoring, roll tables, journeys, Dungeon Studio, continuity, shops, imports, and Fantasy Statblocks export.
+  - Encounter generation now creates one durable planned encounter atomically, preserves user-owned content across rerolls, enforces idempotency and optimistic concurrency, records recoverable revisions, and reports server-authoritative difficulty evidence.
+  - Canonical stat-block export merges standard, custom, action, spellcasting, and snapshot data; enforces licensing/image rules; deduplicates encounter creatures; and validates all 664 enabled standard creatures with zero unsupported records.
+  - Local authorization-code + PKCE tests, MCP Inspector, browser token/authoring QA, Obsidian Fantasy Statblocks 4.10.3 fixture rendering, and an isolated PostgreSQL recovery drill cover the repository-controlled release path.
+  - The 2026-08-04 revalidation passed the normal and security gates, database-backed suites, production browser E2E, exact-fence Vault verification, nginx-served Inspector checks, and a real Codex tool call on `http://localhost:3080/mcp`.
+  - Docker Hub manifest resolution was unavailable to the local Docker Desktop daemon during that revalidation, so the prescribed image rebuild remains an external infrastructure rerun; newly compiled API/frontend artifacts passed an isolated cached-base container substitute without being misreported as a successful rebuild.
 
 ## In Progress
 
@@ -260,7 +282,7 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 - Monitor Dungeon Studio use for concrete follow-ups around per-tile theme painting, generator add-to-current-layer UX, backend-backed reusable asset storage, generated/artist-made asset policy, and create-floor-from-stair convenience.
 - Add backend-backed shop price rules/markup, restock cadence, and transaction history if real shop play needs richer stock modelling.
-- Add backend/AI generation for town starter content and random encounters if local deterministic placeholders prove too limited.
+- Add backend/AI generation for town starter content if local deterministic placeholders prove too limited.
 - Continue mockup-comparison passes until the major Campaign World screens are recognisably in the same design language as the saved refactor mockups, with special attention to authored map/placeholder visuals and any remaining light-theme rough edges.
 - Normalize demo/seed map coverage so region, town, floor, and room examples consistently exercise the intended Studio or image preview paths rather than fallback placeholders.
 - After the mockup-alignment pass is structurally accepted, continue real-table polish around richer authored/generated map art for locations without uploaded maps and stronger NPC portrait-first profile routes if NPC-heavy play needs them.
@@ -288,6 +310,10 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - Rationale: Campaign-wide shop review, restock reminders, and richer merchant pricing rules should wait for shop-heavy play needs instead of expanding scope in this PR.
 - Dungeon Studio per-tile theme painting, generator add-to-current-layer UX, backend-backed reusable asset storage, generated/artist-made asset policy, and create-floor-from-stair convenience.
   - Rationale: The implemented metadata-backed foundations cover current actionable phases; these are workflow expansions that should be driven by observed editor use, licensing policy, and metadata-size limits.
+- Production OAuth and optional remote ChatGPT/plugin publication.
+  - Rationale: bluDM is implemented and tested as an OAuth protected resource with local authorization-code + PKCE coverage. Selecting a real provider, configuring a public domain and HTTPS, granting credentials, completing consent/privacy work, and authorizing a production security review require external owner decisions.
+- Fantasy Statblocks YAML import into bluDM.
+  - Rationale: The plan makes reverse import an optional later extension after export compatibility is proven. Strict/partial export, compatibility diagnostics, and the lossless bluDM Markdown import path are complete; no Fantasy Statblocks export is currently promised as a lossless reverse-import format.
 
 ## Rejected
 
@@ -302,4 +328,6 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Next Recommended Task
 
-Continue Campaign World mockup-alignment redesign with browser screenshots for Region, Settlement, Shop, Dungeon, Floor, Room, NPC, and Encounter contexts. Do not treat the issue as complete until those screens are visually and structurally close enough to be mistaken for the saved mockup direction.
+Continue Campaign World mockup-alignment redesign with browser screenshot comparison for Region,
+Settlement, Shop, Dungeon, Floor, Room, NPC, and Encounter contexts, while preserving the shared
+semantic theme and Dungeon Studio source-of-truth decisions already recorded above.
