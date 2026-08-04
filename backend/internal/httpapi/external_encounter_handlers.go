@@ -1,9 +1,11 @@
 package httpapi
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/app/statblocks"
@@ -118,15 +120,11 @@ func (s *Server) externalCreatureStatblock(w http.ResponseWriter, r *http.Reques
 	}
 	result.Output = output
 	if output == "yaml" {
-		w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(result.YAML))
+		writeExternalTextExport(w, r, "application/yaml; charset=utf-8", "statblock.yaml", result.YAML)
 		return
 	}
 	if output == "markdown" || wantsMarkdown(r) {
-		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(result.Markdown))
+		writeExternalTextExport(w, r, "text/markdown; charset=utf-8", "statblock.md", result.Markdown)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
@@ -148,13 +146,13 @@ func (s *Server) externalEncounterStatblocks(w http.ResponseWriter, r *http.Requ
 	}
 	result.Output = output
 	if output == "markdown" || output == "obsidian-bundle" || wantsMarkdown(r) {
-		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
 		markdown := result.Markdown
+		filename := "encounter-statblocks.md"
 		if strings.HasSuffix(r.URL.Path, "/exports/obsidian-bundle") || output == "obsidian-bundle" {
 			markdown = result.BundleMarkdown
+			filename = "encounter-obsidian-bundle.md"
 		}
-		_, _ = w.Write([]byte(markdown))
+		writeExternalTextExport(w, r, "text/markdown; charset=utf-8", filename, markdown)
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
@@ -171,6 +169,19 @@ func (s *Server) externalEncounterCompatibility(w http.ResponseWriter, r *http.R
 func wantsMarkdown(r *http.Request) bool {
 	return strings.Contains(r.Header.Get("Accept"), "text/markdown") ||
 		r.URL.Query().Get("output") == "markdown"
+}
+
+func writeExternalTextExport(
+	w http.ResponseWriter,
+	r *http.Request,
+	contentType string,
+	filename string,
+	content string,
+) {
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	http.ServeContent(w, r, filename, time.Time{}, strings.NewReader(content))
 }
 
 func externalExportOptions(r *http.Request, encounter bool) (string, bool, error) {

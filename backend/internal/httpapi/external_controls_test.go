@@ -40,3 +40,30 @@ func TestMCPRateLimitsUseToolSemanticsInsteadOfHTTPMethod(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteExternalTextExportUsesSafeDownloadHeaders(t *testing.T) {
+	request := httptest.NewRequest("GET", "/api/external/v1/export", nil)
+	response := httptest.NewRecorder()
+	content := "name: <script>alert('untrusted')</script>\n"
+
+	writeExternalTextExport(response, request, "application/yaml; charset=utf-8", "statblock.yaml", content)
+
+	result := response.Result()
+	defer result.Body.Close()
+	if got := result.Header.Get("Content-Type"); got != "application/yaml; charset=utf-8" {
+		t.Fatalf("unexpected content type: %q", got)
+	}
+	if got := result.Header.Get("Content-Disposition"); got != `attachment; filename="statblock.yaml"` {
+		t.Fatalf("unexpected content disposition: %q", got)
+	}
+	if got := result.Header.Get("X-Content-Type-Options"); got != "nosniff" {
+		t.Fatalf("unexpected content type protection: %q", got)
+	}
+	body, err := io.ReadAll(result.Body)
+	if err != nil {
+		t.Fatalf("read response: %v", err)
+	}
+	if string(body) != content {
+		t.Fatalf("export content changed: %q", body)
+	}
+}
