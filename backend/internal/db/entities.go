@@ -8,7 +8,7 @@ import (
 
 type UserEntity struct {
 	ID            string `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	Email         string `gorm:"not null;uniqueIndex"`
+	Email         string `gorm:"not null;unique"`
 	PasswordHash  string
 	AvatarAssetID *string `gorm:"type:uuid"`
 	AvatarURL     string  `gorm:"not null;default:''"`
@@ -48,7 +48,7 @@ func (OAuthStateEntity) TableName() string { return "oauth_states" }
 type SessionEntity struct {
 	ID        string `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	UserID    string `gorm:"type:uuid;not null;index"`
-	TokenHash string `gorm:"not null;uniqueIndex"`
+	TokenHash string `gorm:"not null;unique"`
 	ExpiresAt time.Time
 	CreatedAt time.Time
 }
@@ -483,7 +483,7 @@ func (EncounterRunAlertEntity) TableName() string { return "encounter_run_alerts
 type CombatLogEventEntity struct {
 	ID             string  `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
 	EncounterRunID string  `gorm:"type:uuid;not null;index:combat_log_events_run_sequence_idx,priority:1"`
-	Sequence       int64   `gorm:"autoIncrement;index:combat_log_events_run_sequence_idx,priority:2"`
+	Sequence       int64   `gorm:"not null;autoIncrement;index:combat_log_events_run_sequence_idx,priority:2"`
 	EventType      string  `gorm:"not null"`
 	ActorID        *string `gorm:"type:uuid"`
 	TargetID       *string `gorm:"type:uuid"`

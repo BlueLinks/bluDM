@@ -32,7 +32,7 @@ func (IdempotencyRecordEntity) TableName() string { return "idempotency_records"
 
 type AuthoringPreviewEntity struct {
 	ID             string  `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	TokenHash      string  `gorm:"not null;uniqueIndex"`
+	TokenHash      string  `gorm:"not null;unique"`
 	PrincipalKey   string  `gorm:"not null;index"`
 	CampaignID     string  `gorm:"type:uuid;not null;index"`
 	OperationsHash string  `gorm:"not null"`
