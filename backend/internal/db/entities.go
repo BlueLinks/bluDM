@@ -32,7 +32,7 @@ func (AuthIdentityEntity) TableName() string { return "auth_identities" }
 
 type OAuthStateEntity struct {
 	ID           string  `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	StateHash    string  `gorm:"not null;uniqueIndex"`
+	StateHash    string  `gorm:"not null;unique"`
 	Provider     string  `gorm:"not null"`
 	Nonce        string  `gorm:"not null"`
 	PKCEVerifier string  `gorm:"column:pkce_verifier;not null"`

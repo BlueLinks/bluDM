@@ -45,13 +45,29 @@ func TestAutoMigrateUpgradesInitialSQLSchema(t *testing.T) {
 	if err := database.Exec(string(initialSchema)).Error; err != nil {
 		t.Fatal(err)
 	}
+	if err := database.Exec(`
+create table oauth_states (
+    id uuid primary key default gen_random_uuid(),
+    state_hash text not null unique,
+    provider text not null,
+    nonce text not null,
+    pkce_verifier text not null,
+    purpose text not null default 'login',
+    user_id uuid references users(id) on delete cascade,
+    return_to text not null default '/',
+    expires_at timestamptz not null,
+    created_at timestamptz not null default now()
+)
+`).Error; err != nil {
+		t.Fatal(err)
+	}
 	for run := 1; run <= 2; run++ {
 		if err := database.AutoMigrate(schemaEntities()...); err != nil {
 			t.Fatalf("AutoMigrate run %d failed: %v", run, err)
 		}
 	}
 
-	for _, table := range []string{"users", "sessions", "authoring_previews"} {
+	for _, table := range []string{"users", "oauth_states", "sessions", "authoring_previews"} {
 		var uniqueConstraints int64
 		if err := database.Raw(`
 select count(*)
