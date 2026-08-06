@@ -41,6 +41,8 @@ type LocationWriteResult struct {
 
 type NPCWriteResult struct {
 	models.Creature
+	Actions      []models.CreatureAction            `json:"actions"`
+	Spellcasting models.CreatureSpellcastingProfile `json:"spellcasting"`
 	AuthoringWriteMetadata
 }
 
@@ -65,21 +67,68 @@ type JourneyWriteResult struct {
 }
 
 type NPCCommand struct {
-	IdempotencyKey    string         `json:"idempotencyKey"`
-	ExpectedUpdatedAt *time.Time     `json:"expectedUpdatedAt,omitempty"`
-	Name              string         `json:"name"`
-	Description       string         `json:"description,omitempty"`
-	Size              string         `json:"size"`
-	CreatureType      string         `json:"creatureType"`
-	Alignment         string         `json:"alignment,omitempty"`
-	ArmorClass        int            `json:"armorClass"`
-	HitPoints         int            `json:"hitPoints"`
-	HitDice           string         `json:"hitDice"`
-	ChallengeRating   string         `json:"challengeRating"`
-	XP                int            `json:"xp"`
-	AvatarURL         string         `json:"avatarUrl,omitempty"`
-	StatBlock         map[string]any `json:"statBlock"`
-	Disposition       string         `json:"disposition,omitempty"`
+	IdempotencyKey    string                  `json:"idempotencyKey"`
+	ExpectedUpdatedAt *time.Time              `json:"expectedUpdatedAt,omitempty"`
+	Name              string                  `json:"name"`
+	Description       string                  `json:"description,omitempty"`
+	Size              string                  `json:"size"`
+	CreatureType      string                  `json:"creatureType"`
+	Alignment         string                  `json:"alignment,omitempty"`
+	ArmorClass        int                     `json:"armorClass"`
+	HitPoints         int                     `json:"hitPoints"`
+	HitDice           string                  `json:"hitDice"`
+	ChallengeRating   string                  `json:"challengeRating"`
+	XP                int                     `json:"xp"`
+	AvatarURL         string                  `json:"avatarUrl,omitempty"`
+	StatBlock         map[string]any          `json:"statBlock"`
+	Disposition       string                  `json:"disposition,omitempty"`
+	Actions           *[]NPCActionCommand     `json:"actions,omitempty" jsonschema:"When supplied, atomically replace the NPC's complete typed action list; use an empty array to clear it"`
+	Spellcasting      *NPCSpellcastingCommand `json:"spellcasting,omitempty" jsonschema:"When supplied, atomically replace the NPC's spellcasting profile and attached spells"`
+}
+
+type NPCActionCommand struct {
+	Name            string                 `json:"name"`
+	Description     string                 `json:"description,omitempty"`
+	Recharge        string                 `json:"recharge,omitempty"`
+	LimitedUses     int                    `json:"limitedUses,omitempty"`
+	LimitType       string                 `json:"limitType,omitempty" jsonschema:"day or turn; defaults to day"`
+	Reach           int                    `json:"reach,omitempty"`
+	Range           int                    `json:"range,omitempty"`
+	AOEType         string                 `json:"aoeType,omitempty"`
+	AOESize         int                    `json:"aoeSize,omitempty"`
+	ActionType      string                 `json:"actionType,omitempty" jsonschema:"melee_weapon, ranged_weapon, spell_attack, save, damage, healing, or other"`
+	DisplaySection  string                 `json:"displaySection,omitempty" jsonschema:"trait, action, bonus_action, reaction, legendary_action, mythic_action, or lair_action"`
+	AttackModifier  int                    `json:"attackModifier,omitempty"`
+	MissEffect      string                 `json:"missEffect,omitempty" jsonschema:"none, half, or full; defaults to none"`
+	HitSpecialEvent string                 `json:"hitSpecialEvent,omitempty"`
+	Rolls           []NPCActionRollCommand `json:"rolls,omitempty"`
+}
+
+type NPCActionRollCommand struct {
+	RollKind   string `json:"rollKind,omitempty" jsonschema:"damage, healing, or another supported combat roll kind"`
+	DamageType string `json:"damageType,omitempty"`
+	Magical    bool   `json:"magical,omitempty"`
+	DiceCount  int    `json:"diceCount,omitempty"`
+	DieSize    int    `json:"dieSize,omitempty"`
+	FixedValue int    `json:"fixedValue,omitempty"`
+}
+
+type NPCSpellcastingCommand struct {
+	SpellcastingAbility       string                     `json:"spellcastingAbility,omitempty"`
+	InnateSpellcastingAbility string                     `json:"innateSpellcastingAbility,omitempty"`
+	CasterLevel               int                        `json:"casterLevel,omitempty"`
+	SpellSaveDC               int                        `json:"spellSaveDC,omitempty"`
+	SpellAttackBonus          int                        `json:"spellAttackBonus,omitempty"`
+	Slots                     map[string]any             `json:"slots"`
+	Spells                    []NPCSpellReferenceCommand `json:"spells"`
+}
+
+type NPCSpellReferenceCommand struct {
+	SpellID       string `json:"spellId" jsonschema:"Spell ID returned by search_library"`
+	LibrarySource string `json:"librarySource" jsonschema:"standard or user"`
+	SpellLevel    int    `json:"spellLevel"`
+	Prepared      bool   `json:"prepared,omitempty"`
+	Innate        bool   `json:"innate,omitempty"`
 }
 
 type NPCLinkCommand struct {

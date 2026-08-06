@@ -47,8 +47,12 @@ func (s *Service) CreateNPC(
 		}).Error; err != nil {
 			return err
 		}
+		actions, spellcasting, err := persistNPCAbilities(ctx, tx, principal, entity.ID, command)
+		if err != nil {
+			return err
+		}
 		result = NPCWriteResult{
-			Creature: creatureModel(entity),
+			Creature: creatureModel(entity), Actions: actions, Spellcasting: spellcasting,
 			AuthoringWriteMetadata: AuthoringWriteMetadata{
 				Operation: "created", AppURL: s.AppURL("/creatures/" + entity.ID), Warnings: []string{},
 			},
@@ -115,8 +119,12 @@ func (s *Service) UpdateNPC(
 		if err := tx.WithContext(ctx).Save(&entity).Error; err != nil {
 			return err
 		}
+		actions, spellcasting, err := persistNPCAbilities(ctx, tx, principal, entity.ID, command)
+		if err != nil {
+			return err
+		}
 		result = NPCWriteResult{
-			Creature: creatureModel(entity),
+			Creature: creatureModel(entity), Actions: actions, Spellcasting: spellcasting,
 			AuthoringWriteMetadata: AuthoringWriteMetadata{
 				Operation: "updated", AppURL: s.AppURL("/creatures/" + entity.ID), Warnings: []string{},
 			},
@@ -197,7 +205,7 @@ func validateNPC(command NPCCommand) error {
 			"missing_npc_fields", "name, size, type, AC, and HP are required", nil,
 		)
 	}
-	return nil
+	return validateNPCAbilities(command)
 }
 
 func creatureEntity(userID string, command NPCCommand) dbmodels.CreatureEntity {

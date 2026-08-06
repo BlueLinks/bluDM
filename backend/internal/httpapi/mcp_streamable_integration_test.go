@@ -46,6 +46,22 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 		},
 	})
 	requireArchiveNoError(t, err)
+	replacementCreature, err := stores.Creatures.Create(ctx, owner.ID, store.CreatureInput{
+		Name: "Campaign Wolf", Size: "Medium", CreatureType: "Beast", ArmorClass: 14,
+		HitPoints: 18, HitDice: "4d8", ChallengeRating: "1", XP: 200,
+		StatBlock: map[string]any{
+			"abilityScores": map[string]any{
+				"str": 14, "dex": 15, "con": 12, "int": 3, "wis": 12, "cha": 6,
+			},
+			"speed": map[string]any{"walk": 40},
+		},
+	})
+	requireArchiveNoError(t, err)
+	_, err = stores.Actions.ReplaceCreatureActions(ctx, owner.ID, replacementCreature.ID, []store.ActionInput{{
+		Name: "Bite", ActionType: "melee_weapon", DisplaySection: "action",
+		AttackModifier: 4, Reach: 5, MissEffect: "none", IconSource: "none",
+	}})
+	requireArchiveNoError(t, err)
 	var standardCreatureID string
 	requireArchiveNoError(t, database.Raw(`
 		insert into standard_creatures (
@@ -233,6 +249,7 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 		t.Fatalf("authored encounter roster was incomplete: %+v", authoredReadback.Combatants)
 	}
 	authoredPlayerFound := false
+	authoredCreatureCombatantID := ""
 	for _, combatant := range authoredReadback.Combatants {
 		if combatant.PlayerID == player.ID {
 			authoredPlayerFound = true
@@ -240,10 +257,16 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 				t.Fatalf("MCP-authored player was not usable by initiative setup: %+v", combatant)
 			}
 		}
+		if combatant.CreatureID == creature.ID {
+			authoredCreatureCombatantID = combatant.ID
+		}
 	}
-	if !authoredPlayerFound {
+	if !authoredPlayerFound || authoredCreatureCombatantID == "" {
 		t.Fatalf("authored encounter omitted the selected player: %+v", authoredReadback.Combatants)
 	}
+	assertMCPEncounterCreatureRepoint(
+		t, session, campaign.ID, authored.ID, authoredCreatureCombatantID, replacementCreature,
+	)
 
 	// Simulate an encounter created before player/ally sides were normalized.
 	requireArchiveNoError(t, database.Table("encounter_combatants").

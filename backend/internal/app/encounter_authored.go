@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	dbmodels "bludm/backend/internal/db"
+	"bludm/backend/internal/models"
 
 	"gorm.io/gorm"
 )
@@ -331,6 +332,11 @@ func (s *Service) applyTargetedRosterPatch(
 			)
 		}
 		seen[combatantID] = true
+		if patch.CreatureID != nil {
+			if err := s.replaceCombatantCreature(ctx, principal, campaign, combatant, *patch.CreatureID); err != nil {
+				return err
+			}
+		}
 		if err := applyCombatantPatch(combatant, patch); err != nil {
 			return err
 		}
@@ -351,6 +357,42 @@ func (s *Service) applyTargetedRosterPatch(
 		}
 		nextOrder++
 	}
+	return nil
+}
+
+func (s *Service) replaceCombatantCreature(
+	ctx context.Context,
+	principal Principal,
+	campaign models.Campaign,
+	combatant *dbmodels.EncounterCombatantEntity,
+	creatureID string,
+) error {
+	if combatant.SourceType != "creature" {
+		return ValidationError("invalid_combatant_source", "creatureId can only replace a creature combatant", nil)
+	}
+	creatureID = strings.TrimSpace(creatureID)
+	if creatureID == "" {
+		return ValidationError("missing_creature_id", "creatureId cannot be empty", nil)
+	}
+	side := "enemy"
+	if combatant.Side == "friendly" {
+		side = "ally"
+	}
+	replacement, err := s.authoredCombatant(ctx, principal, campaign, combatant.EncounterID, combatant.SortOrder, EncounterCombatantCommand{
+		SourceType: "creature", CreatureID: creatureID, Side: side, RolledHP: combatant.RolledHP,
+	})
+	if err != nil {
+		return err
+	}
+	for _, key := range []string{"authoringOrigin", "generationBatchId", "generatorVersion", "seed"} {
+		if value, ok := combatant.Snapshot[key]; ok {
+			replacement.Snapshot[key] = value
+		}
+	}
+	replacement.ID = combatant.ID
+	replacement.DisplayName = combatant.DisplayName
+	replacement.CreatedAt = combatant.CreatedAt
+	*combatant = replacement
 	return nil
 }
 
