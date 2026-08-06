@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Creature, Encounter, Player } from "../../types";
 import { api } from "../../lib/api";
+import { encounterRuleset2024, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import { CampaignEncountersSection } from "./CampaignEncountersSection";
 import { encounterArchetypeIcons } from "./encounterArchetypeIcons";
@@ -145,6 +146,23 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(screen.getAllByLabelText("Roll HP at start").length).toBeGreaterThan(0);
   });
 
+  it("uses 2024 difficulty names and budget evidence in previews", async () => {
+    renderBuilder({ difficultyRuleset: encounterRuleset2024 });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    await screen.findByText("Encounter preview");
+
+    expect(screen.getByRole("button", { name: /Low/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /Moderate/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /High/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Deadly/ })).toBeNull();
+    expect(screen.getAllByText("XP Budget").length).toBeGreaterThan(0);
+    expect(screen.getByText("XP Spent")).toBeTruthy();
+    await waitFor(() => expect(api.previewGeneratedEncounter).toHaveBeenCalled());
+    const request = vi.mocked(api.previewGeneratedEncounter).mock.calls.at(-1)?.[1];
+    expect(request?.options.challenge).toBe("moderate");
+  });
+
   it("opens aligned Add Ally and Add Enemy menus in the three-step flow", async () => {
     renderBuilder({ initialLocationId: "shop-1" });
 
@@ -247,9 +265,11 @@ describe("CampaignEncounterCreateDialog", () => {
 });
 
 function renderBuilder({
+  difficultyRuleset,
   initialLocationId = "",
   onCreated = vi.fn(),
 }: {
+  difficultyRuleset?: EncounterRuleset;
   initialLocationId?: string;
   onCreated?: () => void;
 } = {}) {
@@ -257,6 +277,7 @@ function renderBuilder({
     <MemoryRouter>
       <CampaignEncounterCreateDialog
         campaignId="campaign-1"
+        difficultyRuleset={difficultyRuleset}
         initialLocationId={initialLocationId}
         locations={[location()]}
         npcs={[creature({ id: "veteran", name: "Kara Ironshield", librarySource: "user" })]}

@@ -34,6 +34,7 @@ func (s *Service) persistGeneratedEncounter(
 	metadata, err := jsonMap(map[string]any{
 		"authoringOrigin": "generator", "generatorVersion": preview.GeneratorVersion,
 		"seed": seed, "difficultyEvidence": preview.DifficultyEvidence,
+		"difficultyRuleset": preview.DifficultyEvidence.Ruleset,
 		"candidatePoolSize": preview.CandidatePoolSize,
 		"selectionReasons":  preview.SelectionReasons,
 		"narrativePurpose":  command.NarrativePurpose, "roomTheme": command.RoomTheme,
@@ -45,6 +46,7 @@ func (s *Service) persistGeneratedEncounter(
 		CampaignID: campaign.ID, Name: name, Description: command.Description,
 		Status: "planned", Location: locationName, LocationID: optionalID(command.LocationID),
 		RoomNumber: command.RoomNumber, Metadata: metadata, Revision: 1,
+		DifficultyRuleset: preview.DifficultyEvidence.Ruleset,
 	}
 	if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 		return EncounterAuthoringResult{}, err
@@ -246,7 +248,8 @@ func encounterModel(entity dbmodels.EncounterEntity, combatants, enemies int) mo
 		ID: entity.ID, CampaignID: entity.CampaignID, Name: entity.Name,
 		Description: entity.Description, Status: entity.Status, Location: entity.Location,
 		LocationID: entity.LocationID, RoomNumber: entity.RoomNumber, LootNotes: entity.LootNotes,
-		CombatantCount: combatants, EnemyCount: enemies, Revision: entity.Revision,
+		DifficultyRuleset: entity.DifficultyRuleset,
+		CombatantCount:    combatants, EnemyCount: enemies, Revision: entity.Revision,
 		Metadata: map[string]any(entity.Metadata), CreatedAt: entity.CreatedAt, UpdatedAt: entity.UpdatedAt,
 	}
 }

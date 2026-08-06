@@ -22,27 +22,29 @@ type Campaign struct {
 	Name                   string    `json:"name"`
 	Description            string    `json:"description"`
 	AllowedStandardSources []string  `json:"allowedStandardSources"`
+	EncounterRuleset       string    `json:"encounterRuleset"`
 	CreatedAt              time.Time `json:"createdAt"`
 	UpdatedAt              time.Time `json:"updatedAt"`
 }
 
 type Encounter struct {
-	ID             string               `json:"id"`
-	CampaignID     string               `json:"campaignId"`
-	Name           string               `json:"name"`
-	Description    string               `json:"description"`
-	Status         string               `json:"status"`
-	Location       string               `json:"location"`
-	LocationID     *string              `json:"locationId,omitempty"`
-	RoomNumber     string               `json:"roomNumber"`
-	LootNotes      string               `json:"lootNotes"`
-	Combatants     []EncounterCombatant `json:"combatants,omitempty"`
-	CombatantCount int                  `json:"combatantCount"`
-	EnemyCount     int                  `json:"enemyCount"`
-	Revision       int                  `json:"revision"`
-	Metadata       map[string]any       `json:"metadata"`
-	CreatedAt      time.Time            `json:"createdAt"`
-	UpdatedAt      time.Time            `json:"updatedAt"`
+	ID                string               `json:"id"`
+	CampaignID        string               `json:"campaignId"`
+	Name              string               `json:"name"`
+	Description       string               `json:"description"`
+	Status            string               `json:"status"`
+	Location          string               `json:"location"`
+	LocationID        *string              `json:"locationId,omitempty"`
+	RoomNumber        string               `json:"roomNumber"`
+	LootNotes         string               `json:"lootNotes"`
+	DifficultyRuleset string               `json:"difficultyRuleset"`
+	Combatants        []EncounterCombatant `json:"combatants,omitempty"`
+	CombatantCount    int                  `json:"combatantCount"`
+	EnemyCount        int                  `json:"enemyCount"`
+	Revision          int                  `json:"revision"`
+	Metadata          map[string]any       `json:"metadata"`
+	CreatedAt         time.Time            `json:"createdAt"`
+	UpdatedAt         time.Time            `json:"updatedAt"`
 }
 
 type EncounterCombatant struct {

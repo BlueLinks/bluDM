@@ -32,7 +32,7 @@ func registerEncounterReads(
 		return nil, encountersOutput{Encounters: values, Page: page}, err
 	})
 	mcp.AddTool(server, tool("get_encounter", "Get encounter",
-		"Read metadata, revision, full roster, generation provenance, and calculated difficulty evidence.",
+		"Read metadata, revision, full roster, generation provenance, persisted encounter ruleset, and ruleset-aware difficulty evidence.",
 		true, false, false,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in encounterInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.GetEncounter(
@@ -41,7 +41,7 @@ func registerEncounterReads(
 		return nil, value, err
 	})
 	mcp.AddTool(server, tool("evaluate_encounter", "Evaluate encounter",
-		"Calculate server-authoritative 2014 XP difficulty for an explicit discovered party and enemy roster without saving.",
+		"Calculate server-authoritative campaign difficulty without saving: 2014 adjusted XP or 2024 Low/Moderate/High raw XP budgets. The result includes the effective ruleset.",
 		true, false, false,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in evaluateInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.EvaluateEncounter(

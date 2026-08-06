@@ -23,6 +23,7 @@ import type {
   StandardSource,
   User,
 } from "../../types";
+import type { EncounterRuleset } from "../domain/encounterRulesets";
 import { actionTemplateApi } from "./actionTemplates";
 import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
@@ -106,6 +107,7 @@ export const api = {
     name: string;
     description: string;
     allowedStandardSources?: string[];
+    encounterRuleset?: EncounterRuleset;
   }) =>
     request<{ campaign: Campaign }>("/api/campaigns", {
       method: "POST",
@@ -113,7 +115,12 @@ export const api = {
     }),
   updateCampaign: (
     id: string,
-    payload: { name: string; description: string; allowedStandardSources: string[] },
+    payload: {
+      name: string;
+      description: string;
+      allowedStandardSources: string[];
+      encounterRuleset?: EncounterRuleset;
+    },
   ) =>
     request<{ campaign: Campaign }>(`/api/campaigns/${id}`, {
       method: "PUT",

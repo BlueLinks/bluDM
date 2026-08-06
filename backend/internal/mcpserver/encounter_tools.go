@@ -14,7 +14,7 @@ func registerEncounterWriteTools(
 	principal appdomain.Principal,
 ) {
 	mcp.AddTool(server, tool("create_generated_encounter", "Create generated encounter",
-		"After user approval, generate and atomically create a durable planned encounter, party roster, managed enemies, and revision 1. This is a write, not a preview.",
+		"After user approval, use the campaign's effective 2014 or 2024 encounter rules, then atomically create a durable planned encounter, persisted ruleset, party roster, managed enemies, and revision 1. This is a write, not a preview.",
 		false, false, true,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in generateInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.CreateGeneratedEncounter(
@@ -35,7 +35,7 @@ func registerEncounterWriteTools(
 		return nil, value, err
 	})
 	mcp.AddTool(server, tool("regenerate_encounter", "Regenerate encounter",
-		"After approval, reroll generator-managed enemies on the same encounter ID, preserve manual work by default, require expectedRevision, and append history. Set replaceManagedCombatantsOnly=false only when the user explicitly asks to replace manual enemy rows too; players and allies are always preserved.",
+		"After approval, reroll generator-managed enemies using the encounter's persisted 2014 or 2024 ruleset on the same encounter ID, preserve manual work by default, require expectedRevision, and append history. Set replaceManagedCombatantsOnly=false only when the user explicitly asks to replace manual enemy rows too; players and allies are always preserved.",
 		false, true, true,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in regenerateInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.RegenerateEncounter(

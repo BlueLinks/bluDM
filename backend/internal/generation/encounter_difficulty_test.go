@@ -89,6 +89,59 @@ func TestDifficultyEnemyGroupMultipliersAndZeroXPWarnings(t *testing.T) {
 	}
 }
 
+func Test2024ModerateBudgetUsesRawXPWithoutMultipliers(t *testing.T) {
+	players := testPlayers(5, 4)
+	result := EvaluateEncounterForRuleset(
+		DifficultyRuleset2024,
+		players,
+		[]EncounterEnemy{{Creature: models.Creature{XP: 300}, Quantity: 5}},
+		"medium",
+	)
+	if result.Thresholds.Moderate != 1875 || result.XPBudget != 1875 {
+		t.Fatalf("five level-four characters should have a 1,875 XP Moderate budget: %+v", result)
+	}
+	if result.RawXP != 1500 || result.XPSpent != 1500 || result.AdjustedXP != 1500 ||
+		result.Multiplier != 1 || result.BaseMultiplier != 1 || result.PartySizeAdjustment != 0 {
+		t.Fatalf("2024 evaluation applied a 2014 adjustment: %+v", result)
+	}
+	if result.ActualDifficulty != "Moderate" || result.RequestedDifficulty != "Moderate" ||
+		!result.WithinTarget || result.Ruleset != DifficultyRuleset2024 {
+		t.Fatalf("unexpected 2024 difficulty evidence: %+v", result)
+	}
+
+	legacy := EvaluateEncounter(
+		players,
+		[]EncounterEnemy{{Creature: models.Creature{XP: 300}, Quantity: 5}},
+		"medium",
+	)
+	if legacy.AdjustedXP != 3000 || legacy.Multiplier != 2 ||
+		legacy.Ruleset != DifficultyRuleset || legacy.ActualDifficulty != "Deadly" {
+		t.Fatalf("equivalent 2014 encounter changed behavior: %+v", legacy)
+	}
+}
+
+func Test2024GeneratorSelectsRosterWithinRequestedBudget(t *testing.T) {
+	creatures := []models.Creature{
+		{ID: "one", Name: "Goblin One", CreatureType: "goblin", XP: 100},
+		{ID: "two", Name: "Goblin Two", CreatureType: "goblin", XP: 250},
+		{ID: "three", Name: "Goblin Three", CreatureType: "goblin", XP: 500},
+		{ID: "four", Name: "Goblin Four", CreatureType: "goblin", XP: 625},
+	}
+	preview := GenerateEncounterForRuleset(
+		DifficultyRuleset2024,
+		creatures,
+		nil,
+		EncounterOptions{Archetype: "monsters", Challenge: "moderate", EnemyCount: 3},
+		testPlayers(5, 4),
+		91,
+	)
+	if !preview.DifficultyEvidence.WithinTarget ||
+		preview.DifficultyEvidence.ActualDifficulty != "Moderate" ||
+		preview.DifficultyEvidence.XPSpent > 1875 {
+		t.Fatalf("2024 generator missed an available Moderate budget: %+v", preview)
+	}
+}
+
 func TestGeneratorBossMinionSparseAndHazardEvidence(t *testing.T) {
 	creatures := []models.Creature{
 		{ID: "minion", Name: "Ash Minion", CreatureType: "undead", XP: 25},

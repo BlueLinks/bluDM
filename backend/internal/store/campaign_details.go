@@ -12,12 +12,13 @@ import (
 )
 
 type CampaignEncounterInput struct {
-	Name        string
-	Description string
-	Status      string
-	Location    string
-	LocationID  string
-	RoomNumber  string
+	Name              string
+	Description       string
+	Status            string
+	Location          string
+	LocationID        string
+	RoomNumber        string
+	DifficultyRuleset string
 }
 
 type LongRestSnapshot struct {
@@ -40,14 +41,15 @@ func (s CampaignStore) CreateEncounter(ctx context.Context, ownerUserID, campaig
 			}
 		}
 		entity = dbmodels.EncounterEntity{
-			CampaignID:  strings.TrimSpace(campaignID),
-			Name:        input.Name,
-			Description: input.Description,
-			Status:      input.Status,
-			Location:    input.Location,
-			LocationID:  optionalString(input.LocationID),
-			RoomNumber:  input.RoomNumber,
-			Revision:    1,
+			CampaignID:        strings.TrimSpace(campaignID),
+			Name:              input.Name,
+			Description:       input.Description,
+			Status:            input.Status,
+			Location:          input.Location,
+			LocationID:        optionalString(input.LocationID),
+			RoomNumber:        input.RoomNumber,
+			DifficultyRuleset: input.DifficultyRuleset,
+			Revision:          1,
 		}
 		if err := tx.Create(&entity).Error; err != nil {
 			return err
@@ -275,21 +277,22 @@ type encounterCountRow struct {
 
 func encounterFromCounts(entity dbmodels.EncounterEntity, combatantCount, enemyCount int) models.Encounter {
 	return models.Encounter{
-		ID:             entity.ID,
-		CampaignID:     entity.CampaignID,
-		Name:           entity.Name,
-		Description:    entity.Description,
-		Status:         entity.Status,
-		Location:       entity.Location,
-		LocationID:     entity.LocationID,
-		RoomNumber:     entity.RoomNumber,
-		LootNotes:      entity.LootNotes,
-		Metadata:       map[string]any(entity.Metadata),
-		Revision:       entity.Revision,
-		CombatantCount: combatantCount,
-		EnemyCount:     enemyCount,
-		CreatedAt:      entity.CreatedAt,
-		UpdatedAt:      entity.UpdatedAt,
+		ID:                entity.ID,
+		CampaignID:        entity.CampaignID,
+		Name:              entity.Name,
+		Description:       entity.Description,
+		Status:            entity.Status,
+		Location:          entity.Location,
+		LocationID:        entity.LocationID,
+		RoomNumber:        entity.RoomNumber,
+		LootNotes:         entity.LootNotes,
+		DifficultyRuleset: entity.DifficultyRuleset,
+		Metadata:          map[string]any(entity.Metadata),
+		Revision:          entity.Revision,
+		CombatantCount:    combatantCount,
+		EnemyCount:        enemyCount,
+		CreatedAt:         entity.CreatedAt,
+		UpdatedAt:         entity.UpdatedAt,
 	}
 }
 

@@ -8,18 +8,20 @@ import (
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/rulesets"
 
 	"gorm.io/gorm"
 )
 
 type MarkdownEncounterImportInput struct {
-	SourceKey   string
-	SourcePath  string
-	BlockID     string
-	ContentHash string
-	Encounter   EncounterInput
-	LootNotes   string
-	Combatants  []EncounterCombatantInput
+	SourceKey         string
+	SourcePath        string
+	BlockID           string
+	ContentHash       string
+	Encounter         EncounterInput
+	LootNotes         string
+	DifficultyRuleset string
+	Combatants        []EncounterCombatantInput
 }
 
 type MarkdownEncounterImportResult struct {
@@ -69,7 +71,20 @@ func (s EncounterStore) ImportMarkdown(
 		if err := ensureCampaignOwnedTx(ctx, tx, ownerUserID, campaignID); err != nil {
 			return err
 		}
+		var campaign dbmodels.CampaignEntity
+		if err := tx.WithContext(ctx).Where("id = ?", campaignID).First(&campaign).Error; err != nil {
+			return err
+		}
+		campaignRuleset, err := rulesets.ResolveEncounterRuleset(
+			[]string(campaign.AllowedStandardSources), campaign.EncounterRuleset,
+		)
+		if err != nil {
+			return err
+		}
 		for _, input := range inputs {
+			if input.DifficultyRuleset == "" {
+				input.DifficultyRuleset = campaignRuleset
+			}
 			entity, operation, err := upsertMarkdownEncounterTx(ctx, tx, campaignID, input)
 			if err != nil {
 				return err
@@ -148,12 +163,16 @@ func upsertMarkdownEncounterTx(
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		entity = dbmodels.EncounterEntity{
 			CampaignID: strings.TrimSpace(campaignID), Revision: 1,
+			DifficultyRuleset: input.DifficultyRuleset,
 		}
 		operation = "create"
 	} else if err != nil {
 		return dbmodels.EncounterEntity{}, "", err
 	} else {
 		entity.Revision++
+		if entity.DifficultyRuleset == "" {
+			entity.DifficultyRuleset = input.DifficultyRuleset
+		}
 	}
 
 	if input.Encounter.LocationID != "" {

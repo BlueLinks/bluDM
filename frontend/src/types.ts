@@ -1,3 +1,5 @@
+import type { EncounterRuleset } from "./lib/domain/encounterRulesets";
+
 export type User = {
   id: string;
   email: string;
@@ -48,6 +50,7 @@ export type Campaign = {
   name: string;
   description: string;
   allowedStandardSources: string[];
+  encounterRuleset?: EncounterRuleset;
   createdAt: string;
   updatedAt: string;
 };
@@ -72,6 +75,7 @@ export type Encounter = {
   locationId?: string;
   roomNumber: string;
   lootNotes: string;
+  difficultyRuleset?: EncounterRuleset;
   combatants?: EncounterCombatant[];
   combatantCount: number;
   enemyCount: number;

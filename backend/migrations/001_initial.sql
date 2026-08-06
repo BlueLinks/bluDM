@@ -23,6 +23,7 @@ create table campaigns (
     name text not null,
     description text not null default '',
     allowed_standard_sources text[] not null default array['srd-2014']::text[],
+    encounter_ruleset text not null default 'dnd-5e-2014-xp-v1',
     archived_at timestamptz,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
@@ -338,6 +339,7 @@ create table encounters (
     location text not null default '',
     room_number text not null default '',
     loot_notes text not null default '',
+    difficulty_ruleset text not null default 'dnd-5e-2014-xp-v1',
     background_asset_id uuid references uploaded_assets(id) on delete set null,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()

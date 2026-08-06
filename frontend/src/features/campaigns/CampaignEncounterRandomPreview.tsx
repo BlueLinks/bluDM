@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import { Button, Callout } from "../../components/ui";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { EncounterCombatant, Player } from "../../types";
 import { CombatantCard } from "../encounters/EncounterCombatantCard";
 import { EncounterDifficultyPanel } from "../encounters/EncounterDifficultyPanel";
@@ -9,16 +10,22 @@ import type { EncounterBuilderPreview } from "./encounterBuilderGenerator";
 
 export function RandomPreviewPanel({
   allyCount,
+  difficultyRuleset = encounterRuleset2014,
   players,
   preview,
   onRegenerate,
 }: {
   allyCount: number;
+  difficultyRuleset?: EncounterRuleset;
   players: Player[];
   preview: EncounterBuilderPreview;
   onRegenerate: () => void;
 }) {
-  const difficulty = calculateEncounterDifficulty(players, previewCombatants(preview));
+  const difficulty = calculateEncounterDifficulty(
+    players,
+    previewCombatants(preview),
+    difficultyRuleset,
+  );
   return (
     <aside className="grid content-start gap-3 lg:-my-4 lg:border-l lg:border-border lg:pb-4 lg:pl-6 lg:pr-0.5 lg:pt-[1.375rem]">
       <div className="flex flex-wrap items-start justify-between gap-3">

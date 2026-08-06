@@ -4,8 +4,34 @@ import type {
   EncounterRunCombatant,
   Player,
 } from "../../types";
+import {
+  encounterRuleset2014,
+  encounterRuleset2024,
+  type EncounterRuleset,
+} from "./encounterRulesets";
 
-const xpThresholdsByLevel: Record<
+type DifficultyThresholds = {
+  easy: number;
+  medium: number;
+  hard: number;
+  deadly: number;
+  low: number;
+  moderate: number;
+  high: number;
+};
+
+export type EncounterDifficulty = {
+  ruleset: EncounterRuleset;
+  thresholds: DifficultyThresholds;
+  enemyXP: number;
+  xpBudget: number;
+  xpSpent: number;
+  multiplier: number;
+  adjustedXP: number;
+  label: string;
+};
+
+const xpThresholds2014ByLevel: Record<
   number,
   { easy: number; medium: number; hard: number; deadly: number }
 > = {
@@ -31,6 +57,29 @@ const xpThresholdsByLevel: Record<
   20: { easy: 2800, medium: 5700, hard: 8500, deadly: 12700 },
 };
 
+const xpBudgets2024ByLevel: Record<number, { low: number; moderate: number; high: number }> = {
+  1: { low: 50, moderate: 75, high: 100 },
+  2: { low: 100, moderate: 150, high: 200 },
+  3: { low: 150, moderate: 225, high: 400 },
+  4: { low: 250, moderate: 375, high: 500 },
+  5: { low: 500, moderate: 750, high: 1100 },
+  6: { low: 600, moderate: 1000, high: 1400 },
+  7: { low: 750, moderate: 1300, high: 1700 },
+  8: { low: 1000, moderate: 1700, high: 2100 },
+  9: { low: 1300, moderate: 2000, high: 2600 },
+  10: { low: 1600, moderate: 2300, high: 3100 },
+  11: { low: 1900, moderate: 2900, high: 4100 },
+  12: { low: 2200, moderate: 3700, high: 4700 },
+  13: { low: 2600, moderate: 4200, high: 5400 },
+  14: { low: 2900, moderate: 4900, high: 6200 },
+  15: { low: 3300, moderate: 5400, high: 7800 },
+  16: { low: 3800, moderate: 6100, high: 9800 },
+  17: { low: 4500, moderate: 7200, high: 11700 },
+  18: { low: 5000, moderate: 8700, high: 14200 },
+  19: { low: 5500, moderate: 10700, high: 17200 },
+  20: { low: 6400, moderate: 13200, high: 22000 },
+};
+
 export function rollHitDiceClient(hitDice: string, fallback: number) {
   const match = hitDice
     .trim()
@@ -46,59 +95,85 @@ export function rollHitDiceClient(hitDice: string, fallback: number) {
   return Math.max(1, total);
 }
 
-export function calculateEncounterDifficulty(players: Player[], enemies: EncounterCombatant[]) {
-  const thresholds = players.reduce(
-    (total, player) => {
-      const sheetLevel =
-        typeof player.characterSheet.level === "number" ? player.characterSheet.level : 1;
-      const threshold =
-        xpThresholdsByLevel[Math.max(1, Math.min(20, sheetLevel))] ?? xpThresholdsByLevel[1];
-      return {
-        easy: total.easy + threshold.easy,
-        medium: total.medium + threshold.medium,
-        hard: total.hard + threshold.hard,
-        deadly: total.deadly + threshold.deadly,
-      };
-    },
-    { easy: 0, medium: 0, hard: 0, deadly: 0 },
-  );
+export function calculateEncounterDifficulty(
+  players: Player[],
+  enemies: EncounterCombatant[],
+  ruleset: EncounterRuleset = encounterRuleset2014,
+): EncounterDifficulty {
+  const levels = players.map((player) => numericLevel(player.characterSheet.level));
   return difficultyFromXP(
-    thresholds,
+    thresholdsForLevels(levels, ruleset),
     enemies.reduce((total, enemy) => total + combatantXP(enemy), 0),
     enemies.length,
+    ruleset,
   );
 }
 
-export function calculateRunEncounterDifficulty(combatants: EncounterRunCombatant[]) {
+export function calculateCombatantEncounterDifficulty(
+  combatants: EncounterCombatant[],
+  ruleset: EncounterRuleset = encounterRuleset2014,
+) {
   const players = combatants.filter((combatant) => combatant.sourceType === "player");
   const enemies = combatants.filter((combatant) => combatant.side === "enemy");
-  const thresholds = players.reduce(
-    (total, player) => {
-      const sheet = combatantSheet(player);
-      const sheetLevel = typeof sheet.level === "number" ? sheet.level : 1;
-      const threshold =
-        xpThresholdsByLevel[Math.max(1, Math.min(20, sheetLevel))] ?? xpThresholdsByLevel[1];
-      return {
-        easy: total.easy + threshold.easy,
-        medium: total.medium + threshold.medium,
-        hard: total.hard + threshold.hard,
-        deadly: total.deadly + threshold.deadly,
-      };
-    },
-    { easy: 0, medium: 0, hard: 0, deadly: 0 },
-  );
   return difficultyFromXP(
-    thresholds,
+    thresholdsForLevels(
+      players.map((player) => numericLevel(combatantSheet(player).level)),
+      ruleset,
+    ),
+    enemies.reduce((total, enemy) => total + combatantXP(enemy), 0),
+    enemies.length,
+    ruleset,
+  );
+}
+
+export function calculateRunEncounterDifficulty(
+  combatants: EncounterRunCombatant[],
+  ruleset: EncounterRuleset = encounterRuleset2014,
+) {
+  const players = combatants.filter((combatant) => combatant.sourceType === "player");
+  const enemies = combatants.filter((combatant) => combatant.side === "enemy");
+  return difficultyFromXP(
+    thresholdsForLevels(
+      players.map((player) => numericLevel(combatantSheet(player).level)),
+      ruleset,
+    ),
     enemies.reduce((total, enemy) => total + runCombatantXP(enemy), 0),
     enemies.length,
+    ruleset,
   );
 }
 
 function difficultyFromXP(
-  thresholds: { easy: number; medium: number; hard: number; deadly: number },
+  thresholds: DifficultyThresholds,
   enemyXP: number,
   count: number,
-) {
+  ruleset: EncounterRuleset,
+): EncounterDifficulty {
+  if (ruleset === encounterRuleset2024) {
+    let label = "Trivial";
+    if (enemyXP > 0 && enemyXP <= thresholds.low) label = "Low";
+    else if (enemyXP > 0 && enemyXP <= thresholds.moderate) label = "Moderate";
+    else if (enemyXP > 0 && enemyXP <= thresholds.high) label = "High";
+    else if (enemyXP > 0) label = "Over High";
+    const xpBudget =
+      label === "Low"
+        ? thresholds.low
+        : label === "Moderate"
+          ? thresholds.moderate
+          : label === "High" || label === "Over High"
+            ? thresholds.high
+            : 0;
+    return {
+      ruleset,
+      thresholds,
+      enemyXP,
+      xpBudget,
+      xpSpent: enemyXP,
+      multiplier: 1,
+      adjustedXP: enemyXP,
+      label,
+    };
+  }
   const multiplier = encounterMultiplier(count);
   const adjustedXP = Math.round(enemyXP * multiplier);
   let label = "Trivial";
@@ -107,27 +182,51 @@ function difficultyFromXP(
   else if (adjustedXP >= thresholds.hard) label = "Hard";
   else if (adjustedXP >= thresholds.medium) label = "Medium";
   else if (adjustedXP >= thresholds.easy) label = "Easy";
-  return { thresholds, enemyXP, multiplier, adjustedXP, label };
+  return {
+    ruleset,
+    thresholds,
+    enemyXP,
+    xpBudget: 0,
+    xpSpent: enemyXP,
+    multiplier,
+    adjustedXP,
+    label,
+  };
+}
+
+function thresholdsForLevels(levels: number[], ruleset: EncounterRuleset): DifficultyThresholds {
+  return levels.reduce<DifficultyThresholds>(
+    (total, level) => {
+      if (ruleset === encounterRuleset2024) {
+        const budget = xpBudgets2024ByLevel[level] ?? xpBudgets2024ByLevel[1];
+        total.low += budget.low;
+        total.moderate += budget.moderate;
+        total.high += budget.high;
+      } else {
+        const threshold = xpThresholds2014ByLevel[level] ?? xpThresholds2014ByLevel[1];
+        total.easy += threshold.easy;
+        total.medium += threshold.medium;
+        total.hard += threshold.hard;
+        total.deadly += threshold.deadly;
+      }
+      return total;
+    },
+    { easy: 0, medium: 0, hard: 0, deadly: 0, low: 0, moderate: 0, high: 0 },
+  );
+}
+
+function numericLevel(value: unknown) {
+  return Math.max(1, Math.min(20, typeof value === "number" ? value : 1));
 }
 
 export function combatantXP(combatant: EncounterCombatant) {
-  const creature = combatant.snapshot?.creature;
-  return creature &&
-    typeof creature === "object" &&
-    "xp" in creature &&
-    typeof creature.xp === "number"
-    ? creature.xp
-    : 0;
+  const creature = sheetRecord(combatant.snapshot?.creature ?? combatant.snapshot);
+  return typeof creature.xp === "number" ? creature.xp : 0;
 }
 
 export function runCombatantXP(combatant: EncounterRunCombatant) {
-  const creature = combatant.snapshot?.creature;
-  return creature &&
-    typeof creature === "object" &&
-    "xp" in creature &&
-    typeof creature.xp === "number"
-    ? creature.xp
-    : 0;
+  const creature = sheetRecord(combatant.snapshot?.creature ?? combatant.snapshot);
+  return typeof creature.xp === "number" ? creature.xp : 0;
 }
 
 export function encounterMultiplier(count: number) {
@@ -162,7 +261,9 @@ export function effectiveMaxHP(combatant: EncounterRunCombatant) {
     : Math.max(1, combatant.maxHitPoints + combatant.maxHitPointsModifier);
 }
 
-export function combatantSheet(combatant: EncounterRunCombatant): Record<string, unknown> {
+export function combatantSheet(combatant: {
+  snapshot: Record<string, unknown>;
+}): Record<string, unknown> {
   const source = (combatant.snapshot.player ??
     combatant.snapshot.creature ??
     combatant.snapshot) as Record<string, unknown>;

@@ -122,7 +122,7 @@ type evaluateInput struct {
 	AllCampaignPlayers  bool                         `json:"allCampaignPlayers,omitempty" jsonschema:"Use every campaign player; mutually exclusive with playerIds"`
 	PlayerIDs           []string                     `json:"playerIds,omitempty" jsonschema:"Explicit IDs returned by list_players"`
 	Enemies             []appdomain.EvaluateEnemyRef `json:"enemies" jsonschema:"Explicit creature IDs and quantities"`
-	RequestedDifficulty string                       `json:"requestedDifficulty" jsonschema:"easy, medium, hard, or deadly"`
+	RequestedDifficulty string                       `json:"requestedDifficulty" jsonschema:"2014: easy, medium, hard, or deadly. 2024: low, moderate (medium alias accepted), or high."`
 }
 
 type generateInput struct {

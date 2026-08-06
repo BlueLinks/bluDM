@@ -29,6 +29,14 @@ func (s *Service) PreviewGeneratedEncounter(
 	if err != nil {
 		return generation.EncounterPreview{}, storeError(err, "campaign")
 	}
+	ruleset, err := campaignEncounterRuleset(campaign)
+	if err != nil {
+		return generation.EncounterPreview{}, err
+	}
+	command.Options.Challenge, err = normalizeDifficultyForRuleset(ruleset, command.Options.Challenge)
+	if err != nil {
+		return generation.EncounterPreview{}, err
+	}
 	location, err := s.generationLocation(ctx, principal, campaignID, command.LocationID)
 	if err != nil {
 		return generation.EncounterPreview{}, err
@@ -37,8 +45,10 @@ func (s *Service) PreviewGeneratedEncounter(
 	if err != nil {
 		return generation.EncounterPreview{}, err
 	}
-	preview := generation.GenerateEncounter(creatures, location, command.Options, players, command.Seed)
+	preview := generation.GenerateEncounterForRuleset(
+		ruleset, creatures, location, command.Options, players, command.Seed,
+	)
 	return enforceRequiredCreatures(
-		preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge,
+		preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge, ruleset,
 	)
 }

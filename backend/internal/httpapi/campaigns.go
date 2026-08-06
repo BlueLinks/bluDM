@@ -8,6 +8,7 @@ import (
 
 	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/rulesets"
 	"bludm/backend/internal/store"
 )
 
@@ -35,11 +36,17 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
+	encounterRuleset, err := rulesets.ResolveEncounterRuleset(sources, req.EncounterRuleset)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 
 	campaign, err := s.stores.Campaigns.Create(r.Context(), user.ID, store.CampaignInput{
 		Name:                   req.Name,
 		Description:            req.Description,
 		AllowedStandardSources: sources,
+		EncounterRuleset:       encounterRuleset,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not create campaign")
@@ -51,7 +58,8 @@ func (s *Server) createCampaign(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) updateCampaign(w http.ResponseWriter, r *http.Request) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
-	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+	existing, err := s.campaignByID(r.Context(), campaignID)
+	if err != nil {
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
@@ -65,10 +73,21 @@ func (s *Server) updateCampaign(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "name is required")
 		return
 	}
+	sources := normalizeStandardSources(req.AllowedStandardSources)
+	selectedRuleset := req.EncounterRuleset
+	if selectedRuleset == "" {
+		selectedRuleset = existing.EncounterRuleset
+	}
+	encounterRuleset, err := rulesets.ResolveEncounterRuleset(sources, selectedRuleset)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	campaign, err := s.stores.Campaigns.Update(r.Context(), currentUserIDMust(r.Context()), campaignID, store.CampaignInput{
 		Name:                   req.Name,
 		Description:            req.Description,
-		AllowedStandardSources: normalizeStandardSources(req.AllowedStandardSources),
+		AllowedStandardSources: sources,
+		EncounterRuleset:       encounterRuleset,
 	})
 	if err != nil {
 		if store.IsNotFound(err) {
@@ -143,7 +162,8 @@ func (s *Server) listCampaignEncounters(w http.ResponseWriter, r *http.Request) 
 
 func (s *Server) createEncounter(w http.ResponseWriter, r *http.Request) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
-	if _, err := s.campaignByID(r.Context(), campaignID); err != nil {
+	campaign, err := s.campaignByID(r.Context(), campaignID)
+	if err != nil {
 		writeError(w, http.StatusNotFound, "campaign not found")
 		return
 	}
@@ -189,12 +209,13 @@ func (s *Server) createEncounter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	encounter, err := s.stores.Campaigns.CreateEncounter(r.Context(), currentUserIDMust(r.Context()), campaignID, store.CampaignEncounterInput{
-		Name:        req.Name,
-		Description: req.Description,
-		Status:      req.Status,
-		Location:    req.Location,
-		LocationID:  req.LocationID,
-		RoomNumber:  req.RoomNumber,
+		Name:              req.Name,
+		Description:       req.Description,
+		Status:            req.Status,
+		Location:          req.Location,
+		LocationID:        req.LocationID,
+		RoomNumber:        req.RoomNumber,
+		DifficultyRuleset: campaign.EncounterRuleset,
 	})
 	if err != nil {
 		if store.IsNotFound(err) {

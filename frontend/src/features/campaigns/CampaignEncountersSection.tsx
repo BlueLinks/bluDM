@@ -2,6 +2,7 @@ import { ClipboardList, Copy, FlaskConical, Pencil, Play, Plus, Trash2 } from "l
 import { Link } from "react-router-dom";
 import { Badge, Button, EmptyMini, SectionPanel } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
+import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Creature, Encounter, Player } from "../../types";
 import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import type { CampaignLocation } from "./world/travelTypes";
@@ -11,6 +12,7 @@ const encounterStatusLabel = (status: string) =>
 
 export function CampaignEncountersSection({
   campaignID,
+  difficultyRuleset = encounterRuleset2014,
   encounterOpen,
   encounters,
   locations,
@@ -23,6 +25,7 @@ export function CampaignEncountersSection({
   onCreated,
 }: {
   campaignID: string;
+  difficultyRuleset?: EncounterRuleset;
   encounterOpen: boolean;
   encounters: Encounter[];
   locations: CampaignLocation[];
@@ -55,6 +58,7 @@ export function CampaignEncountersSection({
       <div className="mt-3 flex flex-wrap gap-2">
         <CampaignEncounterCreateDialog
           campaignId={campaignID}
+          difficultyRuleset={difficultyRuleset}
           locations={locations}
           npcs={npcs}
           open={encounterOpen}

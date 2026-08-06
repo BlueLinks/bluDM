@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	dbmodels "bludm/backend/internal/db"
+	"bludm/backend/internal/generation"
 	"bludm/backend/internal/models"
 )
 
@@ -31,7 +32,9 @@ func TestDifficultyFromStoredRosterIncludesPreservedEnemies(t *testing.T) {
 		},
 	}
 
-	evidence := difficultyFromStoredRoster(players, combatants, "medium")
+	evidence := difficultyFromStoredRoster(
+		players, combatants, "medium", generation.DifficultyRuleset,
+	)
 
 	if evidence.RawXP != 150 || evidence.EnemyCount != 2 {
 		t.Fatalf("expected the final roster in evidence, got %+v", evidence)

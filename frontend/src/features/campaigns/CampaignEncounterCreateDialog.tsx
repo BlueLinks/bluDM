@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { Callout, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
+import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Creature, Player } from "../../types";
 import { EncounterAddCombatantDialog } from "../encounters/EncounterAddCombatantDialog";
 import { BuilderProgress, PartyAlliesStep } from "./CampaignEncounterBuilderSteps";
 import { FooterActions, ReviewCreateStep } from "./CampaignEncounterBuilderReviewSteps";
 import { EncounterSetupStep } from "./CampaignEncounterRandomSetup";
 import {
-  defaultRandomOptions,
+  defaultRandomOptionsForRuleset,
   type EncounterBuilderCreatureDraft,
   type EncounterBuilderMetaDraft,
   type EncounterBuilderPreview,
@@ -22,6 +23,7 @@ type AddDialogMode = "ally" | "enemy";
 
 export function CampaignEncounterCreateDialog({
   campaignId,
+  difficultyRuleset = encounterRuleset2014,
   locations,
   npcs = [],
   open,
@@ -32,6 +34,7 @@ export function CampaignEncounterCreateDialog({
   onOpenChange,
 }: {
   campaignId: string;
+  difficultyRuleset?: EncounterRuleset;
   locations: CampaignLocation[];
   npcs?: Creature[];
   open: boolean;
@@ -51,8 +54,9 @@ export function CampaignEncounterCreateDialog({
   const [allies, setAllies] = useState<EncounterBuilderCreatureDraft[]>([]);
   const [enemies, setEnemies] = useState<EncounterBuilderCreatureDraft[]>([]);
   const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [randomOptions, setRandomOptions] =
-    useState<EncounterBuilderRandomOptions>(defaultRandomOptions);
+  const [randomOptions, setRandomOptions] = useState<EncounterBuilderRandomOptions>(() =>
+    defaultRandomOptionsForRuleset(difficultyRuleset),
+  );
   const [previewRoll, setPreviewRoll] = useState(1);
   const [acceptedPreview, setAcceptedPreview] = useState<EncounterBuilderPreview | null>(null);
   const [acceptedPreviewFingerprint, setAcceptedPreviewFingerprint] = useState("");
@@ -90,7 +94,7 @@ export function CampaignEncounterCreateDialog({
     setSelectedPlayerIds(players.map((player) => player.id));
     setAllies([]);
     setEnemies([]);
-    setRandomOptions(defaultRandomOptions);
+    setRandomOptions(defaultRandomOptionsForRuleset(difficultyRuleset));
     setPreviewRoll(1);
     setAcceptedPreview(null);
     setAcceptedPreviewFingerprint("");
@@ -104,7 +108,7 @@ export function CampaignEncounterCreateDialog({
       .creatures({ includeStandard: true })
       .then((payload) => setCreatures(payload.creatures))
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creatures"));
-  }, [initialLocationId, locations, open, players]);
+  }, [difficultyRuleset, initialLocationId, locations, open, players]);
 
   useEffect(() => {
     if (!open) return;
@@ -262,6 +266,7 @@ export function CampaignEncounterCreateDialog({
             <PartyAlliesStep
               allies={allies}
               availablePlayers={availablePlayers}
+              difficultyRuleset={difficultyRuleset}
               players={selectedPlayers}
               onAddAllPlayers={() => setSelectedPlayerIds(players.map((player) => player.id))}
               onAddAlly={() => setAddDialogMode("ally")}
@@ -276,6 +281,7 @@ export function CampaignEncounterCreateDialog({
           ) : step === "setup" ? (
             <EncounterSetupStep
               allyCount={allies.length}
+              difficultyRuleset={difficultyRuleset}
               enemies={setupPreview.enemies}
               options={randomOptions}
               players={selectedPlayers}
@@ -300,6 +306,7 @@ export function CampaignEncounterCreateDialog({
           ) : (
             <ReviewCreateStep
               allies={allies}
+              difficultyRuleset={difficultyRuleset}
               enemies={acceptedPreview?.enemies ?? setupPreview.enemies}
               locations={locations}
               meta={meta}

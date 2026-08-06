@@ -10,6 +10,7 @@ import (
 	"bludm/backend/internal/generation"
 	"bludm/backend/internal/markdownencounter"
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/rulesets"
 )
 
 type EncounterDetails struct {
@@ -103,13 +104,24 @@ func (s *Service) GetEncounter(
 	if err != nil {
 		return EncounterDetails{}, err
 	}
+	ruleset := encounter.DifficultyRuleset
+	if !rulesets.IsEncounterRuleset(ruleset) {
+		campaign, err := s.stores.Campaigns.ByID(ctx, principal.UserID, campaignID)
+		if err != nil {
+			return EncounterDetails{}, err
+		}
+		ruleset, err = campaignEncounterRuleset(campaign)
+		if err != nil {
+			return EncounterDetails{}, err
+		}
+	}
 	players, enemies := encounterDifficultyInputs(combatants)
-	evidence := generation.EvaluateEncounter(players, enemies, "")
+	evidence := generation.EvaluateEncounterForRuleset(ruleset, players, enemies, "")
 	for _, combatant := range combatants {
 		if combatant.SourceType != "player" && combatant.Side == "ally" {
 			evidence.Warnings = append(
 				evidence.Warnings,
-				"Non-player allies are present but are not included in the 2014 XP budget.",
+				"Non-player allies are present but are not included in the encounter XP budget.",
 			)
 			break
 		}
@@ -130,13 +142,17 @@ func (s *Service) EvaluateEncounter(
 	if err != nil {
 		return generation.DifficultyEvidence{}, err
 	}
-	requested := strings.ToLower(strings.TrimSpace(input.RequestedDifficulty))
-	switch requested {
-	case "easy", "medium", "hard", "deadly":
-	default:
-		return generation.DifficultyEvidence{}, ValidationError(
-			"invalid_difficulty", "requestedDifficulty must be easy, medium, hard, or deadly", nil,
-		)
+	campaign, err := s.stores.Campaigns.ByID(ctx, principal.UserID, campaignID)
+	if err != nil {
+		return generation.DifficultyEvidence{}, err
+	}
+	ruleset, err := campaignEncounterRuleset(campaign)
+	if err != nil {
+		return generation.DifficultyEvidence{}, err
+	}
+	requested, err := normalizeDifficultyForRuleset(ruleset, input.RequestedDifficulty)
+	if err != nil {
+		return generation.DifficultyEvidence{}, err
 	}
 	players, err := s.resolvePlayers(ctx, principal, campaignID, input.AllCampaignPlayers, input.PlayerIDs)
 	if err != nil {
@@ -169,7 +185,7 @@ func (s *Service) EvaluateEncounter(
 			Creature: details.Creature, Quantity: reference.Quantity, Side: "enemy",
 		})
 	}
-	return generation.EvaluateEncounter(players, enemies, requested), nil
+	return generation.EvaluateEncounterForRuleset(ruleset, players, enemies, requested), nil
 }
 
 func (s *Service) resolvePlayers(
@@ -213,43 +229,6 @@ func (s *Service) resolvePlayers(
 		return nil, ValidationError("missing_players", "at least one player is required", nil)
 	}
 	return selected, nil
-}
-
-func encounterDifficultyInputs(
-	combatants []models.EncounterCombatant,
-) ([]models.Player, []generation.EncounterEnemy) {
-	players := []models.Player{}
-	enemiesByID := map[string]int{}
-	enemies := []generation.EncounterEnemy{}
-	for _, combatant := range combatants {
-		if combatant.SourceType == "player" {
-			players = append(players, models.Player{
-				ID: combatant.PlayerID, CharacterName: combatant.DisplayName,
-				CharacterSheet: combatant.Snapshot,
-			})
-			continue
-		}
-		if combatant.Side != "enemy" {
-			continue
-		}
-		key := combatant.CreatureID
-		if key == "" {
-			key = combatant.DisplayName
-		}
-		if index, ok := enemiesByID[key]; ok {
-			enemies[index].Quantity++
-			continue
-		}
-		enemiesByID[key] = len(enemies)
-		enemies = append(enemies, generation.EncounterEnemy{
-			Creature: models.Creature{
-				ID: combatant.CreatureID, Name: combatant.DisplayName,
-				XP: integerFromAny(combatant.Snapshot["xp"]),
-			},
-			Quantity: 1, Side: "enemy",
-		})
-	}
-	return players, enemies
 }
 
 func (s *Service) ExportEncounter(

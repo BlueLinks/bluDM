@@ -14,6 +14,9 @@ func EnsureSchema(ctx context.Context, gdb *gorm.DB, seedPool *pgxpool.Pool) err
 	if err := gdb.WithContext(ctx).AutoMigrate(schemaEntities()...); err != nil {
 		return err
 	}
+	if err := backfillEncounterRulesets(ctx, gdb); err != nil {
+		return err
+	}
 	if err := ensurePostgresIndexes(ctx, gdb); err != nil {
 		return err
 	}
@@ -21,6 +24,26 @@ func EnsureSchema(ctx context.Context, gdb *gorm.DB, seedPool *pgxpool.Pool) err
 		return err
 	}
 	return seedStandardContent(ctx, seedPool)
+}
+
+func backfillEncounterRulesets(ctx context.Context, gdb *gorm.DB) error {
+	if err := gdb.WithContext(ctx).Exec(`
+update campaigns
+set encounter_ruleset = case
+    when allowed_standard_sources @> array['srd-5-2-1']::text[]
+      and not (allowed_standard_sources @> array['srd-2014']::text[])
+        then 'dnd-5e-2024-xp-v1'
+    else 'dnd-5e-2014-xp-v1'
+end
+where encounter_ruleset = ''
+`).Error; err != nil {
+		return err
+	}
+	return gdb.WithContext(ctx).Exec(`
+update encounters
+set difficulty_ruleset = 'dnd-5e-2014-xp-v1'
+where difficulty_ruleset = ''
+`).Error
 }
 
 func schemaEntities() []any {

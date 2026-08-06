@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import { encounterRuleset2024 } from "../../lib/domain/encounterRulesets";
 import type { Creature, DraftCombatant, Player } from "../../types";
 import { EncounterAddCombatantDialog } from "./EncounterAddCombatantDialog";
 import { EncounterDifficultyPanel } from "./EncounterDifficultyPanel";
@@ -26,6 +27,22 @@ describe("Encounter edit workflow polish", () => {
     expect(screen.getByText("Multiplier")).toBeTruthy();
     expect(screen.getByText("Threshold")).toBeTruthy();
     expect(screen.getByText("Crossed")).toBeTruthy();
+  });
+
+  it("presents 2024 difficulty as XP budget and spend", () => {
+    const difficulty = calculateEncounterDifficulty(
+      Array.from({ length: 5 }, () => player()),
+      [combatant()],
+      encounterRuleset2024,
+    );
+
+    render(<EncounterDifficultyPanel difficulty={difficulty} />);
+
+    expect(screen.getAllByText("Low").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("XP Budget").length).toBeGreaterThan(0);
+    expect(screen.getByText("XP Spent")).toBeTruthy();
+    expect(screen.queryByText("Adjusted XP")).toBeNull();
+    expect(screen.queryByText("Multiplier")).toBeNull();
   });
 
   it("renders compact combatant rows with identity, stats, and contextual actions", () => {

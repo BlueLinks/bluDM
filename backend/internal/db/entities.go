@@ -61,6 +61,7 @@ type CampaignEntity struct {
 	Name                   string         `gorm:"not null"`
 	Description            string         `gorm:"not null;default:''"`
 	AllowedStandardSources pq.StringArray `gorm:"type:text[];not null;default:array['srd-2014']::text[]"`
+	EncounterRuleset       string         `gorm:"not null;default:''"`
 	Metadata               JSONMap        `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	ArchivedAt             *time.Time
 	CreatedAt              time.Time
@@ -349,6 +350,7 @@ type EncounterEntity struct {
 	LocationID        *string `gorm:"type:uuid;index"`
 	RoomNumber        string  `gorm:"not null;default:''"`
 	LootNotes         string  `gorm:"not null;default:''"`
+	DifficultyRuleset string  `gorm:"not null;default:'dnd-5e-2014-xp-v1'"`
 	BackgroundAssetID *string `gorm:"type:uuid"`
 	Metadata          JSONMap `gorm:"type:jsonb;not null;default:'{}'::jsonb"`
 	Revision          int     `gorm:"not null;default:1"`

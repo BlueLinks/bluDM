@@ -6,7 +6,8 @@ import { ContentStack, SidebarDetailLayout } from "../../components/layout";
 import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
 import { Button, Callout, MutedPanel, Page, ToastViewport, useToasts } from "../../components/ui";
 import { api } from "../../lib/api";
-import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import { calculateCombatantEncounterDifficulty } from "../../lib/domain/combat";
+import { campaignEncounterRuleset, encounterRuleset2014 } from "../../lib/domain/encounterRulesets";
 import type {
   CampaignDetail,
   Creature,
@@ -71,9 +72,12 @@ export function EncounterEditPage() {
     : ["srd-2014"];
   const hasCreatureSourceMismatch =
     Boolean(detail) && creatureSources.some((source) => !campaignSources.includes(source));
+  const difficultyRuleset =
+    encounter?.difficultyRuleset ??
+    (detail ? campaignEncounterRuleset(detail.campaign) : encounterRuleset2014);
   const difficulty = useMemo(
-    () => calculateEncounterDifficulty(detail?.players ?? [], enemyCombatants),
-    [detail?.players, enemyCombatants],
+    () => calculateCombatantEncounterDifficulty(combatants, difficultyRuleset),
+    [combatants, difficultyRuleset],
   );
 
   async function load() {
