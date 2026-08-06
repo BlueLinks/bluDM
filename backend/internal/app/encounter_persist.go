@@ -197,8 +197,16 @@ func generatedCombatant(
 	snapshot["generationBatchId"] = batchID
 	snapshot["generatorVersion"] = generatorVersion
 	snapshot["seed"] = seed
+	creatureID := optionalID(creature.ID)
+	if creature.LibrarySource == "standard" {
+		// Standard creatures live in standard_creatures, while creature_id is a
+		// foreign key to the user-owned creatures table. Keep the standard
+		// reference in the snapshot, matching the authored encounter path.
+		creatureID = nil
+		snapshot["standardCreatureId"] = creature.ID
+	}
 	return dbmodels.EncounterCombatantEntity{
-		EncounterID: encounterID, SourceType: "creature", CreatureID: optionalID(creature.ID),
+		EncounterID: encounterID, SourceType: "creature", CreatureID: creatureID,
 		Side: "enemy", DisplayName: creature.Name, ColorLabel: "danger",
 		AvatarURL: creature.AvatarURL, ArmorClass: creature.ArmorClass,
 		MaxHitPoints: max(1, creature.HitPoints), CurrentHitPoints: max(1, creature.HitPoints),
