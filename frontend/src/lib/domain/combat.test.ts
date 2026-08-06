@@ -10,6 +10,7 @@ import {
   isDownEnemy,
 } from "./combat";
 import { createId } from "./ids";
+import { encounterRuleset2024 } from "./encounterRulesets";
 
 function player(level: number): Player {
   return {
@@ -99,6 +100,21 @@ describe("combat domain helpers", () => {
   it("calculates encounter difficulty from player thresholds and enemy xp", () => {
     expect(calculateEncounterDifficulty([player(1)], [enemy(50)]).label).toBe("Medium");
     expect(calculateEncounterDifficulty([player(1)], [enemy(200)]).label).toBe("Over Deadly");
+  });
+
+  it("uses 2024 budgets without monster-count multipliers", () => {
+    const difficulty = calculateEncounterDifficulty(
+      Array.from({ length: 5 }, () => player(4)),
+      Array.from({ length: 5 }, () => enemy(300)),
+      encounterRuleset2024,
+    );
+
+    expect(difficulty.thresholds.moderate).toBe(1875);
+    expect(difficulty.xpBudget).toBe(1875);
+    expect(difficulty.xpSpent).toBe(1500);
+    expect(difficulty.adjustedXP).toBe(1500);
+    expect(difficulty.multiplier).toBe(1);
+    expect(difficulty.label).toBe("Moderate");
   });
 
   it("derives effective defenses and hp percentage", () => {

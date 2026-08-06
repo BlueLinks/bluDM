@@ -2,6 +2,11 @@ import { Check, Plus, Shield, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { Badge, Button } from "../../components/ui";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import {
+  encounterRuleset2014,
+  encounterRuleset2024,
+  type EncounterRuleset,
+} from "../../lib/domain/encounterRulesets";
 import type { Player } from "../../types";
 import {
   CreatureCombatantCard,
@@ -103,6 +108,7 @@ export function Toggle({
 export function PartyAlliesStep({
   allies,
   availablePlayers,
+  difficultyRuleset = encounterRuleset2014,
   players,
   onAddAllPlayers,
   onAddAlly,
@@ -112,6 +118,7 @@ export function PartyAlliesStep({
 }: {
   allies: EncounterBuilderCreatureDraft[];
   availablePlayers: Player[];
+  difficultyRuleset?: EncounterRuleset;
   players: Player[];
   onAddAllPlayers: () => void;
   onAddAlly: () => void;
@@ -152,7 +159,7 @@ export function PartyAlliesStep({
           <AllyDraftList drafts={allies} onRemove={onRemoveAlly} />
         </RosterPanel>
       </div>
-      <PartySummary allies={allies} players={players} />
+      <PartySummary allies={allies} players={players} ruleset={difficultyRuleset} />
     </div>
   );
 }
@@ -265,14 +272,17 @@ function AllyDraftList({
 function PartySummary({
   allies,
   players,
+  ruleset,
 }: {
   allies: EncounterBuilderCreatureDraft[];
   players: Player[];
+  ruleset: EncounterRuleset;
 }) {
   const averageLevel = players.length
     ? Math.round(players.reduce((total, player) => total + playerLevel(player), 0) / players.length)
     : 0;
-  const difficulty = calculateEncounterDifficulty(players, []);
+  const difficulty = calculateEncounterDifficulty(players, [], ruleset);
+  const uses2024Rules = ruleset === encounterRuleset2024;
   return (
     <aside className="grid content-start gap-3 rounded-md border border-border bg-card p-3">
       <div className="font-semibold">Party Summary</div>
@@ -280,7 +290,10 @@ function PartySummary({
         <SummaryMetric label="Players" value={players.length} />
         <SummaryMetric label="Allies" value={allies.length} />
         <SummaryMetric label="Average Level" value={averageLevel || "-"} />
-        <SummaryMetric label="Deadly Threshold" value={`${difficulty.thresholds.deadly} XP`} />
+        <SummaryMetric
+          label={uses2024Rules ? "High Budget" : "Deadly Threshold"}
+          value={`${uses2024Rules ? difficulty.thresholds.high : difficulty.thresholds.deadly} XP`}
+        />
       </div>
       <p className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">
         {players.length + allies.length

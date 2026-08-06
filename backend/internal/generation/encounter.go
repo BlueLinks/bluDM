@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/rulesets"
 )
 
 const EncounterGeneratorVersion = "bludm-encounter-generator-v2"
 
 type EncounterOptions struct {
 	Archetype        string `json:"archetype,omitempty"`
-	Challenge        string `json:"challenge,omitempty"`
+	Challenge        string `json:"challenge,omitempty" jsonschema:"2014: easy, medium, hard, or deadly. 2024: low, moderate (medium alias accepted), or high."`
 	EnemyCount       int    `json:"enemyCount,omitempty"`
 	IncludeBoss      bool   `json:"includeBoss,omitempty"`
 	IncludeHazards   bool   `json:"includeHazards,omitempty"`
@@ -72,7 +73,20 @@ func GenerateEncounter(
 	players []models.Player,
 	roll int,
 ) EncounterPreview {
-	options = normalizeEncounterOptions(options)
+	return GenerateEncounterForRuleset(
+		rulesets.Encounter2014, creatures, location, options, players, roll,
+	)
+}
+
+func GenerateEncounterForRuleset(
+	ruleset string,
+	creatures []models.Creature,
+	location *models.CampaignLocation,
+	options EncounterOptions,
+	players []models.Player,
+	roll int,
+) EncounterPreview {
+	options = normalizeEncounterOptionsForRuleset(ruleset, options)
 	selectedArchetype := encounterArchetypes[2]
 	for _, candidate := range encounterArchetypes {
 		if candidate.Value == options.Archetype {
@@ -94,7 +108,7 @@ func GenerateEncounter(
 			count--
 		}
 	}
-	enemies, notice := targetedEnemies(candidates, count, options, players, roll)
+	enemies, notice := targetedEnemies(ruleset, candidates, count, options, players, roll)
 	place := "the campaign"
 	if location != nil {
 		place = location.Name
@@ -124,7 +138,7 @@ func GenerateEncounter(
 	for _, enemy := range enemies {
 		estimatedXP += enemy.Creature.XP * enemy.Quantity
 	}
-	evidence := EvaluateEncounter(players, enemies, options.Challenge)
+	evidence := EvaluateEncounterForRuleset(ruleset, players, enemies, options.Challenge)
 	if notice != "" && !evidence.WithinTarget {
 		evidence.Warnings = uniqueWarnings(append(evidence.Warnings, notice))
 	}
@@ -177,13 +191,20 @@ func GenerateEncounter(
 }
 
 func normalizeEncounterOptions(options EncounterOptions) EncounterOptions {
+	return normalizeEncounterOptionsForRuleset(rulesets.Encounter2014, options)
+}
+
+func normalizeEncounterOptionsForRuleset(ruleset string, options EncounterOptions) EncounterOptions {
 	if options.Archetype == "" {
 		options.Archetype = "monsters"
 	}
-	switch options.Challenge {
-	case "easy", "medium", "hard", "deadly":
-	default:
+	if normalized, ok := NormalizeDifficulty(ruleset, options.Challenge); ok {
+		options.Challenge = normalized
+	} else {
 		options.Challenge = "medium"
+		if ruleset == rulesets.Encounter2024 {
+			options.Challenge = "moderate"
+		}
 	}
 	if options.EnemyCount < 1 {
 		options.EnemyCount = 1
@@ -231,6 +252,7 @@ func matchingCreatures(creatures []models.Creature, terms []string) []models.Cre
 }
 
 func targetedEnemies(
+	ruleset string,
 	creatures []models.Creature,
 	count int,
 	options EncounterOptions,
@@ -255,7 +277,7 @@ func targetedEnemies(
 	scored := make([]scoredSelection, 0, len(selections))
 	for attempt, selected := range selections {
 		enemies := createEnemyDrafts(selected, options, roll+attempt)
-		result := encounterDifficulty(players, enemies)
+		result := encounterDifficultyForRuleset(ruleset, players, enemies)
 		names := make([]string, 0, len(enemies))
 		standardCount := 0
 		for _, enemy := range enemies {

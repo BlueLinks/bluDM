@@ -17,6 +17,7 @@ import {
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
+import { campaignEncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Campaign, Creature, Encounter, Player } from "../../types";
 import { CampaignEncountersSection } from "./CampaignEncountersSection";
 import { CampaignForm } from "./CampaignForm";
@@ -302,6 +303,7 @@ export function CampaignDetailPage() {
         <div id="campaign-encounters">
           <CampaignEncountersSection
             campaignID={detail.campaign.id}
+            difficultyRuleset={campaignEncounterRuleset(detail.campaign)}
             encounterOpen={encounterOpen}
             encounters={detail.encounters}
             locations={locations}

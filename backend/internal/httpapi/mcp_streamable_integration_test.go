@@ -13,6 +13,8 @@ import (
 
 	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/config"
+	"bludm/backend/internal/generation"
+	"bludm/backend/internal/rulesets"
 	"bludm/backend/internal/store"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -23,7 +25,10 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	ctx := context.Background()
 	owner, err := stores.Auth.CreateUser(ctx, uniqueArchiveEmail("mcp-agent"), "hash")
 	requireArchiveNoError(t, err)
-	campaign, err := stores.Campaigns.Create(ctx, owner.ID, store.CampaignInput{Name: "MCP Campaign"})
+	campaign, err := stores.Campaigns.Create(ctx, owner.ID, store.CampaignInput{
+		Name: "MCP Campaign", AllowedStandardSources: []string{rulesets.Source2024},
+		EncounterRuleset: rulesets.Encounter2024,
+	})
 	requireArchiveNoError(t, err)
 	player, err := stores.Players.Create(ctx, owner.ID, store.PlayerInput{
 		CampaignID: campaign.ID, CharacterName: "Tamsin", ArmorClass: 16, MaxHitPoints: 31,
@@ -111,6 +116,20 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	if creatureResult.IsError {
 		t.Fatalf("search_creatures returned an error: %+v", creatureResult)
 	}
+	evaluatedResult := callMCPTool(t, session, "evaluate_encounter", map[string]any{
+		"campaignId": campaign.ID, "allCampaignPlayers": true,
+		"requestedDifficulty": "medium",
+		"enemies":             []map[string]any{{"creatureId": creature.ID, "quantity": 1}},
+	})
+	if evaluatedResult.IsError {
+		t.Fatalf("evaluate_encounter returned an error: %+v", evaluatedResult)
+	}
+	var evaluated generation.DifficultyEvidence
+	decodeMCPStructured(t, evaluatedResult, &evaluated)
+	if evaluated.Ruleset != rulesets.Encounter2024 ||
+		evaluated.RequestedDifficulty != "Moderate" || evaluated.Thresholds.Moderate != 375 {
+		t.Fatalf("MCP evaluation did not use the actual campaign party and 2024 rules: %+v", evaluated)
+	}
 
 	createdResult := callMCPTool(t, session, "create_generated_encounter", map[string]any{
 		"campaignId": campaign.ID, "idempotencyKey": "mcp-agent-create-1",
@@ -130,7 +149,9 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	}
 	if created.DifficultyEvidence.RequestedDifficulty == "" ||
 		created.DifficultyEvidence.ActualDifficulty == "" ||
-		created.DifficultyEvidence.RawXP == 0 {
+		created.DifficultyEvidence.RawXP == 0 ||
+		created.DifficultyEvidence.Ruleset != rulesets.Encounter2024 ||
+		created.Encounter.DifficultyRuleset != rulesets.Encounter2024 {
 		t.Fatalf("MCP generation omitted server-side difficulty evidence: %+v", created)
 	}
 
@@ -145,6 +166,9 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	requireArchiveNoError(t, json.Unmarshal(restResponse.Body.Bytes(), &readback))
 	if readback.Encounter.ID != created.Encounter.ID || readback.Encounter.Revision != 1 {
 		t.Fatalf("REST and MCP did not share the same application state: %+v", readback)
+	}
+	if readback.DifficultyEvidence.Ruleset != rulesets.Encounter2024 {
+		t.Fatalf("get_encounter did not retain the persisted ruleset: %+v", readback)
 	}
 
 	replayedResult := callMCPTool(t, session, "create_generated_encounter", map[string]any{
@@ -196,6 +220,7 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	requireArchiveNoError(t, database.Table("external_audit_records").
 		Where("operation in ?", []string{
 			"list_campaigns", "get_campaign_context", "search_creatures",
+			"evaluate_encounter",
 			"create_generated_encounter", "regenerate_encounter", "list_encounter_revisions",
 		}).Count(&auditCount).Error)
 	if auditCount < 8 {

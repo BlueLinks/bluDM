@@ -42,21 +42,22 @@ type EncounterCombatantInput struct {
 
 func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID string) (models.Encounter, error) {
 	var row struct {
-		ID             string
-		CampaignID     string
-		Name           string
-		Description    string
-		Status         string
-		Location       string
-		LocationID     *string
-		RoomNumber     string
-		LootNotes      string
-		Metadata       dbmodels.JSONMap
-		Revision       int
-		CombatantCount int
-		EnemyCount     int
-		CreatedAt      time.Time
-		UpdatedAt      time.Time
+		ID                string
+		CampaignID        string
+		Name              string
+		Description       string
+		Status            string
+		Location          string
+		LocationID        *string
+		RoomNumber        string
+		LootNotes         string
+		DifficultyRuleset string
+		Metadata          dbmodels.JSONMap
+		Revision          int
+		CombatantCount    int
+		EnemyCount        int
+		CreatedAt         time.Time
+		UpdatedAt         time.Time
 	}
 	err := s.db.WithContext(ctx).
 		Table("encounters").
@@ -70,6 +71,7 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 			encounters.location_id,
 			encounters.room_number,
 			encounters.loot_notes,
+			encounters.difficulty_ruleset,
 			encounters.metadata,
 			encounters.revision,
 			count(encounter_combatants.id)::int as combatant_count,
@@ -89,21 +91,22 @@ func (s EncounterStore) ByID(ctx context.Context, ownerUserID, encounterID strin
 		return models.Encounter{}, ErrNotFound
 	}
 	return models.Encounter{
-		ID:             row.ID,
-		CampaignID:     row.CampaignID,
-		Name:           row.Name,
-		Description:    row.Description,
-		Status:         row.Status,
-		Location:       row.Location,
-		LocationID:     row.LocationID,
-		RoomNumber:     row.RoomNumber,
-		LootNotes:      row.LootNotes,
-		Metadata:       map[string]any(row.Metadata),
-		Revision:       row.Revision,
-		CombatantCount: row.CombatantCount,
-		EnemyCount:     row.EnemyCount,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
+		ID:                row.ID,
+		CampaignID:        row.CampaignID,
+		Name:              row.Name,
+		Description:       row.Description,
+		Status:            row.Status,
+		Location:          row.Location,
+		LocationID:        row.LocationID,
+		RoomNumber:        row.RoomNumber,
+		LootNotes:         row.LootNotes,
+		DifficultyRuleset: row.DifficultyRuleset,
+		Metadata:          map[string]any(row.Metadata),
+		Revision:          row.Revision,
+		CombatantCount:    row.CombatantCount,
+		EnemyCount:        row.EnemyCount,
+		CreatedAt:         row.CreatedAt,
+		UpdatedAt:         row.UpdatedAt,
 	}, nil
 }
 
@@ -183,15 +186,16 @@ func (s EncounterStore) Clone(ctx context.Context, ownerUserID, encounterID stri
 	var clone dbmodels.EncounterEntity
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		clone = dbmodels.EncounterEntity{
-			CampaignID:  source.CampaignID,
-			Name:        source.Name + " Copy",
-			Description: source.Description,
-			Status:      source.Status,
-			Location:    source.Location,
-			LocationID:  source.LocationID,
-			RoomNumber:  source.RoomNumber,
-			LootNotes:   source.LootNotes,
-			Revision:    1,
+			CampaignID:        source.CampaignID,
+			Name:              source.Name + " Copy",
+			Description:       source.Description,
+			Status:            source.Status,
+			Location:          source.Location,
+			LocationID:        source.LocationID,
+			RoomNumber:        source.RoomNumber,
+			LootNotes:         source.LootNotes,
+			DifficultyRuleset: source.DifficultyRuleset,
+			Revision:          1,
 		}
 		if err := tx.Create(&clone).Error; err != nil {
 			return err

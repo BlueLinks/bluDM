@@ -3,6 +3,12 @@ import { ResponsiveGrid } from "../../components/layout";
 import { Button, Field, Select } from "../../components/ui";
 import type { Player } from "../../types";
 import {
+  difficultyOptions,
+  encounterRuleset2014,
+  encounterRuleset2024,
+  type EncounterRuleset,
+} from "../../lib/domain/encounterRulesets";
+import {
   CombatantActions,
   CombatantQuantityControl,
   CreatureCombatantCard,
@@ -14,7 +20,6 @@ import { Toggle } from "./CampaignEncounterBuilderSteps";
 import { EncounterArchetypeIcon } from "./encounterArchetypeIcons";
 import {
   archetypeOptions,
-  challengeOptions,
   enemyCountMax,
   enemyCountMin,
   terrainOptions,
@@ -25,6 +30,7 @@ import {
 
 export function EncounterSetupStep({
   allyCount,
+  difficultyRuleset = encounterRuleset2014,
   enemies,
   options,
   players,
@@ -36,6 +42,7 @@ export function EncounterSetupStep({
   onUpdateEnemy,
 }: {
   allyCount: number;
+  difficultyRuleset?: EncounterRuleset;
   enemies: EncounterBuilderCreatureDraft[];
   options: EncounterBuilderRandomOptions;
   players: Player[];
@@ -76,6 +83,7 @@ export function EncounterSetupStep({
           ))}
         </div>
         <ChallengeChooser
+          ruleset={difficultyRuleset}
           value={options.challenge}
           onChange={(challenge) => onOptionsChange({ ...options, challenge })}
         />
@@ -127,6 +135,7 @@ export function EncounterSetupStep({
       </div>
       <RandomPreviewPanel
         allyCount={allyCount}
+        difficultyRuleset={difficultyRuleset}
         players={players}
         preview={preview}
         onRegenerate={onRegenerate}
@@ -172,17 +181,25 @@ function ArchetypeCard({
 }
 
 function ChallengeChooser({
+  ruleset,
   value,
   onChange,
 }: {
+  ruleset: EncounterRuleset;
   value: string;
   onChange: (challenge: string) => void;
 }) {
+  const options = difficultyOptions(ruleset);
   return (
     <section className="-mt-[0.4375rem] grid gap-1">
       <h3 className="font-semibold">Difficulty</h3>
-      <div className="grid gap-2.5 sm:grid-cols-[1.02fr_1.015fr_0.98fr_0.985fr]">
-        {challengeOptions.map((option) => (
+      <div
+        className={[
+          "grid gap-2.5",
+          ruleset === encounterRuleset2024 ? "sm:grid-cols-3" : "sm:grid-cols-4",
+        ].join(" ")}
+      >
+        {options.map((option) => (
           <button
             aria-pressed={value === option.value}
             className={[
@@ -205,6 +222,9 @@ function ChallengeChooser({
 }
 
 function challengeCopy(value: string) {
+  if (value === "low") return "Light pressure";
+  if (value === "moderate") return "Expected fight";
+  if (value === "high") return "Severe threat";
   if (value === "easy") return "Light pressure";
   if (value === "hard") return "Real danger";
   if (value === "deadly") return "Severe threat";

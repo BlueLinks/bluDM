@@ -1,5 +1,6 @@
 import { Shield, Skull } from "lucide-react";
-import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import type { EncounterDifficulty } from "../../lib/domain/combat";
+import { encounterRuleset2024 } from "../../lib/domain/encounterRulesets";
 
 export function EncounterDifficultyPanel({
   compact = false,
@@ -8,10 +9,11 @@ export function EncounterDifficultyPanel({
 }: {
   compact?: boolean;
   dense?: boolean;
-  difficulty: ReturnType<typeof calculateEncounterDifficulty>;
+  difficulty: EncounterDifficulty;
 }) {
   const tone = difficultyTone(difficulty.label);
-  const crossed = crossedThreshold(difficulty);
+  const reference = difficultyReference(difficulty);
+  const usesBudget = difficulty.ruleset === encounterRuleset2024;
   const Icon = dense ? Shield : Skull;
   return (
     <section
@@ -26,7 +28,9 @@ export function EncounterDifficultyPanel({
             ? "sm:grid-cols-2"
             : dense
               ? "md:grid-cols-[1.45fr_repeat(4,minmax(0,1fr))]"
-              : "md:grid-cols-[1.15fr_repeat(5,minmax(0,0.8fr))]",
+              : usesBudget
+                ? "md:grid-cols-[1.15fr_repeat(4,minmax(0,0.8fr))]"
+                : "md:grid-cols-[1.15fr_repeat(5,minmax(0,0.8fr))]",
         ].join(" ")}
       >
         <div
@@ -55,7 +59,7 @@ export function EncounterDifficultyPanel({
             </div>
             {!dense ? (
               <div className="text-xs text-muted-foreground">
-                Threshold: {crossed.value.toLocaleString()} XP
+                {usesBudget ? "Budget" : "Threshold"}: {reference.value.toLocaleString()} XP
               </div>
             ) : null}
           </div>
@@ -63,38 +67,70 @@ export function EncounterDifficultyPanel({
         {dense ? (
           <DifficultyMetric
             dense
-            label="Threshold"
-            value={`${crossed.value.toLocaleString()} XP`}
+            label={usesBudget ? "XP Budget" : "Threshold"}
+            value={`${reference.value.toLocaleString()} XP`}
           />
         ) : null}
-        <DifficultyMetric
-          compact={compact}
-          dense={dense}
-          label="Enemy XP"
-          value={difficulty.enemyXP.toLocaleString()}
-        />
-        <DifficultyMetric
-          compact={compact}
-          dense={dense}
-          label="Adjusted XP"
-          value={difficulty.adjustedXP.toLocaleString()}
-        />
-        <DifficultyMetric
-          compact={compact}
-          dense={dense}
-          label="Multiplier"
-          value={`${difficulty.multiplier}x`}
-        />
-        {!dense ? (
+        {usesBudget ? (
           <>
             <DifficultyMetric
               compact={compact}
-              label="Threshold"
-              value={`${crossed.value.toLocaleString()} XP`}
+              dense={dense}
+              label="XP Spent"
+              value={difficulty.xpSpent.toLocaleString()}
             />
-            <DifficultyMetric compact={compact} label="Crossed" value={crossed.label} />
+            {!dense ? (
+              <DifficultyMetric
+                compact={compact}
+                label="XP Budget"
+                value={difficulty.xpBudget.toLocaleString()}
+              />
+            ) : null}
+            <DifficultyMetric
+              compact={compact}
+              dense={dense}
+              label="Remaining"
+              value={Math.max(0, difficulty.xpBudget - difficulty.xpSpent).toLocaleString()}
+            />
+            <DifficultyMetric
+              compact={compact}
+              dense={dense}
+              label="Band"
+              value={reference.label}
+            />
           </>
-        ) : null}
+        ) : (
+          <>
+            <DifficultyMetric
+              compact={compact}
+              dense={dense}
+              label="Enemy XP"
+              value={difficulty.enemyXP.toLocaleString()}
+            />
+            <DifficultyMetric
+              compact={compact}
+              dense={dense}
+              label="Adjusted XP"
+              value={difficulty.adjustedXP.toLocaleString()}
+            />
+            <DifficultyMetric
+              compact={compact}
+              dense={dense}
+              label="Multiplier"
+              value={`${difficulty.multiplier}x`}
+            />
+            {!dense ? (
+              <>
+                <DifficultyMetric
+                  compact={compact}
+                  label="Threshold"
+                  value={`${reference.value.toLocaleString()} XP`}
+                />
+                <DifficultyMetric compact={compact} label="Crossed" value={reference.label} />
+              </>
+            ) : null}
+          </>
+        )}
       </div>
     </section>
   );
@@ -142,6 +178,26 @@ function difficultyTone(label: string) {
       surface: "bg-info/5",
       text: "text-info",
     },
+    Low: {
+      icon: "border-success/30 bg-success/10 text-success",
+      surface: "bg-success/5",
+      text: "text-success",
+    },
+    Moderate: {
+      icon: "border-info/30 bg-info/10 text-info",
+      surface: "bg-info/5",
+      text: "text-info",
+    },
+    High: {
+      icon: "border-warning/30 bg-warning/10 text-warning",
+      surface: "bg-warning/5",
+      text: "text-warning",
+    },
+    "Over High": {
+      icon: "border-destructive/30 bg-destructive/10 text-destructive",
+      surface: "bg-destructive/5",
+      text: "text-destructive",
+    },
     Hard: {
       icon: "border-warning/30 bg-warning/10 text-warning",
       surface: "bg-warning/5",
@@ -167,7 +223,10 @@ function difficultyTone(label: string) {
   );
 }
 
-function crossedThreshold(difficulty: ReturnType<typeof calculateEncounterDifficulty>) {
+function difficultyReference(difficulty: EncounterDifficulty) {
+  if (difficulty.ruleset === encounterRuleset2024) {
+    return { label: difficulty.label, value: difficulty.xpBudget };
+  }
   if (difficulty.label === "Over Deadly") {
     return { label: "Over Deadly", value: Math.round(difficulty.thresholds.deadly * 1.5) };
   }

@@ -23,6 +23,7 @@ func scanCampaign(row scanner, campaign *models.Campaign) error {
 		&campaign.Name,
 		&campaign.Description,
 		&campaign.AllowedStandardSources,
+		&campaign.EncounterRuleset,
 		&campaign.CreatedAt,
 		&campaign.UpdatedAt,
 	)
@@ -60,6 +61,7 @@ type campaignRequest struct {
 	Name                   string   `json:"name"`
 	Description            string   `json:"description"`
 	AllowedStandardSources []string `json:"allowedStandardSources"`
+	EncounterRuleset       string   `json:"encounterRuleset"`
 }
 
 type encounterRequest struct {

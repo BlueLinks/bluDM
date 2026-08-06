@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { ActionRow, ResponsiveGrid } from "../../components/layout";
 import { Button, Field, FloatingInput, Select, Textarea } from "../../components/ui";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
+import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Player } from "../../types";
 import {
   CreatureCombatantCard,
@@ -21,6 +22,7 @@ import type { CampaignLocation } from "./world/travelTypes";
 
 export function ReviewCreateStep({
   allies,
+  difficultyRuleset = encounterRuleset2014,
   enemies,
   locations,
   meta,
@@ -29,6 +31,7 @@ export function ReviewCreateStep({
   onMetaChange,
 }: {
   allies: EncounterBuilderCreatureDraft[];
+  difficultyRuleset?: EncounterRuleset;
   enemies: EncounterBuilderCreatureDraft[];
   locations: CampaignLocation[];
   meta: EncounterBuilderMetaDraft;
@@ -36,7 +39,11 @@ export function ReviewCreateStep({
   onLocationChange: (locationId: string) => void;
   onMetaChange: (meta: EncounterBuilderMetaDraft) => void;
 }) {
-  const difficulty = calculateEncounterDifficulty(players, previewCombatantsFromDrafts(enemies));
+  const difficulty = calculateEncounterDifficulty(
+    players,
+    previewCombatantsFromDrafts(enemies),
+    difficultyRuleset,
+  );
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.85fr)]">
       <div className="grid content-start gap-4">

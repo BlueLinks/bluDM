@@ -1,5 +1,11 @@
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import type { Creature, EncounterCombatant } from "../../types";
+import {
+  defaultDifficulty,
+  difficultyOptions,
+  encounterRuleset2014,
+  type EncounterRuleset,
+} from "../../lib/domain/encounterRulesets";
 import type { EncounterArchetypeIconKey } from "./encounterArchetypeIcons";
 
 export type EncounterBuilderMode = "custom" | "random";
@@ -57,6 +63,12 @@ export const defaultRandomOptions: EncounterBuilderRandomOptions = {
   useLocationTheme: true,
   useLocationNotes: true,
 };
+
+export function defaultRandomOptionsForRuleset(
+  ruleset: EncounterRuleset,
+): EncounterBuilderRandomOptions {
+  return { ...defaultRandomOptions, challenge: defaultDifficulty(ruleset) };
+}
 
 export const archetypeOptions = [
   {
@@ -137,12 +149,7 @@ export const archetypeOptions = [
   value: string;
 }>;
 
-export const challengeOptions = [
-  { label: "Easy", value: "easy" },
-  { label: "Medium", value: "medium" },
-  { label: "Hard", value: "hard" },
-  { label: "Deadly", value: "deadly" },
-];
+export const challengeOptions = difficultyOptions(encounterRuleset2014);
 
 export const enemyCountMax = 6;
 export const enemyCountMin = 1;

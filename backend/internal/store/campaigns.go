@@ -7,6 +7,7 @@ import (
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
+	"bludm/backend/internal/rulesets"
 
 	"gorm.io/gorm"
 )
@@ -19,6 +20,7 @@ type CampaignInput struct {
 	Name                   string
 	Description            string
 	AllowedStandardSources []string
+	EncounterRuleset       string
 }
 
 func (s CampaignStore) List(ctx context.Context, ownerUserID string) ([]models.Campaign, error) {
@@ -42,6 +44,7 @@ func (s CampaignStore) Create(ctx context.Context, ownerUserID string, input Cam
 		Name:                   input.Name,
 		Description:            input.Description,
 		AllowedStandardSources: input.AllowedStandardSources,
+		EncounterRuleset:       input.EncounterRuleset,
 	}
 	if err := s.db.WithContext(ctx).Create(&entity).Error; err != nil {
 		return models.Campaign{}, err
@@ -77,6 +80,7 @@ func (s CampaignStore) Update(ctx context.Context, ownerUserID, campaignID strin
 	campaign.Name = input.Name
 	campaign.Description = input.Description
 	campaign.AllowedStandardSources = input.AllowedStandardSources
+	campaign.EncounterRuleset = input.EncounterRuleset
 	if err := s.db.WithContext(ctx).Save(&campaign).Error; err != nil {
 		return models.Campaign{}, err
 	}
@@ -84,11 +88,21 @@ func (s CampaignStore) Update(ctx context.Context, ownerUserID, campaignID strin
 }
 
 func campaignFromEntity(campaign dbmodels.CampaignEntity) models.Campaign {
+	encounterRuleset := campaign.EncounterRuleset
+	if encounterRuleset == "" {
+		resolved, err := rulesets.ResolveEncounterRuleset(
+			[]string(campaign.AllowedStandardSources), "",
+		)
+		if err == nil {
+			encounterRuleset = resolved
+		}
+	}
 	return models.Campaign{
 		ID:                     campaign.ID,
 		Name:                   campaign.Name,
 		Description:            campaign.Description,
 		AllowedStandardSources: []string(campaign.AllowedStandardSources),
+		EncounterRuleset:       encounterRuleset,
 		CreatedAt:              campaign.CreatedAt,
 		UpdatedAt:              campaign.UpdatedAt,
 	}

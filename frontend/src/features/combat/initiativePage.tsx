@@ -7,6 +7,7 @@ import { ActionRow, SidebarDetailLayout } from "../../components/layout";
 import { Button, Callout, MutedPanel, Page } from "../../components/ui";
 import { api } from "../../lib/api";
 import { calculateRunEncounterDifficulty } from "../../lib/domain/combat";
+import { encounterRuleset2014 } from "../../lib/domain/encounterRulesets";
 import type { Encounter, EncounterRun, EncounterRunCombatant } from "../../types";
 import {
   InitiativeEntryPanel,
@@ -182,7 +183,10 @@ function InitiativePageHeader({
   groups: InitiativeGroups;
   onEdit: (path: string) => void;
 }) {
-  const difficulty = calculateRunEncounterDifficulty(combatants);
+  const difficulty = calculateRunEncounterDifficulty(
+    combatants,
+    encounter?.difficultyRuleset ?? encounterRuleset2014,
+  );
   return (
     <header className="relative top-[0.1875rem] flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0">

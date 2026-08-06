@@ -88,6 +88,16 @@ func (s *Service) RegenerateEncounter(
 		if err != nil {
 			return err
 		}
+		ruleset, err := persistedEncounterRuleset(entity, campaign)
+		if err != nil {
+			return err
+		}
+		command.Options.Challenge, err = normalizeDifficultyForRuleset(
+			ruleset, command.Options.Challenge,
+		)
+		if err != nil {
+			return err
+		}
 		location, err := s.generationLocation(
 			ctx, principal, campaignID, valueFromPointer(entity.LocationID),
 		)
@@ -111,7 +121,9 @@ func (s *Service) RegenerateEncounter(
 		} else if seed == 0 {
 			seed = deterministicSeed(command.IdempotencyKey)
 		}
-		preview := generation.GenerateEncounter(creatures, location, command.Options, players, seed)
+		preview := generation.GenerateEncounterForRuleset(
+			ruleset, creatures, location, command.Options, players, seed,
+		)
 		if entity.LocationID != nil && !principal.HasScope(ScopeWorldRead) &&
 			(command.Options.UseLocationTheme || command.Options.UseLocationNotes) {
 			preview.SelectionReasons = append(
@@ -120,7 +132,7 @@ func (s *Service) RegenerateEncounter(
 			)
 		}
 		preview, err = enforceRequiredCreatures(
-			preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge,
+			preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge, ruleset,
 		)
 		if err != nil {
 			return err
@@ -258,6 +270,7 @@ func (s *Service) persistRegeneration(
 	}
 	actualDifficulty := difficultyFromStoredRoster(
 		players, finalCombatants, preview.DifficultyEvidence.RequestedDifficulty,
+		preview.DifficultyEvidence.Ruleset,
 	)
 	preview.DifficultyEvidence = actualDifficulty
 	preview.Difficulty = actualDifficulty.ActualDifficulty
@@ -266,7 +279,9 @@ func (s *Service) persistRegeneration(
 	metadata["generatorVersion"] = preview.GeneratorVersion
 	metadata["seed"] = seed
 	metadata["difficultyEvidence"] = preview.DifficultyEvidence
+	metadata["difficultyRuleset"] = preview.DifficultyEvidence.Ruleset
 	entity.Metadata = metadata
+	entity.DifficultyRuleset = preview.DifficultyEvidence.Ruleset
 	entity.Revision = newRevision
 	if err := tx.WithContext(ctx).Save(&entity).Error; err != nil {
 		return EncounterAuthoringResult{}, err
@@ -314,6 +329,7 @@ func difficultyFromStoredRoster(
 	players []models.Player,
 	combatants []dbmodels.EncounterCombatantEntity,
 	requestedDifficulty string,
+	ruleset string,
 ) generation.DifficultyEvidence {
 	enemiesByID := map[string]int{}
 	enemies := []generation.EncounterEnemy{}
@@ -342,11 +358,13 @@ func difficultyFromStoredRoster(
 			Quantity: 1, Side: "enemy",
 		})
 	}
-	evidence := generation.EvaluateEncounter(players, enemies, requestedDifficulty)
+	evidence := generation.EvaluateEncounterForRuleset(
+		ruleset, players, enemies, requestedDifficulty,
+	)
 	if alliesNotBudgeted {
 		evidence.Warnings = append(
 			evidence.Warnings,
-			"Non-player allies are present but are not included in the 2014 XP budget.",
+			"Non-player allies are present but are not included in the encounter XP budget.",
 		)
 	}
 	return evidence

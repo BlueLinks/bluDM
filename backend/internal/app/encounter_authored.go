@@ -29,6 +29,14 @@ func (s *Service) CreateEncounter(
 			nil,
 		)
 	}
+	campaign, err := s.stores.Campaigns.ByID(ctx, principal.UserID, campaignID)
+	if err != nil {
+		return EncounterWriteResult{}, storeError(err, "campaign")
+	}
+	ruleset, err := campaignEncounterRuleset(campaign)
+	if err != nil {
+		return EncounterWriteResult{}, err
+	}
 	inputHash, _ := normalizedHash(command)
 	var result EncounterWriteResult
 	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -46,7 +54,7 @@ func (s *Service) CreateEncounter(
 		if err := locationBelongsToCampaign(ctx, tx, campaignID, command.LocationID); err != nil {
 			return err
 		}
-		entity := encounterEntityFromCommand(campaignID, command)
+		entity := encounterEntityFromCommand(campaignID, command, ruleset)
 		entity.Revision = 1
 		if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 			return err
@@ -412,6 +420,7 @@ func validateEncounterCommand(command EncounterCommand, update bool) error {
 func encounterEntityFromCommand(
 	campaignID string,
 	command EncounterCommand,
+	ruleset string,
 ) dbmodels.EncounterEntity {
 	status := normalizedToken(command.Status, "planned")
 	return dbmodels.EncounterEntity{
@@ -420,5 +429,6 @@ func encounterEntityFromCommand(
 		Location: strings.TrimSpace(command.Location), LocationID: optionalID(command.LocationID),
 		RoomNumber: strings.TrimSpace(command.RoomNumber),
 		LootNotes:  strings.TrimSpace(command.LootNotes), Metadata: dbmodels.JSONMap{},
+		DifficultyRuleset: ruleset,
 	}
 }

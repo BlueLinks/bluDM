@@ -10,6 +10,7 @@ import {
   useToasts,
 } from "../../../components/ui";
 import { api } from "../../../lib/api";
+import { campaignEncounterRuleset } from "../../../lib/domain/encounterRulesets";
 import type { Encounter } from "../../../types";
 import { CampaignEncounterCreateDialog } from "../CampaignEncounterCreateDialog";
 import { CampaignTravelTool } from "../CampaignTravelTool";
@@ -139,6 +140,7 @@ export function CampaignWorldPage() {
       />
       <CampaignEncounterCreateDialog
         campaignId={detail.campaign.id}
+        difficultyRuleset={campaignEncounterRuleset(detail.campaign)}
         initialLocationId={encounterLocationId}
         locations={locations}
         npcs={detail.npcs}

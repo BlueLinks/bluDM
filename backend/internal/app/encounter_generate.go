@@ -38,6 +38,18 @@ func (s *Service) CreateGeneratedEncounter(
 	if command.Seed == 0 {
 		command.Seed = deterministicSeed(command.IdempotencyKey)
 	}
+	campaign, err := s.stores.Campaigns.ByID(ctx, principal.UserID, campaignID)
+	if err != nil {
+		return EncounterAuthoringResult{}, err
+	}
+	ruleset, err := campaignEncounterRuleset(campaign)
+	if err != nil {
+		return EncounterAuthoringResult{}, err
+	}
+	command.Options.Challenge, err = normalizeDifficultyForRuleset(ruleset, command.Options.Challenge)
+	if err != nil {
+		return EncounterAuthoringResult{}, err
+	}
 	inputHash, err := normalizedHash(command)
 	if err != nil {
 		return EncounterAuthoringResult{}, err
@@ -58,10 +70,6 @@ func (s *Service) CreateGeneratedEncounter(
 	if err != nil {
 		return EncounterAuthoringResult{}, err
 	}
-	campaign, err := s.stores.Campaigns.ByID(ctx, principal.UserID, campaignID)
-	if err != nil {
-		return EncounterAuthoringResult{}, err
-	}
 	location, err := s.generationLocation(ctx, principal, campaignID, command.LocationID)
 	if err != nil {
 		return EncounterAuthoringResult{}, err
@@ -71,7 +79,9 @@ func (s *Service) CreateGeneratedEncounter(
 		return EncounterAuthoringResult{}, err
 	}
 	seed := command.Seed
-	preview := generation.GenerateEncounter(creatures, location, command.Options, players, seed)
+	preview := generation.GenerateEncounterForRuleset(
+		ruleset, creatures, location, command.Options, players, seed,
+	)
 	if command.LocationID != "" && !principal.HasScope(ScopeWorldRead) &&
 		(command.Options.UseLocationTheme || command.Options.UseLocationNotes) {
 		preview.SelectionReasons = append(
@@ -80,7 +90,7 @@ func (s *Service) CreateGeneratedEncounter(
 		)
 	}
 	preview, err = enforceRequiredCreatures(
-		preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge,
+		preview, creatures, command.RequiredCreatureIDs, players, command.Options.Challenge, ruleset,
 	)
 	if err != nil {
 		return EncounterAuthoringResult{}, err
@@ -144,10 +154,10 @@ func normalizeGenerateEncounterCommand(
 		command.Options.Challenge = "medium"
 	}
 	switch command.Options.Challenge {
-	case "easy", "medium", "hard", "deadly":
+	case "easy", "medium", "hard", "deadly", "low", "moderate", "high":
 	default:
 		return command, ValidationError(
-			"invalid_difficulty", "challenge must be easy, medium, hard, or deadly", nil,
+			"invalid_difficulty", "challenge must be a supported 2014 or 2024 difficulty", nil,
 		)
 	}
 	if command.Options.EnemyCount == 0 {
@@ -343,6 +353,7 @@ func enforceRequiredCreatures(
 	requiredIDs []string,
 	players []models.Player,
 	requested string,
+	ruleset string,
 ) (generation.EncounterPreview, error) {
 	if len(requiredIDs) == 0 {
 		return preview, nil
@@ -378,7 +389,9 @@ func enforceRequiredCreatures(
 		}
 	}
 	preview.Enemies = required
-	preview.DifficultyEvidence = generation.EvaluateEncounter(players, required, requested)
+	preview.DifficultyEvidence = generation.EvaluateEncounterForRuleset(
+		ruleset, players, required, requested,
+	)
 	preview.Difficulty = preview.DifficultyEvidence.ActualDifficulty
 	preview.EstimatedXP = preview.DifficultyEvidence.RawXP
 	preview.SelectionReasons = append(
