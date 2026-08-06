@@ -108,3 +108,29 @@ func TestApplyCombatantPatchPreservesProvenance(t *testing.T) {
 		t.Fatalf("generator provenance was lost: %+v", entity.Snapshot)
 	}
 }
+
+func TestApplyCombatantPatchCanonicalizesAuthoredSide(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		sourceType string
+		side       string
+		want       string
+	}{
+		{name: "player ally", sourceType: "player", side: "ally", want: "player"},
+		{name: "creature ally", sourceType: "creature", side: "ally", want: "friendly"},
+		{name: "creature enemy", sourceType: "creature", side: "enemy", want: "enemy"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			entity := dbmodels.EncounterCombatantEntity{SourceType: test.sourceType}
+			if err := applyCombatantPatch(
+				&entity,
+				EncounterCombatantPatchCommand{Side: &test.side},
+			); err != nil {
+				t.Fatal(err)
+			}
+			if entity.Side != test.want {
+				t.Fatalf("canonical side = %q, want %q", entity.Side, test.want)
+			}
+		})
+	}
+}

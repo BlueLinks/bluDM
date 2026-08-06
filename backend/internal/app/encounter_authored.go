@@ -363,7 +363,7 @@ func applyCombatantPatch(
 		if side != "enemy" && side != "ally" {
 			return ValidationError("invalid_side", "side must be enemy or ally", nil)
 		}
-		combatant.Side = side
+		combatant.Side = canonicalAuthoredCombatantSide(combatant.SourceType, side)
 	}
 	if patch.DisplayName != nil {
 		name := strings.TrimSpace(*patch.DisplayName)

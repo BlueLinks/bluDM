@@ -335,7 +335,8 @@ func difficultyFromStoredRoster(
 	enemies := []generation.EncounterEnemy{}
 	alliesNotBudgeted := false
 	for _, combatant := range combatants {
-		if combatant.SourceType != "player" && combatant.Side == "ally" {
+		if combatant.SourceType != "player" &&
+			(combatant.Side == "friendly" || combatant.Side == "ally") {
 			alliesNotBudgeted = true
 		}
 		if combatant.Side != "enemy" {

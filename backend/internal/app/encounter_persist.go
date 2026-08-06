@@ -173,7 +173,7 @@ func playerCombatant(
 	snapshot["characterName"] = player.CharacterName
 	return dbmodels.EncounterCombatantEntity{
 		EncounterID: encounterID, SourceType: "player", PlayerID: optionalID(player.ID),
-		Side: "ally", DisplayName: player.CharacterName, ColorLabel: "primary",
+		Side: "player", DisplayName: player.CharacterName, ColorLabel: "primary",
 		AvatarURL: player.AvatarURL, ArmorClass: player.ArmorClass,
 		MaxHitPoints:     max(1, player.MaxHitPoints),
 		CurrentHitPoints: max(1, player.CurrentHitPoints),

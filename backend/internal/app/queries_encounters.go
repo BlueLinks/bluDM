@@ -118,7 +118,7 @@ func (s *Service) GetEncounter(
 	players, enemies := encounterDifficultyInputs(combatants)
 	evidence := generation.EvaluateEncounterForRuleset(ruleset, players, enemies, "")
 	for _, combatant := range combatants {
-		if combatant.SourceType != "player" && combatant.Side == "ally" {
+		if combatant.SourceType != "player" && combatant.Side == "friendly" {
 			evidence.Warnings = append(
 				evidence.Warnings,
 				"Non-player allies are present but are not included in the encounter XP budget.",

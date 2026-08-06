@@ -293,7 +293,7 @@ func TestExternalGeneratedEncounterLifecycleIsAtomicAndRevisioned(t *testing.T) 
 	exported, err := server.app.ExportEncounter(serviceContext, campaign.ID, encounterID, false)
 	requireArchiveNoError(t, err)
 	if len(exported.Roster) != 1 || exported.Roster[0].Quantity != 3 ||
-		exported.Roster[0].Sides["enemy"] != 2 || exported.Roster[0].Sides["ally"] != 1 ||
+		exported.Roster[0].Sides["enemy"] != 2 || exported.Roster[0].Sides["friendly"] != 1 ||
 		len(exported.Results) != 1 || strings.Count(exported.Markdown, "```statblock") != 1 ||
 		len(exported.OmittedCombatants) != 1 || len(exported.Warnings) == 0 {
 		t.Fatalf("repeated creature was not deduplicated with quantity preserved: %+v", exported)
