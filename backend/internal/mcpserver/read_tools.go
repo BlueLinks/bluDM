@@ -56,9 +56,9 @@ func registerPartyAndWorldReads(
 	principal appdomain.Principal,
 ) {
 	mcp.AddTool(server, tool("list_players", "List players",
-		"List campaign characters with stable IDs, levels, and compact combat context.",
+		"List accessible characters with stable IDs, campaign assignments, levels, and compact combat context. Omit campaignId to include all accessible campaigns and Unassigned when permitted.",
 		true, false, false,
-	), func(ctx context.Context, _ *mcp.CallToolRequest, in campaignInput) (*mcp.CallToolResult, any, error) {
+	), func(ctx context.Context, _ *mcp.CallToolRequest, in playerListInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.ListPlayers(appdomain.WithPrincipal(ctx, principal), in.CampaignID)
 		if err != nil {
 			return nil, nil, err

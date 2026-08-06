@@ -11,7 +11,9 @@ type Scope string
 
 const (
 	ScopeCampaignsRead   Scope = "campaigns:read"
+	ScopeCampaignsWrite  Scope = "campaigns:write"
 	ScopePartyRead       Scope = "party:read"
+	ScopePartyWrite      Scope = "party:write"
 	ScopeWorldRead       Scope = "world:read"
 	ScopeWorldWrite      Scope = "world:write"
 	ScopeLibraryRead     Scope = "library:read"
@@ -25,7 +27,9 @@ const (
 
 var AllScopes = []Scope{
 	ScopeCampaignsRead,
+	ScopeCampaignsWrite,
 	ScopePartyRead,
+	ScopePartyWrite,
 	ScopeWorldRead,
 	ScopeWorldWrite,
 	ScopeLibraryRead,

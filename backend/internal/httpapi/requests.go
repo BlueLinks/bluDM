@@ -37,6 +37,10 @@ type playerRequest struct {
 	CharacterSheet        map[string]any `json:"characterSheet"`
 }
 
+type movePlayerRequest struct {
+	CampaignID string `json:"campaignId"`
+}
+
 type actionRequest struct {
 	Name             string                  `json:"name"`
 	SourceTemplateID string                  `json:"sourceTemplateId"`

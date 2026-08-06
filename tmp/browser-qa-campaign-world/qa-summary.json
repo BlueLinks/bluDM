@@ -1,0 +1,12 @@
+{
+  "campaignId": "8438f7dc-ef7a-4507-bec2-33b418e033de",
+  "dungeon": "d4a84d1d-b532-4798-84be-ee98a54bb4b8",
+  "floor": "efa02a45-430d-4d70-bf09-5f1b552d46fe",
+  "room": "45b9be37-9add-45f8-9870-8aa56f744937",
+  "cistern": "dd642d76-7408-4a56-a3b8-652785ad3b16",
+  "notes": [
+    "01-dungeon-overview-dark: Lantern Vault @ 1440x950 dark",
+    "03-room-overview-dark: Broken Signal Hall @ 1440x950 dark",
+    "07-room-overview-light-tablet: Broken Signal Hall @ 900x900 light"
+  ]
+}

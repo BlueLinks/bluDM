@@ -106,6 +106,49 @@ func (s *Server) updatePlayer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"player": player})
 }
 
+func (s *Server) movePlayer(w http.ResponseWriter, r *http.Request) {
+	playerID := strings.TrimSpace(r.PathValue("playerID"))
+	var req movePlayerRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	req.CampaignID = strings.TrimSpace(req.CampaignID)
+	if req.CampaignID != "" {
+		if _, err := s.campaignByID(r.Context(), req.CampaignID); err != nil {
+			writeError(w, http.StatusNotFound, "campaign not found")
+			return
+		}
+	}
+	player, err := s.stores.Players.Move(
+		r.Context(), currentUserIDMust(r.Context()), playerID, req.CampaignID,
+	)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "player not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not move player")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"player": player})
+}
+
+func (s *Server) clonePlayer(w http.ResponseWriter, r *http.Request) {
+	playerID := strings.TrimSpace(r.PathValue("playerID"))
+	player, err := s.stores.Players.Clone(
+		r.Context(), currentUserIDMust(r.Context()), playerID,
+	)
+	if store.IsNotFound(err) {
+		writeError(w, http.StatusNotFound, "player not found")
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "could not clone player")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"player": player})
+}
+
 func (s *Server) deletePlayer(w http.ResponseWriter, r *http.Request) {
 	playerID := strings.TrimSpace(r.PathValue("playerID"))
 	if err := s.stores.Players.Delete(r.Context(), currentUserIDMust(r.Context()), playerID); err != nil {

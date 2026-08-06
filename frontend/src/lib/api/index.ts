@@ -247,6 +247,13 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(playerPayload(payload)),
     }),
+  movePlayer: (id: string, campaignId: string) =>
+    request<{ player: Player }>(`/api/players/${id}/campaign`, {
+      method: "PUT",
+      body: JSON.stringify({ campaignId }),
+    }),
+  clonePlayer: (id: string) =>
+    request<{ player: Player }>(`/api/players/${id}/clone`, { method: "POST" }),
   deletePlayer: (id: string) => request<void>(`/api/players/${id}`, { method: "DELETE" }),
 
   creatures: (

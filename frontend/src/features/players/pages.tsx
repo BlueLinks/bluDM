@@ -1,39 +1,89 @@
-import { Pencil, Plus, Trash2, UserRound, UsersRound } from "lucide-react";
+import { Plus, UserRound, UsersRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
-import { PlayerCard } from "../../components/PlayerCard";
-import { ResponsiveGrid } from "../../components/layout";
+import { useUiDensity } from "../../app/uiDensity";
+import { ActionRow } from "../../components/layout";
 import {
   Button,
   Callout,
   ConfirmDialog,
-  EmptyMini,
+  Field,
+  Modal,
   MutedPanel,
   Page,
   PageHeader,
   SectionPanel,
+  Select,
   ToastViewport,
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import type { Campaign, Player } from "../../types";
 import { PlayerForm } from "./PlayerForm";
+import { PlayerDensityToggle, PlayersRoster } from "./PlayersRoster";
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [removePlayer, setRemovePlayer] = useState<Player | null>(null);
+  const [movePlayer, setMovePlayer] = useState<Player | null>(null);
+  const [moveCampaignId, setMoveCampaignId] = useState("");
+  const [actionBusy, setActionBusy] = useState(false);
+  const { density, onDensityChange } = useUiDensity();
+  const rosterDensity = density === "compact" ? "compact" : "comfy";
   const toast = useToasts();
 
   useEffect(() => {
-    api
-      .players()
-      .then((payload) => setPlayers(payload.players))
+    Promise.all([api.players(), api.campaigns()])
+      .then(([playerPayload, campaignPayload]) => {
+        setPlayers(playerPayload.players);
+        setCampaigns(campaignPayload.campaigns);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load players"))
       .finally(() => setLoading(false));
   }, []);
+
+  function openMoveDialog(player: Player) {
+    setMovePlayer(player);
+    setMoveCampaignId(player.campaignId);
+  }
+
+  async function confirmMovePlayer() {
+    if (!movePlayer || moveCampaignId === movePlayer.campaignId) return;
+    setActionBusy(true);
+    setError("");
+    try {
+      const payload = await api.movePlayer(movePlayer.id, moveCampaignId);
+      setPlayers((current) =>
+        current.map((player) => (player.id === payload.player.id ? payload.player : player)),
+      );
+      const destination =
+        campaigns.find((campaign) => campaign.id === moveCampaignId)?.name ?? "Unassigned";
+      toast.push(`${movePlayer.characterName} moved to ${destination}`);
+      setMovePlayer(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not move character");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function clonePlayer(player: Player) {
+    setActionBusy(true);
+    setError("");
+    try {
+      const payload = await api.clonePlayer(player.id);
+      setPlayers((current) => [...current, payload.player]);
+      toast.push(`${payload.player.characterName} created in the same campaign`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not clone character");
+    } finally {
+      setActionBusy(false);
+    }
+  }
 
   async function confirmRemovePlayer() {
     if (!removePlayer) return;
@@ -41,7 +91,7 @@ export function PlayersPage() {
     try {
       await api.deletePlayer(removePlayer.id);
       setPlayers((current) => current.filter((player) => player.id !== removePlayer.id));
-      toast.push(`${removePlayer.characterName} removed`);
+      toast.push(`${removePlayer.characterName} deleted`);
       setRemovePlayer(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not remove player");
@@ -53,7 +103,7 @@ export function PlayersPage() {
       <PageHeader
         eyebrow="Players"
         title="Character sheets"
-        copy="Structured player input belongs here: stats, saves, skills, AC, health, temp HP, resources, and rest state."
+        copy="Characters are organised by campaign so party membership is clear at a glance."
         action={
           <Link to="/players/new">
             <Button icon={Plus}>Add player</Button>
@@ -61,43 +111,72 @@ export function PlayersPage() {
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <SectionPanel title="Saved Characters" icon={UsersRound}>
+      <SectionPanel
+        title="Saved characters"
+        icon={UsersRound}
+        action={
+          <PlayerDensityToggle
+            density={rosterDensity}
+            onChange={(nextDensity) => onDensityChange(nextDensity)}
+          />
+        }
+      >
         {loading && <p className="text-sm text-muted-foreground">Loading players...</p>}
-        {!loading && players.length === 0 && (
-          <EmptyMini copy="No saved players yet. Create a full player record from the Add player page." />
+        {!loading && (
+          <PlayersRoster
+            campaigns={campaigns}
+            density={rosterDensity}
+            players={players}
+            onClone={(player) => void clonePlayer(player)}
+            onDelete={setRemovePlayer}
+            onMove={openMoveDialog}
+          />
         )}
-        <ResponsiveGrid variant="cards3">
-          {players.map((player) => (
-            <div className="grid gap-2" key={player.id}>
-              <PlayerCard player={player} />
-              <div className="grid grid-cols-2 gap-2">
-                <Link to={`/players/${player.id}/edit`}>
-                  <Button type="button" icon={Pencil} variant="secondary" className="w-full">
-                    Edit character
-                  </Button>
-                </Link>
-                <Button
-                  type="button"
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => setRemovePlayer(player)}
-                >
-                  Remove
-                </Button>
-              </div>
-            </div>
-          ))}
-        </ResponsiveGrid>
       </SectionPanel>
+      <Modal
+        open={Boolean(movePlayer)}
+        title="Move character"
+        onOpenChange={(open) => !open && setMovePlayer(null)}
+      >
+        <p className="text-sm text-muted-foreground">
+          Choose where <strong className="text-foreground">{movePlayer?.characterName}</strong>{" "}
+          should appear.
+        </p>
+        <Field className="mt-5" label="Campaign">
+          <Select
+            options={[
+              ...campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id })),
+              { label: "Unassigned", value: "" },
+            ]}
+            placeholder="Choose a campaign"
+            value={moveCampaignId}
+            onValueChange={setMoveCampaignId}
+          />
+        </Field>
+        <ActionRow className="mt-6" justify="end">
+          <Button type="button" variant="outline" onClick={() => setMovePlayer(null)}>
+            Cancel
+          </Button>
+          <Button
+            disabled={
+              actionBusy || !movePlayer || moveCampaignId === (movePlayer?.campaignId ?? "")
+            }
+            type="button"
+            onClick={() => void confirmMovePlayer()}
+          >
+            {actionBusy ? "Moving..." : "Move character"}
+          </Button>
+        </ActionRow>
+      </Modal>
       <ConfirmDialog
         open={Boolean(removePlayer)}
-        title="Remove player character?"
-        confirmLabel="Remove character"
+        title="Delete character?"
+        confirmLabel="Delete character"
         onCancel={() => setRemovePlayer(null)}
         onConfirm={() => void confirmRemovePlayer()}
       >
-        This will remove {removePlayer?.characterName ?? "this character"} from the character sheet
-        page and any campaign party lists.
+        This permanently removes {removePlayer?.characterName ?? "this character"} from saved
+        characters. Campaign party references will also be removed.
       </ConfirmDialog>
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
     </Page>

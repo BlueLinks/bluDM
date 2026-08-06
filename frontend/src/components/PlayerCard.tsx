@@ -1,3 +1,4 @@
+import type React from "react";
 import type { Player } from "../types";
 import {
   AbilityScoreCard,
@@ -10,9 +11,13 @@ import { signedModifier } from "../lib/domain/forms";
 
 export function PlayerCard({
   player,
+  actions,
+  density = "comfy",
   showCampaign = true,
 }: {
   player: Player;
+  actions?: React.ReactNode;
+  density?: "compact" | "comfy";
   showCampaign?: boolean;
 }) {
   const sheet = player.characterSheet;
@@ -25,9 +30,18 @@ export function PlayerCard({
   const avatarSrc = player.avatarAssetId ? `/api/assets/${player.avatarAssetId}` : player.avatarUrl;
 
   return (
-    <div className="rounded-lg border border-border bg-background p-4">
-      <div className="flex items-start gap-3">
-        <InitialsAvatar name={player.characterName} src={avatarSrc} />
+    <article
+      className={[
+        "grid h-full min-w-0 content-start rounded-lg border border-border bg-background",
+        density === "compact" ? "gap-2 p-3" : "gap-3 p-4",
+      ].join(" ")}
+    >
+      <div className={density === "compact" ? "flex items-start gap-2" : "flex items-start gap-3"}>
+        <InitialsAvatar
+          name={player.characterName}
+          size={density === "compact" ? "sm" : "md"}
+          src={avatarSrc}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-semibold">{player.characterName}</h3>
@@ -42,16 +56,15 @@ export function PlayerCard({
           </p>
         </div>
       </div>
-      <div className="mt-4">
+      <div>
         <CharacterVitals
           armorClass={player.armorClass}
           currentHitPoints={player.currentHitPoints}
           maxHitPoints={player.maxHitPoints}
-          temporaryHitPoints={player.temporaryHitPoints}
         />
       </div>
-      {Object.keys(abilityScores).length > 0 && (
-        <div className="mt-3 flex flex-wrap gap-1">
+      {density === "comfy" && Object.keys(abilityScores).length > 0 && (
+        <div className="flex flex-wrap gap-1">
           {abilities.map((ability) => (
             <AbilityScoreCard
               key={ability.key}
@@ -62,6 +75,7 @@ export function PlayerCard({
           ))}
         </div>
       )}
-    </div>
+      {actions ? <div className="mt-auto pt-0.5">{actions}</div> : null}
+    </article>
   );
 }

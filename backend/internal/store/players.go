@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
@@ -97,6 +98,59 @@ func (s PlayerStore) Update(ctx context.Context, ownerUserID, playerID string, i
 		return models.Player{}, err
 	}
 	return playerFromEntity(updated), nil
+}
+
+func (s PlayerStore) Move(ctx context.Context, ownerUserID, playerID, campaignID string) (models.Player, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		var entity dbmodels.PlayerEntity
+		err := tx.
+			Where("id = ? and owner_user_id = ?", strings.TrimSpace(playerID), ownerUserID).
+			First(&entity).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if campaignID == "" {
+			return tx.Model(&entity).Update("campaign_id", nil).Error
+		}
+		if err := ensureCampaignOwnedTx(ctx, tx, ownerUserID, campaignID); err != nil {
+			return err
+		}
+		return tx.Model(&entity).Update("campaign_id", campaignID).Error
+	})
+	if err != nil {
+		return models.Player{}, err
+	}
+	return s.ByID(ctx, ownerUserID, playerID)
+}
+
+func (s PlayerStore) Clone(ctx context.Context, ownerUserID, playerID string) (models.Player, error) {
+	var source dbmodels.PlayerEntity
+	err := s.db.WithContext(ctx).
+		Where("id = ? and owner_user_id = ?", strings.TrimSpace(playerID), ownerUserID).
+		First(&source).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return models.Player{}, ErrNotFound
+	}
+	if err != nil {
+		return models.Player{}, err
+	}
+
+	source.ID = ""
+	source.CharacterName = clonePlayerName(source.CharacterName)
+	source.CreatedAt = time.Time{}
+	source.UpdatedAt = time.Time{}
+	if err := s.db.WithContext(ctx).Create(&source).Error; err != nil {
+		return models.Player{}, err
+	}
+	return s.ByID(ctx, ownerUserID, source.ID)
+}
+
+func clonePlayerName(characterName string) string {
+	return strings.TrimSpace(characterName) + " Copy"
 }
 
 func (s PlayerStore) Delete(ctx context.Context, ownerUserID, playerID string) error {

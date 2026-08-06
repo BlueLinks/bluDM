@@ -1,0 +1,70 @@
+{
+  "campaignId": "5719bb22-5200-438b-b72a-feef3d1fde95",
+  "locationId": "13e78d71-b795-4449-9d95-61c056f0a674",
+  "shots": [
+    {
+      "name": "main-encounters-entry-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/01-main-encounters-entry-light.png"
+    },
+    {
+      "name": "party-allies-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/02-party-allies-light.png"
+    },
+    {
+      "name": "add-ally-menu",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/03-add-ally-menu.png"
+    },
+    {
+      "name": "add-summon-tab",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/04-add-summon-tab.png"
+    },
+    {
+      "name": "encounter-setup-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/05-encounter-setup-light.png"
+    },
+    {
+      "name": "add-enemy-menu",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/06-add-enemy-menu.png"
+    },
+    {
+      "name": "regenerated-preview-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/07-regenerated-preview-light.png"
+    },
+    {
+      "name": "review-create-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/08-review-create-light.png"
+    },
+    {
+      "name": "created-encounter-edit",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/09-created-encounter-edit.png"
+    },
+    {
+      "name": "campaign-world-entry-light",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/10-campaign-world-entry-light.png"
+    },
+    {
+      "name": "campaign-world-builder-entry",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/11-campaign-world-builder-entry.png"
+    },
+    {
+      "name": "party-allies-dark",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/12-party-allies-dark.png"
+    },
+    {
+      "name": "encounter-setup-dark",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/13-encounter-setup-dark.png"
+    },
+    {
+      "name": "review-create-dark",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/14-review-create-dark.png"
+    },
+    {
+      "name": "tablet-party-allies-dark",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/15-tablet-party-allies-dark.png"
+    },
+    {
+      "name": "campaign-world-location-entry",
+      "file": "/Users/bluelinks/Developer/bluDM/tmp/encounter-builder-qa/16-campaign-world-location-entry.png"
+    }
+  ]
+}

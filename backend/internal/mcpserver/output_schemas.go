@@ -81,12 +81,16 @@ func outputSchemaFor(name string) *jsonschema.Schema {
 		prototype = campaignsOutput{}
 	case "get_campaign_context":
 		prototype = appdomain.CampaignContext{}
+	case "create_campaign", "update_campaign":
+		prototype = appdomain.CampaignWriteResult{}
 	case "search_campaign_content":
 		prototype = campaignSearchOutput{}
 	case "list_players":
 		prototype = playersOutput{}
 	case "get_player":
 		prototype = appdomain.PlayerDetails{}
+	case "create_player", "update_player", "move_player", "clone_player":
+		prototype = appdomain.PlayerWriteResult{}
 	case "list_locations":
 		prototype = locationsOutput{}
 	case "get_location":
