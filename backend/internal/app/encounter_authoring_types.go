@@ -133,6 +133,7 @@ type UpdateEncounterCommand struct {
 
 type EncounterCombatantPatchCommand struct {
 	CombatantID      string  `json:"combatantId"`
+	CreatureID       *string `json:"creatureId,omitempty" jsonschema:"Replacement custom or enabled standard creature ID; refreshes the linked stat block while preserving this combatant row"`
 	Side             *string `json:"side,omitempty"`
 	DisplayName      *string `json:"displayName,omitempty"`
 	AvatarURL        *string `json:"avatarUrl,omitempty"`

@@ -32,7 +32,7 @@ func registerWorldWriteTools(
 		return nil, value, err
 	})
 	mcp.AddTool(server, tool("create_npc", "Create NPC",
-		"After approval, create a custom NPC creature and link it to the campaign.",
+		"After approval, create a custom NPC creature, optionally persist its typed actions and spellcasting, and link it to the campaign.",
 		false, false, true,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in createNPCInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.CreateNPC(
@@ -41,7 +41,7 @@ func registerWorldWriteTools(
 		return nil, value, err
 	})
 	mcp.AddTool(server, tool("update_npc", "Update NPC",
-		"After approval, update a discovered custom NPC using expectedUpdatedAt concurrency protection.",
+		"After approval, update a discovered custom NPC and optionally replace its typed actions or spellcasting using expectedUpdatedAt concurrency protection.",
 		false, false, true,
 	), func(ctx context.Context, _ *mcp.CallToolRequest, in updateNPCInput) (*mcp.CallToolResult, any, error) {
 		value, err := service.UpdateNPC(

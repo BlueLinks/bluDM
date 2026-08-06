@@ -106,11 +106,30 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 				"abilityScores": map[string]any{"str": 10, "dex": 12, "con": 10, "int": 14, "wis": 13, "cha": 12},
 				"speed":         map[string]any{"walk": 30},
 			},
+			"actions": []any{map[string]any{
+				"name": "Walking Staff", "description": "Melee Weapon Attack.",
+				"actionType": "melee_weapon", "displaySection": "action",
+				"attackModifier": 3, "reach": 5,
+				"rolls": []any{map[string]any{
+					"rollKind": "damage", "damageType": "bludgeoning",
+					"diceCount": 1, "dieSize": 6, "fixedValue": 1,
+				}},
+			}},
+			"spellcasting": map[string]any{
+				"spellcastingAbility": "int", "casterLevel": 2,
+				"spellSaveDC": 12, "spellAttackBonus": 4,
+				"slots": map[string]any{"1": 2}, "spells": []any{},
+			},
 		},
 	})
 	assertMCPToolSuccess(t, "create_npc", npcResult)
 	var npc appdomain.NPCWriteResult
 	decodeMCPStructured(t, npcResult, &npc)
+	if len(npc.Actions) != 1 || npc.Actions[0].Name != "Walking Staff" ||
+		len(npc.Actions[0].Rolls) != 1 || npc.Actions[0].Rolls[0].DieSize != 6 ||
+		npc.Spellcasting.SpellcastingAbility != "int" || npc.Spellcasting.CasterLevel != 2 {
+		t.Fatalf("NPC typed abilities were not created atomically: %+v", npc)
+	}
 
 	updatedNPCResult := callMCPTool(t, session, "update_npc", map[string]any{
 		"campaignId": campaign.ID, "npcId": npc.ID,
@@ -124,6 +143,11 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 		},
 	})
 	assertMCPToolSuccess(t, "update_npc", updatedNPCResult)
+	var updatedNPC appdomain.NPCWriteResult
+	decodeMCPStructured(t, updatedNPCResult, &updatedNPC)
+	if len(updatedNPC.Actions) != 1 || updatedNPC.Spellcasting.SpellSaveDC != 12 {
+		t.Fatalf("omitted NPC abilities were not preserved during scalar update: %+v", updatedNPC)
+	}
 
 	linkNPC := callMCPTool(t, session, "link_npc_to_location", map[string]any{
 		"campaignId": campaign.ID,
