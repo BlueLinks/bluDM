@@ -128,15 +128,13 @@ export function CharacterVitals({
   armorClass,
   currentHitPoints,
   maxHitPoints,
-  temporaryHitPoints = 0,
 }: {
   armorClass: number;
   currentHitPoints: number;
   maxHitPoints: number;
-  temporaryHitPoints?: number;
 }) {
   return (
-    <div className="grid grid-cols-3 gap-2 text-sm">
+    <div className="grid grid-cols-2 gap-2 text-sm">
       <VitalPill icon={Shield} label="AC" value={armorClass} tone="shield" />
       <VitalPill
         icon={HeartPulse}
@@ -144,7 +142,6 @@ export function CharacterVitals({
         value={`${currentHitPoints}/${maxHitPoints}`}
         tone="heart"
       />
-      <VitalPill icon={HeartPulse} label="Temp" value={temporaryHitPoints} tone="temp" />
     </div>
   );
 }
@@ -158,12 +155,11 @@ function VitalPill({
   icon: React.ElementType;
   label: React.ReactNode;
   value: React.ReactNode;
-  tone: "shield" | "heart" | "temp";
+  tone: "shield" | "heart";
 }) {
   const tones = {
     shield: "primary",
     heart: "tertiary",
-    temp: "secondary",
   } as const;
   return <VitalStatCard icon={Icon} label={label} tone={tones[tone]} value={value} />;
 }

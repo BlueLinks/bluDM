@@ -103,6 +103,20 @@ describe("APITokenSettings", () => {
     );
   });
 
+  it("includes campaign and party management in the campaign-writer preset", async () => {
+    render(<APITokenSettings />);
+    await screen.findByText("No external tools can access this account.");
+
+    fireEvent.click(screen.getByText("Read-only"));
+    fireEvent.click(await screen.findByRole("option", { name: "Campaign writer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create token" }));
+
+    await waitFor(() => expect(api.createAPIToken).toHaveBeenCalled());
+    const access = vi.mocked(api.createAPIToken).mock.calls.at(-1)?.[2];
+    expect(access?.scopes).toContain("campaigns:write");
+    expect(access?.scopes).toContain("party:write");
+  });
+
   it("labels legacy tokens without implying MCP write access", async () => {
     vi.mocked(api.apiTokens).mockResolvedValue({
       tokens: [

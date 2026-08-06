@@ -88,7 +88,9 @@ func TestToolContractAndInstructions(t *testing.T) {
 	}
 	required := []string{
 		"list_campaigns", "get_campaign_context", "search_campaign_content",
+		"create_campaign", "update_campaign",
 		"list_players", "get_player", "list_locations", "get_location", "get_world_graph",
+		"create_player", "update_player", "move_player", "clone_player",
 		"list_encounters", "get_encounter", "search_creatures", "get_creature",
 		"check_statblock_compatibility", "export_creature_statblock",
 		"export_encounter_statblocks", "export_encounter_bundle", "search_library",
@@ -109,6 +111,12 @@ func TestToolContractAndInstructions(t *testing.T) {
 		}
 	}
 	assertToolHints(t, result.Tools, "list_campaigns", true, false, false)
+	assertToolHints(t, result.Tools, "create_campaign", false, false, true)
+	assertToolHints(t, result.Tools, "update_campaign", false, false, true)
+	assertToolHints(t, result.Tools, "create_player", false, false, true)
+	assertToolHints(t, result.Tools, "update_player", false, false, true)
+	assertToolHints(t, result.Tools, "move_player", false, false, true)
+	assertToolHints(t, result.Tools, "clone_player", false, false, true)
 	assertToolHints(t, result.Tools, "create_generated_encounter", false, false, true)
 	assertToolHints(t, result.Tools, "regenerate_encounter", false, true, true)
 	assertToolHints(t, result.Tools, "restore_encounter_revision", false, true, true)
@@ -119,6 +127,18 @@ func TestToolContractAndInstructions(t *testing.T) {
 	assertRequiredInputFields(t, result.Tools, "create_generated_encounter", "campaignId", "idempotencyKey", "options")
 	assertRequiredInputFields(t, result.Tools, "regenerate_encounter", "campaignId", "encounterId", "idempotencyKey", "expectedRevision", "options")
 	assertRequiredInputFields(t, result.Tools, "restore_encounter_revision", "campaignId", "encounterId", "revision", "expectedRevision", "idempotencyKey")
+	assertRequiredInputFields(t, result.Tools, "create_campaign", "campaign")
+	assertNestedRequiredInputFields(t, result.Tools, "create_campaign", "campaign", "idempotencyKey", "name", "encounterRuleset")
+	assertRequiredInputFields(t, result.Tools, "update_campaign", "campaignId", "campaign")
+	assertNestedRequiredInputFields(t, result.Tools, "update_campaign", "campaign", "idempotencyKey", "expectedUpdatedAt")
+	assertRequiredInputFields(t, result.Tools, "create_player", "campaignId", "player")
+	assertNestedRequiredInputFields(t, result.Tools, "create_player", "player", "idempotencyKey", "characterName")
+	assertRequiredInputFields(t, result.Tools, "update_player", "campaignId", "playerId", "player")
+	assertNestedRequiredInputFields(t, result.Tools, "update_player", "player", "idempotencyKey", "expectedUpdatedAt")
+	assertRequiredInputFields(t, result.Tools, "move_player", "campaignId", "playerId", "move")
+	assertNestedRequiredInputFields(t, result.Tools, "move_player", "move", "idempotencyKey", "expectedUpdatedAt", "destinationCampaignId")
+	assertRequiredInputFields(t, result.Tools, "clone_player", "campaignId", "playerId", "clone")
+	assertNestedRequiredInputFields(t, result.Tools, "clone_player", "clone", "idempotencyKey", "expectedUpdatedAt")
 	assertNestedRequiredInputFields(t, result.Tools, "preview_campaign_changes", "changes", "changes")
 	assertNestedRequiredInputFields(t, result.Tools, "apply_campaign_changes", "changes", "idempotencyKey", "previewToken", "changes")
 	assertNestedRequiredInputFields(t, result.Tools, "preview_shop_stock_changes", "changes", "stock")

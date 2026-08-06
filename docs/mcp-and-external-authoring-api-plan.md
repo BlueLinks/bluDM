@@ -1,7 +1,7 @@
 # MCP And External Authoring API Implementation Plan
 
 Status: Implemented locally; production OAuth deployment gate remains
-Last updated: 2026-08-04
+Last updated: 2026-08-06
 
 ## Implementation Record
 
@@ -36,7 +36,15 @@ verifier confirms that all seven curated notes use Fantasy Statblocks 4.10.3 and
 checked-in fences; the snapshot fixture was also rendered live in Obsidian, while the complete
 seven-note visual pass remains recorded by the 2026-07-30 check.
 
-Inspector discovered all 46 tools with object-shaped success/error output unions and successfully
+The 2026-08-06 campaign/player management expansion adds six MCP tools and separate
+`campaigns:write`/`party:write` grants. Its Streamable HTTP workflow and scope-boundary tests pass,
+as does `make verify` with 73 frontend test files/300 tests, all backend packages, the production
+frontend build, and Compose configuration. The prior live Inspector/Codex interoperability record
+predates these six tools; the repository-controlled MCP client and contract suites cover the new
+surface locally.
+
+The current contract suite discovers all 52 tools with object-shaped success/error output unions.
+The last live Inspector pass on 2026-08-04 discovered the then-current 46 tools and successfully
 called `list_campaigns` through the nginx-served `http://localhost:3080/mcp` endpoint. The installed
 Codex CLI then connected to that exact endpoint, invoked the same tool, received structured
 content, and returned the campaign ID. The current migration binary passed a full isolated
@@ -298,7 +306,9 @@ Add explicit scopes:
 | Scope              | Capability                                                        |
 | ------------------ | ----------------------------------------------------------------- |
 | `campaigns:read`   | List campaigns and read campaign summaries.                       |
+| `campaigns:write`  | Create campaigns and update campaign settings and rulesets.       |
 | `party:read`       | Read campaign players and character information.                  |
+| `party:write`      | Create, update, move, and clone players.                           |
 | `world:read`       | Read locations, links, NPC placement, shops, maps, and prep gaps. |
 | `world:write`      | Create or update locations and world relationships.               |
 | `library:read`     | Search and read creatures, spells, items, and standard entries.   |
@@ -766,6 +776,12 @@ without having to parse its own Markdown output.
 | `restore_encounter_revision` | Restore a selected snapshot as a new head revision.                                                               | `encounters:write`                       | write, destructive                     |
 | `create_encounter`           | Atomically create an authored, non-generated encounter and roster.                                                | `encounters:write`                       | write, idempotent                      |
 | `update_encounter`           | Make a targeted metadata or roster change with `expectedRevision`.                                                | `encounters:write`                       | write; destructive if replacing roster |
+| `create_campaign`            | Create a campaign with an explicit 2014 or 2024 ruleset.                                                      | `campaigns:write`                        | write, idempotent                      |
+| `update_campaign`            | Update campaign settings with optimistic concurrency.                                                            | `campaigns:write`                        | write                                  |
+| `create_player`              | Create a character in a campaign or Unassigned.                                                                  | `party:write`                            | write, idempotent                      |
+| `update_player`              | Partially update character fields with optimistic concurrency.                                                    | `party:write`                            | write                                  |
+| `move_player`                | Move a character between accessible campaigns or to Unassigned.                                                   | `party:write`                            | write, idempotent                      |
+| `clone_player`               | Create a deterministic copy that preserves campaign assignment.                                                   | `party:write`                            | write, idempotent                      |
 | `create_location`            | Create a typed Campaign World location under an existing parent.                                                  | `world:write`                            | write, idempotent                      |
 | `update_location`            | Update authored location fields with optimistic concurrency.                                                      | `world:write`                            | write                                  |
 | `create_npc`                 | Create a custom NPC/creature with campaign linkage.                                                               | `library:write`                          | write, idempotent                      |

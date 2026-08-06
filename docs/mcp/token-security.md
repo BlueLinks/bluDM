@@ -9,7 +9,9 @@ last-used time, and revocation time.
 | Scope | Grants |
 | --- | --- |
 | `campaigns:read` | Campaign list, summaries, search, and prep context. |
+| `campaigns:write` | Campaign creation and settings updates, including the 2014/2024 ruleset. |
 | `party:read` | Campaign players and character sheets. |
+| `party:write` | Player creation, character-sheet updates, campaign moves, and deterministic clones. |
 | `world:read` | Locations, links, maps, shops, journeys, tables, and world graph. |
 | `world:write` | Locations, relationships, roll tables, journeys, dungeons, and shop stock. |
 | `library:read` | Campaign-visible creatures, spells, items, rules, and exports. |
@@ -32,6 +34,10 @@ discover IDs before writing.
 Both the transport and application service enforce restrictions. A handler cannot bypass them by
 calling a store with an attacker-supplied ID. Unknown, cross-user, and cross-campaign IDs are
 reported as not found or forbidden without revealing another campaign's data.
+
+Creating a campaign requires `all` campaign access because its new ID cannot already be in a
+selected allow-list. Selected-campaign credentials may manage players only while both the current
+and destination campaigns are allowed. Unassigned players are available only to `all` credentials.
 
 ## Presets
 

@@ -4,7 +4,9 @@ import type { Campaign } from "../types";
 
 const scopeOptions = [
   ["campaigns:read", "Campaigns"],
+  ["campaigns:write", "Campaign write"],
   ["party:read", "Party"],
+  ["party:write", "Party write"],
   ["world:read", "World read"],
   ["world:write", "World write"],
   ["library:read", "Library read"],

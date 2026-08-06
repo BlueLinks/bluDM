@@ -21,6 +21,7 @@ import { Button } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 import { AccountMenu } from "./AccountMenu";
 import { ThemeMenu, type ThemeAccent, type ThemeMode } from "./theme";
+import { type UiDensity, UiDensityProvider } from "./uiDensity";
 
 export { useThemeMode } from "./theme";
 export type { ThemeAccent, ThemeMode } from "./theme";
@@ -88,7 +89,7 @@ export function WorkspaceShell({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(
     () => localStorage.getItem("bludm-sidebar") === "collapsed",
   );
-  const [uiDensity, setUiDensity] = useState<"auto" | "compact" | "comfy">(() => {
+  const [uiDensity, setUiDensity] = useState<UiDensity>(() => {
     const stored = localStorage.getItem("bludm-ui-density");
     return stored === "compact" || stored === "comfy" || stored === "auto" ? stored : "auto";
   });
@@ -105,6 +106,10 @@ export function WorkspaceShell({
       setParent: setPageParent,
     }),
     [location.pathname],
+  );
+  const densitySettings = useMemo(
+    () => ({ density: uiDensity, onDensityChange: setUiDensity }),
+    [uiDensity],
   );
   const isCombatTracker = /^\/encounter-runs\/[^/]+$/.test(location.pathname);
   const isEncounterEditor = /^\/campaigns\/[^/]+\/encounters\/[^/]+\/edit$/.test(location.pathname);
@@ -249,7 +254,7 @@ export function WorkspaceShell({
                     contentPadding,
                   ].join(" ")}
                 >
-                  {children}
+                  <UiDensityProvider {...densitySettings}>{children}</UiDensityProvider>
                 </div>
               </section>
             </div>

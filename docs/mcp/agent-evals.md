@@ -28,11 +28,16 @@ write exists in bluDM and no undiscovered ID is invented.
 15. “Retrieve recent completed-run facts and draft a recap without changing live combat.”
 16. “Read continuity context and identify contradictions or unresolved prep gaps before writing.”
 17. “Preview shop inventory changes, prove the item and shop IDs exist, then apply.”
-18. “Attempt an encounter write with a read-only token.” Expected: `forbidden`.
-19. “Read an encounter, make a browser edit, then submit the stale MCP edit.” Expected: `conflict`.
-20. “Reuse a creation idempotency key with changed input.” Expected: `idempotency_conflict`.
-21. “Delete the rejected encounter.” Expected: explain that no deletion tool exists.
-22. “Change hit points in the active combat.” Expected: explain that live mutation is unavailable.
+18. “Create a 2024 campaign, then switch its encounter ruleset to 2014 using the latest update
+    timestamp. Report any source-setting warning.”
+19. “Create a player in that campaign, update its name, move it to another discovered campaign,
+    and clone it. Confirm the clone's name and campaign assignment.”
+20. “Move the clone to Unassigned, then discover and read it without inventing a campaign ID.”
+21. “Attempt an encounter write with a read-only token.” Expected: `forbidden`.
+22. “Read an encounter, make a browser edit, then submit the stale MCP edit.” Expected: `conflict`.
+23. “Reuse a creation idempotency key with changed input.” Expected: `idempotency_conflict`.
+24. “Delete the rejected encounter.” Expected: explain that no deletion tool exists.
+25. “Change hit points in the active combat.” Expected: explain that live mutation is unavailable.
 
 ## Automated Contract Checks
 
@@ -55,9 +60,10 @@ tool-return prose:
 
 | Prompts              | Automated evidence                                                                                                                                                                                                                                                                                                                           |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1–4, 6, 18, 21–22    | `TestMCPStreamableHTTPAgentEncounterWorkflow` discovers stable IDs, creates/retries/rerolls one durable encounter, reads revision history, and proves a migrated token cannot write. Tool inventory tests prove deletion and live-combat tools are absent.                                                                                   |
-| 5–8, 19–20           | `TestExternalGeneratedEncounterLifecycleIsAtomicAndRevisioned` exercises the same application services through REST, including targeted edits, preserved manual combatants, restore-as-new-head, stale revision conflict, changed-input idempotency conflict, strict export atomicity, snapshot export, and distinct-creature deduplication. |
+| 1–4, 6, 21, 24–25    | `TestMCPStreamableHTTPAgentEncounterWorkflow` discovers stable IDs, creates/retries/rerolls one durable encounter, reads revision history, and proves a migrated token cannot write. Tool inventory tests prove deletion and live-combat tools are absent.                                                                                   |
+| 5–8, 22–23           | `TestExternalGeneratedEncounterLifecycleIsAtomicAndRevisioned` exercises the same application services through REST, including targeted edits, preserved manual combatants, restore-as-new-head, stale revision conflict, changed-input idempotency conflict, strict export atomicity, snapshot export, and distinct-creature deduplication. |
 | 9–17                 | `TestMCPStreamableHTTPAdvancedAuthoringWorkflow` creates and updates connected locations/NPCs, previews and applies a change set, authors and rolls a table, calculates/saves travel, previews/saves a Dungeon Studio document, reads completed-run/continuity facts, and previews/applies shop stock over Streamable HTTP.                  |
+| 18–20                | `TestMCPManagementCampaignAndPlayerWorkflow` creates and switches a campaign ruleset, discovers assignment-aware players, updates and moves one, idempotently clones it with the same assignment, and moves the copy to Unassigned over Streamable HTTP.                                                                                      |
 | Compatibility claims | `TestAllStandardCreaturesAreSupported`, `TestCheckedInFantasyStatblocksFixturesParse`, and the statblock/export integration assertions validate every enabled standard record and the ordinary, caster, legendary, custom-section, incomplete, repeated-roster, and snapshot fixtures.                                                        |
 
 Run the database-backed harness with:

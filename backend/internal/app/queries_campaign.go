@@ -23,6 +23,8 @@ type CampaignSummary struct {
 
 type PartySummary struct {
 	ID               string `json:"id"`
+	CampaignID       string `json:"campaignId,omitempty"`
+	CampaignName     string `json:"campaignName,omitempty"`
 	CharacterName    string `json:"characterName"`
 	PlayerName       string `json:"playerName"`
 	Level            int    `json:"level"`
@@ -96,16 +98,31 @@ func (s *Service) CampaignContext(ctx context.Context, campaignID string) (Campa
 }
 
 func (s *Service) ListPlayers(ctx context.Context, campaignID string) ([]PartySummary, error) {
-	principal, err := s.authorize(ctx, campaignID, ScopePartyRead)
+	principal, err := s.authorize(ctx, "", ScopePartyRead)
 	if err != nil {
 		return nil, err
 	}
-	players, err := s.stores.Campaigns.Players(ctx, principal.UserID, campaignID)
+	campaignID = strings.TrimSpace(campaignID)
+	var players []models.Player
+	if campaignID != "" {
+		if _, err := s.authorize(ctx, campaignID, ScopePartyRead); err != nil {
+			return nil, err
+		}
+		players, err = s.stores.Campaigns.Players(ctx, principal.UserID, campaignID)
+	} else {
+		players, err = s.stores.Players.List(ctx, principal.UserID)
+	}
 	if err != nil {
 		return nil, err
 	}
 	result := make([]PartySummary, 0, len(players))
 	for _, player := range players {
+		if player.CampaignID == "" && principal.CampaignRestrictionMode == "selected" {
+			continue
+		}
+		if player.CampaignID != "" && !principal.AllowsCampaign(player.CampaignID) {
+			continue
+		}
 		result = append(result, s.linkedPlayerSummary(player))
 	}
 	return result, nil
@@ -116,13 +133,21 @@ func (s *Service) GetPlayer(
 	campaignID string,
 	playerID string,
 ) (PlayerDetails, error) {
-	principal, err := s.authorize(ctx, campaignID, ScopePartyRead)
+	principal, err := s.authorize(ctx, "", ScopePartyRead)
 	if err != nil {
 		return PlayerDetails{}, err
 	}
 	player, err := s.stores.Players.ByID(ctx, principal.UserID, playerID)
 	if err != nil || player.CampaignID != strings.TrimSpace(campaignID) {
 		return PlayerDetails{}, NewError(CodeNotFound, "player not found", nil)
+	}
+	if player.CampaignID == "" && principal.CampaignRestrictionMode == "selected" {
+		return PlayerDetails{}, NewError(CodeForbidden, "token cannot access unassigned players", nil)
+	}
+	if player.CampaignID != "" {
+		if _, err := s.authorize(ctx, player.CampaignID, ScopePartyRead); err != nil {
+			return PlayerDetails{}, err
+		}
 	}
 	return PlayerDetails{
 		Player: player,
@@ -132,7 +157,8 @@ func (s *Service) GetPlayer(
 
 func playerSummary(player models.Player) PartySummary {
 	return PartySummary{
-		ID: player.ID, CharacterName: player.CharacterName, PlayerName: player.PlayerName,
+		ID: player.ID, CampaignID: player.CampaignID, CampaignName: player.CampaignName,
+		CharacterName: player.CharacterName, PlayerName: player.PlayerName,
 		Level: integerFromAny(player.CharacterSheet["level"]), ArmorClass: player.ArmorClass,
 		CurrentHitPoints: player.CurrentHitPoints, MaxHitPoints: player.MaxHitPoints,
 	}

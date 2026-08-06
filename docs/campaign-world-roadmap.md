@@ -261,12 +261,21 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
   - REST remained the initial integration surface while MCP was deferred pending a demonstrated discovery or orchestration gap. The planned MCP and external authoring API work below now supersedes that deferral.
 - MCP and external authoring API:
   - Transport-neutral principals, scoped and campaign-restricted tokens, legacy-token migration rules, token presets, shared application services, and versioned external REST contracts now cover discovery and safe authoring.
-  - The nginx-served Streamable HTTP `/mcp` endpoint exposes 46 bounded, typed, audited tools for campaign discovery, encounter generation and revision recovery, Campaign World authoring, roll tables, journeys, Dungeon Studio, continuity, shops, imports, and Fantasy Statblocks export.
+  - The nginx-served Streamable HTTP `/mcp` endpoint exposes 52 bounded, typed, audited tools for campaign/player management, campaign discovery, encounter generation and revision recovery, Campaign World authoring, roll tables, journeys, Dungeon Studio, continuity, shops, imports, and Fantasy Statblocks export.
   - Encounter generation now creates one durable planned encounter atomically, preserves user-owned content across rerolls, enforces idempotency and optimistic concurrency, records recoverable revisions, and reports server-authoritative difficulty evidence.
   - Canonical stat-block export merges standard, custom, action, spellcasting, and snapshot data; enforces licensing/image rules; deduplicates encounter creatures; and validates all 664 enabled standard creatures with zero unsupported records.
   - Local authorization-code + PKCE tests, MCP Inspector, browser token/authoring QA, Obsidian Fantasy Statblocks 4.10.3 fixture rendering, and an isolated PostgreSQL recovery drill cover the repository-controlled release path.
   - The 2026-08-04 revalidation passed the normal and security gates, database-backed suites, production browser E2E, exact-fence Vault verification, nginx-served Inspector checks, and a real Codex tool call on `http://localhost:3080/mcp`.
   - Docker Hub manifest resolution was unavailable to the local Docker Desktop daemon during that revalidation, so the prescribed image rebuild remains an external infrastructure rerun; newly compiled API/frontend artifacts passed an isolated cached-base container substitute without being misreported as a successful rebuild.
+- MCP campaign and player management:
+  - Added separate `campaigns:write` and `party:write` grants plus six typed, audited, idempotent tools for campaign creation/settings and player creation, updates, moves, and deterministic assignment-preserving clones.
+  - Player discovery now supports every accessible campaign plus Unassigned for unrestricted credentials; selected-campaign credentials cannot create campaigns, access Unassigned players, or move players outside their grants.
+  - Campaign and player mutations use the shared application service, explicit approval metadata, optimistic timestamps, deterministic retry behavior, and the existing no-delete/no-live-combat boundary.
+  - Streamable HTTP integration coverage exercises 2014/2024 ruleset changes and the complete player lifecycle; `make verify` passes with 73 frontend test files and 300 tests plus all backend packages and build/config gates.
+- Campaign-grouped player roster:
+  - The Players route groups saved characters by campaign ID in collapsible sections, keeps Unassigned last and always visible, and reuses the persisted Compact/Comfy density preference.
+  - Roster cards now focus on AC and current/max HP, keep abilities in Comfy mode, and place move, deterministic same-campaign clone, and confirmed delete actions in an overflow menu.
+  - Focused frontend/backend coverage, `make verify`, a fresh Docker rebuild, and desktop/mobile browser QA cover grouping, counts, actions, density, and responsive overflow behavior.
 
 ## In Progress
 

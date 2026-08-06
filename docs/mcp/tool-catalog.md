@@ -16,8 +16,8 @@ text, creature type, inclusive CR range, and source-key filters.
 | `list_campaigns`          | `campaigns:read`               | Token-visible campaigns.                         |
 | `get_campaign_context`    | `campaigns:read`               | Brief, counts, party summary, app links.         |
 | `search_campaign_content` | `campaigns:read`               | Compact cross-domain discovery.                  |
-| `list_players`            | `party:read`                   | Party combat summary and stable IDs.             |
-| `get_player`              | `party:read`                   | Full campaign-bound character state.             |
+| `list_players`            | `party:read`                   | Assignment-aware summary; omit campaign ID for all accessible players. |
+| `get_player`              | `party:read`                   | Full character state, including Unassigned when permitted.             |
 | `list_locations`          | `world:read`                   | Hierarchy and paths.                             |
 | `get_location`            | `world:read`                   | Children, links, NPCs, encounters, maps, stock.  |
 | `get_world_graph`         | `world:read`                   | Location nodes and explicit edges.               |
@@ -54,6 +54,23 @@ Exports accept profile `fantasy-statblocks-basic-5e@1`. Encounter exports accept
 | `update_encounter`           | `encounters:write`                   | write; roster replacement may be destructive |
 
 There is no delete or live-combat tool.
+
+## Campaign And Player Management
+
+| Tool              | Required scope    | Annotation                                  |
+| ----------------- | ----------------- | ------------------------------------------- |
+| `create_campaign` | `campaigns:write` | write, idempotent; all-campaign tokens only |
+| `update_campaign` | `campaigns:write` | write with `expectedUpdatedAt`              |
+| `create_player`   | `party:write`     | write, idempotent                           |
+| `update_player`   | `party:write`     | partial write with `expectedUpdatedAt`      |
+| `move_player`     | `party:write`     | assignment write with `expectedUpdatedAt`   |
+| `clone_player`    | `party:write`     | deterministic, assignment-preserving clone  |
+
+Campaign ruleset inputs accept `2014` or `2024` and are stored as bluDM's canonical encounter
+ruleset. If a ruleset update needs a standard source that is not enabled, bluDM enables that source
+and returns a warning. Player moves accept an empty destination for Unassigned; moving to the
+current campaign returns `operation: "unchanged"`. Clone retries with the same idempotency key
+return the same copy rather than another player record.
 
 ## World And Connected Authoring
 

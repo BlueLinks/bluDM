@@ -94,6 +94,8 @@ func (s *Server) Routes() http.Handler {
 	mux.Handle("GET /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.getPlayer)))
 	mux.Handle("PUT /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.updatePlayer)))
 	mux.Handle("DELETE /api/players/{playerID}", s.requireAuth(http.HandlerFunc(s.deletePlayer)))
+	mux.Handle("PUT /api/players/{playerID}/campaign", s.requireAuth(http.HandlerFunc(s.movePlayer)))
+	mux.Handle("POST /api/players/{playerID}/clone", s.requireAuth(http.HandlerFunc(s.clonePlayer)))
 	mux.Handle("POST /api/campaigns/{campaignID}/players", s.requireAuth(http.HandlerFunc(s.createPlayer)))
 	mux.Handle("GET /api/library/creatures", s.requireAuth(http.HandlerFunc(s.listCreatures)))
 	mux.Handle("GET /api/library/sources", s.requireAuth(http.HandlerFunc(s.listStandardSources)))
