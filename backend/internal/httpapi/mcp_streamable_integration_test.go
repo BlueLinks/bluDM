@@ -46,6 +46,17 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 		},
 	})
 	requireArchiveNoError(t, err)
+	var standardCreatureID string
+	requireArchiveNoError(t, database.Raw(`
+		insert into standard_creatures (
+			source_key, slug, name, size, creature_type, armor_class,
+			hit_points, hit_dice, challenge_rating, xp, source_label
+		) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		returning id
+	`,
+		rulesets.Source2024, "agent-test-standard-wolf", "Agent Test Standard Wolf",
+		"Medium", "Beast", 13, 11, "2d8+2", "1/4", 50, "SRD 5.2.1",
+	).Scan(&standardCreatureID).Error)
 
 	secret := apiTokenPrefix + strings.Repeat("m", 32)
 	expiresAt := time.Now().Add(time.Hour)
@@ -134,7 +145,7 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	createdResult := callMCPTool(t, session, "create_generated_encounter", map[string]any{
 		"campaignId": campaign.ID, "idempotencyKey": "mcp-agent-create-1",
 		"name": "The Wolf Crossing", "playerIds": []string{player.ID}, "seed": 41,
-		"requiredCreatureIds": []string{creature.ID},
+		"requiredCreatureIds": []string{standardCreatureID},
 		"options": map[string]any{
 			"archetype": "beasts", "challenge": "medium", "enemyCount": 1,
 		},
@@ -170,11 +181,24 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	if readback.DifficultyEvidence.Ruleset != rulesets.Encounter2024 {
 		t.Fatalf("get_encounter did not retain the persisted ruleset: %+v", readback)
 	}
+	foundStandardCreature := false
+	for _, combatant := range readback.Combatants {
+		if combatant.Snapshot["standardCreatureId"] != standardCreatureID {
+			continue
+		}
+		foundStandardCreature = true
+		if combatant.CreatureID != "" {
+			t.Fatalf("standard creature populated the custom creature foreign key: %+v", combatant)
+		}
+	}
+	if !foundStandardCreature {
+		t.Fatalf("generated standard creature reference was not persisted: %+v", readback.Combatants)
+	}
 
 	replayedResult := callMCPTool(t, session, "create_generated_encounter", map[string]any{
 		"campaignId": campaign.ID, "idempotencyKey": "mcp-agent-create-1",
 		"name": "The Wolf Crossing", "playerIds": []string{player.ID}, "seed": 41,
-		"requiredCreatureIds": []string{creature.ID},
+		"requiredCreatureIds": []string{standardCreatureID},
 		"options": map[string]any{
 			"archetype": "beasts", "challenge": "medium", "enemyCount": 1,
 		},
@@ -188,7 +212,7 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	regeneratedResult := callMCPTool(t, session, "regenerate_encounter", map[string]any{
 		"campaignId": campaign.ID, "encounterId": created.Encounter.ID,
 		"idempotencyKey": "mcp-agent-regenerate-1", "expectedRevision": 1, "seed": 43,
-		"requiredCreatureIds": []string{creature.ID},
+		"requiredCreatureIds": []string{standardCreatureID},
 		"options": map[string]any{
 			"archetype": "beasts", "challenge": "medium", "enemyCount": 1,
 		},
