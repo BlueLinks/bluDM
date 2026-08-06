@@ -13,7 +13,7 @@ func encounterCombatantEntityFromInput(encounterID string, sortOrder int, input 
 		SourceType:       input.SourceType,
 		PlayerID:         stringPointer(input.PlayerID),
 		CreatureID:       stringPointer(input.CreatureID),
-		Side:             input.Side,
+		Side:             canonicalCombatantSide(input.SourceType, input.Side),
 		DisplayName:      input.DisplayName,
 		ColorLabel:       input.ColorLabel,
 		AvatarURL:        input.AvatarURL,
@@ -33,7 +33,7 @@ func encounterCombatantFromEntity(entity dbmodels.EncounterCombatantEntity) mode
 		SourceType:       entity.SourceType,
 		PlayerID:         stringFromPointer(entity.PlayerID),
 		CreatureID:       stringFromPointer(entity.CreatureID),
-		Side:             entity.Side,
+		Side:             canonicalCombatantSide(entity.SourceType, entity.Side),
 		DisplayName:      entity.DisplayName,
 		ColorLabel:       entity.ColorLabel,
 		AvatarURL:        entity.AvatarURL,
@@ -46,4 +46,16 @@ func encounterCombatantFromEntity(entity dbmodels.EncounterCombatantEntity) mode
 		CreatedAt:        entity.CreatedAt,
 		UpdatedAt:        entity.UpdatedAt,
 	}
+}
+
+func canonicalCombatantSide(sourceType, side string) string {
+	sourceType = strings.ToLower(strings.TrimSpace(sourceType))
+	side = strings.ToLower(strings.TrimSpace(side))
+	if sourceType == "player" {
+		return "player"
+	}
+	if side == "ally" {
+		return "friendly"
+	}
+	return side
 }

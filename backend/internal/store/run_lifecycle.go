@@ -107,7 +107,7 @@ func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, runID 
 			SourceType:        source.SourceType,
 			PlayerID:          source.PlayerID,
 			CreatureID:        source.CreatureID,
-			Side:              source.Side,
+			Side:              canonicalCombatantSide(source.SourceType, source.Side),
 			DisplayName:       source.DisplayName,
 			ColorLabel:        source.ColorLabel,
 			AvatarURL:         avatarURL,

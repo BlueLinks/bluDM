@@ -56,9 +56,7 @@ func (s *Service) authoredCombatant(
 				"unknown_player", "unknown or cross-campaign player ID", nil,
 			)
 		}
-		combatant, err := playerCombatant(encounterID, player, sortOrder)
-		combatant.Side = command.Side
-		return combatant, err
+		return playerCombatant(encounterID, player, sortOrder)
 	case "creature":
 		creature, err := s.stores.Creatures.ByID(ctx, principal.UserID, command.CreatureID)
 		if store.IsNotFound(err) {
@@ -82,7 +80,7 @@ func (s *Service) authoredCombatant(
 		delete(combatant.Snapshot, "generationBatchId")
 		delete(combatant.Snapshot, "generatorVersion")
 		delete(combatant.Snapshot, "seed")
-		combatant.Side = command.Side
+		combatant.Side = canonicalAuthoredCombatantSide(command.SourceType, command.Side)
 		combatant.RolledHP = command.RolledHP
 		return combatant, err
 	case "inline":
@@ -91,7 +89,8 @@ func (s *Service) authoredCombatant(
 			snapshot = dbmodels.JSONMap{}
 		}
 		return dbmodels.EncounterCombatantEntity{
-			EncounterID: encounterID, SourceType: "inline", Side: command.Side,
+			EncounterID: encounterID, SourceType: "inline",
+			Side:        canonicalAuthoredCombatantSide(command.SourceType, command.Side),
 			DisplayName: command.DisplayName, AvatarURL: command.AvatarURL,
 			ColorLabel: "neutral", ArmorClass: max(1, command.ArmorClass),
 			MaxHitPoints:     max(1, command.MaxHitPoints),
@@ -103,4 +102,17 @@ func (s *Service) authoredCombatant(
 			"unsupported_source_type", "sourceType must be player, creature, or inline", nil,
 		)
 	}
+}
+
+// The external authoring API describes encounter allegiance as enemy/ally,
+// while combat setup uses player/friendly/enemy groups. Persist the latter so
+// authored combatants are immediately usable by the browser combat workflow.
+func canonicalAuthoredCombatantSide(sourceType, side string) string {
+	if normalizedToken(sourceType, "") == "player" {
+		return "player"
+	}
+	if normalizedToken(side, "") == "ally" {
+		return "friendly"
+	}
+	return normalizedToken(side, "")
 }

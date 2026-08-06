@@ -182,7 +182,14 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 		t.Fatalf("get_encounter did not retain the persisted ruleset: %+v", readback)
 	}
 	foundStandardCreature := false
+	foundPlayer := false
 	for _, combatant := range readback.Combatants {
+		if combatant.PlayerID == player.ID {
+			foundPlayer = true
+			if combatant.SourceType != "player" || combatant.Side != "player" {
+				t.Fatalf("MCP-generated player was not usable by initiative setup: %+v", combatant)
+			}
+		}
 		if combatant.Snapshot["standardCreatureId"] != standardCreatureID {
 			continue
 		}
@@ -193,6 +200,74 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	}
 	if !foundStandardCreature {
 		t.Fatalf("generated standard creature reference was not persisted: %+v", readback.Combatants)
+	}
+	if !foundPlayer {
+		t.Fatalf("generated encounter omitted the selected player: %+v", readback.Combatants)
+	}
+
+	authoredResult := callMCPTool(t, session, "create_encounter", map[string]any{
+		"campaignId": campaign.ID,
+		"encounter": map[string]any{
+			"idempotencyKey": "mcp-authored-player-roster-1",
+			"name":           "The Authored Wolf Crossing",
+			"combatants": []map[string]any{
+				{"sourceType": "player", "playerId": player.ID, "side": "ally"},
+				{"sourceType": "creature", "creatureId": creature.ID, "side": "enemy"},
+			},
+		},
+	})
+	if authoredResult.IsError {
+		t.Fatalf("create_encounter returned an error: %+v", authoredResult)
+	}
+	var authored appdomain.EncounterWriteResult
+	decodeMCPStructured(t, authoredResult, &authored)
+	authoredReadResult := callMCPTool(t, session, "get_encounter", map[string]any{
+		"campaignId": campaign.ID, "encounterId": authored.ID,
+	})
+	if authoredReadResult.IsError {
+		t.Fatalf("get_encounter returned an error: %+v", authoredReadResult)
+	}
+	var authoredReadback appdomain.EncounterDetails
+	decodeMCPStructured(t, authoredReadResult, &authoredReadback)
+	if len(authoredReadback.Combatants) != 2 {
+		t.Fatalf("authored encounter roster was incomplete: %+v", authoredReadback.Combatants)
+	}
+	authoredPlayerFound := false
+	for _, combatant := range authoredReadback.Combatants {
+		if combatant.PlayerID == player.ID {
+			authoredPlayerFound = true
+			if combatant.Side != "player" {
+				t.Fatalf("MCP-authored player was not usable by initiative setup: %+v", combatant)
+			}
+		}
+	}
+	if !authoredPlayerFound {
+		t.Fatalf("authored encounter omitted the selected player: %+v", authoredReadback.Combatants)
+	}
+
+	// Simulate an encounter created before player/ally sides were normalized.
+	requireArchiveNoError(t, database.Table("encounter_combatants").
+		Where("encounter_id = ? and player_id = ?", authored.ID, player.ID).
+		Update("side", "ally").Error)
+	legacyReadResult := callMCPTool(t, session, "get_encounter", map[string]any{
+		"campaignId": campaign.ID, "encounterId": authored.ID,
+	})
+	if legacyReadResult.IsError {
+		t.Fatalf("get_encounter could not read a legacy roster: %+v", legacyReadResult)
+	}
+	var legacyReadback appdomain.EncounterDetails
+	decodeMCPStructured(t, legacyReadResult, &legacyReadback)
+	for _, combatant := range legacyReadback.Combatants {
+		if combatant.PlayerID == player.ID && combatant.Side != "player" {
+			t.Fatalf("legacy MCP player side was not normalized on read: %+v", combatant)
+		}
+	}
+	run, err := stores.Runs.StartEncounter(ctx, owner.ID, authored.ID, true)
+	requireArchiveNoError(t, err)
+	for _, combatant := range run.Combatants {
+		if combatant.PlayerID == player.ID && combatant.Side != "player" {
+			t.Fatalf("MCP-authored player was missing from the initiative player group: %+v", combatant)
+		}
 	}
 
 	replayedResult := callMCPTool(t, session, "create_generated_encounter", map[string]any{
