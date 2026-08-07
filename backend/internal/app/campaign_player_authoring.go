@@ -98,7 +98,7 @@ func (s *Service) UpdateCampaign(
 			First(&entity).Error; err != nil {
 			return storeError(err, "campaign")
 		}
-		if !entity.UpdatedAt.Equal(*command.ExpectedUpdatedAt) {
+		if !databaseTimestampEqual(entity.UpdatedAt, *command.ExpectedUpdatedAt) {
 			return NewError(CodeConflict, "campaign changed since it was read", map[string]any{
 				"actualUpdatedAt": entity.UpdatedAt,
 			})
@@ -338,7 +338,7 @@ func (s *Service) mutatePlayer(
 				"campaignId": actualCampaignID,
 			})
 		}
-		if !entity.UpdatedAt.Equal(*expectedUpdatedAt) {
+		if !databaseTimestampEqual(entity.UpdatedAt, *expectedUpdatedAt) {
 			return NewError(CodeConflict, "player changed since it was read", map[string]any{
 				"actualUpdatedAt": entity.UpdatedAt,
 			})

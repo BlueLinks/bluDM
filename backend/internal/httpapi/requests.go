@@ -372,6 +372,9 @@ func (req *actionRollPartRequest) normalize(_ int) {
 	if req.DamageType == "" {
 		req.DamageType = "bludgeoning"
 	}
+	if req.DiceCount == 0 && req.DieSize == 0 && req.FixedValue != 0 {
+		return
+	}
 	if req.DiceCount < 1 {
 		req.DiceCount = 1
 	}

@@ -9,6 +9,7 @@ import (
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type PlayerStore struct {
@@ -94,7 +95,7 @@ func (s PlayerStore) Update(ctx context.Context, ownerUserID, playerID string, i
 	updated.ID = entity.ID
 	updated.CurrentHitPoints = currentHP
 	updated.CreatedAt = entity.CreatedAt
-	if err := s.db.WithContext(ctx).Save(&updated).Error; err != nil {
+	if err := s.db.WithContext(ctx).Clauses(clause.Returning{}).Save(&updated).Error; err != nil {
 		return models.Player{}, err
 	}
 	return playerFromEntity(updated), nil

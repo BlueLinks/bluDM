@@ -11,7 +11,7 @@ func TestNPCAbilityTokensPreserveCombatEnumValues(t *testing.T) {
 		DisplaySection:  "bonus_action",
 		HitSpecialEvent: "heal_caster_full",
 		Rolls: []NPCActionRollCommand{{
-			RollKind: "max_hp_reduction",
+			RollKind: "max_hp_reduction", FixedValue: 5,
 		}},
 	}}
 	command := NPCCommand{Actions: &actions}

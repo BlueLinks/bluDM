@@ -97,7 +97,7 @@ func (s *Service) UpdateLocation(
 			First(&entity).Error; err != nil {
 			return storeError(err, "location")
 		}
-		if !entity.UpdatedAt.Equal(*command.ExpectedUpdatedAt) {
+		if !databaseTimestampEqual(entity.UpdatedAt, *command.ExpectedUpdatedAt) {
 			return NewError(CodeConflict, "location changed since it was read", map[string]any{
 				"actualUpdatedAt": entity.UpdatedAt,
 			})
@@ -116,7 +116,7 @@ func (s *Service) UpdateLocation(
 		updated := locationEntity(campaignID, command)
 		updated.ID, updated.CreatedAt = entity.ID, entity.CreatedAt
 		entity = updated
-		if err := tx.WithContext(ctx).Save(&entity).Error; err != nil {
+		if err := tx.WithContext(ctx).Clauses(clause.Returning{}).Save(&entity).Error; err != nil {
 			return err
 		}
 		result = LocationWriteResult{

@@ -10,6 +10,7 @@ import (
 	"bludm/backend/internal/rulesets"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type CampaignStore struct {
@@ -81,7 +82,7 @@ func (s CampaignStore) Update(ctx context.Context, ownerUserID, campaignID strin
 	campaign.Description = input.Description
 	campaign.AllowedStandardSources = input.AllowedStandardSources
 	campaign.EncounterRuleset = input.EncounterRuleset
-	if err := s.db.WithContext(ctx).Save(&campaign).Error; err != nil {
+	if err := s.db.WithContext(ctx).Clauses(clause.Returning{}).Save(&campaign).Error; err != nil {
 		return models.Campaign{}, err
 	}
 	return campaignFromEntity(campaign), nil

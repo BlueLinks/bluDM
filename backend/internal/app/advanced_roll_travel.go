@@ -139,7 +139,7 @@ func (s *Service) UpdateRollTable(
 		if err != nil {
 			return storeError(err, "roll table")
 		}
-		if !entity.UpdatedAt.Equal(*command.ExpectedUpdatedAt) {
+		if !databaseTimestampEqual(entity.UpdatedAt, *command.ExpectedUpdatedAt) {
 			return NewError(
 				CodeConflict, "roll table changed after it was read",
 				map[string]any{"currentUpdatedAt": entity.UpdatedAt},
@@ -150,7 +150,7 @@ func (s *Service) UpdateRollTable(
 		entity.Category = normalizedToken(command.Category, "custom")
 		entity.Tags = pq.StringArray(normalizedStringList(command.Tags))
 		entity.DieExpression = strings.ToLower(strings.TrimSpace(command.DieExpression))
-		if err := tx.WithContext(ctx).Save(&entity).Error; err != nil {
+		if err := tx.WithContext(ctx).Clauses(clause.Returning{}).Save(&entity).Error; err != nil {
 			return err
 		}
 		if err := tx.WithContext(ctx).Where("table_id = ?", entity.ID).

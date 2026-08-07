@@ -158,9 +158,15 @@ func actionRollsFromInput(rolls []models.ActionRollPart) []models.ActionRollPart
 	for index, roll := range rolls {
 		roll.ID = ""
 		roll.SortOrder = index
-		roll.DiceCount = positiveOrDefault(roll.DiceCount, 1)
-		roll.DieSize = positiveOrDefault(roll.DieSize, 6)
+		roll.DiceCount, roll.DieSize = normalizedActionRollDice(roll)
 		normalized = append(normalized, roll)
 	}
 	return normalized
+}
+
+func normalizedActionRollDice(roll models.ActionRollPart) (int, int) {
+	if roll.DiceCount == 0 && roll.DieSize == 0 && roll.FixedValue != 0 {
+		return 0, 0
+	}
+	return positiveOrDefault(roll.DiceCount, 1), positiveOrDefault(roll.DieSize, 6)
 }

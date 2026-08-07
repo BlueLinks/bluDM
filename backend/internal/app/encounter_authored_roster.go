@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"strings"
 
 	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/models"
@@ -56,7 +57,9 @@ func (s *Service) authoredCombatant(
 				"unknown_player", "unknown or cross-campaign player ID", nil,
 			)
 		}
-		return playerCombatant(encounterID, player, sortOrder)
+		combatant, err := playerCombatant(encounterID, player, sortOrder)
+		applyAuthoredCombatantOverrides(&combatant, command)
+		return combatant, err
 	case "creature":
 		creature, err := s.stores.Creatures.ByID(ctx, principal.UserID, command.CreatureID)
 		if store.IsNotFound(err) {
@@ -81,7 +84,7 @@ func (s *Service) authoredCombatant(
 		delete(combatant.Snapshot, "generatorVersion")
 		delete(combatant.Snapshot, "seed")
 		combatant.Side = canonicalAuthoredCombatantSide(command.SourceType, command.Side)
-		combatant.RolledHP = command.RolledHP
+		applyAuthoredCombatantOverrides(&combatant, command)
 		return combatant, err
 	case "inline":
 		snapshot := dbmodels.JSONMap(command.Snapshot)
@@ -102,6 +105,29 @@ func (s *Service) authoredCombatant(
 			"unsupported_source_type", "sourceType must be player, creature, or inline", nil,
 		)
 	}
+}
+
+func applyAuthoredCombatantOverrides(
+	combatant *dbmodels.EncounterCombatantEntity,
+	command EncounterCombatantCommand,
+) {
+	if name := strings.TrimSpace(command.DisplayName); name != "" {
+		combatant.DisplayName = name
+	}
+	if avatarURL := strings.TrimSpace(command.AvatarURL); avatarURL != "" {
+		combatant.AvatarURL = avatarURL
+	}
+	if command.ArmorClass > 0 {
+		combatant.ArmorClass = command.ArmorClass
+	}
+	if command.MaxHitPoints > 0 {
+		combatant.MaxHitPoints = command.MaxHitPoints
+		combatant.CurrentHitPoints = min(combatant.CurrentHitPoints, command.MaxHitPoints)
+	}
+	if command.CurrentHitPoints > 0 {
+		combatant.CurrentHitPoints = min(command.CurrentHitPoints, combatant.MaxHitPoints)
+	}
+	combatant.RolledHP = command.RolledHP
 }
 
 // The external authoring API describes encounter allegiance as enemy/ally,
