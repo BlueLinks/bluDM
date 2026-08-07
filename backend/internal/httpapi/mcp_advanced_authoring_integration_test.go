@@ -126,6 +126,7 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 	var npc appdomain.NPCWriteResult
 	decodeMCPStructured(t, npcResult, &npc)
 	if len(npc.Actions) != 1 || npc.Actions[0].Name != "Walking Staff" ||
+		npc.Actions[0].ActionType != "melee_weapon" || npc.Actions[0].DisplaySection != "action" ||
 		len(npc.Actions[0].Rolls) != 1 || npc.Actions[0].Rolls[0].DieSize != 6 ||
 		npc.Spellcasting.SpellcastingAbility != "int" || npc.Spellcasting.CasterLevel != 2 {
 		t.Fatalf("NPC typed abilities were not created atomically: %+v", npc)

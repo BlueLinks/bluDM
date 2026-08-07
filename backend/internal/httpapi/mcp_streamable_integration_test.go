@@ -264,8 +264,11 @@ func TestMCPStreamableHTTPAgentEncounterWorkflow(t *testing.T) {
 	if !authoredPlayerFound || authoredCreatureCombatantID == "" {
 		t.Fatalf("authored encounter omitted the selected player: %+v", authoredReadback.Combatants)
 	}
+	requireArchiveNoError(t, database.Table("encounter_combatants").
+		Where("id = ?", authoredCreatureCombatantID).
+		Update("current_hit_points", 4).Error)
 	assertMCPEncounterCreatureRepoint(
-		t, session, campaign.ID, authored.ID, authoredCreatureCombatantID, replacementCreature,
+		t, session, campaign.ID, authored.ID, authoredCreatureCombatantID, replacementCreature, 4,
 	)
 
 	// Simulate an encounter created before player/ally sides were normalized.

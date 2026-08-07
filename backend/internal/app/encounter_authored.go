@@ -378,11 +378,16 @@ func (s *Service) replaceCombatantCreature(
 	if combatant.Side == "friendly" {
 		side = "ally"
 	}
+	currentHitPoints := combatant.CurrentHitPoints
+	wasAtFullHealth := currentHitPoints >= combatant.MaxHitPoints
 	replacement, err := s.authoredCombatant(ctx, principal, campaign, combatant.EncounterID, combatant.SortOrder, EncounterCombatantCommand{
 		SourceType: "creature", CreatureID: creatureID, Side: side, RolledHP: combatant.RolledHP,
 	})
 	if err != nil {
 		return err
+	}
+	if !wasAtFullHealth {
+		replacement.CurrentHitPoints = min(max(currentHitPoints, 0), replacement.MaxHitPoints)
 	}
 	for _, key := range []string{"authoringOrigin", "generationBatchId", "generatorVersion", "seed"} {
 		if value, ok := combatant.Snapshot[key]; ok {

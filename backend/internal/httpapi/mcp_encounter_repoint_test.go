@@ -16,6 +16,7 @@ func assertMCPEncounterCreatureRepoint(
 	encounterID string,
 	combatantID string,
 	replacement models.Creature,
+	expectedCurrentHitPoints int,
 ) {
 	t.Helper()
 	result := callMCPTool(t, session, "update_encounter", map[string]any{
@@ -41,7 +42,8 @@ func assertMCPEncounterCreatureRepoint(
 	for _, combatant := range readback.Combatants {
 		if combatant.ID == combatantID && combatant.CreatureID == replacement.ID &&
 			combatant.ArmorClass == replacement.ArmorClass &&
-			combatant.MaxHitPoints == replacement.HitPoints && combatant.Snapshot["actions"] != nil {
+			combatant.MaxHitPoints == replacement.HitPoints &&
+			combatant.CurrentHitPoints == expectedCurrentHitPoints && combatant.Snapshot["actions"] != nil {
 			return
 		}
 	}
