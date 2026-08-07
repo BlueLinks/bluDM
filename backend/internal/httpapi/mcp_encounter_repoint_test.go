@@ -41,6 +41,7 @@ func assertMCPEncounterCreatureRepoint(
 	}
 	for _, combatant := range readback.Combatants {
 		if combatant.ID == combatantID && combatant.CreatureID == replacement.ID &&
+			combatant.DisplayName == replacement.Name &&
 			combatant.ArmorClass == replacement.ArmorClass &&
 			combatant.MaxHitPoints == replacement.HitPoints &&
 			combatant.CurrentHitPoints == expectedCurrentHitPoints && combatant.Snapshot["actions"] != nil {

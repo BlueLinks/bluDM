@@ -11,6 +11,7 @@ import (
 
 	appdomain "bludm/backend/internal/app"
 	"bludm/backend/internal/config"
+	dbmodels "bludm/backend/internal/db"
 	"bludm/backend/internal/generation"
 	"bludm/backend/internal/store"
 
@@ -22,6 +23,17 @@ import (
 // and shop-stock prompts in docs/mcp/agent-evals.md.
 func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 	database, stores := newImportExportArchiveTestStores(t)
+	requireArchiveNoError(t, database.Exec(`
+		create or replace function touch_updated_at() returns trigger as $$
+		begin
+			new.updated_at = now();
+			return new;
+		end;
+		$$ language plpgsql;
+		create trigger creatures_touch_updated_at
+		before update on creatures
+		for each row execute function touch_updated_at();
+	`).Error)
 	ctx := context.Background()
 	owner, err := stores.Auth.CreateUser(ctx, uniqueArchiveEmail("mcp-advanced"), "hash")
 	requireArchiveNoError(t, err)
@@ -114,6 +126,12 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 					"rollKind": "damage", "damageType": "bludgeoning",
 					"diceCount": 1, "dieSize": 6, "fixedValue": 1,
 				}},
+			}, map[string]any{
+				"name": "Steadying Word", "description": "Restores exactly 5 hit points.",
+				"actionType": "healing", "displaySection": "bonus_action",
+				"rolls": []any{map[string]any{
+					"rollKind": "healing", "diceCount": 0, "dieSize": 0, "fixedValue": 5,
+				}},
 			}},
 			"spellcasting": map[string]any{
 				"spellcastingAbility": "int", "casterLevel": 2,
@@ -125,9 +143,11 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 	assertMCPToolSuccess(t, "create_npc", npcResult)
 	var npc appdomain.NPCWriteResult
 	decodeMCPStructured(t, npcResult, &npc)
-	if len(npc.Actions) != 1 || npc.Actions[0].Name != "Walking Staff" ||
+	if len(npc.Actions) != 2 || npc.Actions[0].Name != "Walking Staff" ||
 		npc.Actions[0].ActionType != "melee_weapon" || npc.Actions[0].DisplaySection != "action" ||
 		len(npc.Actions[0].Rolls) != 1 || npc.Actions[0].Rolls[0].DieSize != 6 ||
+		len(npc.Actions[1].Rolls) != 1 || npc.Actions[1].Rolls[0].DiceCount != 0 ||
+		npc.Actions[1].Rolls[0].DieSize != 0 || npc.Actions[1].Rolls[0].FixedValue != 5 ||
 		npc.Spellcasting.SpellcastingAbility != "int" || npc.Spellcasting.CasterLevel != 2 {
 		t.Fatalf("NPC typed abilities were not created atomically: %+v", npc)
 	}
@@ -146,9 +166,27 @@ func TestMCPStreamableHTTPAdvancedAuthoringWorkflow(t *testing.T) {
 	assertMCPToolSuccess(t, "update_npc", updatedNPCResult)
 	var updatedNPC appdomain.NPCWriteResult
 	decodeMCPStructured(t, updatedNPCResult, &updatedNPC)
-	if len(updatedNPC.Actions) != 1 || updatedNPC.Spellcasting.SpellSaveDC != 12 {
+	if len(updatedNPC.Actions) != 2 || updatedNPC.Spellcasting.SpellSaveDC != 12 {
 		t.Fatalf("omitted NPC abilities were not preserved during scalar update: %+v", updatedNPC)
 	}
+	var persistedNPC dbmodels.CreatureEntity
+	requireArchiveNoError(t, database.First(&persistedNPC, "id = ?", updatedNPC.ID).Error)
+	if !updatedNPC.UpdatedAt.Equal(persistedNPC.UpdatedAt) {
+		t.Fatalf("NPC response returned an unusable concurrency token: response=%s persisted=%s",
+			updatedNPC.UpdatedAt, persistedNPC.UpdatedAt)
+	}
+	followupNPCResult := callMCPTool(t, session, "update_npc", map[string]any{
+		"campaignId": campaign.ID, "npcId": npc.ID,
+		"npc": map[string]any{
+			"idempotencyKey": "advanced-npc-followup", "expectedUpdatedAt": updatedNPC.UpdatedAt,
+			"name": updatedNPC.Name, "description": "Keeper of the restored waystone.",
+			"size": updatedNPC.Size, "creatureType": updatedNPC.CreatureType, "alignment": updatedNPC.Alignment,
+			"armorClass": updatedNPC.ArmorClass, "hitPoints": updatedNPC.HitPoints,
+			"hitDice": updatedNPC.HitDice, "challengeRating": updatedNPC.ChallengeRating, "xp": updatedNPC.XP,
+			"statBlock": updatedNPC.StatBlock,
+		},
+	})
+	assertMCPToolSuccess(t, "update_npc follow-up with returned concurrency token", followupNPCResult)
 
 	linkNPC := callMCPTool(t, session, "link_npc_to_location", map[string]any{
 		"campaignId": campaign.ID,

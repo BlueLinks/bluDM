@@ -395,10 +395,18 @@ func (s *Service) replaceCombatantCreature(
 		}
 	}
 	replacement.ID = combatant.ID
-	replacement.DisplayName = combatant.DisplayName
+	if combatantDisplayNameWasCustomized(combatant) {
+		replacement.DisplayName = combatant.DisplayName
+	}
 	replacement.CreatedAt = combatant.CreatedAt
 	*combatant = replacement
 	return nil
+}
+
+func combatantDisplayNameWasCustomized(combatant *dbmodels.EncounterCombatantEntity) bool {
+	snapshotName, _ := combatant.Snapshot["name"].(string)
+	snapshotName = strings.TrimSpace(snapshotName)
+	return snapshotName == "" || strings.TrimSpace(combatant.DisplayName) != snapshotName
 }
 
 func applyCombatantPatch(

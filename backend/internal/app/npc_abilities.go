@@ -38,9 +38,11 @@ func validateNPCAbilities(command NPCCommand) error {
 				return ValidationError("invalid_miss_effect", "missEffect must be none, half, or full", map[string]any{"index": index})
 			}
 			for rollIndex, roll := range action.Rolls {
-				if roll.DiceCount < 0 || roll.DieSize < 0 || (roll.DiceCount > 0 && roll.DieSize == 0) {
+				fixedOnly := roll.DiceCount == 0 && roll.DieSize == 0 && roll.FixedValue != 0
+				diceRoll := roll.DiceCount > 0 && roll.DieSize >= 2
+				if !fixedOnly && !diceRoll {
 					return ValidationError(
-						"invalid_action_roll", "roll diceCount and dieSize must describe a valid non-negative roll",
+						"invalid_action_roll", "rolls need either diceCount with dieSize, or a non-zero fixedValue",
 						map[string]any{"actionIndex": index, "rollIndex": rollIndex},
 					)
 				}

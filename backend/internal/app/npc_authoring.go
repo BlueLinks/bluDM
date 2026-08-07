@@ -108,7 +108,7 @@ func (s *Service) UpdateNPC(
 		if err != nil {
 			return storeError(err, "npc")
 		}
-		if !entity.UpdatedAt.Equal(*command.ExpectedUpdatedAt) {
+		if !databaseTimestampEqual(entity.UpdatedAt, *command.ExpectedUpdatedAt) {
 			return NewError(CodeConflict, "NPC changed since it was read", map[string]any{
 				"actualUpdatedAt": entity.UpdatedAt,
 			})
@@ -116,7 +116,9 @@ func (s *Service) UpdateNPC(
 		updated := creatureEntity(principal.UserID, command)
 		updated.ID, updated.CreatedAt = entity.ID, entity.CreatedAt
 		entity = updated
-		if err := tx.WithContext(ctx).Save(&entity).Error; err != nil {
+		// PostgreSQL's touch_updated_at trigger owns the persisted concurrency
+		// token. RETURNING keeps the response token in sync with that value.
+		if err := tx.WithContext(ctx).Clauses(clause.Returning{}).Save(&entity).Error; err != nil {
 			return err
 		}
 		actions, spellcasting, err := persistNPCAbilities(ctx, tx, principal, entity.ID, command)

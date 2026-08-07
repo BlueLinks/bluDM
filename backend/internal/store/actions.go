@@ -425,18 +425,27 @@ func replaceTemplateRolls(ctx context.Context, tx *gorm.DB, templateID string, r
 		return err
 	}
 	for index, roll := range rolls {
+		diceCount, dieSize := normalizedActionRollDice(roll)
 		entity := dbmodels.ActionTemplateRollPartEntity{
 			ActionTemplateID: templateID,
 			SortOrder:        index,
 			RollKind:         roll.RollKind,
 			DamageType:       roll.DamageType,
 			Magical:          roll.Magical,
-			DiceCount:        positiveOrDefault(roll.DiceCount, 1),
-			DieSize:          positiveOrDefault(roll.DieSize, 6),
+			DiceCount:        diceCount,
+			DieSize:          dieSize,
 			FixedValue:       roll.FixedValue,
 		}
 		if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 			return err
+		}
+		if diceCount == 0 && dieSize == 0 {
+			if err := tx.WithContext(ctx).Model(&entity).Updates(map[string]any{
+				"dice_count": 0,
+				"die_size":   0,
+			}).Error; err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -447,18 +456,27 @@ func replaceCreatureActionRolls(ctx context.Context, tx *gorm.DB, actionID strin
 		return err
 	}
 	for index, roll := range rolls {
+		diceCount, dieSize := normalizedActionRollDice(roll)
 		entity := dbmodels.CreatureActionRollPartEntity{
 			CreatureActionID: actionID,
 			SortOrder:        index,
 			RollKind:         roll.RollKind,
 			DamageType:       roll.DamageType,
 			Magical:          roll.Magical,
-			DiceCount:        positiveOrDefault(roll.DiceCount, 1),
-			DieSize:          positiveOrDefault(roll.DieSize, 6),
+			DiceCount:        diceCount,
+			DieSize:          dieSize,
 			FixedValue:       roll.FixedValue,
 		}
 		if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 			return err
+		}
+		if diceCount == 0 && dieSize == 0 {
+			if err := tx.WithContext(ctx).Model(&entity).Updates(map[string]any{
+				"dice_count": 0,
+				"die_size":   0,
+			}).Error; err != nil {
+				return err
+			}
 		}
 	}
 	return nil

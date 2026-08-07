@@ -134,3 +134,33 @@ func TestApplyCombatantPatchCanonicalizesAuthoredSide(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyAuthoredCombatantOverridesHonorsExplicitValues(t *testing.T) {
+	entity := dbmodels.EncounterCombatantEntity{
+		DisplayName: "Goblin", AvatarURL: "default.png", ArmorClass: 15,
+		MaxHitPoints: 7, CurrentHitPoints: 7,
+	}
+	applyAuthoredCombatantOverrides(&entity, EncounterCombatantCommand{
+		DisplayName: "Sly Cutter", AvatarURL: "custom.png", ArmorClass: 16,
+		MaxHitPoints: 12, CurrentHitPoints: 4, RolledHP: true,
+	})
+	if entity.DisplayName != "Sly Cutter" || entity.AvatarURL != "custom.png" ||
+		entity.ArmorClass != 16 || entity.MaxHitPoints != 12 ||
+		entity.CurrentHitPoints != 4 || !entity.RolledHP {
+		t.Fatalf("explicit authored combatant values were ignored: %+v", entity)
+	}
+}
+
+func TestCombatantDisplayNameCustomizationDetection(t *testing.T) {
+	defaultName := dbmodels.EncounterCombatantEntity{
+		DisplayName: "Goblin", Snapshot: dbmodels.JSONMap{"name": "Goblin"},
+	}
+	if combatantDisplayNameWasCustomized(&defaultName) {
+		t.Fatal("canonical creature name was treated as a custom display name")
+	}
+	customName := defaultName
+	customName.DisplayName = "Sly Cutter"
+	if !combatantDisplayNameWasCustomized(&customName) {
+		t.Fatal("custom encounter display name was not detected")
+	}
+}
