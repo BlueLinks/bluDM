@@ -67,13 +67,17 @@ func validateNPCAbilities(command NPCCommand) error {
 }
 
 func oneOfDefault(value, fallback string, allowed ...string) bool {
-	value = normalizedToken(value, fallback)
+	value = normalizedAbilityToken(value, fallback)
 	for _, candidate := range allowed {
-		if value == candidate {
+		if value == normalizedAbilityToken(candidate, candidate) {
 			return true
 		}
 	}
 	return false
+}
+
+func normalizedAbilityToken(value, fallback string) string {
+	return strings.ReplaceAll(normalizedToken(value, fallback), "-", "_")
 }
 
 func persistNPCAbilities(
@@ -115,7 +119,7 @@ func npcActionInput(command NPCActionCommand) store.ActionInput {
 	rolls := make([]models.ActionRollPart, 0, len(command.Rolls))
 	for _, roll := range command.Rolls {
 		rolls = append(rolls, models.ActionRollPart{
-			RollKind: normalizedToken(roll.RollKind, "damage"), DamageType: strings.ToLower(strings.TrimSpace(roll.DamageType)),
+			RollKind: normalizedAbilityToken(roll.RollKind, "damage"), DamageType: strings.ToLower(strings.TrimSpace(roll.DamageType)),
 			Magical: roll.Magical, DiceCount: roll.DiceCount, DieSize: roll.DieSize, FixedValue: roll.FixedValue,
 		})
 	}
@@ -124,9 +128,9 @@ func npcActionInput(command NPCActionCommand) store.ActionInput {
 		Recharge: strings.TrimSpace(command.Recharge), LimitedUses: command.LimitedUses,
 		LimitType: normalizedToken(command.LimitType, "day"), Reach: command.Reach, Range: command.Range,
 		AOEType: strings.TrimSpace(command.AOEType), AOESize: command.AOESize,
-		ActionType: normalizedToken(command.ActionType, "other"), DisplaySection: normalizedToken(command.DisplaySection, "action"),
+		ActionType: normalizedAbilityToken(command.ActionType, "other"), DisplaySection: normalizedAbilityToken(command.DisplaySection, "action"),
 		AttackModifier: command.AttackModifier, MissEffect: normalizedToken(command.MissEffect, "none"),
-		HitSpecialEvent: normalizedToken(command.HitSpecialEvent, "none"), IconSource: "none", Rolls: rolls,
+		HitSpecialEvent: normalizedAbilityToken(command.HitSpecialEvent, "none"), IconSource: "none", Rolls: rolls,
 	}
 }
 
