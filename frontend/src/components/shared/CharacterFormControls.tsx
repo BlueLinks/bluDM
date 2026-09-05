@@ -51,7 +51,7 @@ export function parseDiceFormula(
   fallback = { diceCount: "1", dieSize: "6", fixedValue: "0" },
 ) {
   const match = formula
-    .trim()
+    .replace(/\s+/g, "")
     .toLowerCase()
     .match(/^(\d+)d(4|6|8|10|12|20)([+-]\d+)?$/);
   if (!match) return fallback;
@@ -89,6 +89,7 @@ function StepperNumber({
         <button
           className="grid h-10 w-8 shrink-0 place-items-center border-r border-border text-base text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
+          aria-label={`Decrease ${label}`}
           onClick={() => onStep(-1)}
         >
           -
@@ -104,6 +105,7 @@ function StepperNumber({
         <button
           className="grid h-10 w-8 shrink-0 place-items-center border-l border-border text-base text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
           type="button"
+          aria-label={`Increase ${label}`}
           onClick={() => onStep(1)}
         >
           +
@@ -326,7 +328,7 @@ function DamageChecklist({
             key={damage.id}
           >
             <span className="flex items-center gap-2">
-              <damage.icon className="h-4 w-4 text-accent" />
+              <damage.icon className={`h-4 w-4 ${damage.tone}`} />
               {damage.label}
             </span>
             <input

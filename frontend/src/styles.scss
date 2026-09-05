@@ -360,3 +360,24 @@ input.initiative-number-input::-webkit-inner-spin-button {
     animation: none !important;
   }
 }
+
+// Creature fields share one surface; preview and navigation provide the hierarchy.
+.creature-editor-fields {
+  fieldset {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    padding: 1rem 0;
+  }
+  fieldset + fieldset {
+    border-top: 1px solid var(--border);
+  }
+  legend {
+    padding: 0;
+  }
+  [data-editor-section]:not([hidden]) {
+    display: grid;
+    gap: 1rem;
+  }
+}

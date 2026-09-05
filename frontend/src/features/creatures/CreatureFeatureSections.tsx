@@ -72,7 +72,7 @@ export function CreatureFeatureSections({
           </Button>
         </div>
       </div>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 @md:grid-cols-2">
         <Field label="Legendary action introduction">
           <Textarea
             rows={3}

@@ -40,14 +40,19 @@ export function actionPayload(action: ActionFormState) {
     iconAssetId: action.iconAssetId,
     iconUrl: action.iconUrl,
     iconAttribution: action.iconAttribution,
-    rolls: action.rolls.map((roll) => ({
-      rollKind: roll.rollKind,
-      damageType: roll.damageType,
-      magical: roll.magical,
-      diceCount: Number(roll.diceCount) || 1,
-      dieSize: Number(roll.dieSize) || 6,
-      fixedValue: Number(roll.fixedValue) || 0,
-    })),
+    rolls: action.rolls.map((roll) => {
+      const diceProvided = Boolean(roll.diceCount.trim());
+      const fixedOnly = !diceProvided && Boolean(roll.fixedValue.trim());
+      const diceCount = diceProvided ? Math.max(0, Number(roll.diceCount) || 0) : fixedOnly ? 0 : 1;
+      return {
+        rollKind: roll.rollKind,
+        damageType: roll.damageType,
+        magical: roll.magical,
+        diceCount,
+        dieSize: diceCount === 0 ? 0 : Number(roll.dieSize) || 6,
+        fixedValue: Number(roll.fixedValue) || 0,
+      };
+    }),
   };
 }
 
@@ -449,6 +454,7 @@ export function creaturePayload(payload: CreatureFormState) {
       savingThrowProficiencies: payload.savingThrowProficiencies,
       skillProficiencies: payload.skillProficiencies,
       skillExpertise: payload.skillExpertise,
+      skillAdjustments: payload.skillAdjustments ?? {},
       damageVulnerabilities: payload.damageVulnerabilities,
       damageResistances: payload.damageResistances,
       damageImmunities: payload.damageImmunities,

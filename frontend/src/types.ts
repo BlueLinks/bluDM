@@ -274,6 +274,8 @@ export type {
 export type { Item, ItemFormState } from "./types/items";
 
 export type CreatureSpellRef = {
+  prepared?: boolean;
+  innate?: boolean;
   spellId: string;
   librarySource: "user" | "standard";
   spellLevel: number;
@@ -392,6 +394,7 @@ export type CreatureFormState = {
   savingThrowProficiencies: string[];
   skillProficiencies: string[];
   skillExpertise: string[];
+  skillAdjustments?: Record<string, number>;
   damageVulnerabilities: string[];
   damageResistances: string[];
   damageImmunities: string[];

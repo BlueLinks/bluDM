@@ -90,6 +90,7 @@ export function FieldGrid({
 }
 
 const sidebarDetailClasses = {
+  creatureEditor: "grid gap-4 2xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]",
   catalog: "grid lg:grid-cols-[250px_minmax(0,1fr)]",
   compact: "grid gap-4 xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] xl:items-stretch",
   editor: "grid gap-2 xl:grid-cols-[minmax(0,1.29fr)_minmax(28rem,0.71fr)] xl:items-start",

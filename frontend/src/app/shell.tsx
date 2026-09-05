@@ -212,6 +212,7 @@ export function WorkspaceShell({
                       </button>
                     ) : !isCombatTracker && !isInitiativeSetup && parent ? (
                       <Button
+                        aria-label="Back"
                         type="button"
                         size="sm"
                         variant="ghost"
@@ -221,7 +222,7 @@ export function WorkspaceShell({
                           if (parent) void navigate(parent);
                         }}
                       >
-                        Back
+                        <span className="hidden sm:inline">Back</span>
                       </Button>
                     ) : null}
                     <WorkspaceBreadcrumbs

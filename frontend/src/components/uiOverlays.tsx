@@ -137,12 +137,14 @@ export function IconNumberField({
   value,
   onChange,
   className = "w-36",
+  stepper = false,
 }: {
   icon: React.ElementType;
   label: string;
   value: string;
   onChange: (value: string) => void;
   className?: string;
+  stepper?: boolean;
 }) {
   return (
     <label className={["grid gap-2 text-sm font-medium", className].filter(Boolean).join(" ")}>
@@ -150,12 +152,36 @@ export function IconNumberField({
         <Icon className="h-4 w-4 text-accent" />
         {label}
       </span>
-      <Input
-        className="w-full text-center font-semibold"
-        type="number"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <span className="flex min-w-0 overflow-hidden rounded-md border border-border bg-background">
+        {stepper && (
+          <button
+            type="button"
+            className="w-9 shrink-0 hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={`Decrease ${label}`}
+            onClick={() => onChange(String(Math.max(0, (Number(value) || 0) - 1)))}
+          >
+            −
+          </button>
+        )}
+        <Input
+          className="min-w-0 w-full rounded-none border-0 text-center font-semibold"
+          aria-label={label}
+          min={stepper ? 0 : undefined}
+          type="number"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {stepper && (
+          <button
+            type="button"
+            className="w-9 shrink-0 hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label={`Increase ${label}`}
+            onClick={() => onChange(String((Number(value) || 0) + 1))}
+          >
+            +
+          </button>
+        )}
+      </span>
     </label>
   );
 }

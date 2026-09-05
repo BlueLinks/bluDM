@@ -1,4 +1,4 @@
-import { BookOpen, HeartPulse, Shield, Zap } from "lucide-react";
+import { BookOpen, Dice5, HeartPulse, Shield, Zap } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { AvatarImagePicker } from "../../components/AvatarImagePicker";
 import {
@@ -84,7 +84,7 @@ function CreatureBasicInfo({
           required
         />
       </Field>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 @sm:grid-cols-3">
         <Field label="Size">
           <Select
             options={creatureSizes.map((size) => ({ label: size, value: size }))}
@@ -113,7 +113,7 @@ function CreatureBasicInfo({
           />
         </Field>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[minmax(240px,1fr)_minmax(220px,1fr)_auto]">
+      <div className="grid gap-3 @xl:grid-cols-[minmax(240px,1fr)_minmax(220px,1fr)_auto]">
         <Field label="Type">
           <Select
             options={creatureTypes.map((type) => ({ label: type, value: type }))}
@@ -177,6 +177,7 @@ function CreatureMovement({
         {(["walkSpeed", "swimSpeed", "flySpeed", "burrowSpeed", "climbSpeed"] as const).map(
           (key) => (
             <IconNumberField
+              stepper
               key={key}
               icon={Zap}
               label={speedLabel(key)}
@@ -201,8 +202,9 @@ function CreatureHealth({
   return (
     <FormSection title="Health and AC">
       <div className="grid gap-4">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 @sm:grid-cols-2 @xl:grid-cols-3">
           <IconNumberField
+            stepper
             className="w-full"
             icon={Shield}
             label="AC"
@@ -210,6 +212,7 @@ function CreatureHealth({
             onChange={(value) => setForm({ ...form, armorClass: value })}
           />
           <IconNumberField
+            stepper
             className="w-full"
             icon={HeartPulse}
             label="HP"
@@ -217,33 +220,14 @@ function CreatureHealth({
             onChange={(value) => setForm({ ...form, hitPoints: value })}
           />
         </div>
-        <Field label="Hit Dice">
+        <div className="grid gap-2">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            <Dice5 className="h-4 w-4 text-accent" />
+            Hit dice
+          </span>
           <DiceFormulaInput
             value={hitDice}
             onChange={(next) => setForm({ ...form, hitDice: formatDiceFormula(next) })}
-          />
-        </Field>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Perception"
-            value={form.passivePerception}
-            onChange={(value) => setForm({ ...form, passivePerception: value })}
-          />
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Investigation"
-            value={form.passiveInvestigation}
-            onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
-          />
-          <IconNumberField
-            className="w-full"
-            icon={BookOpen}
-            label="Passive Insight"
-            value={form.passiveInsight}
-            onChange={(value) => setForm({ ...form, passiveInsight: value })}
           />
         </div>
       </div>
@@ -260,7 +244,7 @@ function CreatureChallenge({
 }) {
   return (
     <FormSection title="Challenge">
-      <div className="grid gap-4 sm:grid-cols-[180px_160px_80px]">
+      <div className="grid gap-4 @sm:grid-cols-[180px_160px_80px]">
         <Field label="Challenge Rating">
           <Select
             options={challengeRatings.map((rating) => ({ label: rating, value: rating }))}
@@ -303,7 +287,7 @@ function CreatureChallenge({
 
 function creatureProficiency(form: CreatureFormState) {
   const cr = Number(form.challengeRating.includes("/") ? 0 : form.challengeRating) || 0;
-  return Math.max(2, Math.min(9, Math.ceil((cr + 3) / 4) + 1));
+  return Math.max(2, Math.min(9, Math.ceil(cr / 4) + 1));
 }
 
 function speedLabel(key: "walkSpeed" | "swimSpeed" | "flySpeed" | "burrowSpeed" | "climbSpeed") {
@@ -311,4 +295,44 @@ function speedLabel(key: "walkSpeed" | "swimSpeed" | "flySpeed" | "burrowSpeed" 
     .replace("Speed", "")
     .replace(/^[a-z]/, (match) => match.toUpperCase())
     .concat(" speed");
+}
+
+export function CreaturePassiveScores({
+  form,
+  setForm,
+}: {
+  form: CreatureFormState;
+  setForm: CreatureFormSetter;
+}) {
+  return (
+    <FormSection title="Passive scores">
+      {" "}
+      <div className="grid gap-4 @sm:grid-cols-2 @xl:grid-cols-3">
+        <IconNumberField
+          stepper
+          className="w-full"
+          icon={BookOpen}
+          label="Passive Perception"
+          value={form.passivePerception}
+          onChange={(value) => setForm({ ...form, passivePerception: value })}
+        />
+        <IconNumberField
+          stepper
+          className="w-full"
+          icon={BookOpen}
+          label="Passive Investigation"
+          value={form.passiveInvestigation}
+          onChange={(value) => setForm({ ...form, passiveInvestigation: value })}
+        />
+        <IconNumberField
+          stepper
+          className="w-full"
+          icon={BookOpen}
+          label="Passive Insight"
+          value={form.passiveInsight}
+          onChange={(value) => setForm({ ...form, passiveInsight: value })}
+        />
+      </div>
+    </FormSection>
+  );
 }
