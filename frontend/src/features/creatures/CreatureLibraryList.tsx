@@ -13,7 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
-import { ActionRow, SidebarDetailLayout } from "../../components/layout";
+import { ActionRow, ResizableSplitLayout } from "../../components/layout";
 import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
 import { Button, EmptyMini, FloatingInput, Modal, Select } from "../../components/ui";
 import type { Creature } from "../../types";
@@ -263,64 +263,72 @@ function CreatureLibraryWorkspace({
   onSelect: (creature: Creature) => void;
 }) {
   return (
-    <SidebarDetailLayout variant="workspace" className="items-start">
-      <section
-        className="min-w-0 overflow-hidden rounded-lg border border-border bg-card"
-        aria-label="Creature results"
-      >
-        <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
-          <span role="status">{resultCount} creatures</span>
-          {hasFilters && (
-            <button type="button" className="p-1 text-primary underline" onClick={onClear}>
-              Clear filters
-            </button>
-          )}
-        </div>
-        {!resultCount && (
-          <div className="p-6">
-            <EmptyMini
-              copy={
-                scope === "mine" && customCount === 0
-                  ? "Your custom creatures will appear here. Create your first creature to get started."
-                  : "No creatures match these filters."
-              }
-            />
-          </div>
-        )}
-        {creatures.map((creature) => (
-          <CreatureRow
-            key={creature.id}
-            creature={creature}
-            active={active?.id === creature.id}
-            onSelect={() => onSelect(creature)}
-          />
-        ))}
-        {remaining > 0 && (
-          <div className="p-3">
-            <Button variant="outline" onClick={onLoadMore}>
-              Load more ({remaining} remaining)
-            </Button>
-          </div>
-        )}
-      </section>
-      {active && (
-        <aside
-          aria-label="Selected creature"
-          className="hidden min-w-0 rounded-lg border border-border bg-card p-4 xl:sticky xl:top-4 xl:block"
+    <ResizableSplitLayout
+      className="items-start"
+      defaultPrimary={64}
+      label="Resize creature list and preview"
+      visibleFrom="xl"
+      primary={
+        <section
+          className="min-w-0 overflow-hidden rounded-lg border border-border bg-card"
+          aria-label="Creature results"
         >
-          <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Creature preview
-            </span>
-            <Button size="sm" icon={Maximize2} variant="ghost" onClick={() => onExpand(active)}>
-              Full view
-            </Button>
+          <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
+            <span role="status">{resultCount} creatures</span>
+            {hasFilters && (
+              <button type="button" className="p-1 text-primary underline" onClick={onClear}>
+                Clear filters
+              </button>
+            )}
           </div>
-          <LoadedCreatureProfile creature={active} />
-          <CreatureProfileActions creature={active} onRemove={onRemove} />
-        </aside>
-      )}
-    </SidebarDetailLayout>
+          {!resultCount && (
+            <div className="p-6">
+              <EmptyMini
+                copy={
+                  scope === "mine" && customCount === 0
+                    ? "Your custom creatures will appear here. Create your first creature to get started."
+                    : "No creatures match these filters."
+                }
+              />
+            </div>
+          )}
+          {creatures.map((creature) => (
+            <CreatureRow
+              key={creature.id}
+              creature={creature}
+              active={active?.id === creature.id}
+              onSelect={() => onSelect(creature)}
+            />
+          ))}
+          {remaining > 0 && (
+            <div className="p-3">
+              <Button variant="outline" onClick={onLoadMore}>
+                Load more ({remaining} remaining)
+              </Button>
+            </div>
+          )}
+        </section>
+      }
+      secondary={
+        active ? (
+          <aside
+            aria-label="Selected creature"
+            className="resizable-preview-panel hidden min-w-0 rounded-lg border border-border bg-card p-4 xl:sticky xl:top-4 xl:block"
+          >
+            <div className="resizable-preview-header mb-4 flex items-center justify-between border-b border-border bg-card pb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Creature preview
+              </span>
+              <Button size="sm" icon={Maximize2} variant="ghost" onClick={() => onExpand(active)}>
+                Full view
+              </Button>
+            </div>
+            <LoadedCreatureProfile creature={active} />
+            <CreatureProfileActions creature={active} onRemove={onRemove} />
+          </aside>
+        ) : undefined
+      }
+    />
   );
 }
 

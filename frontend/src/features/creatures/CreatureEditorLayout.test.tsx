@@ -18,7 +18,7 @@ describe("CreatureEditorLayout", () => {
 
     const separator = screen.getByRole("separator", { name: "Resize editor and preview" });
     expect(separator.getAttribute("aria-valuenow")).toBe("60");
-    expect(separator.getAttribute("aria-valuetext")).toBe("Editor 60%, preview 40%");
+    expect(separator.getAttribute("aria-valuetext")).toBe("Left 60%, right 40%");
 
     fireEvent.keyDown(separator, { key: "End" });
     expect(separator.getAttribute("aria-valuenow")).toBe("70");

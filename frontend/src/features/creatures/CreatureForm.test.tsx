@@ -154,6 +154,13 @@ describe("custom creature library", () => {
     ]);
     render(<RouterProvider router={router} />);
     expect(screen.getByRole("button", { name: "View Ashen Wolf, my creation" })).toBeTruthy();
+    const separator = screen.getByRole("separator", {
+      name: "Resize creature list and preview",
+    });
+    expect(separator.getAttribute("aria-valuenow")).toBe("64");
+    expect(screen.getByLabelText("Selected creature").className).toContain(
+      "resizable-preview-panel",
+    );
     expect(await screen.findByText("Ember Bite.")).toBeTruthy();
     expect(screen.getByText(/Faerie Fire/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /SRD library/ }));
