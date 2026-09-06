@@ -1,5 +1,12 @@
 import { BookOpen, Eye, FileText, Shield, Sparkles, Swords, UserRound } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 import { ActionRow, SidebarDetailLayout } from "../../components/layout";
 import {
   Button,
@@ -32,6 +39,14 @@ export const editorSections = [
   { id: "notes", title: "Notes & advanced", hint: "Description & stat block JSON", icon: FileText },
 ] as const;
 export type EditorSection = (typeof editorSections)[number]["id"];
+const defaultEditorWidth = 60;
+const minimumEditorWidth = 45;
+const maximumEditorWidth = 70;
+
+function boundedEditorWidth(value: number) {
+  return Math.min(maximumEditorWidth, Math.max(minimumEditorWidth, value));
+}
+
 export function CreatureEditorLayout({
   active,
   onSection,
@@ -44,6 +59,31 @@ export function CreatureEditorLayout({
   preview: ReactNode;
 }) {
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [editorWidth, setEditorWidth] = useState(defaultEditorWidth);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const resizeFromPointer = (clientX: number) => {
+    const bounds = splitRef.current?.getBoundingClientRect();
+    if (!bounds?.width) return;
+    setEditorWidth(boundedEditorWidth(((clientX - bounds.left) / bounds.width) * 100));
+  };
+  const handleResizeKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next =
+      event.key === "ArrowLeft"
+        ? editorWidth - 2
+        : event.key === "ArrowRight"
+          ? editorWidth + 2
+          : event.key === "Home"
+            ? minimumEditorWidth
+            : event.key === "End"
+              ? maximumEditorWidth
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    setEditorWidth(boundedEditorWidth(next));
+  };
+  const splitStyle = {
+    "--creature-editor-primary": `${editorWidth}%`,
+  } as CSSProperties;
   return (
     <SidebarDetailLayout variant="compact" className="creature-editor items-start">
       <nav
@@ -69,7 +109,7 @@ export function CreatureEditorLayout({
           </button>
         ))}
       </nav>
-      <SidebarDetailLayout variant="creatureEditor" className="min-w-0 items-start">
+      <div ref={splitRef} className="creature-editor-split min-w-0 items-start" style={splitStyle}>
         <div className="min-w-0">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-lg font-semibold">
@@ -90,11 +130,40 @@ export function CreatureEditorLayout({
             {children}
           </div>
         </div>
+        <div
+          aria-label="Resize editor and preview"
+          aria-orientation="vertical"
+          aria-valuemin={minimumEditorWidth}
+          aria-valuemax={maximumEditorWidth}
+          aria-valuenow={Math.round(editorWidth)}
+          aria-valuetext={`Editor ${Math.round(editorWidth)}%, preview ${Math.round(100 - editorWidth)}%`}
+          className="creature-editor-splitter hidden 2xl:block"
+          role="separator"
+          tabIndex={0}
+          title="Drag to resize. Double-click to reset."
+          onDoubleClick={() => setEditorWidth(defaultEditorWidth)}
+          onKeyDown={handleResizeKey}
+          onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            resizeFromPointer(event.clientX);
+          }}
+          onPointerMove={(event: PointerEvent<HTMLDivElement>) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              resizeFromPointer(event.clientX);
+            }
+          }}
+          onPointerUp={(event: PointerEvent<HTMLDivElement>) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+              event.currentTarget.releasePointerCapture(event.pointerId);
+            }
+          }}
+        />
         <aside
           aria-label="Live creature preview"
-          className="hidden min-w-0 rounded-lg border border-border bg-card p-4 2xl:sticky 2xl:top-4 2xl:block"
+          className="creature-editor-preview hidden min-w-0 rounded-lg border border-border bg-card p-4 2xl:sticky 2xl:top-4 2xl:block"
         >
-          <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+          <div className="creature-editor-preview-header mb-4 flex items-center justify-between border-b border-border bg-card pb-3">
             <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Live preview
             </span>
@@ -110,7 +179,7 @@ export function CreatureEditorLayout({
         >
           {preview}
         </Modal>
-      </SidebarDetailLayout>
+      </div>
     </SidebarDetailLayout>
   );
 }

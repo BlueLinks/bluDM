@@ -381,3 +381,60 @@ input.initiative-number-input::-webkit-inner-spin-button {
     gap: 1rem;
   }
 }
+
+.creature-editor-split {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 1536px) {
+  .creature-editor-split {
+    grid-template-columns:
+      minmax(32rem, var(--creature-editor-primary)) 0.75rem
+      minmax(22rem, 1fr);
+    gap: 0;
+  }
+
+  .creature-editor-splitter {
+    position: sticky;
+    top: 1rem;
+    height: calc(100dvh - 5.5rem);
+    cursor: col-resize;
+    touch-action: none;
+    outline: none;
+
+    &::before {
+      position: absolute;
+      inset-block: 0;
+      left: 50%;
+      width: 2px;
+      border-radius: 999px;
+      background: hsl(var(--border));
+      content: "";
+      translate: -50% 0;
+      transition:
+        width $motion-fast ease,
+        background-color $motion-fast ease;
+    }
+
+    &:hover::before,
+    &:focus-visible::before {
+      width: 4px;
+      background: hsl(var(--primary));
+    }
+  }
+
+  .creature-editor-preview {
+    max-height: calc(100dvh - 5.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .creature-editor-preview-header {
+    position: sticky;
+    top: -1rem;
+    z-index: 1;
+    padding-top: 1rem;
+  }
+}
