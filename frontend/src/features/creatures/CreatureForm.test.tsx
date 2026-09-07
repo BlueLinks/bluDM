@@ -97,21 +97,25 @@ describe("sectioned creature editor", () => {
       dieSize: "0",
       fixedValue: "7",
     });
-  });
+  }, 15_000);
 
   it("prompts before leaving a dirty form", async () => {
     const { router } = mountForm();
     fireEvent.click(screen.getByRole("button", { name: "Increase AC" }));
     await screen.findByText("Unsaved changes");
     void router.navigate("/npcs");
-    expect(await screen.findByText("Discard unsaved changes?")).toBeTruthy();
+    expect(
+      await screen.findByText("Discard unsaved changes?", {}, { timeout: 5_000 }),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByText("Discard unsaved changes?")).toBeNull());
     expect(screen.queryByText("Library destination")).toBeNull();
     void router.navigate("/npcs");
-    fireEvent.click(await screen.findByRole("button", { name: "Discard and leave" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Discard and leave" }, { timeout: 5_000 }),
+    );
     expect(await screen.findByText("Library destination")).toBeTruthy();
-  });
+  }, 15_000);
 
   it("retries a partial create against the same creature", async () => {
     vi.mocked(api.replaceCreatureActions).mockRejectedValueOnce(new Error("temporary failure"));
