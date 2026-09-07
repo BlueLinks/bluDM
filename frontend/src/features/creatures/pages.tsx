@@ -1,43 +1,23 @@
-import { Castle, Plus, Search, Swords } from "lucide-react";
+import { Plus } from "lucide-react";
 import { type FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { BackButton, Breadcrumbs } from "../../app/shell";
-import { CreatureSourceFilter } from "../../components/shared/CreatureSourceFilter";
-import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
+import { Link } from "react-router-dom";
 import {
   Button,
   Callout,
   ConfirmDialog,
-  EmptyMini,
-  FloatingInput,
-  MutedPanel,
   Page,
   PageHeader,
-  SectionPanel,
   ToastViewport,
   useToasts,
 } from "../../components/ui";
 import { api } from "../../lib/api";
 import { actionFormFromTemplate, blankAction, spiderStaffAction } from "../../lib/domain/forms";
-import type {
-  ActionFormState,
-  ActionTemplate,
-  ActionTemplateUsage,
-  Campaign,
-  Creature,
-  CreatureAction,
-  CreatureSpellcastingProfile,
-} from "../../types";
+import type { ActionFormState, ActionTemplate, ActionTemplateUsage, Creature } from "../../types";
 import { ActionBankPanel } from "./ActionBankPanel";
-import { CreatureForm } from "./CreatureForm";
-import { CreatureLibraryList, CreaturePreviewModal } from "./CreatureLibraryList";
+import { CreatureLibraryList } from "./CreatureLibraryList";
 
 export function NpcsPage() {
   const [creatures, setCreatures] = useState<Creature[]>([]);
-  const [showUserCreatures, setShowUserCreatures] = useState(true);
-  const [showStandardCreatures, setShowStandardCreatures] = useState(false);
-  const [selectedSources, setSelectedSources] = useState(["srd-2014", "srd-5-2-1"]);
-  const [creatureSearch, setCreatureSearch] = useState("");
   const [templates, setTemplates] = useState<ActionTemplate[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,14 +28,13 @@ export function NpcsPage() {
     null,
   );
   const [deleteCreature, setDeleteCreature] = useState<Creature | null>(null);
-  const [previewCreature, setPreviewCreature] = useState<Creature | null>(null);
   const [deleteTemplate, setDeleteTemplate] = useState<ActionTemplate | null>(null);
   const [templateUsage, setTemplateUsage] = useState<ActionTemplateUsage[]>([]);
   const toast = useToasts();
 
   useEffect(() => {
     Promise.all([
-      api.creatures({ includeStandard: true, source: selectedSources }),
+      api.creatures({ includeStandard: true, source: ["srd-2014", "srd-5-2-1"] }),
       api.actionTemplates(),
     ])
       .then(([creaturePayload, templatePayload]) => {
@@ -64,7 +43,7 @@ export function NpcsPage() {
       })
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load NPCs"))
       .finally(() => setLoading(false));
-  }, [selectedSources]);
+  }, []);
 
   async function handleCreateTemplate(event: FormEvent) {
     event.preventDefault();
@@ -127,10 +106,14 @@ export function NpcsPage() {
 
   async function confirmDeleteCreature() {
     if (!deleteCreature) return;
-    await api.deleteCreature(deleteCreature.id);
-    setCreatures((current) => current.filter((creature) => creature.id !== deleteCreature.id));
-    toast.push(`${deleteCreature.name} removed`);
-    setDeleteCreature(null);
+    try {
+      await api.deleteCreature(deleteCreature.id);
+      setCreatures((current) => current.filter((creature) => creature.id !== deleteCreature.id));
+      toast.push(`${deleteCreature.name} removed`);
+      setDeleteCreature(null);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not remove creature");
+    }
   }
 
   async function openDeleteTemplate(template: ActionTemplate) {
@@ -194,70 +177,50 @@ export function NpcsPage() {
   return (
     <Page>
       <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <BackButton to="/npcs">Back to NPCs</BackButton>
-      <Breadcrumbs items={[{ label: "NPCs", to: "/npcs" }, { label: "New" }]} />
       <PageHeader
         eyebrow="NPCs & Monsters"
         title="Creature library"
-        copy="Reusable stat blocks, default disposition, attacks, and spells live here. Encounter-side disposition can override these defaults."
+        copy="Your NPCs, monsters, and the SRD. Ready when you need them."
         action={
           <Link to="/npcs/new">
-            <Button icon={Plus}>Add NPC</Button>
+            <Button icon={Plus}>Create creature</Button>
           </Link>
         }
       />
       {error && <Callout tone="danger">{error}</Callout>}
-      <SectionPanel title="Existing NPCs & Monsters" icon={Swords}>
-        <div className="mb-4">
-          <CreatureSourceFilter
-            showStandard={showStandardCreatures}
-            showUser={showUserCreatures}
-            onShowStandardChange={setShowStandardCreatures}
-            onShowUserChange={setShowUserCreatures}
+      {loading ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          Loading creatures…
+        </p>
+      ) : (
+        <CreatureLibraryList creatures={creatures} onRemove={setDeleteCreature} />
+      )}
+      <details className="mt-6 border-t border-border pt-4">
+        <summary className="cursor-pointer font-semibold">
+          Action bank{" "}
+          <span className="text-sm font-normal text-muted-foreground">
+            · {templates.length} reusable actions
+          </span>
+        </summary>
+        <div className="mt-4">
+          <ActionBankPanel
+            editingTemplate={editingTemplate}
+            loading={loading}
+            templateConflict={templateConflict}
+            templateConflictMatches={templateConflictMatches}
+            templateForm={templateForm}
+            templateModalOpen={templateModalOpen}
+            templates={templates}
+            onDelete={(template) => void openDeleteTemplate(template)}
+            onDuplicate={(template) => void duplicateTemplate(template)}
+            onFormChange={setTemplateForm}
+            onModalChange={(open) => (open ? setTemplateModalOpen(true) : closeTemplateModal())}
+            onOpenTemplate={openTemplateModal}
+            onOverwrite={() => void overwriteConflictingTemplate()}
+            onSubmit={handleCreateTemplate}
           />
         </div>
-        {showStandardCreatures && (
-          <div className="mb-4">
-            <StandardSourceToggles selected={selectedSources} onChange={setSelectedSources} />
-          </div>
-        )}
-        <div className="mb-4">
-          <FloatingInput
-            icon={Search}
-            label="Search creatures"
-            value={creatureSearch}
-            onChange={setCreatureSearch}
-          />
-        </div>
-        {loading && <p className="text-sm text-muted-foreground">Loading creatures...</p>}
-        <CreatureLibraryList
-          creatures={creatures.filter((creature) =>
-            creatureVisible(creature, {
-              query: creatureSearch,
-              showStandard: showStandardCreatures,
-              showUser: showUserCreatures,
-            }),
-          )}
-          onPreview={setPreviewCreature}
-          onRemove={setDeleteCreature}
-        />
-      </SectionPanel>
-      <ActionBankPanel
-        editingTemplate={editingTemplate}
-        loading={loading}
-        templateConflict={templateConflict}
-        templateConflictMatches={templateConflictMatches}
-        templateForm={templateForm}
-        templateModalOpen={templateModalOpen}
-        templates={templates}
-        onDelete={(template) => void openDeleteTemplate(template)}
-        onDuplicate={(template) => void duplicateTemplate(template)}
-        onFormChange={setTemplateForm}
-        onModalChange={(open) => (open ? setTemplateModalOpen(true) : closeTemplateModal())}
-        onOpenTemplate={openTemplateModal}
-        onOverwrite={() => void overwriteConflictingTemplate()}
-        onSubmit={handleCreateTemplate}
-      />
+      </details>
       <ConfirmDialog
         open={Boolean(deleteCreature)}
         title="Remove creature?"
@@ -293,23 +256,8 @@ export function NpcsPage() {
           </div>
         )}
       </ConfirmDialog>
-      <CreaturePreviewModal creature={previewCreature} onClose={() => setPreviewCreature(null)} />
     </Page>
   );
-}
-
-function creatureVisible(
-  creature: Creature,
-  options: { query: string; showStandard: boolean; showUser: boolean },
-) {
-  if (creature.librarySource === "standard" && !options.showStandard) return false;
-  if (creature.librarySource !== "standard" && !options.showUser) return false;
-  const query = options.query.trim().toLowerCase();
-  if (!query) return true;
-  return [creature.name, creature.size, creature.creatureType, creature.challengeRating]
-    .join(" ")
-    .toLowerCase()
-    .includes(query);
 }
 
 function nextActionCopyName(name: string, templates: ActionTemplate[]) {
@@ -327,136 +275,4 @@ function normalizeActionName(name: string) {
   return name.trim().toLowerCase();
 }
 
-export function NpcCreatePage() {
-  const navigate = useNavigate();
-  const toast = useToasts();
-  return (
-    <Page>
-      <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <PageHeader
-        eyebrow="NPCs & Monsters"
-        title="Add NPC"
-        copy="Full-page creation keeps larger stat blocks readable: basic info, movement, health, abilities, skills, defenses, and actions."
-      />
-      <div className="max-w-6xl">
-        <SectionPanel title="NPC / Monster Details" icon={Swords}>
-          <CreatureForm mode="create" notify={toast.push} onSaved={() => void navigate("/npcs")} />
-        </SectionPanel>
-      </div>
-    </Page>
-  );
-}
-
-export function NpcEditPage() {
-  const { creatureID = "" } = useParams();
-  const navigate = useNavigate();
-  const toast = useToasts();
-  const [creature, setCreature] = useState<Creature | null>(null);
-  const [actions, setActions] = useState<CreatureAction[]>([]);
-  const [spellcasting, setSpellcasting] = useState<CreatureSpellcastingProfile | undefined>();
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [linkedCampaigns, setLinkedCampaigns] = useState<Campaign[]>([]);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    Promise.all([
-      api.creature(creatureID),
-      api.creatureActions(creatureID),
-      api.creatureSpellcasting(creatureID),
-      api.campaigns(),
-      api.creatureCampaigns(creatureID),
-    ])
-      .then(
-        ([creaturePayload, actionPayload, spellcastingPayload, campaignPayload, linkedPayload]) => {
-          setCreature(creaturePayload.creature);
-          setActions(actionPayload.actions);
-          setSpellcasting(spellcastingPayload.spellcasting);
-          setCampaigns(campaignPayload.campaigns);
-          setLinkedCampaigns(linkedPayload.campaigns);
-        },
-      )
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not load creature"))
-      .finally(() => setLoading(false));
-  }, [creatureID]);
-
-  async function linkCampaign(campaign: Campaign) {
-    await api.linkCampaignNpc(campaign.id, creatureID);
-    toast.push(`Linked to ${campaign.name}`);
-    const payload = await api.creatureCampaigns(creatureID);
-    setLinkedCampaigns(payload.campaigns);
-  }
-
-  async function unlinkCampaign(campaign: Campaign) {
-    await api.unlinkCampaignNpc(campaign.id, creatureID);
-    toast.push(`Unlinked from ${campaign.name}`);
-    const payload = await api.creatureCampaigns(creatureID);
-    setLinkedCampaigns(payload.campaigns);
-  }
-
-  return (
-    <Page>
-      <ToastViewport toasts={toast.toasts} onDismiss={toast.dismiss} />
-      <BackButton to="/npcs">Back to NPCs</BackButton>
-      <Breadcrumbs
-        items={[
-          { label: "NPCs", to: "/npcs" },
-          { label: creature?.name ?? "NPC" },
-          { label: "Edit" },
-        ]}
-      />
-      <PageHeader
-        eyebrow="NPCs & Monsters"
-        title={creature ? `Edit ${creature.name}` : "Edit NPC"}
-        copy="Changes are staged locally until saved."
-      />
-      {error && <Callout tone="danger">{error}</Callout>}
-      {loading && <MutedPanel>Loading creature...</MutedPanel>}
-      {creature && (
-        <div className="grid max-w-6xl gap-4">
-          <SectionPanel title="Campaign Links" icon={Castle}>
-            <div className="grid gap-2">
-              {campaigns.length === 0 && <EmptyMini copy="No campaigns exist yet." />}
-              {campaigns.map((campaign) => {
-                const linked = linkedCampaigns.some((item) => item.id === campaign.id);
-                return (
-                  <div
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-background p-3"
-                    key={campaign.id}
-                  >
-                    <div>
-                      <div className="font-semibold">{campaign.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {linked ? "Linked to this campaign" : "Not linked"}
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={linked ? "danger" : "success"}
-                      size="sm"
-                      onClick={() =>
-                        linked ? void unlinkCampaign(campaign) : void linkCampaign(campaign)
-                      }
-                    >
-                      {linked ? "Unlink" : "Link"}
-                    </Button>
-                  </div>
-                );
-              })}
-            </div>
-          </SectionPanel>
-          <SectionPanel title="NPC / Monster Details" icon={Swords}>
-            <CreatureForm
-              mode="edit"
-              creature={creature}
-              existingActions={actions}
-              spellcasting={spellcasting}
-              notify={toast.push}
-              onSaved={() => void navigate("/npcs")}
-            />
-          </SectionPanel>
-        </div>
-      )}
-    </Page>
-  );
-}
+export { NpcCreatePage, NpcEditPage } from "./CreatureEditorPages";

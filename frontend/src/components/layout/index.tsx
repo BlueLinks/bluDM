@@ -1,4 +1,11 @@
-import type React from "react";
+import {
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type PointerEvent,
+  type ReactNode,
+} from "react";
 
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -30,7 +37,7 @@ export function ActionRow({
   justify = "start",
 }: {
   align?: keyof typeof actionAlignClasses;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   gap?: keyof typeof actionGapClasses;
   justify?: keyof typeof actionJustifyClasses;
@@ -64,7 +71,7 @@ export function ResponsiveGrid({
   className = "",
   variant,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   variant: keyof typeof responsiveGridClasses;
 }) {
@@ -82,7 +89,7 @@ export function FieldGrid({
   className = "",
   variant,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   variant: keyof typeof fieldGridClasses;
 }) {
@@ -104,18 +111,111 @@ export function SidebarDetailLayout({
   className = "",
   variant,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   variant: keyof typeof sidebarDetailClasses;
 }) {
   return <div className={cx(sidebarDetailClasses[variant], className)}>{children}</div>;
 }
 
+export function ResizableSplitLayout({
+  className = "",
+  defaultPrimary = 60,
+  label = "Resize panels",
+  maxPrimary = 70,
+  minPrimary = 45,
+  primary,
+  primaryMinWidth = "24rem",
+  secondary,
+  secondaryMinWidth = "20rem",
+  visibleFrom = "xl",
+}: {
+  className?: string;
+  defaultPrimary?: number;
+  label?: string;
+  maxPrimary?: number;
+  minPrimary?: number;
+  primary: ReactNode;
+  primaryMinWidth?: string;
+  secondary?: ReactNode;
+  secondaryMinWidth?: string;
+  visibleFrom?: "xl" | "2xl";
+}) {
+  const [primaryWidth, setPrimaryWidth] = useState(defaultPrimary);
+  const splitRef = useRef<HTMLDivElement>(null);
+  const boundedWidth = (value: number) => Math.min(maxPrimary, Math.max(minPrimary, value));
+  const resizeFromPointer = (clientX: number) => {
+    const bounds = splitRef.current?.getBoundingClientRect();
+    if (!bounds?.width) return;
+    setPrimaryWidth(boundedWidth(((clientX - bounds.left) / bounds.width) * 100));
+  };
+  const handleResizeKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const next =
+      event.key === "ArrowLeft"
+        ? primaryWidth - 2
+        : event.key === "ArrowRight"
+          ? primaryWidth + 2
+          : event.key === "Home"
+            ? minPrimary
+            : event.key === "End"
+              ? maxPrimary
+              : null;
+    if (next === null) return;
+    event.preventDefault();
+    setPrimaryWidth(boundedWidth(next));
+  };
+  if (!secondary) return <div className={className}>{primary}</div>;
+  const style = {
+    "--split-primary-min": primaryMinWidth,
+    "--split-primary-size": `${primaryWidth}%`,
+    "--split-secondary-min": secondaryMinWidth,
+  } as CSSProperties;
+  return (
+    <div
+      ref={splitRef}
+      className={cx("resizable-split-layout", `resizable-split-layout--${visibleFrom}`, className)}
+      style={style}
+    >
+      {primary}
+      <div
+        aria-label={label}
+        aria-orientation="vertical"
+        aria-valuemin={minPrimary}
+        aria-valuemax={maxPrimary}
+        aria-valuenow={Math.round(primaryWidth)}
+        aria-valuetext={`Left ${Math.round(primaryWidth)}%, right ${Math.round(100 - primaryWidth)}%`}
+        className="resizable-splitter"
+        role="separator"
+        tabIndex={0}
+        title="Drag to resize. Double-click to reset."
+        onDoubleClick={() => setPrimaryWidth(defaultPrimary)}
+        onKeyDown={handleResizeKey}
+        onPointerDown={(event: PointerEvent<HTMLDivElement>) => {
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          resizeFromPointer(event.clientX);
+        }}
+        onPointerMove={(event: PointerEvent<HTMLDivElement>) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            resizeFromPointer(event.clientX);
+          }
+        }}
+        onPointerUp={(event: PointerEvent<HTMLDivElement>) => {
+          if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          }
+        }}
+      />
+      {secondary}
+    </div>
+  );
+}
+
 export function DetailAsideLayout({
   children,
   className = "",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -136,7 +236,7 @@ export function ContentStack({
   className = "",
 }: {
   as?: "aside" | "div";
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   const Component = as;
@@ -155,7 +255,7 @@ export function CardSection({
   className = "",
   tone = "card",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
   tone?: keyof typeof cardSectionTones;
 }) {
@@ -173,11 +273,11 @@ export function SectionHeader({
   meta,
   title,
 }: {
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
   icon?: React.ElementType;
-  meta?: React.ReactNode;
-  title: React.ReactNode;
+  meta?: ReactNode;
+  title: ReactNode;
 }) {
   return (
     <div className={cx("flex flex-wrap items-start justify-between gap-3", className)}>

@@ -1,351 +1,479 @@
-import { BookOpen, Eye, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import {
+  BookOpen,
+  Copy,
+  Eye,
+  HeartPulse,
+  Maximize2,
+  Pencil,
+  Search,
+  Shield,
+  Trash2,
+  UserRound,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
-import { InitialsAvatar, PropertyCard, StatChip } from "../../components/shared/displayPrimitives";
-import { sourceBadgeClass, sourceToneClass } from "../../components/shared/sourceTones";
-import { Badge, Button, EmptyMini, Modal } from "../../components/ui";
-import { creatureDefaultDisposition } from "../../lib/domain/forms";
+import { ActionRow, ResizableSplitLayout } from "../../components/layout";
+import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
+import { Button, EmptyMini, FloatingInput, Modal, Select } from "../../components/ui";
 import type { Creature } from "../../types";
+import { LoadedCreatureProfile } from "./CreatureProfile";
 
+type LibraryScope = "all" | "mine" | "srd";
 export function CreatureLibraryList({
   creatures,
-  onPreview,
   onRemove,
 }: {
   creatures: Creature[];
-  onPreview: (creature: Creature) => void;
   onRemove: (creature: Creature) => void;
 }) {
-  const [visibleCount, setVisibleCount] = useState(80);
-
-  useEffect(() => {
-    setVisibleCount(80);
-  }, [creatures]);
-
-  if (creatures.length === 0) {
-    return <EmptyMini copy="No creatures in the selected library view." />;
+  const [scope, setScope] = useState<LibraryScope>("mine");
+  const [query, setQuery] = useState("");
+  const [type, setType] = useState("all");
+  const [rating, setRating] = useState("all");
+  const [edition, setEdition] = useState("all");
+  const [sort, setSort] = useState("name");
+  const [selected, setSelected] = useState("");
+  const [expanded, setExpanded] = useState<Creature | null>(null);
+  const [limit, setLimit] = useState(60);
+  const filtered = useMemo(
+    () =>
+      creatures
+        .filter((creature) => {
+          const standard = creature.librarySource === "standard";
+          return (
+            (scope === "all" || (scope === "srd" ? standard : !standard)) &&
+            (type === "all" || creature.creatureType === type) &&
+            (rating === "all" || creature.challengeRating === rating) &&
+            (scope === "mine" ||
+              edition === "all" ||
+              !standard ||
+              creature.sourceKey === edition) &&
+            [creature.name, creature.creatureType, creature.size]
+              .join(" ")
+              .toLowerCase()
+              .includes(query.trim().toLowerCase())
+          );
+        })
+        .sort((a, b) =>
+          sort === "cr"
+            ? crNumber(a.challengeRating) - crNumber(b.challengeRating) ||
+              a.name.localeCompare(b.name)
+            : a.name.localeCompare(b.name),
+        ),
+    [creatures, scope, type, rating, edition, query, sort],
+  );
+  const active = filtered.find((creature) => creature.id === selected) ?? filtered[0];
+  const customCount = creatures.filter((creature) => creature.librarySource !== "standard").length;
+  function resetFilters() {
+    setQuery("");
+    setType("all");
+    setRating("all");
+    setEdition("all");
+    setLimit(60);
   }
-  const visibleCreatures = creatures.slice(0, visibleCount);
   return (
-    <div className="grid gap-3">
-      {visibleCreatures.map((creature) => (
-        <CreatureLibraryCard
-          creature={creature}
-          key={creature.id}
-          onPreview={onPreview}
-          onRemove={onRemove}
-        />
-      ))}
-      {visibleCount < creatures.length && (
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => setVisibleCount((current) => current + 80)}
-        >
-          Load more creatures ({creatures.length - visibleCount} remaining)
-        </Button>
-      )}
+    <div className="grid min-w-0 gap-4">
+      <CreatureLibraryToolbar
+        creatures={creatures}
+        customCount={customCount}
+        scope={scope}
+        query={query}
+        type={type}
+        rating={rating}
+        edition={edition}
+        sort={sort}
+        setScope={(value) => {
+          setScope(value);
+          setLimit(60);
+        }}
+        setQuery={(value) => {
+          setQuery(value);
+          setLimit(60);
+        }}
+        setType={(value) => {
+          setType(value);
+          setLimit(60);
+        }}
+        setRating={(value) => {
+          setRating(value);
+          setLimit(60);
+        }}
+        setEdition={(value) => {
+          setEdition(value);
+          setLimit(60);
+        }}
+        setSort={setSort}
+      />
+      <CreatureLibraryWorkspace
+        active={active}
+        creatures={filtered.slice(0, limit)}
+        customCount={customCount}
+        hasFilters={Boolean(query || type !== "all" || rating !== "all" || edition !== "all")}
+        remaining={filtered.length - limit}
+        resultCount={filtered.length}
+        scope={scope}
+        onClear={resetFilters}
+        onExpand={setExpanded}
+        onLoadMore={() => setLimit((current) => current + 60)}
+        onRemove={onRemove}
+        onSelect={(creature) => {
+          setSelected(creature.id);
+          if (!window.matchMedia("(min-width: 1280px)").matches) setExpanded(creature);
+        }}
+      />
+      <CreatureProfileModal
+        creature={expanded}
+        onClose={() => setExpanded(null)}
+        onRemove={onRemove}
+      />
     </div>
   );
 }
 
-export function CreaturePreviewModal({
+type LibrarySetters = {
+  setScope: (value: LibraryScope) => void;
+  setQuery: (value: string) => void;
+  setType: (value: string) => void;
+  setRating: (value: string) => void;
+  setEdition: (value: string) => void;
+  setSort: (value: string) => void;
+};
+
+function CreatureLibraryToolbar({
+  creatures,
+  customCount,
+  scope,
+  query,
+  type,
+  rating,
+  edition,
+  sort,
+  setScope,
+  setQuery,
+  setType,
+  setRating,
+  setEdition,
+  setSort,
+}: LibrarySetters & {
+  creatures: Creature[];
+  customCount: number;
+  scope: LibraryScope;
+  query: string;
+  type: string;
+  rating: string;
+  edition: string;
+  sort: string;
+}) {
+  const tabs = [
+    ["all", "All creatures", creatures.length],
+    ["mine", "My creations", customCount],
+    ["srd", "SRD library", creatures.length - customCount],
+  ] as const;
+  const types = [
+    ...new Set(creatures.map((creature) => creature.creatureType).filter(Boolean)),
+  ].sort();
+  const ratings = [
+    ...new Set(creatures.map((creature) => creature.challengeRating).filter(Boolean)),
+  ].sort((a, b) => crNumber(a) - crNumber(b));
+  const editions = Array.from(
+    new Map(
+      creatures
+        .filter((creature) => creature.readOnly)
+        .map((creature) => [
+          creature.sourceKey,
+          { value: creature.sourceKey, label: creature.sourceLabel || creature.sourceKey },
+        ]),
+    ).values(),
+  );
+  return (
+    <>
+      <div className="flex flex-wrap gap-1 border-b border-border" aria-label="Creature source">
+        {tabs.map(([value, label, count]) => (
+          <button
+            type="button"
+            key={value}
+            aria-pressed={scope === value}
+            onClick={() => setScope(value)}
+            className={`border-b-2 px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${scope === value ? "border-primary bg-primary/5 text-primary" : "border-transparent text-muted-foreground hover:bg-surface hover:text-foreground"}`}
+          >
+            {label} <span className="ml-1 font-normal tabular-nums">{count}</span>
+          </button>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-0 grow">
+          <FloatingInput label="Search creatures" icon={Search} value={query} onChange={setQuery} />
+        </div>
+        <LibraryFilter label="Type" value={type} onChange={setType} values={types} />
+        <LibraryFilter label="CR" value={rating} onChange={setRating} values={ratings} />
+        {scope !== "mine" && (
+          <label className="grid gap-1 text-xs text-muted-foreground">
+            Edition
+            <Select
+              placeholder="Edition"
+              value={edition}
+              onValueChange={setEdition}
+              options={[{ value: "all", label: "All editions" }, ...editions]}
+            />
+          </label>
+        )}
+        <label className="grid gap-1 text-xs text-muted-foreground">
+          Sort
+          <Select
+            placeholder="Sort"
+            value={sort}
+            onValueChange={setSort}
+            options={[
+              { value: "name", label: "Name A–Z" },
+              { value: "cr", label: "Challenge rating" },
+            ]}
+          />
+        </label>
+      </div>
+    </>
+  );
+}
+
+function CreatureLibraryWorkspace({
+  active,
+  creatures,
+  customCount,
+  hasFilters,
+  remaining,
+  resultCount,
+  scope,
+  onClear,
+  onExpand,
+  onLoadMore,
+  onRemove,
+  onSelect,
+}: {
+  active?: Creature;
+  creatures: Creature[];
+  customCount: number;
+  hasFilters: boolean;
+  remaining: number;
+  resultCount: number;
+  scope: LibraryScope;
+  onClear: () => void;
+  onExpand: (creature: Creature) => void;
+  onLoadMore: () => void;
+  onRemove: (creature: Creature) => void;
+  onSelect: (creature: Creature) => void;
+}) {
+  return (
+    <ResizableSplitLayout
+      className="items-start"
+      defaultPrimary={64}
+      label="Resize creature list and preview"
+      visibleFrom="xl"
+      primary={
+        <section
+          className="min-w-0 overflow-hidden rounded-lg border border-border bg-card"
+          aria-label="Creature results"
+        >
+          <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
+            <span role="status">{resultCount} creatures</span>
+            {hasFilters && (
+              <button type="button" className="p-1 text-primary underline" onClick={onClear}>
+                Clear filters
+              </button>
+            )}
+          </div>
+          {!resultCount && (
+            <div className="p-6">
+              <EmptyMini
+                copy={
+                  scope === "mine" && customCount === 0
+                    ? "Your custom creatures will appear here. Create your first creature to get started."
+                    : "No creatures match these filters."
+                }
+              />
+            </div>
+          )}
+          {creatures.map((creature) => (
+            <CreatureRow
+              key={creature.id}
+              creature={creature}
+              active={active?.id === creature.id}
+              onSelect={() => onSelect(creature)}
+            />
+          ))}
+          {remaining > 0 && (
+            <div className="p-3">
+              <Button variant="outline" onClick={onLoadMore}>
+                Load more ({remaining} remaining)
+              </Button>
+            </div>
+          )}
+        </section>
+      }
+      secondary={
+        active ? (
+          <aside
+            aria-label="Selected creature"
+            className="resizable-preview-panel hidden min-w-0 rounded-lg border border-border bg-card p-4 xl:sticky xl:top-4 xl:block"
+          >
+            <div className="resizable-preview-header mb-4 flex items-center justify-between border-b border-border bg-card pb-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Creature preview
+              </span>
+              <Button size="sm" icon={Maximize2} variant="ghost" onClick={() => onExpand(active)}>
+                Full view
+              </Button>
+            </div>
+            <LoadedCreatureProfile creature={active} />
+            <CreatureProfileActions creature={active} onRemove={onRemove} />
+          </aside>
+        ) : undefined
+      }
+    />
+  );
+}
+
+function CreatureProfileModal({
   creature,
   onClose,
+  onRemove,
 }: {
   creature: Creature | null;
   onClose: () => void;
+  onRemove: (creature: Creature) => void;
 }) {
   return (
     <Modal
-      title={creature ? creature.name : "Creature"}
+      title="Creature details"
       open={Boolean(creature)}
       onOpenChange={(open) => !open && onClose()}
-      trigger={<span />}
+      className="max-w-4xl"
     >
-      {creature && <CreaturePreviewSheet creature={creature} />}
+      {creature && (
+        <>
+          <LoadedCreatureProfile creature={creature} />
+          <CreatureProfileActions
+            creature={creature}
+            onRemove={(item) => {
+              onClose();
+              onRemove(item);
+            }}
+          />
+        </>
+      )}
     </Modal>
   );
 }
-
-function CreatureLibraryCard({
-  creature,
-  onPreview,
-  onRemove,
+function LibraryFilter({
+  label,
+  value,
+  values,
+  onChange,
 }: {
-  creature: Creature;
-  onPreview: (creature: Creature) => void;
-  onRemove: (creature: Creature) => void;
+  label: string;
+  value: string;
+  values: string[];
+  onChange: (value: string) => void;
 }) {
-  const avatarSrc = avatarImageSrc(creature.imageAssetId, creature.avatarUrl);
   return (
-    <div
-      className={[
-        "rounded-lg border bg-background p-4 transition",
-        creature.readOnly ? "border-companion-official/50 shadow-sm" : "border-border",
-      ].join(" ")}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <InitialsAvatar name={creature.name} src={avatarSrc} />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate font-semibold">{creature.name}</h3>
-              {creature.readOnly && <SrdBadge label={creature.sourceLabel} />}
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {[creature.size, creature.creatureType, creature.alignment]
-                .filter(Boolean)
-                .join(" · ") || "Creature"}
-            </p>
-          </div>
-        </div>
-        <CreatureLibraryCardActions creature={creature} onPreview={onPreview} onRemove={onRemove} />
-      </div>
-      <CreatureStatBadges creature={creature} />
-    </div>
+    <label className="grid gap-1 text-xs text-muted-foreground">
+      {label}
+      <Select
+        placeholder={label}
+        value={value}
+        onValueChange={onChange}
+        options={[
+          { value: "all", label: `All ${label === "CR" ? "CRs" : "types"}` },
+          ...values.map((value) => ({ label: value, value })),
+        ]}
+      />
+    </label>
   );
 }
-
-function CreatureLibraryCardActions({
+function CreatureRow({
   creature,
-  onPreview,
+  active,
+  onSelect,
+}: {
+  creature: Creature;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-label={`View ${creature.name}${creature.readOnly ? `, ${creature.sourceLabel}` : ", my creation"}`}
+      aria-pressed={active}
+      className={`group flex w-full min-w-0 items-center gap-3 border-b border-border p-3 text-left transition last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary ${active ? "bg-primary/8 text-foreground" : "bg-card text-card-foreground hover:bg-surface"}`}
+    >
+      <InitialsAvatar
+        size="sm"
+        name={creature.name}
+        src={avatarImageSrc(creature.imageAssetId, creature.avatarUrl)}
+      />
+      <span className="min-w-0 grow">
+        <span className="block truncate font-semibold">{creature.name}</span>
+        <span className="block text-xs text-muted-foreground">
+          {creature.size} · {creature.creatureType}
+        </span>
+        <span
+          className={`mt-1 flex items-center gap-1 text-xs ${creature.readOnly ? "text-companion-official" : "text-companion-personal"}`}
+        >
+          {creature.readOnly ? <BookOpen className="h-3 w-3" /> : <UserRound className="h-3 w-3" />}
+          {creature.readOnly ? creature.sourceLabel : "My creation"}
+        </span>
+      </span>
+      <span className="hidden gap-3 text-xs tabular-nums sm:flex">
+        <span className="flex items-center gap-1">
+          <Shield className="h-3.5 w-3.5 text-primary" />
+          {creature.armorClass}
+        </span>
+        <span className="flex items-center gap-1">
+          <HeartPulse className="h-3.5 w-3.5 text-tertiary" />
+          {creature.hitPoints}
+        </span>
+      </span>
+      <StatChip label="CR" value={creature.challengeRating || "—"} tone="metadata" />
+      <Eye className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </button>
+  );
+}
+function CreatureProfileActions({
+  creature,
   onRemove,
 }: {
   creature: Creature;
-  onPreview: (creature: Creature) => void;
   onRemove: (creature: Creature) => void;
 }) {
-  if (creature.readOnly) {
-    return (
-      <Button icon={Eye} size="sm" variant="secondary" onClick={() => onPreview(creature)}>
-        View
-      </Button>
-    );
-  }
+  const navigate = useNavigate();
   return (
-    <div className="flex flex-wrap gap-2">
-      <Link to={`/npcs/${creature.id}/edit`}>
-        <Button icon={Pencil} size="sm" variant="secondary">
-          Edit
+    <ActionRow className="mt-4 border-t border-border pt-4">
+      {!creature.readOnly && (
+        <Button icon={Pencil} size="sm" onClick={() => navigate(`/npcs/${creature.id}/edit`)}>
+          Edit creature
         </Button>
-      </Link>
-      <Button icon={Trash2} size="sm" variant="danger" onClick={() => onRemove(creature)}>
-        Remove
+      )}
+      <Button
+        icon={Copy}
+        size="sm"
+        variant="outline"
+        onClick={() =>
+          navigate(
+            `/npcs/new?copy=${encodeURIComponent(creature.id)}${creature.readOnly ? "&source=standard" : ""}`,
+          )
+        }
+      >
+        {creature.readOnly ? "Copy to my creations" : "Duplicate"}
       </Button>
-    </div>
-  );
-}
-
-function CreatureStatBadges({ creature }: { creature: Creature }) {
-  return (
-    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-      <StatChip label="AC" value={creature.armorClass} tone="primary" />
-      <StatChip label="HP" value={creature.hitPoints} tone="tertiary" />
-      <StatChip label="CR" value={creature.challengeRating || "-"} tone="custom" />
-      <StatChip
-        label="Default:"
-        value={creatureDefaultDisposition(creature)}
-        tone={creatureDefaultDisposition(creature) === "friendly" ? "shared" : "danger"}
-      />
-    </div>
-  );
-}
-
-function CreaturePreviewSheet({ creature }: { creature: Creature }) {
-  const abilities = abilityScores(creature);
-  const avatarSrc = avatarImageSrc(creature.imageAssetId, creature.avatarUrl);
-  return (
-    <div className="grid gap-5">
-      <div className={["rounded-lg border p-4", sourceToneClass("official")].join(" ")}>
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <SrdBadge label={creature.sourceLabel} />
-          <span className="text-sm font-semibold">
-            {creature.sourceLabel || "Standard content"}
-          </span>
-        </div>
-        <p className="text-sm leading-6 opacity-90">
-          This is shared read-only library content. Copy-to-library editing will come in the next
-          data import slice.
-        </p>
-      </div>
-      <div className="flex flex-wrap items-start gap-4">
-        <InitialsAvatar className="rounded-lg" name={creature.name} size="xl" src={avatarSrc} />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-2xl font-bold">{creature.name}</h3>
-          <p className="mt-1 italic text-muted-foreground">
-            {[creature.size, creature.creatureType, creature.alignment].filter(Boolean).join(", ")}
-          </p>
-        </div>
-      </div>
-      {creature.description && (
-        <p className="rounded-md border border-border bg-muted/30 p-3 text-sm leading-6">
-          {creature.description}
-        </p>
+      {!creature.readOnly && (
+        <Button icon={Trash2} size="sm" variant="ghost" onClick={() => onRemove(creature)}>
+          Remove
+        </Button>
       )}
-      <div className="grid gap-3 sm:grid-cols-4">
-        <PropertyCard label="Armor Class" value={creature.armorClass} tone="primary" />
-        <PropertyCard label="Hit Points" value={creature.hitPoints} tone="tertiary" />
-        <PropertyCard label="Hit Dice" value={creature.hitDice || "-"} tone="metadata" />
-        <PropertyCard label="XP" value={creature.xp} tone="custom" />
-      </div>
-      <div className="grid gap-2 sm:grid-cols-6">
-        {abilities.map((ability) => (
-          <PropertyCard
-            key={ability.label}
-            label={ability.label}
-            tone="secondary"
-            value={
-              <span className="grid gap-0.5">
-                <span className="text-xl font-bold">{ability.value}</span>
-                <span className="text-sm text-muted-foreground">
-                  {signedModifier(ability.value)}
-                </span>
-              </span>
-            }
-          />
-        ))}
-      </div>
-      <div className="grid gap-3 md:grid-cols-2">
-        <PreviewJsonBlock title="Skills" value={recordFromStatBlock(creature, "skills")} />
-        <PreviewJsonBlock title="Senses" value={recordFromStatBlock(creature, "senses")} />
-        <PreviewJsonBlock title="Defenses" value={recordFromStatBlock(creature, "defenses")} />
-        <PreviewJsonBlock
-          title="Spellcasting"
-          value={recordFromStatBlock(creature, "spellcasting")}
-        />
-      </div>
-      <PreviewFeatureBlock
-        title="Special Abilities"
-        value={arrayFromStatBlock(creature, "specialAbilities")}
-      />
-      <PreviewFeatureBlock title="Actions" value={arrayFromStatBlock(creature, "actions")} />
-      <PreviewFeatureBlock
-        title="Legendary Actions"
-        value={arrayFromStatBlock(creature, "legendaryActions")}
-      />
-    </div>
+    </ActionRow>
   );
 }
-
-function PreviewJsonBlock({ title, value }: { title: string; value: Record<string, unknown> }) {
-  const entries = Object.entries(value);
-  return (
-    <div className="rounded-md border border-border bg-background p-3">
-      <h4 className="font-semibold">{title}</h4>
-      {entries.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">None listed.</p>
-      ) : (
-        <dl className="mt-2 grid gap-1 text-sm">
-          {entries.map(([key, item]) => (
-            <div className="flex justify-between gap-3" key={key}>
-              <dt className="capitalize text-muted-foreground">{key}</dt>
-              <dd className="text-right font-medium">{formatPreviewValue(item)}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
-  );
-}
-
-function PreviewFeatureBlock({ title, value }: { title: string; value: unknown[] }) {
-  return (
-    <div className="rounded-md border border-border bg-background p-3">
-      <h4 className="font-semibold">{title}</h4>
-      {value.length === 0 ? (
-        <p className="mt-2 text-sm text-muted-foreground">None listed.</p>
-      ) : (
-        <div className="mt-3 grid gap-3">
-          {value.map((item, index) => (
-            <PreviewFeatureItem item={item} key={featureKey(item, index)} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function PreviewFeatureItem({ item }: { item: unknown }) {
-  const feature = item && typeof item === "object" ? (item as Record<string, unknown>) : {};
-  const damage = Array.isArray(feature.damage) ? feature.damage : [];
-  const name = stringFromFeature(feature.name, "Feature");
-  const description = stringFromFeature(feature.description);
-  return (
-    <article className="rounded-md border border-border bg-muted/20 p-3">
-      <div className="font-semibold">{name}</div>
-      {description && <p className="mt-1 text-sm leading-6 text-muted-foreground">{description}</p>}
-      {damage.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {damage.map((part, index) => (
-            <Badge key={featureKey(part, index)} tone="warning">
-              {formatPreviewValue(part)}
-            </Badge>
-          ))}
-        </div>
-      )}
-    </article>
-  );
-}
-
-function SrdBadge({ label }: { label?: string }) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold uppercase tracking-wide",
-        sourceBadgeClass("official"),
-      ].join(" ")}
-    >
-      <BookOpen className="h-3 w-3" />
-      {label || "SRD"}
-    </span>
-  );
-}
-
-function abilityScores(creature: Creature) {
-  const abilities = recordFromStatBlock(creature, "abilities");
-  return ["str", "dex", "con", "int", "wis", "cha"].map((key) => ({
-    label: key,
-    value: numberFromRecord(abilities, key),
-  }));
-}
-
-function recordFromStatBlock(creature: Creature, key: string): Record<string, unknown> {
-  const value = creature.statBlock[key];
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function arrayFromStatBlock(creature: Creature, key: string): unknown[] {
-  const value = creature.statBlock[key];
-  return Array.isArray(value) ? value : [];
-}
-
-function numberFromRecord(record: Record<string, unknown>, key: string) {
-  const value = record[key];
-  return typeof value === "number" ? value : 10;
-}
-
-function signedModifier(score: number) {
-  const modifier = Math.floor((score - 10) / 2);
-  return modifier >= 0 ? `+${modifier}` : String(modifier);
-}
-
-function formatPreviewValue(value: unknown): string {
-  if (Array.isArray(value)) return value.join(", ");
-  if (typeof value === "object" && value) return Object.values(value).flat().join(", ");
-  return String(value);
-}
-
-function stringFromFeature(value: unknown, fallback = ""): string {
-  return typeof value === "string" && value ? value : fallback;
-}
-
-function featureKey(value: unknown, index: number): string {
-  if (value && typeof value === "object" && "name" in value) {
-    return `${String((value as { name?: unknown }).name)}-${index}`;
-  }
-  return String(index);
+function crNumber(value: string) {
+  const [n, d] = value.split("/").map(Number);
+  return d ? n / d : n || 0;
 }

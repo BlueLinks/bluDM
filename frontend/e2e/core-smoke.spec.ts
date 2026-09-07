@@ -32,7 +32,9 @@ test("core bluDM browser journeys", async ({ page }) => {
 
   await page.goto("/npcs");
   await expect(page.getByRole("heading", { name: "Creature library" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: npc.name, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: `View ${npc.name}, my creation`, exact: true }),
+  ).toBeVisible();
 
   await page.goto(`/npcs/${npc.id}/edit`);
   await expect(page.getByRole("heading", { name: `Edit ${npc.name}` })).toBeVisible();

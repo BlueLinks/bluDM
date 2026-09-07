@@ -265,6 +265,13 @@ export function creatureToForm(
     savingThrowProficiencies: asStrings(stat.savingThrowProficiencies),
     skillProficiencies: asStrings(stat.skillProficiencies),
     skillExpertise: asStrings(stat.skillExpertise),
+    skillAdjustments: Object.fromEntries(
+      Object.entries(
+        stat.skillAdjustments && typeof stat.skillAdjustments === "object"
+          ? stat.skillAdjustments
+          : {},
+      ).filter(([, value]) => typeof value === "number" && Number.isFinite(value)),
+    ),
     damageVulnerabilities: asStrings(stat.damageVulnerabilities),
     damageResistances: asStrings(stat.damageResistances),
     damageImmunities: asStrings(stat.damageImmunities),

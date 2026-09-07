@@ -1,4 +1,4 @@
-FROM golang:1.26.5-alpine AS build
+FROM golang:1.26.6-alpine AS build
 
 WORKDIR /app
 COPY go.mod go.sum* ./
@@ -9,6 +9,7 @@ RUN go build -o /out/bludm-migrate ./cmd/migrate
 
 FROM alpine:3.24
 
+RUN apk upgrade --no-cache libcrypto3 libssl3
 RUN adduser -D -H appuser
 USER appuser
 COPY --from=build /out/bludm-api /usr/local/bin/bludm-api

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./tailwind.css";
 import "./styles.scss";
 import { AuthLanding } from "./app/AuthLanding";
@@ -85,7 +85,7 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <>
       <WorkspaceShell
         accent={accent}
         resolvedTheme={resolvedTheme}
@@ -102,13 +102,15 @@ function App() {
       >
         <AppRoutes />
       </WorkspaceShell>
-    </BrowserRouter>
+    </>
   );
 }
 
+const router = createBrowserRouter([{ path: "*", element: <App /> }]);
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </React.StrictMode>,
 );
 

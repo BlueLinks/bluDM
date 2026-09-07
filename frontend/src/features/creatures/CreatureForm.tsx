@@ -12,7 +12,6 @@ import {
   actionFormFromCreatureAction,
   actionFormFromTemplate,
   creatureToForm as creatureToFormState,
-  spiderStaffAction,
   weaponAction,
 } from "../../lib/domain/forms";
 import type {
@@ -28,109 +27,24 @@ import type {
 import { CreatureActionsSection } from "./CreatureActionsSection";
 import { CreatureFeatureSections } from "./CreatureFeatureSections";
 import {
-  CreatureFormFooter,
   CreatureSpellcastingSection,
-  CreatureTraitSections,
+  CreatureAbilitySections,
+  CreatureDefenseSections,
   spellSlotCount,
 } from "./CreatureFormSections";
 import { CreatureIdentitySections } from "./CreatureIdentitySections";
 
-const emptyCreatureForm: CreatureFormState = {
-  imageAssetId: "",
-  avatarUrl: "",
-  name: "",
-  description: "",
-  size: "",
-  creatureType: "",
-  creatureSubtype: "",
-  alignment: "",
-  environment: "",
-  defaultDisposition: "enemy",
-  languages: "",
-  walkSpeed: "30",
-  swimSpeed: "",
-  flySpeed: "",
-  burrowSpeed: "",
-  climbSpeed: "",
-  armorClass: "10",
-  hitPoints: "1",
-  hitDice: "1d6",
-  challengeRating: "",
-  xp: "0",
-  passivePerception: "10",
-  passiveInvestigation: "10",
-  passiveInsight: "10",
-  abilityScores: {
-    str: "10",
-    dex: "10",
-    con: "10",
-    int: "10",
-    wis: "10",
-    cha: "10",
-  },
-  savingThrowProficiencies: [],
-  skillProficiencies: [],
-  skillExpertise: [],
-  damageVulnerabilities: [],
-  damageResistances: [],
-  damageImmunities: [],
-  conditionImmunities: [],
-  traits: [],
-  legendaryDescription: "",
-  mythicDescription: "",
-  senses: {
-    Blindsight: { enabled: false, range: "" },
-    Darkvision: { enabled: false, range: "" },
-    Tremorsense: { enabled: false, range: "" },
-    Truesight: { enabled: false, range: "" },
-  },
-  spellcastingAbility: "",
-  innateSpellcastingAbility: "",
-  casterLevel: "0",
-  spellSaveDC: "10",
-  spellAttackBonus: "0",
-  spellSlots1: "0",
-  spellSlots2: "0",
-  spellSlots3: "0",
-  spellSlots4: "0",
-  spellSlots5: "0",
-  spellSlots6: "0",
-  spellSlots7: "0",
-  spellSlots8: "0",
-  spellSlots9: "0",
-  spellRefs: [],
-  statBlock: "{}",
-};
-
-function applySpellcastingToForm(
-  form: CreatureFormState,
-  spellcasting?: CreatureSpellcastingProfile,
-): CreatureFormState {
-  if (!spellcasting) return form;
-  const slotValue = (level: number) => String(Number(spellcasting.slots[String(level)]) || 0);
-  return {
-    ...form,
-    spellcastingAbility: spellcasting.spellcastingAbility,
-    innateSpellcastingAbility: spellcasting.innateSpellcastingAbility,
-    casterLevel: String(spellcasting.casterLevel),
-    spellSaveDC: String(spellcasting.spellSaveDC),
-    spellAttackBonus: String(spellcasting.spellAttackBonus),
-    spellSlots1: slotValue(1),
-    spellSlots2: slotValue(2),
-    spellSlots3: slotValue(3),
-    spellSlots4: slotValue(4),
-    spellSlots5: slotValue(5),
-    spellSlots6: slotValue(6),
-    spellSlots7: slotValue(7),
-    spellSlots8: slotValue(8),
-    spellSlots9: slotValue(9),
-    spellRefs: spellcasting.spells.map((spell) => ({
-      spellId: spell.spellId,
-      librarySource: spell.librarySource === "standard" ? "standard" : "user",
-      spellLevel: spell.spellLevel,
-    })),
-  };
-}
+import { parseJSONField } from "../../lib/api/payloads";
+import {
+  CreatureEditorFooter,
+  CreatureEditorLayout,
+  CreatureNotesSection,
+  EditorPreview,
+  type EditorSection,
+} from "./CreatureEditorLayout";
+import { useCreatureNavigationGuard } from "./useCreatureNavigationGuard";
+import { makeEditorPreview } from "./creatureEditorPreview";
+import { emptyCreatureForm, applySpellcastingToForm } from "./creatureEditorModel";
 
 export function CreatureForm({
   mode,
@@ -152,13 +66,8 @@ export function CreatureForm({
     [creature, spellcasting],
   );
   const initialActions = useMemo(
-    () =>
-      existingActions.length > 0
-        ? existingActions.map(actionFormFromCreatureAction)
-        : mode === "create"
-          ? [spiderStaffAction()]
-          : [],
-    [existingActions, mode],
+    () => (existingActions.length > 0 ? existingActions.map(actionFormFromCreatureAction) : []),
+    [existingActions],
   );
   const persistedActionIds = useMemo(
     () => new Set(existingActions.map((action) => action.id)),
@@ -174,27 +83,15 @@ export function CreatureForm({
   const [spellSources, setSpellSources] = useState(["srd-2014"]);
   const [actionBankOpen, setActionBankOpen] = useState(false);
   const [actionSearch, setActionSearch] = useState("");
-  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [section, setSection] = useState<EditorSection>("essentials");
+  const [saving, setSaving] = useState(false);
+  const [savedID, setSavedID] = useState(mode === "edit" ? creature?.id : undefined);
   const [baselineSnapshot, setBaselineSnapshot] = useState(() =>
     JSON.stringify({ form: initialForm, actions: initialActions }),
   );
   const currentSnapshot = JSON.stringify({ form, actions });
   const dirty = currentSnapshot !== baselineSnapshot;
-  useEffect(() => {
-    setForm(initialForm);
-    setActions(initialActions);
-    setBaselineSnapshot(JSON.stringify({ form: initialForm, actions: initialActions }));
-  }, [creature?.id, existingActions.length, spellcasting]);
-
-  useEffect(() => {
-    if (!dirty) return;
-    const handler = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [dirty]);
+  const guard = useCreatureNavigationGuard(dirty);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -235,42 +132,69 @@ export function CreatureForm({
     value: string,
     checked: boolean,
   ) {
-    setForm((current) => ({
-      ...current,
-      [field]: checked
-        ? [...current[field], value]
-        : current[field].filter((item) => item !== value),
-    }));
+    setForm((current) => {
+      const next = {
+        ...current,
+        [field]: checked
+          ? [...new Set([...current[field], value])]
+          : current[field].filter((item) => item !== value),
+      };
+      if (field === "skillExpertise" && checked)
+        next.skillProficiencies = [...new Set([...next.skillProficiencies, value])];
+      if (field === "skillProficiencies" && !checked)
+        next.skillExpertise = next.skillExpertise.filter((item) => item !== value);
+      return next;
+    });
   }
 
-  async function handleCreate(event: FormEvent) {
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
     setError("");
+    const invalid = Array.from(event.currentTarget.elements).find(
+      (element) => element instanceof HTMLInputElement && !element.validity.valid,
+    ) as HTMLInputElement | undefined;
+    if (invalid) {
+      const panel = invalid.closest<HTMLElement>("[data-editor-section]");
+      setSection((panel?.dataset.editorSection as EditorSection) || "essentials");
+      invalid.closest("details")?.setAttribute("open", "");
+      requestAnimationFrame(() => {
+        invalid.focus();
+        invalid.reportValidity();
+      });
+      return;
+    }
     try {
-      const payload =
-        mode === "edit" && creature
-          ? await api.updateCreature(creature.id, form)
-          : await api.createCreature(form);
-      if (mode === "create") {
-        await Promise.all([
-          ...actions
-            .filter((action) => action.name.trim())
-            .map((action) => api.createCreatureAction(payload.creature.id, action)),
-          api.saveCreatureSpellcasting(payload.creature.id, form),
-        ]);
-      } else {
-        await Promise.all([
-          api.replaceCreatureActions(payload.creature.id, actions),
-          api.saveCreatureSpellcasting(payload.creature.id, form),
-        ]);
-      }
+      parseJSONField(form.statBlock);
+    } catch {
+      setSection("notes");
+      setError("Stat block JSON must be a valid JSON object.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = savedID
+        ? await api.updateCreature(savedID, form)
+        : await api.createCreature(form);
+      // Keep the created ID so retrying a failed action/spell save updates the same creature.
+      setSavedID(payload.creature.id);
+      const results = await Promise.allSettled([
+        api.replaceCreatureActions(payload.creature.id, actions),
+        api.saveCreatureSpellcasting(payload.creature.id, form),
+      ]);
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected")
+        throw new Error(
+          `The creature was saved, but some actions or spells could not be saved. Retry Save to finish. ${failure.reason instanceof Error ? failure.reason.message : ""}`,
+        );
       notify(mode === "edit" ? "Creature saved" : "Creature created");
       setBaselineSnapshot(JSON.stringify({ form, actions }));
+      guard.allowNavigation();
       onSaved(payload.creature);
-      setForm(emptyCreatureForm);
-      setActions([spiderStaffAction()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create creature");
+      setError(err instanceof Error ? err.message : "Could not save creature");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -314,56 +238,98 @@ export function CreatureForm({
   });
 
   return (
-    <form className="grid gap-5" data-creature-form="true" onSubmit={handleCreate}>
-      <CreatureIdentitySections form={form} setForm={setForm} />
-      <CreatureTraitSections form={form} setForm={setForm} toggleList={toggleList} />
-      <CreatureFeatureSections form={form} setForm={setForm} />
-      <CreatureSpellcastingSection
-        form={form}
-        setForm={setForm}
-        notify={notify}
-        spellcasting={spellcasting}
-        spellModalOpen={spellModalOpen}
-        setSpellModalOpen={setSpellModalOpen}
-        spellSearch={spellSearch}
-        setSpellSearch={setSpellSearch}
-        spellSources={spellSources}
-        setSpellSources={setSpellSources}
-        filteredSpells={filteredSpells}
-        spells={spells}
-      />
-      <CreatureActionsSection
-        actions={actions}
-        setActions={setActions}
-        actionBankOpen={actionBankOpen}
-        setActionBankOpen={setActionBankOpen}
-        actionSearch={actionSearch}
-        setActionSearch={setActionSearch}
-        filteredTemplates={filteredTemplates}
-        creature={creature}
-        notify={notify}
-        persistedActionIds={persistedActionIds}
-        sensors={sensors}
-        setTemplates={setTemplates}
-        templates={templates}
-        onDragEnd={handleActionDragEnd}
-        onCopyTemplate={copyTemplateIntoCreature}
-        onAddWeapon={addWeaponAction}
-      />
-      <CreatureFormFooter
+    <form className="min-w-0" data-creature-form="true" noValidate onSubmit={handleCreate}>
+      <fieldset disabled={saving} className="min-w-0">
+        <CreatureEditorLayout
+          active={section}
+          onSection={setSection}
+          preview={
+            <EditorPreview {...makeEditorPreview(form, actions, spells, spellcasting, creature)} />
+          }
+        >
+          <div
+            id="creature-section-essentials"
+            data-editor-section="essentials"
+            hidden={section !== "essentials"}
+          >
+            <CreatureIdentitySections form={form} setForm={setForm} />
+          </div>
+          <div
+            id="creature-section-abilities"
+            data-editor-section="abilities"
+            hidden={section !== "abilities"}
+          >
+            <CreatureAbilitySections form={form} setForm={setForm} toggleList={toggleList} />
+          </div>
+          <div
+            id="creature-section-defenses"
+            data-editor-section="defenses"
+            hidden={section !== "defenses"}
+          >
+            <CreatureDefenseSections form={form} setForm={setForm} toggleList={toggleList} />
+          </div>
+          <div
+            id="creature-section-spells"
+            data-editor-section="spells"
+            hidden={section !== "spells"}
+          >
+            <CreatureSpellcastingSection
+              form={form}
+              setForm={setForm}
+              notify={notify}
+              spellcasting={spellcasting}
+              spellModalOpen={spellModalOpen}
+              setSpellModalOpen={setSpellModalOpen}
+              spellSearch={spellSearch}
+              setSpellSearch={setSpellSearch}
+              spellSources={spellSources}
+              setSpellSources={setSpellSources}
+              filteredSpells={filteredSpells}
+              spells={spells}
+            />
+          </div>
+          <div
+            id="creature-section-actions"
+            data-editor-section="actions"
+            hidden={section !== "actions"}
+          >
+            <CreatureFeatureSections form={form} setForm={setForm} />
+            <CreatureActionsSection
+              actions={actions}
+              setActions={setActions}
+              actionBankOpen={actionBankOpen}
+              setActionBankOpen={setActionBankOpen}
+              actionSearch={actionSearch}
+              setActionSearch={setActionSearch}
+              filteredTemplates={filteredTemplates}
+              creature={creature}
+              notify={notify}
+              persistedActionIds={persistedActionIds}
+              sensors={sensors}
+              setTemplates={setTemplates}
+              templates={templates}
+              onDragEnd={handleActionDragEnd}
+              onCopyTemplate={copyTemplateIntoCreature}
+              onAddWeapon={addWeaponAction}
+            />
+          </div>
+          <div id="creature-section-notes" data-editor-section="notes" hidden={section !== "notes"}>
+            <CreatureNotesSection form={form} setForm={setForm} />
+          </div>
+        </CreatureEditorLayout>
+      </fieldset>
+      <CreatureEditorFooter
         error={error}
         dirty={dirty}
+        saving={saving}
         mode={mode}
-        creature={creature}
-        form={form}
-        initialForm={initialForm}
-        initialActions={initialActions}
-        leaveDialogOpen={leaveDialogOpen}
-        setActions={setActions}
-        setForm={setForm}
-        setLeaveDialogOpen={setLeaveDialogOpen}
-        onSaved={onSaved}
+        onRevert={() => {
+          setForm(initialForm);
+          setActions(initialActions);
+          setError("");
+        }}
       />
+      {guard.dialog}
     </form>
   );
 }

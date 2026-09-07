@@ -15,8 +15,8 @@ export function CompactAbilityTable({
   onSaveProficiencyChange: (ability: AbilityKey, checked: boolean) => void;
 }) {
   function stepScore(ability: AbilityKey, delta: number) {
-    const current = Number(abilityScores[ability]) || 10;
-    onScoreChange(ability, String(current + delta));
+    const current = Number(abilityScores[ability]) || 0;
+    onScoreChange(ability, String(Math.max(1, Math.min(30, current + delta))));
   }
 
   return (
@@ -45,6 +45,9 @@ export function CompactAbilityTable({
                 <Input
                   className="h-9 min-h-0 rounded-none border-0 px-0 text-center font-semibold focus:ring-0"
                   type="number"
+                  aria-label={`${ability.label} score`}
+                  min={1}
+                  max={30}
                   value={abilityScores[ability.key]}
                   onChange={(event) => onScoreChange(ability.key, event.target.value)}
                 />
@@ -74,6 +77,7 @@ export function CompactAbilityTable({
               <span>Save prof</span>
               <input
                 className="h-4 w-4 accent-primary"
+                aria-label={`${ability.label} saving throw proficiency`}
                 checked={savingThrowProficiencies.includes(ability.key)}
                 type="checkbox"
                 onChange={(event) => onSaveProficiencyChange(ability.key, event.target.checked)}
@@ -93,6 +97,8 @@ export function SkillsTable({
   proficiencyBonus,
   onProficiencyChange,
   onExpertiseChange,
+  adjustments = {},
+  onAdjustmentChange,
 }: {
   abilityScores: Record<AbilityKey, string>;
   proficiencies: string[];
@@ -100,6 +106,8 @@ export function SkillsTable({
   proficiencyBonus: number;
   onProficiencyChange: (skill: string, checked: boolean) => void;
   onExpertiseChange: (skill: string, checked: boolean) => void;
+  adjustments?: Record<string, number>;
+  onAdjustmentChange?: (skill: string, value: number) => void;
 }) {
   const bonus = proficiencyBonus;
   return (
@@ -109,7 +117,8 @@ export function SkillsTable({
         const base = abilityModifier(score);
         const isProficient = proficiencies.includes(skill.name);
         const isExpert = expertise.includes(skill.name);
-        const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0);
+        const adjustment = adjustments[skill.name] ?? 0;
+        const total = base + (isExpert ? bonus * 2 : isProficient ? bonus : 0) + adjustment;
         return (
           <div
             className="grid min-w-0 grid-cols-[1.8rem_minmax(4.25rem,1fr)_2.6rem] items-center gap-1 rounded-md border border-border bg-background px-1.5 py-1.5 text-sm"
@@ -126,6 +135,37 @@ export function SkillsTable({
             >
               {total >= 0 ? `+${total}` : total}
             </span>
+            {onAdjustmentChange && (
+              <div className="col-span-3 flex items-center justify-between border-t border-border pt-1">
+                <button
+                  type="button"
+                  className="rounded p-2 hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={`Decrease ${skill.name} bonus`}
+                  onClick={() => onAdjustmentChange(skill.name, adjustment - 1)}
+                >
+                  −
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 text-xs text-muted-foreground hover:text-foreground"
+                  disabled={!adjustment}
+                  aria-label={`Reset ${skill.name} adjustment`}
+                  onClick={() => onAdjustmentChange(skill.name, 0)}
+                >
+                  {adjustment
+                    ? `${adjustment > 0 ? "+" : ""}${adjustment} adjustment · reset`
+                    : "Calculated bonus"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded p-2 hover:bg-surface focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={`Increase ${skill.name} bonus`}
+                  onClick={() => onAdjustmentChange(skill.name, adjustment + 1)}
+                >
+                  +
+                </button>
+              </div>
+            )}
             <div className="col-span-3 grid grid-cols-2 gap-1 border-t border-border/70 pt-1">
               <label
                 className="flex min-w-0 items-center justify-center gap-1 rounded bg-muted/60 px-1 py-1 text-[0.58rem] font-semibold uppercase text-muted-foreground"
@@ -134,6 +174,7 @@ export function SkillsTable({
                 <span className="whitespace-nowrap">Prof</span>
                 <input
                   className="h-4 w-4 shrink-0 accent-primary"
+                  aria-label={`${skill.name} proficiency`}
                   checked={isProficient}
                   type="checkbox"
                   onChange={(event) => onProficiencyChange(skill.name, event.target.checked)}
@@ -146,6 +187,7 @@ export function SkillsTable({
                 <span className="whitespace-nowrap">Exp</span>
                 <input
                   className="h-4 w-4 shrink-0 accent-primary"
+                  aria-label={`${skill.name} expertise`}
                   checked={isExpert}
                   type="checkbox"
                   onChange={(event) => onExpertiseChange(skill.name, event.target.checked)}

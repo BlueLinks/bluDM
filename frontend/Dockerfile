@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM nginx:1.31-alpine
 
-RUN apk upgrade --no-cache libcrypto3 libssl3 libxml2 nghttp2-libs
+RUN apk upgrade --no-cache libcrypto3 libssl3 libuuid libxml2 nghttp2-libs
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/dist /usr/share/nginx/html

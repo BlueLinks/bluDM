@@ -2,35 +2,20 @@ import type { Dispatch, SetStateAction } from "react";
 import {
   AbilitySelect,
   ConditionImmunityChecklist,
-  DamageDefenseGroup,
   SenseControl,
 } from "../../components/shared/CharacterFormControls";
 import { CompactAbilityTable, SkillsTable } from "../../components/shared/CharacterSheetTables";
-import { UnsavedChangesBar } from "../../components/shared/UnsavedChangesBar";
-import {
-  Button,
-  ConfirmDialog,
-  Field,
-  FormSection,
-  Input,
-  SlotStepper,
-  Textarea,
-} from "../../components/ui";
+import { CreatureDamageMatrix } from "./CreatureDamageMatrix";
+import { CreaturePassiveScores } from "./CreatureIdentitySections";
+import { Field, FormSection, Input, SlotStepper } from "../../components/ui";
 import { senseTypes } from "../../lib/domain/options";
-import type {
-  ActionFormState,
-  Creature,
-  CreatureFormState,
-  CreatureSpellcastingProfile,
-  Spell,
-} from "../../types";
+import type { CreatureFormState, CreatureSpellcastingProfile, Spell } from "../../types";
 import { CreatureSpellPickerModal } from "./CreatureSpellPickerModal";
 import { SelectedCreatureSpells } from "./SelectedCreatureSpells";
 
 type SpellSlotLevel = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 type SpellSlotKey = `spellSlots${SpellSlotLevel}`;
 type CreatureFormSetter = Dispatch<SetStateAction<CreatureFormState>>;
-type ActionFormSetter = Dispatch<SetStateAction<ActionFormState[]>>;
 type ToggleCreatureList = (
   field:
     | "savingThrowProficiencies"
@@ -44,7 +29,7 @@ type ToggleCreatureList = (
   checked: boolean,
 ) => void;
 
-export function CreatureTraitSections({
+export function CreatureAbilitySections({
   form,
   setForm,
   toggleList,
@@ -76,12 +61,35 @@ export function CreatureTraitSections({
           expertise={form.skillExpertise}
           proficiencyBonus={creatureProficiency(form)}
           proficiencies={form.skillProficiencies}
+          adjustments={form.skillAdjustments}
+          onAdjustmentChange={(skill, value) =>
+            setForm((current) => ({
+              ...current,
+              skillAdjustments: { ...current.skillAdjustments, [skill]: value },
+            }))
+          }
           onExpertiseChange={(skill, checked) => toggleList("skillExpertise", skill, checked)}
           onProficiencyChange={(skill, checked) => toggleList("skillProficiencies", skill, checked)}
         />
       </FormSection>
+    </>
+  );
+}
+
+export function CreatureDefenseSections({
+  form,
+  setForm,
+  toggleList,
+}: {
+  form: CreatureFormState;
+  setForm: CreatureFormSetter;
+  toggleList: ToggleCreatureList;
+}) {
+  return (
+    <>
+      <CreaturePassiveScores form={form} setForm={setForm} />
       <FormSection title="Senses">
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 @sm:grid-cols-2 @3xl:grid-cols-4">
           {senseTypes.map((sense) => (
             <SenseControl
               key={sense}
@@ -95,12 +103,7 @@ export function CreatureTraitSections({
         </div>
       </FormSection>
       <FormSection title="Resistances & Vulnerabilities">
-        <DamageDefenseGroup
-          damageImmunities={form.damageImmunities}
-          damageResistances={form.damageResistances}
-          damageVulnerabilities={form.damageVulnerabilities}
-          onChange={toggleList}
-        />
+        <CreatureDamageMatrix form={form} onChange={toggleList} />
       </FormSection>
       <FormSection title="Condition Immunities">
         <ConditionImmunityChecklist
@@ -154,7 +157,7 @@ export function CreatureSpellcastingSection({
       title="Spellcasting"
       help="Set the creature's spellcasting numbers, then attach spells from the spell library. Slots determine what leveled spells can be spent in combat."
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 @md:grid-cols-2 @3xl:grid-cols-5">
         <Field label="Spellcasting Ability">
           <AbilitySelect
             value={form.spellcastingAbility}
@@ -232,84 +235,6 @@ export function CreatureSpellcastingSection({
   );
 }
 
-export function CreatureFormFooter({
-  creature,
-  dirty,
-  error,
-  form,
-  initialActions,
-  initialForm,
-  leaveDialogOpen,
-  mode,
-  onSaved,
-  setActions,
-  setForm,
-  setLeaveDialogOpen,
-}: {
-  creature?: Creature;
-  dirty: boolean;
-  error: string;
-  form: CreatureFormState;
-  initialActions: ActionFormState[];
-  initialForm: CreatureFormState;
-  leaveDialogOpen: boolean;
-  mode: "create" | "edit";
-  onSaved: (creature: Creature) => void;
-  setActions: ActionFormSetter;
-  setForm: CreatureFormSetter;
-  setLeaveDialogOpen: (open: boolean) => void;
-}) {
-  return (
-    <>
-      <FormSection title="Notes and JSON">
-        <Field label="Description">
-          <Textarea
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-            rows={4}
-          />
-        </Field>
-        <Field label="Stat block JSON">
-          <Textarea
-            value={form.statBlock}
-            onChange={(event) => setForm({ ...form, statBlock: event.target.value })}
-            rows={5}
-          />
-        </Field>
-      </FormSection>
-      {error && <p className="text-sm font-semibold text-destructive">{error}</p>}
-      <Button type="submit">{mode === "edit" ? "Save NPC" : "Create NPC"}</Button>
-      {dirty && (
-        <UnsavedChangesBar
-          onRevert={() => {
-            setForm(initialForm);
-            setActions(initialActions);
-          }}
-          onCancel={() => setLeaveDialogOpen(true)}
-          onSave={() => {
-            document
-              .querySelector<HTMLFormElement>("form[data-creature-form='true']")
-              ?.requestSubmit();
-          }}
-          saveLabel="Save"
-        />
-      )}
-      <ConfirmDialog
-        open={leaveDialogOpen}
-        title="Leave without saving?"
-        confirmLabel="Leave page"
-        onCancel={() => setLeaveDialogOpen(false)}
-        onConfirm={() => {
-          setLeaveDialogOpen(false);
-          onSaved(creature ?? { ...({} as Creature), id: "" });
-        }}
-      >
-        Changes have been made but have not been saved.
-      </ConfirmDialog>
-    </>
-  );
-}
-
 export function spellSlotCount(form: CreatureFormState, level: number) {
   if (level < 1 || level > 9) return 0;
   const key = `spellSlots${level}` as SpellSlotKey;
@@ -379,5 +304,5 @@ function CompactNumberStepper({
 
 function creatureProficiency(form: CreatureFormState) {
   const cr = Number(form.challengeRating.includes("/") ? 0 : form.challengeRating) || 0;
-  return Math.max(2, Math.min(9, Math.ceil((cr + 3) / 4) + 1));
+  return Math.max(2, Math.min(9, Math.ceil(cr / 4) + 1));
 }
