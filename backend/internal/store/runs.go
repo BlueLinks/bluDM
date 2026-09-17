@@ -318,22 +318,26 @@ func (s RunStore) RestoreCombatantState(ctx context.Context, payload map[string]
 	if err != nil {
 		return err
 	}
+	updates := map[string]any{
+		"current_hit_points":   intFromAny(payload["currentHitPoints"]),
+		"temporary_hit_points": intFromAny(payload["temporaryHitPoints"]),
+		"defeated":             boolFromAny(payload["defeated"]),
+		"damage_dealt":         intFromAny(payload["damageDealt"]),
+		"damage_taken":         intFromAny(payload["damageTaken"]),
+		"healing_done":         intFromAny(payload["healingDone"]),
+		"healing_received":     intFromAny(payload["healingReceived"]),
+		"kills":                intFromAny(payload["kills"]),
+		"death_save_successes": intFromAny(payload["deathSaveSuccesses"]),
+		"death_save_failures":  intFromAny(payload["deathSaveFailures"]),
+		"stable":               boolFromAny(payload["stable"]),
+		"conditions":           conditions,
+	}
+	if _, present := payload["maxHitPointsModifier"]; present {
+		updates["max_hit_points_modifier"] = intFromAny(payload["maxHitPointsModifier"])
+	}
 	return s.db.WithContext(ctx).Model(&dbmodels.EncounterRunCombatantEntity{}).
 		Where("id = ?", strings.TrimSpace(stringFromAny(payload["id"]))).
-		Updates(map[string]any{
-			"current_hit_points":   intFromAny(payload["currentHitPoints"]),
-			"temporary_hit_points": intFromAny(payload["temporaryHitPoints"]),
-			"defeated":             boolFromAny(payload["defeated"]),
-			"damage_dealt":         intFromAny(payload["damageDealt"]),
-			"damage_taken":         intFromAny(payload["damageTaken"]),
-			"healing_done":         intFromAny(payload["healingDone"]),
-			"healing_received":     intFromAny(payload["healingReceived"]),
-			"kills":                intFromAny(payload["kills"]),
-			"death_save_successes": intFromAny(payload["deathSaveSuccesses"]),
-			"death_save_failures":  intFromAny(payload["deathSaveFailures"]),
-			"stable":               boolFromAny(payload["stable"]),
-			"conditions":           conditions,
-		}).Error
+		Updates(updates).Error
 }
 
 func (s RunStore) CombatLogEventsForRun(ctx context.Context, runID string, limit int) ([]models.CombatLogEvent, error) {

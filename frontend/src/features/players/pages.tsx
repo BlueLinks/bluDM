@@ -1,5 +1,5 @@
 import { Plus, UserRound, UsersRound } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { useUiDensity } from "../../app/uiDensity";
@@ -36,15 +36,27 @@ export function PlayersPage() {
   const rosterDensity = density === "compact" ? "compact" : "comfy";
   const toast = useToasts();
 
-  useEffect(() => {
-    Promise.all([api.players(), api.campaigns()])
-      .then(([playerPayload, campaignPayload]) => {
-        setPlayers(playerPayload.players);
-        setCampaigns(campaignPayload.campaigns);
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Could not load players"))
-      .finally(() => setLoading(false));
+  const loadRoster = useCallback(async () => {
+    try {
+      const [playerPayload, campaignPayload] = await Promise.all([api.players(), api.campaigns()]);
+      setPlayers(playerPayload.players);
+      setCampaigns(campaignPayload.campaigns);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load players");
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadRoster();
+  }, [loadRoster]);
+
+  useEffect(() => {
+    const refreshRoster = () => void loadRoster();
+    window.addEventListener("bludm:party-updated", refreshRoster);
+    return () => window.removeEventListener("bludm:party-updated", refreshRoster);
+  }, [loadRoster]);
 
   function openMoveDialog(player: Player) {
     setMovePlayer(player);

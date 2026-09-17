@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>bluDM Party Adjustments — HTML mockup</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="prototype-toolbar" aria-label="Mockup controls">
+      <div>
+        <strong>Party adjustments mockup</strong>
+        <span>Choose a flow to inspect</span>
+      </div>
+      <div class="prototype-scenarios" role="group" aria-label="Prototype scenario">
+        <button class="prototype-scenario is-active" type="button" data-scenario="quick">
+          Fall damage
+        </button>
+        <button class="prototype-scenario" type="button" data-scenario="aid">Cast Aid</button>
+        <button class="prototype-scenario" type="button" data-scenario="leader">
+          Inspiring Leader
+        </button>
+      </div>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3 20 6v5c0 5.2-3.2 8.4-8 10-4.8-1.6-8-4.8-8-10V6l8-3Z" />
+          </svg>
+          <div><strong>bluDM</strong><span>DM workspace</span></div>
+        </div>
+        <nav aria-label="Main navigation">
+          <a href="#"><span class="nav-icon">▣</span>Campaigns</a>
+          <a class="is-active" href="#"><span class="nav-icon">♙</span>Players</a>
+          <a href="#"><span class="nav-icon">⚔</span>NPCs</a>
+          <a href="#"><span class="nav-icon">✦</span>Spells</a>
+          <a href="#"><span class="nav-icon">▤</span>Items</a>
+          <a href="#"><span class="nav-icon">▧</span>Rules</a>
+          <a href="#"><span class="nav-icon">⇩</span>Import</a>
+        </nav>
+        <button class="collapse" type="button">▣ <span>Collapse</span> ›</button>
+      </aside>
+
+      <div class="workspace">
+        <header class="topbar">
+          <div class="breadcrumbs">
+            <strong>bluDM</strong><span>›</span><span>Return to Phandalin</span><span>›</span
+            ><b>Players</b>
+          </div>
+          <div class="top-actions">
+            <button class="top-action adjust-trigger" type="button" aria-haspopup="dialog">
+              <span aria-hidden="true">✚</span><span>Adjust</span>
+            </button>
+            <button class="top-action" type="button"><span aria-hidden="true">◇</span>Dice</button>
+            <button class="top-action" type="button"><span aria-hidden="true">☼</span>Theme</button>
+            <button class="account" type="button"><span aria-hidden="true">♙</span>Account</button>
+          </div>
+        </header>
+
+        <main class="page-content">
+          <div class="page-heading">
+            <div>
+              <h1>Players</h1>
+              <p>Return to Phandalin</p>
+            </div>
+            <button class="primary-button" type="button">+ Add player</button>
+          </div>
+          <div class="player-list" aria-hidden="true">
+            <article>
+              <div class="avatar">TR</div>
+              <div class="player-name">
+                <strong>Tamsin Reed</strong><span>Ranger 5 · Alex</span>
+              </div>
+              <div class="stat"><span>AC</span><strong>15</strong></div>
+              <div class="stat"><span>HP</span><strong>17 / 22</strong></div>
+            </article>
+            <article>
+              <div class="avatar">MT</div>
+              <div class="player-name">
+                <strong>Mira Thornvale</strong><span>Cleric 5 · Jo</span>
+              </div>
+              <div class="stat"><span>AC</span><strong>16</strong></div>
+              <div class="stat"><span>HP</span><strong>38 / 38</strong></div>
+            </article>
+            <article>
+              <div class="avatar">BA</div>
+              <div class="player-name">
+                <strong>Borin Ashmantle</strong><span>Fighter 5 · Sam</span>
+              </div>
+              <div class="stat"><span>AC</span><strong>18</strong></div>
+              <div class="stat"><span>HP</span><strong>44 / 44</strong></div>
+            </article>
+            <article>
+              <div class="avatar">NU</div>
+              <div class="player-name">
+                <strong>Nyx Underbough</strong><span>Bard 5 · Dee</span>
+              </div>
+              <div class="stat"><span>AC</span><strong>15</strong></div>
+              <div class="stat"><span>HP</span><strong>27 / 27</strong></div>
+            </article>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="backdrop"></div>
+    <section
+      class="adjustment-dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialog-title"
+    >
+      <header class="dialog-header">
+        <div>
+          <h2 id="dialog-title">Party adjustment</h2>
+          <p>Return to Phandalin · changes apply immediately</p>
+        </div>
+        <button class="icon-button close-dialog" type="button" aria-label="Close">×</button>
+      </header>
+
+      <div class="workflow-tabs" role="tablist" aria-label="Adjustment workflow">
+        <button
+          class="workflow-tab is-active"
+          type="button"
+          role="tab"
+          aria-selected="true"
+          data-workflow="quick"
+        >
+          Quick adjustment
+          <span>Damage, healing, or direct changes</span>
+        </button>
+        <button
+          class="workflow-tab"
+          type="button"
+          role="tab"
+          aria-selected="false"
+          data-workflow="source"
+        >
+          Cast or use feature
+          <span>Apply rules and track resources</span>
+        </button>
+      </div>
+
+      <div class="dialog-body">
+        <div class="configuration-column">
+          <section class="quick-workflow workflow-panel">
+            <div class="section-heading">
+              <h3>What happened?</h3>
+            </div>
+            <div class="adjustment-kinds" role="group" aria-label="Adjustment type">
+              <button class="kind-button is-active" type="button" data-kind="damage">
+                <span class="kind-icon danger">↓</span
+                ><span><strong>Damage</strong><small>Subtract HP</small></span>
+              </button>
+              <button class="kind-button" type="button" data-kind="healing">
+                <span class="kind-icon success">+</span
+                ><span><strong>Healing</strong><small>Restore HP</small></span>
+              </button>
+              <button class="kind-button" type="button" data-kind="temporary">
+                <span class="kind-icon info">◇</span
+                ><span><strong>Temporary HP</strong><small>Keep higher</small></span>
+              </button>
+              <button class="kind-button" type="button" data-kind="maximum">
+                <span class="kind-icon neutral">↕</span
+                ><span><strong>Max HP</strong><small>Timed modifier</small></span>
+              </button>
+            </div>
+
+            <div class="form-grid">
+              <label>
+                <span>Amount</span>
+                <div class="number-stepper">
+                  <button type="button" data-step="-1" aria-label="Decrease amount">−</button>
+                  <input id="amount" type="number" min="0" value="8" />
+                  <button type="button" data-step="1" aria-label="Increase amount">+</button>
+                </div>
+              </label>
+              <label class="damage-type-field">
+                <span>Damage type</span>
+                <select id="damage-type">
+                  <option>Bludgeoning</option>
+                  <option>Piercing</option>
+                  <option>Slashing</option>
+                  <option>Fire</option>
+                  <option>Other</option>
+                </select>
+              </label>
+              <label class="duration-field is-hidden">
+                <span>Duration</span>
+                <select id="duration">
+                  <option>Until long rest</option>
+                  <option>1 hour</option>
+                  <option>8 hours</option>
+                  <option>Until removed</option>
+                </select>
+              </label>
+              <label class="source-field">
+                <span>Reason <small>optional</small></span>
+                <input id="reason" type="text" value="Fell from the ruined bridge" />
+              </label>
+            </div>
+
+            <label class="inline-check max-current-option is-hidden">
+              <input type="checkbox" checked />
+              <span>Change current HP by the same amount</span>
+            </label>
+            <p class="form-note quick-note">
+              Damage uses temporary HP first. Resistance and vulnerability are not applied here.
+            </p>
+          </section>
+
+          <section class="source-workflow workflow-panel is-hidden">
+            <div class="section-heading">
+              <h3>Choose a spell or feature</h3>
+            </div>
+            <div class="source-fields">
+              <label>
+                <span>Used by</span>
+                <select id="actor-select">
+                  <option value="mira">Mira Thornvale · Cleric 5</option>
+                  <option value="nyx">Nyx Underbough · Bard 5</option>
+                </select>
+              </label>
+              <label>
+                <span>Spell or feature</span>
+                <select id="source-select">
+                  <option value="aid">Aid</option>
+                  <option value="leader">Inspiring Leader</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="source-summary">
+              <div class="source-title-row">
+                <div>
+                  <h4 class="source-name">Aid</h4>
+                  <span class="source-meta">2nd-level spell · 8 hours · no concentration</span>
+                </div>
+                <a href="#">View rules</a>
+              </div>
+              <p class="source-description">
+                Each target’s current and maximum hit points increase by 5 for the duration.
+              </p>
+              <dl class="effect-list">
+                <div>
+                  <dt>Current HP</dt>
+                  <dd class="current-effect">+5</dd>
+                </div>
+                <div>
+                  <dt class="secondary-effect-label">Maximum HP</dt>
+                  <dd class="maximum-effect">+5</dd>
+                </div>
+                <div>
+                  <dt>Targets</dt>
+                  <dd class="target-limit">Up to 3</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div class="resource-row spell-resource">
+              <label>
+                <span>Cast at</span>
+                <select id="slot-level">
+                  <option value="2">2nd level · 3 slots left</option>
+                  <option value="3">3rd level · 2 slots left</option>
+                </select>
+              </label>
+              <label class="inline-check resource-check">
+                <input id="consume-resource" type="checkbox" checked />
+                <span>Use one spell slot</span>
+              </label>
+            </div>
+            <div class="resource-row feature-resource is-hidden">
+              <div>
+                <span class="field-label">Resource</span>
+                <p>No spell slot required · next use after a short or long rest</p>
+              </div>
+              <label class="inline-check resource-check">
+                <input type="checkbox" checked />
+                <span>Mark feature as used</span>
+              </label>
+            </div>
+          </section>
+        </div>
+
+        <section class="targets-column">
+          <div class="targets-heading">
+            <div>
+              <h3>Targets</h3>
+              <span id="target-count">2 selected</span>
+            </div>
+            <div class="target-actions">
+              <button id="select-party" type="button">Select party</button>
+              <button id="clear-targets" type="button">Clear</button>
+            </div>
+          </div>
+          <div class="target-search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="Find player or creature" aria-label="Find target" />
+          </div>
+          <div class="target-list">
+            <label
+              class="target-row is-selected"
+              data-id="tamsin"
+              data-hp="17"
+              data-max="22"
+              data-temp="0"
+            >
+              <input type="checkbox" checked />
+              <span class="avatar">TR</span>
+              <span class="target-identity"
+                ><strong>Tamsin Reed</strong><small>Ranger 5</small></span
+              >
+              <span class="target-current">17 / 22 HP</span>
+              <span class="target-projected"><b>9 / 22 HP</b><small>after</small></span>
+            </label>
+            <label class="target-row" data-id="mira" data-hp="38" data-max="38" data-temp="0">
+              <input type="checkbox" />
+              <span class="avatar">MT</span>
+              <span class="target-identity"
+                ><strong>Mira Thornvale</strong><small>Cleric 5</small></span
+              >
+              <span class="target-current">38 / 38 HP</span>
+              <span class="target-projected"><b>30 / 38 HP</b><small>after</small></span>
+            </label>
+            <label
+              class="target-row is-selected"
+              data-id="borin"
+              data-hp="44"
+              data-max="44"
+              data-temp="0"
+            >
+              <input type="checkbox" checked />
+              <span class="avatar">BA</span>
+              <span class="target-identity"
+                ><strong>Borin Ashmantle</strong><small>Fighter 5</small></span
+              >
+              <span class="target-current">44 / 44 HP</span>
+              <span class="target-projected"><b>36 / 44 HP</b><small>after</small></span>
+            </label>
+            <label class="target-row" data-id="nyx" data-hp="27" data-max="27" data-temp="4">
+              <input type="checkbox" />
+              <span class="avatar">NU</span>
+              <span class="target-identity"
+                ><strong>Nyx Underbough</strong><small>Bard 5 · 4 temp HP</small></span
+              >
+              <span class="target-current">27 / 27 HP</span>
+              <span class="target-projected"><b>23 / 27 HP</b><small>after</small></span>
+            </label>
+            <label class="target-row" data-id="vharkus" data-hp="61" data-max="74" data-temp="0">
+              <input type="checkbox" />
+              <span class="avatar npc">VH</span>
+              <span class="target-identity"
+                ><strong>Vharkus</strong><small>Friendly NPC</small></span
+              >
+              <span class="target-current">61 / 74 HP</span>
+              <span class="target-projected"><b>53 / 74 HP</b><small>after</small></span>
+            </label>
+          </div>
+          <p class="target-limit-warning is-hidden" role="alert">
+            Aid can affect no more than 3 targets at this level.
+          </p>
+        </section>
+      </div>
+
+      <footer class="dialog-footer">
+        <div class="change-summary">
+          <strong id="summary-title">Deal 8 bludgeoning damage</strong>
+          <span id="summary-detail">2 targets · no character resources used</span>
+        </div>
+        <div class="footer-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button id="apply-change" class="primary-button" type="button">Apply damage</button>
+        </div>
+      </footer>
+    </section>
+
+    <div class="toast" role="status" aria-live="polite">
+      <strong>Adjustment applied</strong><span>Prototype only — no data was changed.</span>
+    </div>
+
+    <script src="prototype.js"></script>
+  </body>
+</html>

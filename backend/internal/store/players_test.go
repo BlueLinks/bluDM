@@ -82,3 +82,82 @@ func TestMoveAndClonePlayerPreserveSingleCampaignAssignment(t *testing.T) {
 		t.Fatalf("campaign B player count after unassigning clone = %d, want 1", len(playersB))
 	}
 }
+
+func TestApplyPartyAdjustmentUpdatesVitalsAndTracksAidSlot(t *testing.T) {
+	stores := newIntegrationStores(t)
+	ctx := context.Background()
+
+	owner, err := stores.Auth.CreateUser(ctx, uniqueEmail("party-adjustment"), "hash")
+	requireNoError(t, err)
+	campaign, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Party Campaign"})
+	requireNoError(t, err)
+	otherCampaign, err := stores.Campaigns.Create(ctx, owner.ID, CampaignInput{Name: "Other Campaign"})
+	requireNoError(t, err)
+	caster, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
+		CampaignID:    campaign.ID,
+		CharacterName: "Cleric",
+		MaxHitPoints:  18,
+		CharacterSheet: map[string]any{
+			"spellSlots":          map[string]any{"2": 1},
+			"spellSlotsRemaining": map[string]any{"2": 1},
+		},
+	})
+	requireNoError(t, err)
+	target, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
+		CampaignID:         campaign.ID,
+		CharacterName:      "Fighter",
+		MaxHitPoints:       20,
+		TemporaryHitPoints: 4,
+	})
+	requireNoError(t, err)
+	outsider, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
+		CampaignID:    otherCampaign.ID,
+		CharacterName: "Outsider",
+		MaxHitPoints:  20,
+	})
+	requireNoError(t, err)
+	requireNoError(t, stores.db.WithContext(ctx).Model(&dbmodels.PlayerEntity{}).
+		Where("id = ?", target.ID).Update("current_hit_points", 12).Error)
+
+	_, err = stores.Players.ApplyPartyAdjustment(ctx, owner.ID, campaign.ID, PartyAdjustmentInput{
+		TargetIDs: []string{target.ID},
+		Kind:      "damage",
+		Amount:    7,
+	})
+	requireNoError(t, err)
+	damaged, err := stores.Players.ByID(ctx, owner.ID, target.ID)
+	requireNoError(t, err)
+	if damaged.CurrentHitPoints != 9 || damaged.TemporaryHitPoints != 0 {
+		t.Fatalf("damage should consume temporary HP first, got %+v", damaged)
+	}
+
+	_, err = stores.Players.ApplyPartyAdjustment(ctx, owner.ID, campaign.ID, PartyAdjustmentInput{
+		TargetIDs:        []string{target.ID},
+		Kind:             "aid",
+		Amount:           5,
+		ActorID:          caster.ID,
+		SlotLevel:        2,
+		ConsumeSpellSlot: true,
+	})
+	requireNoError(t, err)
+	aided, err := stores.Players.ByID(ctx, owner.ID, target.ID)
+	requireNoError(t, err)
+	if aided.TemporaryMaxHitPoints != 5 || aided.CurrentHitPoints != 14 {
+		t.Fatalf("Aid should raise maximum and current HP by 5, got %+v", aided)
+	}
+	updatedCaster, err := stores.Players.ByID(ctx, owner.ID, caster.ID)
+	requireNoError(t, err)
+	remaining := numericMap(updatedCaster.CharacterSheet["spellSlotsRemaining"])
+	if remaining["2"] != 0 {
+		t.Fatalf("Aid should consume the caster's level-two slot, got %+v", remaining)
+	}
+
+	_, err = stores.Players.ApplyPartyAdjustment(ctx, owner.ID, campaign.ID, PartyAdjustmentInput{
+		TargetIDs: []string{outsider.ID},
+		Kind:      "healing",
+		Amount:    1,
+	})
+	if !IsNotFound(err) {
+		t.Fatalf("expected cross-campaign target to be rejected, got %v", err)
+	}
+}

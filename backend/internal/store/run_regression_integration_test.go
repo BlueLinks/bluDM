@@ -20,14 +20,15 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	assetID, err := stores.Assets.Create(ctx, owner.ID, "hero.png", "image/png", 4, []byte("data"))
 	requireNoError(t, err)
 	player, err := stores.Players.Create(ctx, owner.ID, PlayerInput{
-		CampaignID:         campaign.ID,
-		CharacterName:      "Edda",
-		PlayerName:         "Blue",
-		AvatarAssetID:      assetID,
-		ArmorClass:         15,
-		MaxHitPoints:       22,
-		ExperiencePoints:   100,
-		TemporaryHitPoints: 3,
+		CampaignID:            campaign.ID,
+		CharacterName:         "Edda",
+		PlayerName:            "Blue",
+		AvatarAssetID:         assetID,
+		ArmorClass:            15,
+		MaxHitPoints:          22,
+		ExperiencePoints:      100,
+		TemporaryHitPoints:    3,
+		TemporaryMaxHitPoints: 2,
 		CharacterSheet: map[string]any{
 			"spellSlots":          map[string]any{"1": 4},
 			"spellSlotsRemaining": map[string]any{"1": 3},
@@ -75,6 +76,8 @@ func TestRunPersistenceRegressions(t *testing.T) {
 		},
 	})
 	requireNoError(t, err)
+	requireNoError(t, stores.db.WithContext(ctx).Model(&dbmodels.PlayerEntity{}).
+		Where("id = ?", player.ID).Update("max_hit_points", 24).Error)
 
 	run, err := stores.Runs.StartEncounter(ctx, owner.ID, encounter.ID, false)
 	requireNoError(t, err)
@@ -85,6 +88,12 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	enemyCombatant := combatantBySource(t, run.Combatants, "creature")
 	if playerCombatant.AvatarURL != "/api/assets/"+assetID {
 		t.Fatalf("expected player avatar asset URL to be snapshotted, got %q", playerCombatant.AvatarURL)
+	}
+	if playerCombatant.TemporaryHitPoints != 3 || playerCombatant.MaxHitPointsModifier != 2 {
+		t.Fatalf("expected current saved temporary HP state in run snapshot, got %+v", playerCombatant)
+	}
+	if playerCombatant.MaxHitPoints != 24 {
+		t.Fatalf("expected current saved maximum HP in run snapshot, got %+v", playerCombatant)
 	}
 	if len(run.SpellSlots) != 1 || run.SpellSlots[0].MaxSlots != 4 || run.SpellSlots[0].RemainingSlots != 3 {
 		t.Fatalf("expected clamped level-one spell slot snapshot, got %+v", run.SpellSlots)
@@ -176,6 +185,7 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	requireNoError(t, stores.Runs.UpdateDeathSave(ctx, playerCombatant))
 	playerCombatant.CurrentHitPoints = 8
 	playerCombatant.TemporaryHitPoints = 1
+	playerCombatant.MaxHitPointsModifier = 5
 	_, err = stores.Runs.UpdateCombatant(ctx, playerCombatant.ID, RunCombatantUpdate{
 		DisplayName:          playerCombatant.DisplayName,
 		ColorLabel:           playerCombatant.ColorLabel,
@@ -219,8 +229,8 @@ func TestRunPersistenceRegressions(t *testing.T) {
 	}
 	updatedPlayer, err := stores.Players.ByID(ctx, owner.ID, player.ID)
 	requireNoError(t, err)
-	if updatedPlayer.CurrentHitPoints != 8 || updatedPlayer.TemporaryHitPoints != 1 {
-		t.Fatalf("expected player HP to persist from run, got %+v", updatedPlayer)
+	if updatedPlayer.CurrentHitPoints != 8 || updatedPlayer.TemporaryHitPoints != 1 || updatedPlayer.TemporaryMaxHitPoints != 5 {
+		t.Fatalf("expected player HP and temporary maximum to persist from run, got %+v", updatedPlayer)
 	}
 	if updatedPlayer.ExperiencePoints != 150 {
 		t.Fatalf("expected XP award to persist, got %d", updatedPlayer.ExperiencePoints)

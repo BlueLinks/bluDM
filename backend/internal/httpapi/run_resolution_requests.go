@@ -23,6 +23,9 @@ type resolutionTargetRequest struct {
 	Healing          int                                `json:"healing"`
 	TemporaryHP      *int                               `json:"temporaryHitPoints"`
 	TemporaryHPMode  string                             `json:"temporaryHitPointsMode"`
+	TemporaryMaxHP   *int                               `json:"temporaryMaxHitPoints"`
+	TemporaryMaxMode string                             `json:"temporaryMaxHitPointsMode"`
+	AdjustCurrentMax bool                               `json:"adjustCurrentHitPointsWithMaximum"`
 	DirectHP         *int                               `json:"directHitPoints"`
 	Conditions       []resolutionConditionRequest       `json:"conditions"`
 }

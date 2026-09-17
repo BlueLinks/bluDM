@@ -18,6 +18,7 @@ import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { DiceRoller } from "../components/DiceRoller";
 import { RollLogProvider } from "../components/RollLogProvider";
 import { Button } from "../components/ui";
+import { PartyAdjustmentDialog } from "../features/players/PartyAdjustmentDialog";
 import type { AccountInfo, User } from "../types";
 import { AccountMenu } from "./AccountMenu";
 import { ThemeMenu, type ThemeAccent, type ThemeMode } from "./theme";
@@ -351,6 +352,7 @@ function WorkspaceHeaderActions({
   return (
     <div className="flex min-w-0 max-w-64 shrink items-center gap-1 overflow-x-auto overscroll-x-contain pr-1 sm:max-w-none sm:shrink-0 sm:gap-2 sm:overflow-visible sm:pr-0">
       {topBarActions}
+      <PartyAdjustmentDialog />
       <DiceRoller />
       <ThemeMenu
         accent={accent}

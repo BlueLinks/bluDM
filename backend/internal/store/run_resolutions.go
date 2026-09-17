@@ -36,18 +36,19 @@ func (s RunStore) SaveResolutionAndLog(
 			if err := tx.Model(&dbmodels.EncounterRunCombatantEntity{}).
 				Where("encounter_run_id = ? and id = ?", strings.TrimSpace(runID), combatant.ID).
 				Updates(map[string]any{
-					"current_hit_points":   combatant.CurrentHitPoints,
-					"temporary_hit_points": combatant.TemporaryHitPoints,
-					"defeated":             combatant.Defeated,
-					"conditions":           conditions,
-					"damage_dealt":         combatant.DamageDealt,
-					"damage_taken":         combatant.DamageTaken,
-					"healing_done":         combatant.HealingDone,
-					"healing_received":     combatant.HealingReceived,
-					"kills":                combatant.Kills,
-					"death_save_successes": combatant.DeathSaveSuccesses,
-					"death_save_failures":  combatant.DeathSaveFailures,
-					"stable":               combatant.Stable,
+					"current_hit_points":      combatant.CurrentHitPoints,
+					"temporary_hit_points":    combatant.TemporaryHitPoints,
+					"max_hit_points_modifier": combatant.MaxHitPointsModifier,
+					"defeated":                combatant.Defeated,
+					"conditions":              conditions,
+					"damage_dealt":            combatant.DamageDealt,
+					"damage_taken":            combatant.DamageTaken,
+					"healing_done":            combatant.HealingDone,
+					"healing_received":        combatant.HealingReceived,
+					"kills":                   combatant.Kills,
+					"death_save_successes":    combatant.DeathSaveSuccesses,
+					"death_save_failures":     combatant.DeathSaveFailures,
+					"stable":                  combatant.Stable,
 				}).Error; err != nil {
 				return err
 			}

@@ -24,6 +24,7 @@ import type {
   User,
 } from "../../types";
 import type { EncounterRuleset } from "../domain/encounterRulesets";
+import type { PartyAdjustmentRequest } from "../domain/partyAdjustments";
 import { actionTemplateApi } from "./actionTemplates";
 import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
@@ -255,6 +256,11 @@ export const api = {
   clonePlayer: (id: string) =>
     request<{ player: Player }>(`/api/players/${id}/clone`, { method: "POST" }),
   deletePlayer: (id: string) => request<void>(`/api/players/${id}`, { method: "DELETE" }),
+  adjustCampaignParty: (campaignId: string, payload: PartyAdjustmentRequest) =>
+    request<{ players: Player[] }>(`/api/campaigns/${campaignId}/party-adjustments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   creatures: (
     options: {

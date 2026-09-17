@@ -128,19 +128,20 @@ func combatantUndoPayload(combatant models.EncounterRunCombatant) map[string]any
 		return map[string]any{}
 	}
 	return map[string]any{
-		"id":                 combatant.ID,
-		"currentHitPoints":   combatant.CurrentHitPoints,
-		"temporaryHitPoints": combatant.TemporaryHitPoints,
-		"defeated":           combatant.Defeated,
-		"damageDealt":        combatant.DamageDealt,
-		"damageTaken":        combatant.DamageTaken,
-		"healingDone":        combatant.HealingDone,
-		"healingReceived":    combatant.HealingReceived,
-		"kills":              combatant.Kills,
-		"deathSaveSuccesses": combatant.DeathSaveSuccesses,
-		"deathSaveFailures":  combatant.DeathSaveFailures,
-		"stable":             combatant.Stable,
-		"conditions":         combatant.Conditions,
+		"id":                   combatant.ID,
+		"currentHitPoints":     combatant.CurrentHitPoints,
+		"temporaryHitPoints":   combatant.TemporaryHitPoints,
+		"maxHitPointsModifier": combatant.MaxHitPointsModifier,
+		"defeated":             combatant.Defeated,
+		"damageDealt":          combatant.DamageDealt,
+		"damageTaken":          combatant.DamageTaken,
+		"healingDone":          combatant.HealingDone,
+		"healingReceived":      combatant.HealingReceived,
+		"kills":                combatant.Kills,
+		"deathSaveSuccesses":   combatant.DeathSaveSuccesses,
+		"deathSaveFailures":    combatant.DeathSaveFailures,
+		"stable":               combatant.Stable,
+		"conditions":           combatant.Conditions,
 	}
 }
 

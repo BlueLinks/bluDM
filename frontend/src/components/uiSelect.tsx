@@ -5,6 +5,7 @@ import React from "react";
 const EMPTY_SELECT_VALUE = "__bludm_empty_select_value__";
 
 export function Select({
+  ariaLabel,
   className = "",
   value,
   placeholder,
@@ -12,6 +13,7 @@ export function Select({
   size = "md",
   onValueChange,
 }: {
+  ariaLabel?: string;
   className?: string;
   value: string;
   placeholder: string;
@@ -32,6 +34,7 @@ export function Select({
       onValueChange={(next) => onValueChange(next === EMPTY_SELECT_VALUE ? "" : next)}
     >
       <SelectPrimitive.Trigger
+        aria-label={ariaLabel}
         className={[
           "inline-flex w-full min-w-0 max-w-full items-center justify-between gap-2 rounded-md border border-border bg-surface text-left text-sm text-surface-foreground outline-none ring-primary/30 transition hover:border-primary/20 hover:bg-card hover:text-foreground focus-visible:ring-2",
           size === "sm" ? "min-h-8 px-2 py-1" : "min-h-10 px-3 py-2",
