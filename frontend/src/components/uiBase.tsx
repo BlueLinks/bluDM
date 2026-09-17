@@ -387,11 +387,13 @@ export function Checkbox({
   label,
   checked,
   compact = false,
+  disabled = false,
   onChange,
 }: {
   label: string;
   checked: boolean;
   compact?: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
@@ -401,11 +403,13 @@ export function Checkbox({
         compact
           ? "gap-1.5 bg-transparent text-xs"
           : "gap-2 rounded-md border border-border bg-background px-3 py-2 text-sm",
+        disabled ? "cursor-not-allowed opacity-60" : "",
       ].join(" ")}
     >
       <input
         className={compact ? "h-3.5 w-3.5 accent-primary" : "h-4 w-4 accent-primary"}
         checked={checked}
+        disabled={disabled}
         type="checkbox"
         onChange={(event) => onChange(event.target.checked)}
       />

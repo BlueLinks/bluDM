@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { MutedPanel, Page, useToasts } from "../../components/ui";
@@ -32,6 +32,7 @@ import {
   stringFromResult,
   stringValue,
   useCombatElapsed,
+  useEncounterRunRefresh,
 } from "./trackerPageHelpers";
 
 export function CombatTrackerPage() {
@@ -63,7 +64,7 @@ export function CombatTrackerPage() {
   const combatStartedAt = combatStartTimestamp(run);
   const elapsed = useCombatElapsed(combatStartedAt);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!runID) return;
     try {
       const payload = await api.encounterRun(runID);
@@ -76,9 +77,10 @@ export function CombatTrackerPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load combat tracker");
     }
-  }
+  }, [navigate, runID]);
 
-  useEffect(() => void load(), [runID]);
+  useEffect(() => void load(), [load]);
+  useEncounterRunRefresh(runID, load);
 
   const combatants = run?.combatants ?? [];
   const active = combatants[run?.currentTurnIndex ?? 0];

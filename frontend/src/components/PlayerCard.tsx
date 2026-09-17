@@ -60,7 +60,7 @@ export function PlayerCard({
         <CharacterVitals
           armorClass={player.armorClass}
           currentHitPoints={player.currentHitPoints}
-          maxHitPoints={player.maxHitPoints}
+          maxHitPoints={player.maxHitPoints + player.temporaryMaxHitPoints}
         />
       </div>
       {density === "comfy" && Object.keys(abilityScores).length > 0 && (

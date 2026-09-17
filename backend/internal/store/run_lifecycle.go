@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"strings"
 	"time"
@@ -69,10 +70,11 @@ func (s RunStore) EndRun(ctx context.Context, run models.EncounterRun, summary m
 			if err := tx.Model(&dbmodels.PlayerEntity{}).
 				Where("id = ?", combatant.PlayerID).
 				Updates(map[string]any{
-					"current_hit_points":   combatant.CurrentHitPoints,
-					"temporary_hit_points": combatant.TemporaryHitPoints,
-					"experience_points":    gorm.Expr("experience_points + ?", xpAwards[combatant.PlayerID]),
-					"character_sheet":      gorm.Expr("jsonb_set(coalesce(character_sheet, '{}'::jsonb), '{spellSlotsRemaining}', ?::jsonb, true)", jsonMapFromInts(remainingSlots)),
+					"current_hit_points":       combatant.CurrentHitPoints,
+					"temporary_hit_points":     combatant.TemporaryHitPoints,
+					"temporary_max_hit_points": max(0, combatant.MaxHitPointsModifier),
+					"experience_points":        gorm.Expr("experience_points + ?", xpAwards[combatant.PlayerID]),
+					"character_sheet":          gorm.Expr("jsonb_set(coalesce(character_sheet, '{}'::jsonb), '{spellSlotsRemaining}', ?::jsonb, true)", jsonMapFromInts(remainingSlots)),
 				}).Error; err != nil {
 				return err
 			}
@@ -116,6 +118,18 @@ func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, runID 
 			CurrentHitPoints:  source.CurrentHitPoints,
 			SortOrder:         source.SortOrder,
 			Snapshot:          source.Snapshot,
+		}
+		if source.SourceType == "player" && source.PlayerID != nil {
+			var player dbmodels.PlayerEntity
+			err := tx.WithContext(ctx).Where("id = ?", *source.PlayerID).First(&player).Error
+			if err == nil {
+				entity.MaxHitPoints = player.MaxHitPoints
+				entity.CurrentHitPoints = player.CurrentHitPoints
+				entity.TemporaryHitPoints = player.TemporaryHitPoints
+				entity.MaxHitPointsModifier = player.TemporaryMaxHitPoints
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
 		if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 			return err

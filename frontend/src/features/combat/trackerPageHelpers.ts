@@ -25,6 +25,20 @@ export function useCombatElapsed(startedAt: string) {
   return elapsed;
 }
 
+export function useEncounterRunRefresh(
+  runId: string | undefined,
+  refresh: () => void | Promise<void>,
+) {
+  useEffect(() => {
+    const refreshRun = (event: Event) => {
+      const detail = (event as CustomEvent<{ runId?: string }>).detail;
+      if (detail?.runId === runId) void refresh();
+    };
+    window.addEventListener("bludm:encounter-run-updated", refreshRun);
+    return () => window.removeEventListener("bludm:encounter-run-updated", refreshRun);
+  }, [refresh, runId]);
+}
+
 export function combatTrackerBreadcrumbs(encounterName?: string) {
   return [{ label: "Encounter Runs", to: "/campaigns" }, { label: encounterName || "Encounter" }];
 }

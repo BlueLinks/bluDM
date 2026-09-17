@@ -145,6 +145,44 @@ func TestApplyResolutionTargetHealingLeavesTemporaryHPAndRecoversTarget(t *testi
 	}
 }
 
+func TestApplyResolutionTargetKeepsHigherTemporaryMaximumAndAdjustsCurrentHP(t *testing.T) {
+	target := testResolutionCombatant("target", 8, 10)
+	target.MaxHitPointsModifier = 2
+	aidMaximum := 5
+	if _, err := applyResolutionTarget(
+		&target,
+		nil,
+		resolutionTargetRequest{
+			DamageMultiplier: 1,
+			TemporaryMaxHP:   &aidMaximum,
+			TemporaryMaxMode: "max",
+			AdjustCurrentMax: true,
+		},
+		damageDefenseRequest{},
+		false,
+	); err != nil {
+		t.Fatal(err)
+	}
+	if target.MaxHitPointsModifier != 5 || target.CurrentHitPoints != 11 {
+		t.Fatalf("expected Aid to add only the 3-point increase, got %+v", target)
+	}
+}
+
+func TestValidateResolutionSourceTargetCount(t *testing.T) {
+	if err := validateResolutionSourceTargetCount("Aid", 3); err != nil {
+		t.Fatalf("Aid with three targets returned error: %v", err)
+	}
+	if err := validateResolutionSourceTargetCount("Aid", 4); err == nil {
+		t.Fatal("expected Aid to reject more than three targets")
+	}
+	if err := validateResolutionSourceTargetCount("Inspiring Leader", 6); err != nil {
+		t.Fatalf("Inspiring Leader with six targets returned error: %v", err)
+	}
+	if err := validateResolutionSourceTargetCount("Inspiring Leader", 7); err == nil {
+		t.Fatal("expected Inspiring Leader to reject more than six targets")
+	}
+}
+
 func TestValidSaveOutcomeRejectsPendingResolution(t *testing.T) {
 	if validSaveOutcome("pending") || validSaveOutcome("") {
 		t.Fatal("expected unresolved save outcomes to be rejected")

@@ -24,6 +24,10 @@ func (s *Server) applyResolutionCommand(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "choose at least one target")
 		return
 	}
+	if err := validateResolutionSourceTargetCount(req.SourceName, len(req.Targets)); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	resolutionKind := normalizedResolutionKind(req.Kind)
 
 	states := map[string]*models.EncounterRunCombatant{}
@@ -128,6 +132,20 @@ func (s *Server) applyResolutionCommand(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, map[string]any{"run": run, "result": payload})
 }
 
+func validateResolutionSourceTargetCount(sourceName string, count int) error {
+	switch strings.ToLower(strings.TrimSpace(sourceName)) {
+	case "aid":
+		if count > 3 {
+			return errors.New("Aid can affect no more than 3 targets")
+		}
+	case "inspiring leader":
+		if count > 6 {
+			return errors.New("Inspiring Leader can affect no more than 6 targets")
+		}
+	}
+	return nil
+}
+
 func applyResolutionTarget(
 	target *models.EncounterRunCombatant,
 	actor *models.EncounterRunCombatant,
@@ -178,6 +196,24 @@ func applyResolutionTarget(
 			target.TemporaryHitPoints = max(target.TemporaryHitPoints, amount)
 		}
 	}
+	if req.TemporaryMaxHP != nil {
+		amount := max(0, *req.TemporaryMaxHP)
+		before := target.MaxHitPointsModifier
+		switch strings.ToLower(strings.TrimSpace(req.TemporaryMaxMode)) {
+		case "max":
+			target.MaxHitPointsModifier = max(before, amount)
+		case "replace":
+			target.MaxHitPointsModifier = amount
+		default:
+			target.MaxHitPointsModifier = before + amount
+		}
+		if req.AdjustCurrentMax {
+			target.CurrentHitPoints = min(
+				effectiveMaxHitPoints(*target),
+				max(0, target.CurrentHitPoints+target.MaxHitPointsModifier-before),
+			)
+		}
+	}
 	for _, condition := range req.Conditions {
 		name := strings.TrimSpace(condition.Name)
 		if name != "" && !containsFold(target.Conditions, name) {
@@ -205,6 +241,8 @@ func applyResolutionTarget(
 		"healingBlocked":         healingBlocked && req.Healing > 0,
 		"temporaryHitPoints":     req.TemporaryHP,
 		"temporaryHitPointsMode": strings.TrimSpace(req.TemporaryHPMode),
+		"temporaryMaxHitPoints":  req.TemporaryMaxHP,
+		"temporaryMaxMode":       strings.TrimSpace(req.TemporaryMaxMode),
 		"directHitPoints":        req.DirectHP,
 		"conditions":             req.Conditions,
 		"targetAfter":            combatantUndoPayload(*target),
