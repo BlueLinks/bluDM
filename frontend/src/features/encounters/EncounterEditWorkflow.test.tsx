@@ -157,6 +157,9 @@ describe("Encounter edit workflow polish", () => {
     expect(screen.getAllByText("Goblin").length).toBeGreaterThan(0);
     expect(screen.getAllByText("AC 15").length).toBeGreaterThan(0);
     expect(screen.getAllByText("HP 7").length).toBeGreaterThan(0);
+    expect(screen.getByRole("combobox", { name: "SRD edition" })).toBeTruthy();
+    expect(screen.queryByText("Role")).toBeNull();
+    expect(screen.getByText("A small monster.")).toBeTruthy();
 
     const quantityField = screen.getByDisplayValue<HTMLInputElement>("1");
     fireEvent.change(quantityField, { target: { value: "2" } });
@@ -169,6 +172,41 @@ describe("Encounter edit workflow polish", () => {
       2,
       false,
     );
+  });
+
+  it("filters add enemy choices by SRD edition", () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    HTMLElement.prototype.hasPointerCapture = vi.fn(() => false);
+    HTMLElement.prototype.setPointerCapture = vi.fn();
+    HTMLElement.prototype.releasePointerCapture = vi.fn();
+    render(
+      <EncounterAddCombatantDialog
+        campaignCreatureIds={new Set()}
+        creatures={[
+          creature(),
+          creature({
+            id: "wolf-2024",
+            name: "Wolf",
+            sourceKey: "srd-2024",
+            sourceLabel: "SRD 2024",
+          }),
+        ]}
+        mode="enemy"
+        npcs={[]}
+        open
+        onAddCreature={vi.fn()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.pointerDown(screen.getByRole("combobox", { name: "SRD edition" }), {
+      button: 0,
+      ctrlKey: false,
+      pointerType: "mouse",
+    });
+    fireEvent.click(screen.getByRole("option", { name: "SRD 2024" }));
+    expect(screen.getByRole("button", { name: /Wolf.*CR/i })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Goblin.*CR/i })).toBeNull();
   });
 
   it("supports add ally tabs for NPCs, creatures, summons, and custom allies", () => {

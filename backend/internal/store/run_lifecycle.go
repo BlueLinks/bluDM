@@ -136,18 +136,6 @@ func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, ownerU
 				return err
 			}
 		}
-		if source.SourceType == "player" && source.PlayerID != nil {
-			var player dbmodels.PlayerEntity
-			err := tx.WithContext(ctx).Where("id = ?", *source.PlayerID).First(&player).Error
-			if err == nil {
-				entity.MaxHitPoints = player.MaxHitPoints
-				entity.CurrentHitPoints = player.CurrentHitPoints
-				entity.TemporaryHitPoints = player.TemporaryHitPoints
-				entity.MaxHitPointsModifier = player.TemporaryMaxHitPoints
-			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return err
-			}
-		}
 		if err := tx.WithContext(ctx).Create(&entity).Error; err != nil {
 			return err
 		}

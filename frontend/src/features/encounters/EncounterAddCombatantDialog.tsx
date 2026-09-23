@@ -1,7 +1,9 @@
-import { Check, HeartPulse, Plus, Search, Shield } from "lucide-react";
+import { Check, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ResizableSplitLayout } from "../../components/layout";
 import { Button, Field, FloatingInput, Input, Modal, Select } from "../../components/ui";
 import type { Creature } from "../../types";
+import { LoadedCreatureProfile } from "../creatures/CreatureProfile";
 import { CreatureAvatar } from "./editorComponents";
 
 type AddMode = "ally" | "enemy";
@@ -34,9 +36,10 @@ export function EncounterAddCombatantDialog({
   const [typeFilter, setTypeFilter] = useState("all");
   const [crFilter, setCrFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
+  const [editionFilter, setEditionFilter] = useState("all");
   const [selectedId, setSelectedId] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [role, setRole] = useState(mode === "enemy" ? "skirmisher" : "ally");
+  const [limit, setLimit] = useState(60);
   const side = mode === "enemy" ? "enemy" : "friendly";
   const pool = mode === "ally" && tab === "npcs" ? npcs : creatures;
   const filtered = useMemo(
@@ -49,18 +52,25 @@ export function EncounterAddCombatantDialog({
         if (typeFilter !== "all" && creature.creatureType !== typeFilter) return false;
         if (crFilter !== "all" && creature.challengeRating !== crFilter) return false;
         if (sourceFilter !== "all" && creature.librarySource !== sourceFilter) return false;
+        if (
+          editionFilter !== "all" &&
+          creature.librarySource === "standard" &&
+          creature.sourceKey !== editionFilter
+        )
+          return false;
         return true;
       }),
-    [crFilter, pool, query, sourceFilter, typeFilter],
+    [crFilter, editionFilter, pool, query, sourceFilter, typeFilter],
   );
   const selected = filtered.find((creature) => creature.id === selectedId) ?? filtered[0] ?? null;
 
   useEffect(() => {
     if (!open) return;
     setQuantity(1);
-    setRole(mode === "enemy" ? "skirmisher" : "ally");
     if (mode === "ally") setTab("npcs");
   }, [mode, open]);
+
+  useEffect(() => setLimit(60), [query, typeFilter, crFilter, sourceFilter, editionFilter, tab]);
 
   function addSelected() {
     if (!selected) return;
@@ -70,7 +80,7 @@ export function EncounterAddCombatantDialog({
 
   return (
     <Modal
-      className="max-w-4xl"
+      className="max-w-6xl"
       open={open}
       title={mode === "enemy" ? "Add enemy" : "Add ally"}
       onOpenChange={onOpenChange}
@@ -80,73 +90,97 @@ export function EncounterAddCombatantDialog({
         {mode === "ally" && (tab === "summons" || tab === "custom") ? (
           <UnsupportedAllyTab tab={tab} />
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-            <div className="grid content-start gap-3">
-              <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_9rem_8rem_8rem]">
+          <ResizableSplitLayout
+            className="min-w-0 gap-4"
+            defaultPrimary={55}
+            primaryMinWidth="24rem"
+            secondaryMinWidth="23rem"
+            primary={
+              <section className="grid min-w-0 content-start gap-3" aria-label="Creature choices">
                 <FloatingInput
                   icon={Search}
                   label={mode === "enemy" ? "Search monsters" : "Search NPCs or creatures"}
                   value={query}
                   onChange={setQuery}
                 />
-                <Field label="Type">
-                  <Select
-                    value={typeFilter}
-                    placeholder="Type"
-                    options={typeOptions(pool)}
-                    onValueChange={setTypeFilter}
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <Field label="Type">
+                    <Select
+                      value={typeFilter}
+                      placeholder="Type"
+                      options={typeOptions(pool)}
+                      onValueChange={setTypeFilter}
+                    />
+                  </Field>
+                  <Field label="CR">
+                    <Select
+                      value={crFilter}
+                      placeholder="CR"
+                      options={crOptions(pool)}
+                      onValueChange={setCrFilter}
+                    />
+                  </Field>
+                  <Field label="Source">
+                    <Select
+                      value={sourceFilter}
+                      placeholder="Source"
+                      options={sourceOptions}
+                      onValueChange={setSourceFilter}
+                    />
+                  </Field>
+                  {pool.some((creature) => creature.librarySource === "standard") ? (
+                    <Field label="SRD edition">
+                      <Select
+                        value={editionFilter}
+                        placeholder="Edition"
+                        options={editionOptions(pool)}
+                        onValueChange={setEditionFilter}
+                      />
+                    </Field>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {filtered.length} {filtered.length === 1 ? "creature" : "creatures"} found
+                </p>
+                <div className="grid max-h-[30rem] content-start gap-2 overflow-y-auto pr-1">
+                  {filtered.slice(0, limit).map((creature) => (
+                    <CreatureChoice
+                      campaignLinked={campaignCreatureIds.has(creature.id)}
+                      creature={creature}
+                      key={creature.id}
+                      selected={selected?.id === creature.id}
+                      onSelect={() => setSelectedId(creature.id)}
+                    />
+                  ))}
+                  {filtered.length === 0 ? (
+                    <p className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">
+                      No matching creatures.
+                    </p>
+                  ) : null}
+                  {filtered.length > limit ? (
+                    <Button type="button" variant="outline" onClick={() => setLimit(limit + 60)}>
+                      Load more ({filtered.length - limit} remaining)
+                    </Button>
+                  ) : null}
+                </div>
+              </section>
+            }
+            secondary={
+              <aside className="min-w-0 max-h-[34rem] overflow-y-auto rounded-md border border-border bg-card p-3">
+                {selected ? (
+                  <CreaturePreview
+                    creature={selected}
+                    mode={mode}
+                    quantity={quantity}
+                    onAdd={addSelected}
+                    onQuantityChange={setQuantity}
                   />
-                </Field>
-                <Field label="CR">
-                  <Select
-                    value={crFilter}
-                    placeholder="CR"
-                    options={crOptions(pool)}
-                    onValueChange={setCrFilter}
-                  />
-                </Field>
-                <Field label="Source">
-                  <Select
-                    value={sourceFilter}
-                    placeholder="Source"
-                    options={sourceOptions}
-                    onValueChange={setSourceFilter}
-                  />
-                </Field>
-              </div>
-              <div className="grid max-h-[26rem] gap-2 overflow-y-auto pr-1">
-                {filtered.map((creature) => (
-                  <CreatureChoice
-                    campaignLinked={campaignCreatureIds.has(creature.id)}
-                    creature={creature}
-                    key={creature.id}
-                    selected={selected?.id === creature.id}
-                    onSelect={() => setSelectedId(creature.id)}
-                  />
-                ))}
-                {filtered.length === 0 ? (
-                  <p className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">
-                    No matching creatures.
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <aside className="rounded-md border border-border bg-background p-3">
-              {selected ? (
-                <CreaturePreview
-                  creature={selected}
-                  mode={mode}
-                  quantity={quantity}
-                  role={role}
-                  onAdd={addSelected}
-                  onQuantityChange={setQuantity}
-                  onRoleChange={setRole}
-                />
-              ) : (
-                <p className="text-sm text-muted-foreground">Choose a creature to preview.</p>
-              )}
-            </aside>
-          </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Choose a creature to preview.</p>
+                )}
+              </aside>
+            }
+          />
         )}
       </div>
     </Modal>
@@ -206,10 +240,11 @@ function CreatureChoice({
 }) {
   return (
     <button
+      aria-pressed={selected}
       className={[
         "grid min-w-0 gap-3 rounded-md border p-2 text-left sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center",
         selected
-          ? "border-primary bg-primary text-primary-foreground shadow-sm"
+          ? "border-primary bg-primary/10 text-foreground"
           : "border-border bg-surface text-surface-foreground hover:bg-card hover:text-foreground",
       ].join(" ")}
       type="button"
@@ -225,6 +260,9 @@ function CreatureChoice({
           <span>AC {creature.armorClass}</span>
           <span>HP {creature.hitPoints}</span>
           {campaignLinked ? <span>Campaign NPC</span> : null}
+          {creature.librarySource === "standard" ? (
+            <span>{creature.sourceLabel || creature.sourceKey || "SRD"}</span>
+          ) : null}
         </div>
       </div>
       {selected ? <Check className="h-4 w-4 text-primary" /> : <Plus className="h-4 w-4" />}
@@ -236,90 +274,48 @@ function CreaturePreview({
   creature,
   mode,
   quantity,
-  role,
   onAdd,
   onQuantityChange,
-  onRoleChange,
 }: {
   creature: Creature;
   mode: AddMode;
   quantity: number;
-  role: string;
   onAdd: () => void;
   onQuantityChange: (quantity: number) => void;
-  onRoleChange: (role: string) => void;
 }) {
   return (
     <div className="grid gap-4">
-      <div className="flex items-center gap-3">
-        <CreatureAvatar creature={creature} />
-        <div className="min-w-0">
-          <div className="truncate font-semibold">{creature.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {creature.size} {creature.creatureType} · CR {creature.challengeRating || "0"}
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3">
+        <Field label="Quantity">
+          <div className="inline-flex overflow-hidden rounded-md border border-border bg-card">
+            <button
+              className="grid h-10 w-9 place-items-center border-r border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              type="button"
+              onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
+            >
+              -
+            </button>
+            <Input
+              className="h-10 min-h-0 w-14 rounded-none border-0 text-center font-semibold focus:ring-0"
+              min={1}
+              type="number"
+              value={quantity}
+              onChange={(event) => onQuantityChange(Math.max(1, Number(event.target.value) || 1))}
+            />
+            <button
+              className="grid h-10 w-9 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              type="button"
+              onClick={() => onQuantityChange(quantity + 1)}
+            >
+              +
+            </button>
           </div>
-        </div>
+        </Field>
+        <Button type="button" icon={Plus} onClick={onAdd}>
+          {mode === "enemy" ? "Add enemy" : "Add ally"}
+        </Button>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        <PreviewStat icon={Shield} label="AC" value={creature.armorClass} />
-        <PreviewStat icon={HeartPulse} label="HP" value={creature.hitPoints} />
-      </div>
-      <Field label="Quantity">
-        <div className="inline-flex overflow-hidden rounded-md border border-border bg-card">
-          <button
-            className="grid h-10 w-9 place-items-center border-r border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-            type="button"
-            onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
-          >
-            -
-          </button>
-          <Input
-            className="h-10 min-h-0 w-14 rounded-none border-0 text-center font-semibold focus:ring-0"
-            min={1}
-            type="number"
-            value={quantity}
-            onChange={(event) => onQuantityChange(Math.max(1, Number(event.target.value) || 1))}
-          />
-          <button
-            className="grid h-10 w-9 place-items-center border-l border-border text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-            type="button"
-            onClick={() => onQuantityChange(quantity + 1)}
-          >
-            +
-          </button>
-        </div>
-      </Field>
-      <Field label="Role">
-        <Select
-          value={role}
-          placeholder="Role"
-          options={mode === "enemy" ? enemyRoleOptions : allyRoleOptions}
-          onValueChange={onRoleChange}
-        />
-      </Field>
-      <Button type="button" icon={Plus} onClick={onAdd}>
-        {mode === "enemy" ? "Add enemy" : "Add ally"}
-      </Button>
-    </div>
-  );
-}
-
-function PreviewStat({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Shield;
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="rounded-md border border-border bg-card p-2">
-      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-        <Icon className="h-3.5 w-3.5 text-accent" />
-        {label}
-      </div>
-      <div className="font-semibold">{value}</div>
+      <LoadedCreatureProfile creature={creature} />
     </div>
   );
 }
@@ -343,21 +339,23 @@ function crOptions(creatures: Creature[]) {
 }
 
 const sourceOptions = [
-  { label: "All", value: "all" },
-  { label: "Standard", value: "standard" },
-  { label: "Custom", value: "user" },
+  { label: "All sources", value: "all" },
+  { label: "SRD library", value: "standard" },
+  { label: "My creatures", value: "user" },
 ];
 
-const enemyRoleOptions = [
-  { label: "Skirmisher", value: "skirmisher" },
-  { label: "Leader", value: "leader" },
-  { label: "Brute", value: "brute" },
-  { label: "Controller", value: "controller" },
-];
-
-const allyRoleOptions = [
-  { label: "Ally", value: "ally" },
-  { label: "Guardian", value: "guardian" },
-  { label: "Summon", value: "summon" },
-  { label: "Support", value: "support" },
-];
+function editionOptions(creatures: Creature[]) {
+  return [
+    { label: "All editions", value: "all" },
+    ...Array.from(
+      new Map(
+        creatures
+          .filter((creature) => creature.librarySource === "standard" && creature.sourceKey)
+          .map((creature) => [
+            creature.sourceKey,
+            { label: creature.sourceLabel || creature.sourceKey, value: creature.sourceKey },
+          ]),
+      ).values(),
+    ),
+  ];
+}

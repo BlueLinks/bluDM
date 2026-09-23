@@ -294,9 +294,11 @@ Allowed literal-color exceptions:
 
 ## Encounter Builder
 
-The encounter builder uses an empty-by-default Available/Included roster. Party members and allies move between those columns explicitly, with an Add all party shortcut. Available allies show AC and HP before selection.
+The encounter builder uses an empty-by-default Available/Included roster. Party members and allies move between those columns explicitly, with an Add all party shortcut and a clear Included action. Available party members show current/max HP and AC; available allies show HP, AC, and CR and can be searched by name.
 
 Encounter Setup has Fully custom and Generated tabs. Both retain an encounter preview with live difficulty and a named list of the selected party, allies, and enemies. Only Generated exposes archetype, difficulty, and generation settings. The preview should not repeat the generated title and summary in a separate panel. Switching tabs or generation settings confirms only when it would discard edits to a generated encounter. The dialog's close control and progress steps replace footer Cancel and Back buttons.
+
+Keep the Fully custom editor top-aligned beside its preview so a short enemy list does not stretch into empty vertical space. The Add enemy/ally picker follows the creature library pattern: a full-width search above filters, source and SRD edition selection, a selectable creature list, and a detailed stat-block preview. Do not show controls such as combat roles unless they affect the saved encounter.
 
 ## Introducing New Styles
 

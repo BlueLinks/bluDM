@@ -88,12 +88,17 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("EncounterInitiativePage", () => {
-  it("keeps player rolls manual and rolls NPCs and allies only", async () => {
+  it("rolls players on request while keeping manual initiative available", async () => {
     renderPage();
     await screen.findByRole("heading", { name: "Set initiative" });
 
-    expect(screen.queryByRole("button", { name: /roll players/i })).toBeNull();
     expect(screen.getAllByText(/physical roll/i).length).toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole("button", { name: "Roll players" }));
+    await waitFor(() => expect(api.rollInitiative).toHaveBeenCalledWith("run-1", ["player"]));
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>("Borin initiative").value).not.toBe(""),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Roll NPCs & allies" }));
     await waitFor(() =>
@@ -104,8 +109,6 @@ describe("EncounterInitiativePage", () => {
     await waitFor(() => expect(api.rollInitiative).toHaveBeenCalledWith("run-1", ["friendly"]));
     fireEvent.click(screen.getByRole("button", { name: "Re-roll enemies" }));
     await waitFor(() => expect(api.rollInitiative).toHaveBeenCalledWith("run-1", ["enemy"]));
-
-    expect(api.rollInitiative).not.toHaveBeenCalledWith("run-1", ["player"]);
   });
 
   it("commits manual zero and negative values without persisting intermediate keystrokes", async () => {

@@ -139,6 +139,7 @@ export function CampaignWorldPage() {
         onStartEncounter={(encounter, test) => void startEncounter(encounter, test)}
       />
       <CampaignEncounterCreateDialog
+        allowedStandardSources={detail.campaign.allowedStandardSources}
         campaignId={detail.campaign.id}
         difficultyRuleset={campaignEncounterRuleset(detail.campaign)}
         initialLocationId={encounterLocationId}

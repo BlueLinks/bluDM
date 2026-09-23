@@ -97,7 +97,7 @@ export function FieldGrid({
 }
 
 const sidebarDetailClasses = {
-  encounterBuilder: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)]",
+  encounterBuilder: "grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.55fr)] lg:items-start",
   catalog: "grid lg:grid-cols-[250px_minmax(0,1fr)]",
   compact: "grid gap-4 xl:grid-cols-[minmax(13rem,16rem)_minmax(0,1fr)] xl:items-stretch",
   editor: "grid gap-2 xl:grid-cols-[minmax(0,1.29fr)_minmax(28rem,0.71fr)] xl:items-start",

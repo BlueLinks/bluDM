@@ -173,6 +173,7 @@ function CampaignEncountersWorkspace({
               </Button>
             </Link>
             <CampaignEncounterCreateDialog
+              allowedStandardSources={detail.campaign.allowedStandardSources}
               campaignId={campaignId}
               difficultyRuleset={campaignEncounterRuleset(detail.campaign)}
               locations={locations}

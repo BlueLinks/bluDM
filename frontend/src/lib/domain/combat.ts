@@ -365,6 +365,24 @@ export function actionSummary(action: CreatureAction) {
     .join(" + ");
 }
 
+export function isRollableCreatureAction(action: CreatureAction) {
+  if (action.displaySection === "trait") return false;
+  if (
+    action.rolls?.some(
+      (roll) => (roll.diceCount > 0 && roll.dieSize > 0) || Number(roll.fixedValue ?? 0) !== 0,
+    )
+  )
+    return true;
+  const attack = /attack|melee_weapon|ranged_weapon|melee_spell|ranged_spell/i.test(
+    action.actionType,
+  );
+  return (
+    attack &&
+    (Number(action.attackModifier ?? 0) !== 0 ||
+      /^(Melee|Ranged).*Attack/i.test(action.description ?? ""))
+  );
+}
+
 export function rollModeLabel(mode: string) {
   if (mode === "advantage") return "Advantage";
   if (mode === "disadvantage") return "Disadvantage";

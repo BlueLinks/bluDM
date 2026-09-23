@@ -107,6 +107,9 @@ const sectionKeys = [
 ] as const;
 export function actionRollText(action: CreatureAction) {
   return (action.rolls ?? [])
+    .filter(
+      (roll) => (roll.diceCount > 0 && roll.dieSize > 0) || Number(roll.fixedValue ?? 0) !== 0,
+    )
     .map((roll) => {
       const dice =
         roll.diceCount > 0 && roll.dieSize > 0
@@ -116,7 +119,10 @@ export function actionRollText(action: CreatureAction) {
     })
     .join(" + ");
 }
-export function profileFeatures(creature: Creature, actions: CreatureAction[] = []) {
+export function profileFeatures(
+  creature: Pick<Creature, "statBlock">,
+  actions: CreatureAction[] = [],
+) {
   return sectionKeys
     .map(([title, section, rawKey]) => {
       const typed = actions.filter((action) => (action.displaySection || "action") === section);
@@ -126,12 +132,15 @@ export function profileFeatures(creature: Creature, actions: CreatureAction[] = 
           ? (creature.statBlock.traits ?? creature.statBlock[rawKey])
           : creature.statBlock[rawKey];
       const items: ProfileFeature[] = list(raw)
-        .map(record)
-        .filter((item) => !names.has(String(item.name).toLowerCase()))
-        .map((item) => ({
-          name: valueText(item.name),
-          description: valueText(item.description ?? item.desc),
-        }));
+        .map((item) =>
+          typeof item === "string"
+            ? { name: item, description: "" }
+            : {
+                name: valueText(record(item).name),
+                description: valueText(record(item).description ?? record(item).desc),
+              },
+        )
+        .filter((item) => item.name && !names.has(item.name.toLowerCase()));
       items.push(
         ...typed.map((action) => ({
           name: action.name,

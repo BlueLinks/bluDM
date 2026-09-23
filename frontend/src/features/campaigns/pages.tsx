@@ -294,6 +294,7 @@ export function CampaignDetailPage() {
       />
       <ResponsiveGrid variant="equal2">
         <CampaignEncounterOverview
+          allowedStandardSources={detail.campaign.allowedStandardSources}
           campaignId={detail.campaign.id}
           difficultyRuleset={campaignEncounterRuleset(detail.campaign)}
           encounterOpen={encounterOpen}

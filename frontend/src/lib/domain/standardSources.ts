@@ -1,3 +1,11 @@
+import type { Creature } from "../../types";
+
+export function creatureAllowedInCampaign(creature: Creature, allowedStandardSources: string[]) {
+  return (
+    creature.librarySource !== "standard" || allowedStandardSources.includes(creature.sourceKey)
+  );
+}
+
 export function standardSourceDisplayName(source: { key: string; label: string }) {
   switch (source.key) {
     case "srd-2014":

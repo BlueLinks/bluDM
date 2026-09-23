@@ -21,6 +21,7 @@ import { CombatWorkspace } from "./CombatWorkspace";
 import { CombatStatusBar } from "./combatWidgets";
 import type { CombatRollFlash } from "./combatTypes";
 import { applyResolutionPayload, blankResolutionTarget } from "./resolutionModel";
+import { standardRunActions } from "./standardRunActions";
 import {
   combatStartTimestamp,
   combatTrackerBreadcrumbs,
@@ -87,9 +88,8 @@ export function CombatTrackerPage() {
   const selectedSheet = combatants.find((combatant) => combatant.id === selectedSheetID) ?? active;
   const acting = combatants.find((combatant) => combatant.id === actingID) ?? active;
   const targets = combatants.filter((combatant) => targetIDs.includes(combatant.id));
-  const pendingActionTarget = combatants.find(
-    (combatant) => combatant.id === stringValue(pendingAction?.targetId),
-  );
+  const pendingTargetID = stringValue(pendingAction?.targetId);
+  const pendingActionTarget = combatants.find(({ id }) => id === pendingTargetID);
   const enemiesAlive = hasLivingEnemies(combatants);
   const downEnemies = combatants.filter((combatant) => isDownEnemy(combatant));
   const orderedCombatants = rotateCombatantsFromActive(
@@ -394,7 +394,7 @@ export function CombatTrackerPage() {
           onMove={(area) => void moveSpellArea(area.id)}
         />
         <CombatWorkspace
-          actions={actions}
+          actions={acting?.creatureId ? actions : standardRunActions(acting)}
           active={active}
           acting={acting}
           actorNeedsDeathSaves={actorNeedsDeathSaves}
