@@ -2,8 +2,9 @@ import { KeyRound, UserRound } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { avatarImageSrc } from "../components/AvatarImagePicker";
+import { useSoundEffects } from "../components/RollLogProvider";
 import { InitialsAvatar } from "../components/shared/displayPrimitives";
-import { Button } from "../components/ui";
+import { Button, Checkbox } from "../components/ui";
 import type { AccountInfo, User } from "../types";
 
 type AccountMenuProps = {
@@ -27,6 +28,7 @@ export function AccountMenu({
   const [account, setAccount] = useState<AccountInfo | null>(null);
   const [accountError, setAccountError] = useState("");
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const { soundEffectsEnabled, setSoundEffectsEnabled } = useSoundEffects();
   const avatarSrc = avatarImageSrc(
     account?.avatarAssetId ?? user?.avatarAssetId,
     account?.avatarUrl ?? user?.avatarUrl,
@@ -90,6 +92,13 @@ export function AccountMenu({
               )}
             </div>
           )}
+          <div className="mt-3 rounded-md border border-border bg-muted/30 p-2">
+            <Checkbox
+              label="Sound effects"
+              checked={soundEffectsEnabled}
+              onChange={setSoundEffectsEnabled}
+            />
+          </div>
           <div className="mt-3 grid gap-2 rounded-md border border-border bg-muted/30 p-2">
             <div className="px-1 text-xs font-bold uppercase text-muted-foreground">
               Interface density

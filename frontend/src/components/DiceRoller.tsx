@@ -55,6 +55,7 @@ export function DiceRoller() {
       detail: `${rolls.join(" + ")} ${signed(modifier)}`,
       total,
       rollType: "Manual",
+      soundEffect: "dice",
     });
   }
 

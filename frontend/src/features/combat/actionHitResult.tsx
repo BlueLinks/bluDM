@@ -416,6 +416,7 @@ export function logDamageRoll(
     total,
     target: targetName,
     rollType: "Damage",
+    soundEffect: "dice",
   });
 }
 

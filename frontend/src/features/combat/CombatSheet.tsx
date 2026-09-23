@@ -86,6 +86,7 @@ export function CombatSheet({
       total,
       actor: combatant.displayName,
       rollType,
+      soundEffect: "dice",
     });
     onRoll(
       `${title}: ${total} (${rollModeLabel(rollMode)} ${d20} ${bonus >= 0 ? "+" : ""}${bonus})`,
