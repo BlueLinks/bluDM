@@ -171,6 +171,9 @@ func playerCombatant(
 	}
 	snapshot["playerId"] = player.ID
 	snapshot["characterName"] = player.CharacterName
+	snapshot["referenceArmorClass"] = player.ArmorClass
+	snapshot["referenceMaxHitPoints"] = player.MaxHitPoints
+	snapshot["referenceAvatarUrl"] = player.AvatarURL
 	return dbmodels.EncounterCombatantEntity{
 		EncounterID: encounterID, SourceType: "player", PlayerID: optionalID(player.ID),
 		Side: "player", DisplayName: player.CharacterName, ColorLabel: "primary",

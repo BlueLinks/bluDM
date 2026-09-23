@@ -1,5 +1,6 @@
 import type React from "react";
 import type { Player } from "../types";
+import { ClassNameText } from "./shared/categoryText";
 import {
   AbilityScoreCard,
   CharacterMetadataChip,
@@ -50,9 +51,10 @@ export function PlayerCard({
             )}
           </div>
           <p className="text-sm text-muted-foreground">
-            {[player.playerName, className && `${className}${level ? ` ${level}` : ""}`]
-              .filter(Boolean)
-              .join(" · ") || "Player character"}
+            {player.playerName || (!className && "Player character")}
+            {player.playerName && className ? " · " : null}
+            {className ? <ClassNameText>{className}</ClassNameText> : null}
+            {className && level ? ` ${level}` : null}
           </p>
         </div>
       </div>

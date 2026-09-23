@@ -18,6 +18,10 @@ Maps is the only dedicated World workspace for now. Travel, encounters, and comm
 
 ## Completed
 
+- Return to Phandalin content exercise: added the Bronn Hill Cartage Depot beneath Phandalin with
+  a table-facing location profile, staff roster, investigation clues, secrets, and Act 3 logistics
+  consequences, confirming the existing Campaign World authoring path supports a detailed working
+  business without a new workspace or backend model.
 - Route-addressable World locations.
 - `/world`, `/world/location/:locationId`, and `/world/maps` routes.
 - Browser reload and back/forward support for selected locations.

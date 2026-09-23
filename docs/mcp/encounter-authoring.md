@@ -86,9 +86,17 @@ silently inserted into the roster or XP budget. The generator version is
 
 ## Snapshot And Latest Export
 
+Saved encounters keep player and creature IDs as their live source references. Browser reads,
+campaign summaries, and new combat runs resolve current names, stats, character sheets, and creature
+abilities from those sources. Deliberate encounter-level name or stat overrides remain local to the
+encounter. If a source has been deleted, the last saved data remains available as a fallback. A run
+freezes its resolved combatants when it starts, so later source edits do not change active combat.
+
 Encounter exports accept `creatureData: "snapshot"` or `"latest"`. New encounter snapshots include
 custom actions and spellcasting alongside core creature data. Legacy snapshots missing adjacent
 records use current adjacent data and report that fallback as lossy. The default is `latest`.
+The explicit `snapshot` export and encounter revision history use the saved historical data rather
+than the live projection.
 
 Inline combatants without a linked creature remain in the bluDM encounter Markdown but cannot
 produce a creature stat block. Encounter export reports each one in `omittedCombatants` and adds a

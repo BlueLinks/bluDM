@@ -43,6 +43,29 @@ func encounterDifficultyInputs(
 	return players, enemies
 }
 
+func EvaluateStoredEncounterDifficulty(
+	ruleset string,
+	combatants []models.EncounterCombatant,
+) generation.DifficultyEvidence {
+	return EvaluateStoredEncounterDifficultyForParty(ruleset, combatants, nil)
+}
+
+func EvaluateStoredEncounterDifficultyForParty(
+	ruleset string,
+	combatants []models.EncounterCombatant,
+	fallbackPlayers []models.Player,
+) generation.DifficultyEvidence {
+	players, enemies := encounterDifficultyInputs(combatants)
+	if len(players) == 0 {
+		players = fallbackPlayers
+	}
+	evidence := generation.EvaluateEncounterForRuleset(ruleset, players, enemies, "")
+	if len(players) == 0 {
+		evidence.ActualDifficulty = "Unrated"
+	}
+	return evidence
+}
+
 func characterSheetFromCombatantSnapshot(snapshot map[string]any) map[string]any {
 	player, ok := objectFromAny(snapshot["player"])
 	if !ok {

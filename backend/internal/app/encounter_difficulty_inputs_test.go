@@ -43,3 +43,59 @@ func TestEncounterDifficultyInputsSupportLegacyNestedSnapshots(t *testing.T) {
 		t.Fatalf("2014 multiplier behavior changed: %+v", evidence)
 	}
 }
+
+func TestEvaluateStoredEncounterDifficultyReturnsDisplayLabel(t *testing.T) {
+	combatants := []models.EncounterCombatant{
+		{
+			SourceType: "player",
+			Snapshot: map[string]any{
+				"player": map[string]any{
+					"characterSheet": map[string]any{"level": float64(4)},
+				},
+			},
+		},
+		{
+			SourceType: "creature", Side: "enemy", DisplayName: "Ogre",
+			Snapshot: map[string]any{
+				"creature": map[string]any{"xp": float64(600)},
+			},
+		},
+	}
+
+	evidence := EvaluateStoredEncounterDifficulty(rulesets.Encounter2014, combatants)
+	if evidence.ActualDifficulty != "Over Deadly" {
+		t.Fatalf("difficulty label = %q, want Over Deadly", evidence.ActualDifficulty)
+	}
+}
+
+func TestEvaluateStoredEncounterDifficultyFallsBackToCampaignParty(t *testing.T) {
+	party := []models.Player{{CharacterSheet: map[string]any{"level": float64(4)}}}
+	combatants := []models.EncounterCombatant{
+		{
+			SourceType: "creature", Side: "enemy", DisplayName: "Goblin",
+			Snapshot: map[string]any{
+				"creature": map[string]any{"xp": float64(50)},
+			},
+		},
+	}
+
+	evidence := EvaluateStoredEncounterDifficultyForParty(
+		rulesets.Encounter2014,
+		combatants,
+		party,
+	)
+	if evidence.ActualDifficulty != "Trivial" {
+		t.Fatalf("difficulty label = %q, want Trivial", evidence.ActualDifficulty)
+	}
+}
+
+func TestEvaluateStoredEncounterDifficultyWithoutPartyIsUnrated(t *testing.T) {
+	combatants := []models.EncounterCombatant{{
+		SourceType: "creature", Side: "enemy", DisplayName: "Goblin",
+		Snapshot: map[string]any{"creature": map[string]any{"xp": float64(50)}},
+	}}
+	evidence := EvaluateStoredEncounterDifficulty(rulesets.Encounter2014, combatants)
+	if evidence.ActualDifficulty != "Unrated" {
+		t.Fatalf("difficulty label = %q, want Unrated", evidence.ActualDifficulty)
+	}
+}

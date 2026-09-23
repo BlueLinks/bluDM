@@ -134,13 +134,6 @@ export const archetypeOptions = [
     copy: "A varied hostile group",
     terms: [],
   },
-  {
-    value: "custom-mix",
-    iconKey: "custom-mix",
-    label: "Custom mix",
-    copy: "Use the preset as a loose prompt",
-    terms: [],
-  },
 ] satisfies Array<{
   copy: string;
   iconKey: EncounterArchetypeIconKey;

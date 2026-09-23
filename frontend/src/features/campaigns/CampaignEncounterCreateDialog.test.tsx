@@ -6,7 +6,6 @@ import { api } from "../../lib/api";
 import { encounterRuleset2024, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import { CampaignEncountersSection } from "./CampaignEncountersSection";
-import { encounterArchetypeIcons } from "./encounterArchetypeIcons";
 import type { CampaignLocation } from "./world/travelTypes";
 
 const navigate = vi.fn();
@@ -78,16 +77,23 @@ describe("CampaignEncounterCreateDialog", () => {
     });
   });
 
-  it("renders only the revised three step headings", () => {
+  it("renders three steps and switches an untouched generated encounter without warning", async () => {
     renderBuilder({ initialLocationId: "shop-1" });
 
     const progress = within(screen.getByRole("navigation", { name: "Encounter builder progress" }));
     expect(progress.getByRole("button", { name: /Party & Allies/i })).toBeTruthy();
     expect(progress.getByRole("button", { name: /Encounter Setup/i })).toBeTruthy();
     expect(progress.getByRole("button", { name: /Review & Create/i })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Details/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Custom encounter/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Random encounter/i })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
+    await screen.findByText("Encounter preview");
+    expect(screen.getByRole("heading", { name: "Party members (2)" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Allies (0)" })).toBeTruthy();
+    expect(screen.queryByText("Monsters at Copper Kettle")).toBeNull();
+    fireEvent.click(screen.getByRole("tab", { name: "Fully custom" }));
+    expect(screen.queryByRole("dialog", { name: "Regenerate encounter?" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Custom encounter" })).toBeTruthy();
   });
 
   it("starts on Party & Allies and preserves participant data between clickable steps", async () => {
@@ -96,26 +102,42 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(
       screen.getByRole("button", { name: /Party & Allies/i }).getAttribute("aria-current"),
     ).toBe("step");
-    expect(screen.getByText("Borin Ashmantle")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Remove Borin Ashmantle" }));
+    expect(screen.getByRole("button", { name: "Add Borin Ashmantle" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Remove Borin Ashmantle" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add Borin Ashmantle" }));
+    expect(screen.getByRole("button", { name: "Remove Borin Ashmantle" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Borin Ashmantle" }));
+    expect(screen.getByRole("button", { name: "Add Borin Ashmantle" })).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    expect(screen.getByRole("tab", { name: "Fully custom" })).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Generated" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Back" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Party & Allies/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Add Borin Ashmantle" }));
+    fireEvent.click(
+      within(screen.getByRole("navigation", { name: "Encounter builder progress" })).getByRole(
+        "button",
+        { name: /Encounter Setup/i },
+      ),
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
     expect(await screen.findByText("Encounter preview")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /Party & Allies/i }));
-    expect(screen.queryByRole("button", { name: "Remove Borin Ashmantle" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Borin Ashmantle" }));
     expect(screen.getByRole("button", { name: "Remove Borin Ashmantle" })).toBeTruthy();
   });
 
   it("renders difficulty cards, enemy count controls, and generated enemy stats", async () => {
     renderBuilder({ initialLocationId: "shop-1" });
 
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
     expect(await screen.findByText("Encounter preview")).toBeTruthy();
     expect(screen.getByTestId("archetype-icon-monsters")).toBeTruthy();
     expect(screen.getByTestId("archetype-icon-humanoids")).toBeTruthy();
-    expect(screen.getByTestId("archetype-icon-custom-mix")).toBeTruthy();
+    expect(screen.queryByTestId("archetype-icon-custom-mix")).toBeNull();
     expect(screen.getByText("Goblins, kobolds, orcs, gnolls, bugbears").className).toContain(
       "text-primary-foreground",
     );
@@ -146,10 +168,61 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(screen.getAllByLabelText("Roll HP at start").length).toBeGreaterThan(0);
   });
 
+  it("moves party members and campaign NPCs between Available and Included", () => {
+    renderBuilder();
+
+    expect(screen.getByText("Included · 0")).toBeTruthy();
+    const allyOption = screen.getByRole("button", { name: "Add Kara Ironshield as ally" });
+    expect(within(allyOption).getByText("AC 15")).toBeTruthy();
+    expect(within(allyOption).getByText("HP 7")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add Borin Ashmantle" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
+    expect(screen.getByText("Included · 2")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Borin Ashmantle" }));
+    expect(screen.getByRole("button", { name: "Add Borin Ashmantle" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add Kara Ironshield as ally" }));
+    expect(screen.getByRole("button", { name: "Remove Kara Ironshield" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Kara Ironshield" }));
+    expect(screen.getByRole("button", { name: "Add Kara Ironshield as ally" })).toBeTruthy();
+  });
+
+  it("keeps custom encounters manual and omits generation-only settings", async () => {
+    renderBuilder({ initialLocationId: "shop-1" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Fully custom" }));
+    expect(screen.getByRole("heading", { name: "Custom encounter" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add enemy" })).toBeTruthy();
+    expect(screen.queryByText("Encounter Type")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Encounter preview" })).toBeTruthy();
+    expect(screen.queryByText("Terrain / environment")).toBeNull();
+    expect(screen.queryByLabelText("Include hazards")).toBeNull();
+    expect(api.previewGeneratedEncounter).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Add enemy" }));
+    const picker = await screen.findByRole("dialog", { name: "Add enemy" });
+    fireEvent.click(within(picker).getByRole("button", { name: "Add enemy" }));
+    expect(screen.getByRole("heading", { name: "Enemies" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Enemies (1)" })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "Next: Review & Create" }));
+    expect(screen.queryByText("Environment")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Create encounter" }));
+    await waitFor(() => expect(api.createEncounter).toHaveBeenCalled());
+    const submitted = vi.mocked(api.createEncounter).mock.calls[0]?.[1];
+    expect(submitted?.previewFingerprint).toBeUndefined();
+    expect(submitted?.combatants).toEqual([
+      expect.objectContaining({ sourceType: "creature", creatureId: "goblin", side: "enemy" }),
+    ]);
+  });
+
   it("uses 2024 difficulty names and budget evidence in previews", async () => {
     renderBuilder({ difficultyRuleset: encounterRuleset2024 });
 
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
     await screen.findByText("Encounter preview");
 
     expect(screen.getByRole("button", { name: /Low/ })).toBeTruthy();
@@ -163,10 +236,61 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(request?.options.challenge).toBe("moderate");
   });
 
+  it("changes generated options freely until the enemy lineup is edited", async () => {
+    renderBuilder({ initialLocationId: "shop-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
+    await screen.findByText("Encounter preview");
+
+    fireEvent.click(screen.getByRole("button", { name: /Humanoids/i }));
+    expect(screen.queryByRole("dialog", { name: "Regenerate encounter?" })).toBeNull();
+    await waitFor(() =>
+      expect(
+        vi.mocked(api.previewGeneratedEncounter).mock.calls.at(-1)?.[1].options.archetype,
+      ).toBe("humanoids"),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Increase qty" }));
+    fireEvent.click(screen.getByRole("button", { name: /Undead/i }));
+    const confirmation = screen.getByRole("dialog", { name: "Regenerate encounter?" });
+    expect(within(confirmation).getByText(/replace your edits/i)).toBeTruthy();
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("button", { name: /Humanoids/i }).getAttribute("aria-pressed")).toBe(
+      "true",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /Undead/i }));
+    fireEvent.click(
+      within(screen.getByRole("dialog", { name: "Regenerate encounter?" })).getByRole("button", {
+        name: "Continue",
+      }),
+    );
+    await waitFor(() =>
+      expect(
+        vi.mocked(api.previewGeneratedEncounter).mock.calls.at(-1)?.[1].options.archetype,
+      ).toBe("undead"),
+    );
+  });
+
+  it("asks before switching an edited generated encounter to custom", async () => {
+    renderBuilder();
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
+    await screen.findByText("Encounter preview");
+    fireEvent.click(screen.getByRole("button", { name: "Increase qty" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Fully custom" }));
+    const confirmation = screen.getByRole("dialog", { name: "Discard generated changes?" });
+    fireEvent.click(within(confirmation).getByRole("button", { name: "Continue" }));
+    expect(screen.getByRole("heading", { name: "Custom encounter" })).toBeTruthy();
+    expect(screen.getByText("Encounter preview")).toBeTruthy();
+  });
+
   it("opens aligned Add Ally and Add Enemy menus in the three-step flow", async () => {
     renderBuilder({ initialLocationId: "shop-1" });
 
-    fireEvent.click(screen.getByRole("button", { name: "Add ally" }));
+    fireEvent.click(screen.getByRole("button", { name: "Browse allies" }));
     expect(await screen.findByRole("heading", { name: "Add ally" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "NPCs" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Creatures" })).toBeTruthy();
@@ -176,6 +300,7 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(await screen.findByText("Kara Ironshield")).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Fully custom" }));
     fireEvent.click(await screen.findByRole("button", { name: "Add enemy" }));
     expect(await screen.findByRole("heading", { name: "Add enemy" })).toBeTruthy();
     expect(screen.getByLabelText("Search monsters")).toBeTruthy();
@@ -185,7 +310,9 @@ describe("CampaignEncounterCreateDialog", () => {
     const onCreated = vi.fn();
     renderBuilder({ initialLocationId: "shop-1", onCreated });
 
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
     await screen.findByText("Encounter preview");
     fireEvent.click(screen.getByRole("button", { name: "Next: Review & Create" }));
 
@@ -248,16 +375,11 @@ describe("CampaignEncounterCreateDialog", () => {
     expect(screen.getByRole("button", { name: /Party & Allies/i })).toBeTruthy();
   });
 
-  it("documents archetype icon licensing and keeps setup UI on theme tokens", async () => {
-    expect(Object.values(encounterArchetypeIcons)).toHaveLength(10);
-    for (const icon of Object.values(encounterArchetypeIcons)) {
-      expect(icon.license).toBe("CC BY 3.0");
-      expect(icon.path).toMatch(/^\/game-icons\/encounter-archetypes\/.+\.svg$/);
-      expect(icon.sourceUrl).toContain("https://game-icons.net/");
-    }
-
+  it("keeps setup UI on theme tokens", async () => {
     renderBuilder({ initialLocationId: "shop-1" });
+    fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
     fireEvent.click(screen.getByRole("button", { name: "Next: Encounter Setup" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Generated" }));
     await screen.findByText("Encounter preview");
     expect(document.body.innerHTML).not.toMatch(/(?:bg|text|border)-\[#/);
     expect(document.body.innerHTML).toContain("bg-card");

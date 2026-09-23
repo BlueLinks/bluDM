@@ -1,10 +1,16 @@
-import { Castle, Map } from "lucide-react";
+import { Castle, ClipboardList, Map } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 export function CampaignWorkspaceTabs({ campaignId }: { campaignId: string }) {
   const tabs = [
     { to: `/campaigns/${campaignId}`, label: "Overview", icon: Castle, end: true },
     { to: `/campaigns/${campaignId}/world`, label: "World", icon: Map, end: false },
+    {
+      to: `/campaigns/${campaignId}/encounters`,
+      label: "Encounters",
+      icon: ClipboardList,
+      end: true,
+    },
   ];
 
   return (

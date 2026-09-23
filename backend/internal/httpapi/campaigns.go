@@ -331,7 +331,42 @@ func (s *Server) campaignsForCreature(ctx context.Context, creatureID string) ([
 }
 
 func (s *Server) encountersForCampaign(ctx context.Context, campaignID string) ([]models.Encounter, error) {
-	return s.stores.Campaigns.Encounters(ctx, currentUserIDMust(ctx), campaignID)
+	userID := currentUserIDMust(ctx)
+	campaign, err := s.stores.Campaigns.ByID(ctx, userID, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	encounters, err := s.stores.Campaigns.Encounters(ctx, userID, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	combatantsByEncounter, err := s.stores.Encounters.CombatantsForCampaign(ctx, userID, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	party, err := s.stores.Campaigns.Players(ctx, userID, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	defaultRuleset, err := rulesets.ResolveEncounterRuleset(
+		campaign.AllowedStandardSources,
+		campaign.EncounterRuleset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	for index := range encounters {
+		ruleset := encounters[index].DifficultyRuleset
+		if !rulesets.IsEncounterRuleset(ruleset) {
+			ruleset = defaultRuleset
+		}
+		encounters[index].Difficulty = appdomain.EvaluateStoredEncounterDifficultyForParty(
+			ruleset,
+			combatantsByEncounter[encounters[index].ID],
+			party,
+		).ActualDifficulty
+	}
+	return encounters, nil
 }
 
 func (s *Server) countCampaignRows(ctx context.Context, tableName string, campaignID string) (int64, error) {

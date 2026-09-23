@@ -1,12 +1,12 @@
 import { FlaskConical, Play, Plus, Skull, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { ResponsiveGrid } from "../../components/layout";
+import { ClassNameText } from "../../components/shared/categoryText";
 import { Button, Field, Input, Select, Textarea } from "../../components/ui";
 import { encounterStatusOptions } from "../../lib/domain/options";
 import type { DraftCombatant, Player } from "../../types";
 import { CombatantList } from "./editorComponents";
 import type { EncounterMetaDraft } from "./domain";
-import { playerClassLevel } from "./domain";
 
 function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
@@ -225,7 +225,16 @@ export function EncounterRosterSections({
                 onClick={() => onAddPlayer(player)}
               >
                 <span className="block font-medium">{player.characterName}</span>
-                <span className="text-xs text-muted-foreground">{playerClassLevel(player)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {typeof player.characterSheet.level === "number"
+                    ? `Level ${player.characterSheet.level} `
+                    : null}
+                  {typeof player.characterSheet.className === "string" ? (
+                    <ClassNameText>{player.characterSheet.className}</ClassNameText>
+                  ) : (
+                    "Character sheet"
+                  )}
+                </span>
               </button>
             ))}
           </div>

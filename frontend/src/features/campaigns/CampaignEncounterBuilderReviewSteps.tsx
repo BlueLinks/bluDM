@@ -14,6 +14,7 @@ import { EncounterDifficultyPanel } from "../encounters/EncounterDifficultyPanel
 import type {
   EncounterBuilderCreatureDraft,
   EncounterBuilderMetaDraft,
+  EncounterBuilderMode,
   EncounterBuilderStep,
 } from "./encounterBuilderGenerator";
 import { previewCombatantsFromDrafts, terrainOptions } from "./encounterBuilderGenerator";
@@ -26,6 +27,7 @@ export function ReviewCreateStep({
   enemies,
   locations,
   meta,
+  mode,
   players,
   onLocationChange,
   onMetaChange,
@@ -35,6 +37,7 @@ export function ReviewCreateStep({
   enemies: EncounterBuilderCreatureDraft[];
   locations: CampaignLocation[];
   meta: EncounterBuilderMetaDraft;
+  mode: EncounterBuilderMode;
   players: Player[];
   onLocationChange: (locationId: string) => void;
   onMetaChange: (meta: EncounterBuilderMetaDraft) => void;
@@ -81,21 +84,29 @@ export function ReviewCreateStep({
               onChange={(roomNumber) => onMetaChange({ ...meta, roomNumber })}
             />
           </ResponsiveGrid>
-          <ResponsiveGrid variant="form2">
-            <Field label="Environment">
-              <Select
-                value={meta.environment}
-                placeholder="Environment"
-                options={terrainOptions}
-                onValueChange={(environment) => onMetaChange({ ...meta, environment })}
+          {mode === "random" ? (
+            <ResponsiveGrid variant="form2">
+              <Field label="Environment">
+                <Select
+                  value={meta.environment}
+                  placeholder="Environment"
+                  options={terrainOptions}
+                  onValueChange={(environment) => onMetaChange({ ...meta, environment })}
+                />
+              </Field>
+              <FloatingInput
+                label="Time"
+                value={meta.timeOfDay}
+                onChange={(timeOfDay) => onMetaChange({ ...meta, timeOfDay })}
               />
-            </Field>
+            </ResponsiveGrid>
+          ) : (
             <FloatingInput
               label="Time"
               value={meta.timeOfDay}
               onChange={(timeOfDay) => onMetaChange({ ...meta, timeOfDay })}
             />
-          </ResponsiveGrid>
+          )}
           <Field label="Description">
             <Textarea
               rows={4}
@@ -111,7 +122,13 @@ export function ReviewCreateStep({
             />
           </Field>
         </section>
-        <EncounterDifficultyPanel compact difficulty={difficulty} />
+        {players.length ? (
+          <EncounterDifficultyPanel compact difficulty={difficulty} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Add party members to estimate encounter difficulty.
+          </p>
+        )}
       </div>
       <section className="grid content-start gap-3 rounded-md border border-border bg-card p-3">
         <div className="flex items-center gap-2">
@@ -130,6 +147,7 @@ export function ReviewCreateStep({
               key={ally.id}
               creature={ally.creature}
               quantity={ally.quantity > 1 ? `Qty ${ally.quantity}` : undefined}
+              tone="friendly"
             />
           ))}
         </ReviewList>
@@ -164,8 +182,6 @@ export function FooterActions({
   canSave,
   saving,
   step,
-  onBack,
-  onCancel,
   onNext,
   onSave,
 }: {
@@ -173,26 +189,14 @@ export function FooterActions({
   canSave: boolean;
   saving: boolean;
   step: EncounterBuilderStep;
-  onBack: () => void;
-  onCancel: () => void;
   onNext: () => void;
   onSave: () => void;
 }) {
   return (
     <ActionRow
       className="z-20 border-t border-border bg-card py-[0.6875rem] pl-[1.875rem] pr-7"
-      justify="between"
+      justify="end"
     >
-      <ActionRow className="gap-5">
-        <Button className="w-24 !py-1" size="sm" type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        {step !== "party" ? (
-          <Button className="w-20 !py-1" size="sm" type="button" variant="outline" onClick={onBack}>
-            Back
-          </Button>
-        ) : null}
-      </ActionRow>
       <ActionRow justify="end">
         {step !== "review" ? (
           <Button

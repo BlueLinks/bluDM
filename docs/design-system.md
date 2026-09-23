@@ -87,6 +87,57 @@ Examples:
 - Difficulty uses semantic tokens: Easy is `success`, Medium is `info`, Hard is `warning`, Deadly is `destructive`, and Over Deadly is `companion-custom`.
 - Imported archive/source markers should use `companion-imported`, unless they are reporting success, warning, or danger.
 
+## Class And Difficulty Identity Colors
+
+Class names and encounter difficulty labels are canonical colored text categories. Whenever a UI presents a known class name or difficulty label as structured data, it must use the shared color mapping below. Do not render a known label with ordinary foreground or muted text, and do not create a page-local mapping.
+
+Use color as reinforcement, not as the only carrier of meaning:
+
+- Keep the class or difficulty name visible as text.
+- Apply the color to the label text by default; do not turn every occurrence into a filled badge.
+- Color only the category name. Keep levels, separators, player names, enemy counts, and surrounding prose in their normal foreground or metadata color.
+- In multiclass labels, color each class name independently. For example, `Fighter 4 / Wizard 1` colors `Fighter` and `Wizard` separately while the levels and slash remain neutral.
+- Do not color ordinary prose merely because it contains a class-like word. The rule applies when the term is being used as a character class or encounter difficulty value.
+- Class colors are stable identity colors. They do not change with the selected accent and must not reuse semantic status tokens.
+- Difficulty colors communicate escalating encounter risk and therefore continue to use the shared semantic status tokens.
+- Every text color must meet WCAG AA contrast on `background`, `card`, and `surface` in both light and dark modes. Define light and dark values at the token level rather than modifying them in feature components.
+- Unknown or homebrew classes use `class-custom`; do not assign an arbitrary color at the call site.
+
+### Class Mapping
+
+| Class             | Shared token      | Color identity            |
+| ----------------- | ----------------- | ------------------------- |
+| Artificer         | `class-artificer` | Copper                    |
+| Barbarian         | `class-barbarian` | Rust red                  |
+| Bard              | `class-bard`      | Amethyst                  |
+| Cleric            | `class-cleric`    | Steel blue-grey           |
+| Druid             | `class-druid`     | Olive                     |
+| Fighter           | `class-fighter`   | Umber                     |
+| Monk              | `class-monk`      | Teal                      |
+| Paladin           | `class-paladin`   | Gold                      |
+| Ranger            | `class-ranger`    | Forest green              |
+| Rogue             | `class-rogue`     | Graphite                  |
+| Sorcerer          | `class-sorcerer`  | Crimson                   |
+| Warlock           | `class-warlock`   | Violet                    |
+| Wizard            | `class-wizard`    | Cobalt                    |
+| Custom or unknown | `class-custom`    | Shared custom-class color |
+
+The canonical class tokens should be exposed through one shared class-name text helper or component before broad UI adoption. Consumers must normalize class names case-insensitively and fall back to `class-custom` for values outside the table.
+
+### Difficulty Mapping
+
+| Ruleset labels     | Shared token         | Meaning                              |
+| ------------------ | -------------------- | ------------------------------------ |
+| Unrated            | `companion-metadata` | No party available to assess risk    |
+| Trivial            | `companion-metadata` | Below meaningful combat pressure     |
+| Easy / Low         | `success`            | Low encounter risk                   |
+| Medium / Moderate  | `info`               | Expected encounter pressure          |
+| Hard / High        | `warning`            | Significant encounter risk           |
+| Deadly / Over High | `destructive`        | Severe encounter risk                |
+| Over Deadly        | `companion-custom`   | Beyond the standard difficulty scale |
+
+Difficulty labels must use the existing shared difficulty-tone helper. A list, filter, summary, preview, encounter builder, combat view, or campaign dashboard must not duplicate this mapping locally.
+
 ## Theme Architecture
 
 bluDM supports shared theme sets that work in both light and dark mode:
@@ -240,6 +291,12 @@ Allowed literal-color exceptions:
 - Navigation hover is neutral; active/selected navigation is accent-backed and must respect the selected accent.
 - The strongest shared examples today are the campaign world hero/header surfaces, campaign overview tiles, import/export summary cards, and compact metric cards.
 - Depth should be introduced where it clarifies hierarchy or clickability, not to make every component look embossed.
+
+## Encounter Builder
+
+The encounter builder uses an empty-by-default Available/Included roster. Party members and allies move between those columns explicitly, with an Add all party shortcut. Available allies show AC and HP before selection.
+
+Encounter Setup has Fully custom and Generated tabs. Both retain an encounter preview with live difficulty and a named list of the selected party, allies, and enemies. Only Generated exposes archetype, difficulty, and generation settings. The preview should not repeat the generated title and summary in a separate panel. Switching tabs or generation settings confirms only when it would discard edits to a generated encounter. The dialog's close control and progress steps replace footer Cancel and Back buttons.
 
 ## Introducing New Styles
 

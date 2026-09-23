@@ -180,7 +180,9 @@ func evaluateEncounter2014(
 	multiplier, partyAdjustment := adjustedEncounterMultiplier(baseMultiplier, len(players))
 	adjusted := int(math.Round(float64(enemyXP) * multiplier))
 	label := "Trivial"
-	if total.Deadly > 0 && float64(adjusted) >= float64(total.Deadly)*1.5 {
+	if adjusted == 0 {
+		label = "Trivial"
+	} else if total.Deadly > 0 && float64(adjusted) >= float64(total.Deadly)*1.5 {
 		label = "Over Deadly"
 	} else if adjusted >= total.Deadly {
 		label = "Deadly"
