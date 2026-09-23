@@ -173,6 +173,7 @@ export function ActionResult({
       total: damage,
       target: target.displayName,
       rollType: "Resolved Damage",
+      soundEffect: "none",
     });
     onResolve(override, damage);
   }
@@ -432,5 +433,6 @@ function logAttackRoll(
     total: attack.attackTotal,
     target: targetName,
     rollType: attack.critical ? "Critical Attack" : "Attack",
+    soundEffect: attack.critical ? "critical" : "dice",
   });
 }
