@@ -1,4 +1,4 @@
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus, Trash2 } from "lucide-react";
 import { ResponsiveGrid, SidebarDetailLayout } from "../../components/layout";
 import { Button, Field, Select } from "../../components/ui";
 import type { Player } from "../../types";
@@ -31,24 +31,33 @@ import {
 export function CustomEncounterSetup({
   enemies,
   onAddEnemy,
+  onClearEnemies,
   onRemoveEnemy,
   onUpdateEnemy,
 }: {
   enemies: EncounterBuilderCreatureDraft[];
   onAddEnemy: () => void;
+  onClearEnemies: () => void;
   onRemoveEnemy: (id: string) => void;
   onUpdateEnemy: (draft: EncounterBuilderCreatureDraft) => void;
 }) {
   return (
-    <section className="grid gap-4">
+    <section className="grid min-w-0 content-start gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">Custom encounter</h3>
           <p className="text-sm text-muted-foreground">Choose the enemies for this encounter.</p>
         </div>
-        <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
-          Add enemy
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {enemies.length ? (
+            <Button type="button" icon={Trash2} size="sm" variant="ghost" onClick={onClearEnemies}>
+              Remove all enemies
+            </Button>
+          ) : null}
+          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
+            Add enemy
+          </Button>
+        </div>
       </div>
       <EnemyDraftList
         enemies={enemies}

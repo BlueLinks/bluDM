@@ -37,8 +37,16 @@ export function EncounterPreviewPanel({
   );
   const enemyXp = enemies.reduce((total, enemy) => total + enemy.creature.xp * enemy.quantity, 0);
   return (
-    <aside className="grid content-start gap-3 lg:-my-4 lg:border-l lg:border-border lg:pb-4 lg:pl-6 lg:pr-0.5 lg:pt-[1.375rem]">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <aside
+      className={
+        mode === "custom"
+          ? "grid min-w-0 content-start gap-3 lg:grid-cols-2 lg:items-start lg:gap-4"
+          : "grid content-start gap-3 lg:-my-4 lg:border-l lg:border-border lg:pb-4 lg:pl-6 lg:pr-0.5 lg:pt-[1.375rem]"
+      }
+    >
+      <div
+        className={`flex flex-wrap items-start justify-between gap-3 ${mode === "custom" ? "lg:col-span-2" : ""}`}
+      >
         <div>
           <h3 className="font-semibold">Encounter preview</h3>
           <p className="text-sm text-muted-foreground">{enemyXp.toLocaleString()} enemy XP</p>
@@ -54,7 +62,11 @@ export function EncounterPreviewPanel({
       ) : (
         <p className="text-sm text-muted-foreground">Add party members to estimate difficulty.</p>
       )}
-      {targetNotice ? <Callout tone="warning">{targetNotice}</Callout> : null}
+      {targetNotice ? (
+        <div className={mode === "custom" ? "lg:col-span-2" : ""}>
+          <Callout tone="warning">{targetNotice}</Callout>
+        </div>
+      ) : null}
       <PreviewGroup title={`Party members (${players.length})`}>
         {players.map((player) => (
           <PlayerCombatantCard compact key={player.id} player={player} />
@@ -67,7 +79,6 @@ export function EncounterPreviewPanel({
             creature={ally.creature}
             key={ally.id}
             quantity={ally.quantity > 1 ? `Qty ${ally.quantity}` : undefined}
-            showChallengeRating={false}
             tone="friendly"
           />
         ))}

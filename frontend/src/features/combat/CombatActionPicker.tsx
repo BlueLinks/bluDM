@@ -2,7 +2,7 @@ import { BowArrow, ChevronDown, Search, Star, Sword, WandSparkles, Zap } from "l
 import { useMemo, useRef, useState } from "react";
 import { ActionIcon } from "../../components/shared/ActionIcon";
 import { Button, Checkbox, Input } from "../../components/ui";
-import { actionSummary } from "../../lib/domain/combat";
+import { actionSummary, isRollableCreatureAction } from "../../lib/domain/combat";
 import type { CreatureAction, CreatureSpell } from "../../types";
 
 type PickerItem =
@@ -32,7 +32,10 @@ export function CombatActionPicker({
   const [showUnavailable, setShowUnavailable] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(readFavorites);
   const [recent, setRecent] = useState<string[]>([]);
-  const items = useMemo(() => pickerItems(actions, spells), [actions, spells]);
+  const items = useMemo(
+    () => pickerItems(actions.filter(isRollableCreatureAction), spells),
+    [actions, spells],
+  );
   const matchingItems = items.filter((item) => matchesQuery(item, query));
   const availableItems = matchingItems.filter(
     (item) => showUnavailable || item.kind === "spell" || !actionDisabledReason,

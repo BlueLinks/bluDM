@@ -11,6 +11,7 @@ const encounterStatusLabel = (status: string) =>
   encounterStatusOptions.find((option) => option.value === status)?.label ?? "Planned";
 
 export function CampaignEncountersSection({
+  allowedStandardSources,
   campaignID,
   difficultyRuleset = encounterRuleset2014,
   encounterOpen,
@@ -24,6 +25,7 @@ export function CampaignEncountersSection({
   onStart,
   onCreated,
 }: {
+  allowedStandardSources: string[];
   campaignID: string;
   difficultyRuleset?: EncounterRuleset;
   encounterOpen: boolean;
@@ -57,6 +59,7 @@ export function CampaignEncountersSection({
       )}
       <div className="mt-3 flex flex-wrap gap-2">
         <CampaignEncounterCreateDialog
+          allowedStandardSources={allowedStandardSources}
           campaignId={campaignID}
           difficultyRuleset={difficultyRuleset}
           locations={locations}

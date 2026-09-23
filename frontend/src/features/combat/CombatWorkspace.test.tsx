@@ -234,6 +234,39 @@ describe("encounter combat workspace", () => {
     expect(screen.getByText("fire")).toBeTruthy();
   });
 
+  it("shows creature trait and action descriptions without inventing an attack roll", () => {
+    const wolf = combatant("wolf", "Wolf", {
+      snapshot: {
+        creature: {
+          statBlock: {
+            specialAbilities: [
+              {
+                name: "Pack Tactics",
+                description: "The wolf has Advantage on attack rolls when an ally is nearby.",
+              },
+            ],
+            actions: [
+              {
+                name: "Bite",
+                description: "Melee Attack Roll: +4. The target has the Prone condition.",
+              },
+            ],
+          },
+        },
+      },
+    });
+    render(
+      <RollLogProvider>
+        <CombatSheet combatant={wolf} runID="run" onRoll={vi.fn()} />
+      </RollLogProvider>,
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "actions" }));
+    expect(screen.getByText("Pack Tactics")).toBeTruthy();
+    expect(screen.getByText(/wolf has Advantage on attack rolls/)).toBeTruthy();
+    expect(screen.getByText("Bite")).toBeTruthy();
+    expect(screen.queryByText(/0 damage attack/i)).toBeNull();
+  });
+
   it("formats durable HP log entries with source, target, type, and resulting HP", () => {
     const event: CombatLogEvent = {
       id: "event",

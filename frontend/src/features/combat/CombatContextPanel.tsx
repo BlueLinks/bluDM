@@ -12,7 +12,7 @@ import {
 import { damageTypeOptions } from "../../components/shared/damageTypes";
 import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
 import { Button, Input, Select } from "../../components/ui";
-import { effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
+import { effectiveAC, effectiveMaxHP, isRollableCreatureAction } from "../../lib/domain/combat";
 import type { CreatureAction, CreatureSpell, EncounterRunCombatant } from "../../types";
 import { CombatActionPicker } from "./CombatActionPicker";
 import { DeathSaveControls } from "./combatWidgets";
@@ -76,6 +76,7 @@ export function CombatContextPanel({
 }) {
   const targets = combatants.filter((combatant) => targetIDs.includes(combatant.id));
   const hasTargets = targets.length > 0;
+  const firstRollableAction = actions.find(isRollableCreatureAction);
   const actionDisabledReason =
     targets.length === 0
       ? "Select one target before choosing an attack."
@@ -113,7 +114,7 @@ export function CombatContextPanel({
                 actions={actions}
                 actionDisabledReason={actionDisabledReason}
                 spells={spells}
-                triggerLabel={actions[0]?.name || spells[0]?.spellName || "Choose action"}
+                triggerLabel={firstRollableAction?.name || spells[0]?.spellName || "Choose action"}
                 onAction={onAction}
                 onSpell={onOpenSpells}
               />

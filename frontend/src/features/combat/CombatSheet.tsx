@@ -27,6 +27,7 @@ import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
 import { friendlyEffectLabel } from "../../lib/domain/spellMessaging";
 import type { EncounterRunCombatant, EncounterRunEffect, RollMode } from "../../types";
+import { CombatSheetActions } from "./CombatSheetActions";
 import { CombatSheetTabs } from "./CombatSheetTabs";
 
 export function CombatSheet({
@@ -57,7 +58,6 @@ export function CombatSheet({
   const descriptor = combatantDescriptor(combatant, sheet);
   const { addRollLogEntry } = useRollLog();
   const [showAllSkills, setShowAllSkills] = React.useState(false);
-  const features = stringArrayFromSheet(sheet.actions ?? sheet.features ?? sheet.traits);
   const notes = textValue(sheet.notes) || textValue(sheet.description);
 
   async function roll(
@@ -115,7 +115,7 @@ export function CombatSheet({
         ) : null
       }
       className="combat-panel combat-section-panel combat-sheet-panel max-h-[calc(100svh-20.5625rem)] min-h-0 overflow-hidden p-2"
-      bodyClassName="max-h-[calc(100svh-24.5625rem)] min-h-0 overflow-hidden px-0.5 pb-1"
+      bodyClassName="max-h-[calc(100svh-24.5625rem)] min-h-0 overflow-y-auto px-0.5 pb-1"
     >
       <div className="grid gap-2">
         <div className="rounded-md border border-border bg-background px-2 py-1.5 xl:px-3 xl:py-[0.5625rem]">
@@ -185,25 +185,7 @@ export function CombatSheet({
                 onToggleExpanded={() => setShowAllSkills((current) => !current)}
               />
             }
-            actions={
-              <div className="grid gap-3 text-sm">
-                <p className="text-muted-foreground">
-                  Use the turn action picker above to resolve modeled attacks and spells.
-                </p>
-                {features.length > 0 ? (
-                  <div>
-                    <div className="font-semibold">Features and actions</div>
-                    <div className="mt-1 text-muted-foreground">{features.join(", ")}</div>
-                  </div>
-                ) : null}
-                <div>
-                  <div className="font-semibold">Combat notes</div>
-                  <div className="mt-1 whitespace-pre-wrap text-muted-foreground">
-                    {notes || "No combat notes recorded."}
-                  </div>
-                </div>
-              </div>
-            }
+            actions={<CombatSheetActions combatant={combatant} notes={notes} sheet={sheet} />}
           />
         </div>
       </div>

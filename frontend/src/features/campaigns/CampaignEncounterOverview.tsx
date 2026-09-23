@@ -8,6 +8,7 @@ import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import type { CampaignLocation } from "./world/travelTypes";
 
 export function CampaignEncounterOverview({
+  allowedStandardSources,
   campaignId,
   difficultyRuleset,
   encounterOpen,
@@ -20,6 +21,7 @@ export function CampaignEncounterOverview({
   onRemove,
   onStart,
 }: {
+  allowedStandardSources: string[];
   campaignId: string;
   difficultyRuleset: EncounterRuleset;
   encounterOpen: boolean;
@@ -40,6 +42,7 @@ export function CampaignEncounterOverview({
       action={
         <div className="flex flex-wrap gap-2">
           <CampaignEncounterCreateDialog
+            allowedStandardSources={allowedStandardSources}
             campaignId={campaignId}
             difficultyRuleset={difficultyRuleset}
             locations={locations}

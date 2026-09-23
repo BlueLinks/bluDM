@@ -1,11 +1,12 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Creature, Encounter, Player } from "../../types";
+import type { Player } from "../../types";
 import { api } from "../../lib/api";
 import { encounterRuleset2024, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import { CampaignEncounterCreateDialog } from "./CampaignEncounterCreateDialog";
 import { CampaignEncountersSection } from "./CampaignEncountersSection";
+import { creature, encounter } from "./encounterBuilderTestFixtures";
 import type { CampaignLocation } from "./world/travelTypes";
 
 const navigate = vi.fn();
@@ -175,7 +176,10 @@ describe("CampaignEncounterCreateDialog", () => {
     const allyOption = screen.getByRole("button", { name: "Add Kara Ironshield as ally" });
     expect(within(allyOption).getByText("AC 15")).toBeTruthy();
     expect(within(allyOption).getByText("HP 7")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add Borin Ashmantle" })).toBeTruthy();
+    expect(within(allyOption).getByText("CR 1/4")).toBeTruthy();
+    const partyOption = screen.getByRole("button", { name: "Add Borin Ashmantle" });
+    expect(within(partyOption).getByText("AC 16")).toBeTruthy();
+    expect(within(partyOption).getByText("HP 24/24")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Add all party" }));
     expect(screen.getByText("Included · 2")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Remove Borin Ashmantle" }));
@@ -356,6 +360,7 @@ describe("CampaignEncounterCreateDialog", () => {
     render(
       <MemoryRouter>
         <CampaignEncountersSection
+          allowedStandardSources={["srd-2014"]}
           campaignID="campaign-1"
           encounterOpen
           encounters={[]}
@@ -398,6 +403,7 @@ function renderBuilder({
   render(
     <MemoryRouter>
       <CampaignEncounterCreateDialog
+        allowedStandardSources={["srd-2014"]}
         campaignId="campaign-1"
         difficultyRuleset={difficultyRuleset}
         initialLocationId={initialLocationId}
@@ -444,50 +450,6 @@ function player(overrides: Partial<Player> = {}): Player {
     temporaryMaxHitPoints: 0,
     experiencePoints: 0,
     characterSheet: { className: "Cleric", level: 4 },
-    createdAt: "",
-    updatedAt: "",
-    ...overrides,
-  };
-}
-
-function creature(overrides: Partial<Creature> = {}): Creature {
-  return {
-    id: "goblin",
-    name: "Goblin",
-    description: "A small monster.",
-    size: "Small",
-    creatureType: "goblinoid",
-    alignment: "neutral evil",
-    armorClass: 15,
-    hitPoints: 7,
-    hitDice: "2d6",
-    challengeRating: "1/4",
-    xp: 50,
-    avatarUrl: "",
-    librarySource: "standard",
-    readOnly: true,
-    sourceKey: "srd-2014",
-    sourceLabel: "SRD 2014",
-    statBlock: {},
-    createdAt: "",
-    updatedAt: "",
-    ...overrides,
-  };
-}
-
-function encounter(overrides: Partial<Encounter> = {}): Encounter {
-  return {
-    id: "encounter-1",
-    campaignId: "campaign-1",
-    name: "Encounter at Copper Kettle",
-    description: "",
-    status: "planned",
-    location: "Brindleford / Copper Kettle",
-    locationId: "shop-1",
-    roomNumber: "",
-    lootNotes: "",
-    combatantCount: 0,
-    enemyCount: 0,
     createdAt: "",
     updatedAt: "",
     ...overrides,

@@ -55,7 +55,7 @@ export function InitiativeEntryPanel({
   onClear: () => void;
   onCommit: (combatant: EncounterRunCombatant, value: string) => void;
   onDraftChange: (id: string, value: string) => void;
-  onRoll: (sides: Array<"friendly" | "enemy">) => void;
+  onRoll: (sides: Array<"player" | "friendly" | "enemy">) => void;
 }) {
   return (
     <section className="grid min-w-0 content-start gap-3 rounded-lg border border-border bg-card p-3">
@@ -75,9 +75,21 @@ export function InitiativeEntryPanel({
       </ActionRow>
       <InitiativeGroup
         title="Players"
-        hint="Enter physical rolls"
+        hint="Enter physical rolls or roll for testing"
         combatants={groups.player}
         drafts={drafts}
+        rollAction={
+          <Button
+            type="button"
+            icon={Dices}
+            size="sm"
+            variant="outline"
+            disabled={busy || groups.player.length === 0}
+            onClick={() => onRoll(["player"])}
+          >
+            Roll players
+          </Button>
+        }
         onDraftChange={onDraftChange}
         onCommit={onCommit}
       />
@@ -246,11 +258,7 @@ function InitiativeGroup({
             {hint ? <div className="text-xs text-muted-foreground">{hint}</div> : null}
           </div>
         </div>
-        {hint ? (
-          <span className="text-xs font-medium text-muted-foreground">Initiative</span>
-        ) : (
-          rollAction
-        )}
+        {rollAction}
       </div>
       {combatants.length === 0 ? (
         <div className="p-3">

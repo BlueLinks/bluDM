@@ -192,8 +192,8 @@ function InitiativePageHeader({
       <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight">Set initiative</h1>
         <p className="mt-1.5 max-w-3xl text-sm text-muted-foreground">
-          Enter the rolls your players call out. Roll NPCs and allies here, or override any
-          generated result manually.
+          Enter the rolls your players call out, or roll for them while testing. NPC and ally rolls
+          can also be overridden manually.
         </p>
         <ActionRow className="mt-2.5 text-sm text-muted-foreground">
           <Swords className="h-4 w-4 shrink-0 text-foreground" />

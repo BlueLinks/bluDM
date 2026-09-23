@@ -66,6 +66,44 @@ describe("CombatActionPicker", () => {
     fireEvent.keyDown(bite, { key: "ArrowDown" });
     expect(document.activeElement).toBe(claw);
   });
+
+  it("keeps traits and empty non-attacks out of the roll picker", () => {
+    render(
+      <CombatActionPicker
+        actions={[
+          action("bite", "Bite", "Melee Attack"),
+          {
+            ...action("pack-tactics", "Pack Tactics", "feature"),
+            displaySection: "trait",
+            description: "The wolf has advantage when an ally is nearby.",
+            attackModifier: 0,
+            rolls: [
+              {
+                rollKind: "damage",
+                damageType: "",
+                magical: false,
+                diceCount: 0,
+                dieSize: 0,
+                fixedValue: 0,
+              },
+            ],
+          },
+          {
+            ...action("multiattack", "Multiattack", "feature"),
+            attackModifier: 0,
+            rolls: [],
+          },
+        ]}
+        spells={[]}
+        onAction={vi.fn()}
+        onSpell={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByText("Choose attack or spell"));
+    expect(screen.getByRole("button", { name: /^Bite/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Pack Tactics/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Multiattack/ })).toBeNull();
+  });
 });
 
 function action(id: string, name: string, actionType: string) {

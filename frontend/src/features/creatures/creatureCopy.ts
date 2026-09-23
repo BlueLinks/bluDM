@@ -140,7 +140,7 @@ export function standardEditorData(creature: Creature): CreatureEditorData {
     },
   };
 }
-function standardAction(
+export function standardAction(
   feature: Record<string, unknown>,
   section: ActionDisplaySection,
   index: number,
@@ -171,7 +171,11 @@ function standardAction(
       description,
       displaySection: section,
       attackModifier: valueText(feature.attackBonus ?? 0),
-      actionType: description.startsWith("Ranged") ? "ranged_weapon" : "melee_weapon",
+      actionType: /^Ranged\b/i.test(description)
+        ? "ranged_weapon"
+        : /^Melee\b/i.test(description)
+          ? "melee_weapon"
+          : "feature",
       reach: description.match(/reach (\d+) ft/)?.[1] ?? "",
       rolls,
     }),

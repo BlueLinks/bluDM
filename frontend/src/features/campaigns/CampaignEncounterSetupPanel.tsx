@@ -1,4 +1,3 @@
-import { SidebarDetailLayout } from "../../components/layout";
 import { ConfirmDialog } from "../../components/ui";
 import type { EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Player } from "../../types";
@@ -22,6 +21,7 @@ export function CampaignEncounterSetupPanel({
   preview,
   onAddEnemy,
   onChooseMode,
+  onClearEnemies,
   onOptionsChange,
   onRegenerate,
   onRemoveEnemy,
@@ -37,6 +37,7 @@ export function CampaignEncounterSetupPanel({
   preview: EncounterBuilderPreview;
   onAddEnemy: () => void;
   onChooseMode: (mode: EncounterBuilderMode) => void;
+  onClearEnemies: () => void;
   onOptionsChange: (options: EncounterBuilderRandomOptions) => void;
   onRegenerate: () => void;
   onRemoveEnemy: (id: string) => void;
@@ -61,10 +62,11 @@ export function CampaignEncounterSetupPanel({
         </ApproachTab>
       </div>
       {mode === "custom" ? (
-        <SidebarDetailLayout variant="encounterBuilder">
+        <div className="grid min-w-0 gap-4">
           <CustomEncounterSetup
             enemies={customEnemies}
             onAddEnemy={onAddEnemy}
+            onClearEnemies={onClearEnemies}
             onRemoveEnemy={onRemoveEnemy}
             onUpdateEnemy={onUpdateEnemy}
           />
@@ -75,7 +77,7 @@ export function CampaignEncounterSetupPanel({
             mode="custom"
             players={players}
           />
-        </SidebarDetailLayout>
+        </div>
       ) : (
         <EncounterSetupStep
           allies={allies}

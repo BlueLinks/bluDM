@@ -1,8 +1,8 @@
-import { Check, HeartPulse, Plus, Shield, UsersRound } from "lucide-react";
-import type { ReactNode } from "react";
+import { Check, HeartPulse, Plus, Search, Shield, Swords, Trash2, UsersRound } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { ClassNameText } from "../../components/shared/categoryText";
 import { StatChip } from "../../components/shared/displayPrimitives";
-import { Badge, Button } from "../../components/ui";
+import { Badge, Button, FloatingInput } from "../../components/ui";
 import type { Creature, Player } from "../../types";
 import {
   CreatureCombatantCard,
@@ -110,6 +110,7 @@ export function PartyAlliesStep({
   onAddAlly,
   onAddAvailableAlly,
   onAddPlayer,
+  onClearIncluded,
   onRemoveAlly,
   onRemovePlayer,
 }: {
@@ -121,9 +122,14 @@ export function PartyAlliesStep({
   onAddAlly: () => void;
   onAddAvailableAlly: (creature: Creature) => void;
   onAddPlayer: (player: Player) => void;
+  onClearIncluded: () => void;
   onRemoveAlly: (id: string) => void;
   onRemovePlayer: (id: string) => void;
 }) {
+  const [allyQuery, setAllyQuery] = useState("");
+  const matchingAllies = availableAllies.filter((creature) =>
+    creature.name.toLowerCase().includes(allyQuery.trim().toLowerCase()),
+  );
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <RosterPanel
@@ -154,13 +160,22 @@ export function PartyAlliesStep({
               type="button"
               onClick={() => onAddPlayer(player)}
             >
-              <span className="min-w-0 truncate">
-                <span className="font-medium">{player.characterName}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{player.characterName}</span>
                 {typeof player.characterSheet.className === "string" ? (
-                  <span className="ml-2 text-xs">
+                  <span className="text-xs">
                     <ClassNameText>{player.characterSheet.className}</ClassNameText>
                   </span>
                 ) : null}
+                <span className="mt-1 flex flex-wrap gap-1.5">
+                  <StatChip icon={Shield} label="AC" tone="primary" value={player.armorClass} />
+                  <StatChip
+                    icon={HeartPulse}
+                    label="HP"
+                    tone="tertiary"
+                    value={`${player.currentHitPoints}/${player.maxHitPoints}`}
+                  />
+                </span>
               </span>
               <Plus className="h-4 w-4 shrink-0" />
             </button>
@@ -170,8 +185,14 @@ export function PartyAlliesStep({
           ) : null}
         </div>
         <RosterLabel icon={Shield} label="Campaign NPCs as allies" />
+        <FloatingInput
+          icon={Search}
+          label="Search available allies"
+          value={allyQuery}
+          onChange={setAllyQuery}
+        />
         <div className="grid gap-2">
-          {availableAllies.map((creature) => (
+          {matchingAllies.map((creature) => (
             <button
               aria-label={`Add ${creature.name} as ally`}
               className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
@@ -189,6 +210,12 @@ export function PartyAlliesStep({
                     tone="tertiary"
                     value={creature.hitPoints}
                   />
+                  <StatChip
+                    icon={Swords}
+                    label="CR"
+                    tone="secondary"
+                    value={creature.challengeRating || "0"}
+                  />
                 </span>
               </span>
               <Plus className="h-4 w-4 shrink-0" />
@@ -196,10 +223,22 @@ export function PartyAlliesStep({
           ))}
           {!availableAllies.length ? (
             <p className="text-sm text-muted-foreground">No other campaign NPCs available.</p>
+          ) : !matchingAllies.length ? (
+            <p className="text-sm text-muted-foreground">No allies match your search.</p>
           ) : null}
         </div>
       </RosterPanel>
-      <RosterPanel icon={Check} title={`Included · ${players.length + allies.length}`}>
+      <RosterPanel
+        icon={Check}
+        title={`Included · ${players.length + allies.length}`}
+        action={
+          players.length || allies.length ? (
+            <Button size="sm" type="button" variant="ghost" icon={Trash2} onClick={onClearIncluded}>
+              Remove all
+            </Button>
+          ) : null
+        }
+      >
         {!players.length && !allies.length ? (
           <p className="text-sm text-muted-foreground">
             Nothing is included yet. Add party members or allies from the left.
@@ -217,10 +256,12 @@ export function PartyAlliesStep({
 }
 
 function RosterPanel({
+  action,
   children,
   icon: Icon,
   title,
 }: {
+  action?: ReactNode;
   children: ReactNode;
   icon: typeof UsersRound;
   title: string;
@@ -232,6 +273,7 @@ function RosterPanel({
           <Icon className="h-4 w-4 text-accent" />
           {title}
         </div>
+        {action}
       </div>
       {children}
     </section>

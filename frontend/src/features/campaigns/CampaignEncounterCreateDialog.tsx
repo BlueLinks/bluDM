@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Callout, Modal } from "../../components/ui";
 import { api } from "../../lib/api";
 import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
+import { creatureAllowedInCampaign } from "../../lib/domain/standardSources";
 import type { Creature, Player } from "../../types";
 import { EncounterAddCombatantDialog } from "../encounters/EncounterAddCombatantDialog";
 import { BuilderProgress, PartyAlliesStep } from "./CampaignEncounterBuilderSteps";
@@ -32,6 +33,7 @@ import type { CampaignLocation } from "./world/travelTypes";
 import { useGeneratedEncounterPreview } from "./useGeneratedEncounterPreview";
 
 export function CampaignEncounterCreateDialog({
+  allowedStandardSources,
   campaignId,
   difficultyRuleset = encounterRuleset2014,
   locations,
@@ -43,6 +45,7 @@ export function CampaignEncounterCreateDialog({
   onCreated,
   onOpenChange,
 }: {
+  allowedStandardSources: string[];
   campaignId: string;
   difficultyRuleset?: EncounterRuleset;
   locations: CampaignLocation[];
@@ -119,16 +122,20 @@ export function CampaignEncounterCreateDialog({
     [activeEnemies, generatedPreview],
   );
   const availablePlayers = players.filter((player) => !selectedPlayerIds.includes(player.id));
+  const campaignNpcs = useMemo(
+    () => npcs.filter((npc) => creatureAllowedInCampaign(npc, allowedStandardSources)),
+    [allowedStandardSources, npcs],
+  );
   const availableAllies = useMemo(() => {
     const chosen = new Set(allies.map((ally) => ally.creature.id));
     const seen = new Set<string>();
-    return [...npcs, ...allyCatalog].filter((creature) => {
+    return [...campaignNpcs, ...allyCatalog].filter((creature) => {
       if (chosen.has(creature.id) || seen.has(creature.id)) return false;
       seen.add(creature.id);
       return true;
     });
-  }, [allies, allyCatalog, npcs]);
-  const campaignCreatureIds = useMemo(() => new Set(npcs.map((npc) => npc.id)), [npcs]);
+  }, [allies, allyCatalog, campaignNpcs]);
+  const campaignCreatureIds = new Set(campaignNpcs.map((npc) => npc.id));
 
   useEffect(() => {
     if (!open) return;
@@ -150,10 +157,24 @@ export function CampaignEncounterCreateDialog({
     setAddDialogMode(null);
     setError("");
     api
-      .creatures({ includeStandard: true })
-      .then((payload) => setCreatures(payload.creatures))
+      .creatures({ includeStandard: true, source: allowedStandardSources })
+      .then((payload) =>
+        setCreatures(
+          payload.creatures.filter((creature) =>
+            creatureAllowedInCampaign(creature, allowedStandardSources),
+          ),
+        ),
+      )
       .catch((err) => setError(err instanceof Error ? err.message : "Could not load creatures"));
-  }, [difficultyRuleset, initialLocationId, locations, open, players, resetGeneratedPreview]);
+  }, [
+    allowedStandardSources,
+    difficultyRuleset,
+    initialLocationId,
+    locations,
+    open,
+    players,
+    resetGeneratedPreview,
+  ]);
 
   function goToStep(next: EncounterBuilderStep) {
     if (next === "review" && mode === "random" && (generatingPreview || generationError)) return;
@@ -227,6 +248,18 @@ export function CampaignEncounterCreateDialog({
         setFurthestStep("setup");
       }
     }, "Changing the party will regenerate the encounter and replace your edits. Continue?");
+  }
+
+  function clearIncluded() {
+    requestRegeneration(() => {
+      setSelectedPlayerIds([]);
+      setAllies([]);
+      resetGeneratedSelection();
+      if (mode === "random") {
+        setMode("custom");
+        setFurthestStep("setup");
+      }
+    }, "Removing the party will regenerate the encounter and replace your edits. Continue?");
   }
 
   function updateLocation(locationId: string) {
@@ -382,6 +415,7 @@ export function CampaignEncounterCreateDialog({
               onAddAlly={() => setAddDialogMode("ally")}
               onAddAvailableAlly={(creature) => addCreature(creature, "friendly")}
               onAddPlayer={(player) => updateSelectedPlayers([...selectedPlayerIds, player.id])}
+              onClearIncluded={clearIncluded}
               onRemoveAlly={(id) =>
                 setAllies((current) => current.filter((item) => item.id !== id))
               }
@@ -401,6 +435,7 @@ export function CampaignEncounterCreateDialog({
               preview={setupPreview}
               onAddEnemy={() => setAddDialogMode("enemy")}
               onChooseMode={chooseMode}
+              onClearEnemies={() => setCustomEnemies([])}
               onOptionsChange={updateOptions}
               onRegenerate={regenerate}
               onRemoveEnemy={removeEnemy}
@@ -442,7 +477,7 @@ export function CampaignEncounterCreateDialog({
           campaignCreatureIds={campaignCreatureIds}
           creatures={creatures}
           mode={addDialogMode ?? "ally"}
-          npcs={npcs}
+          npcs={campaignNpcs}
           open={Boolean(addDialogMode)}
           onAddCreature={addCreature}
           onOpenChange={(isOpen) => {
