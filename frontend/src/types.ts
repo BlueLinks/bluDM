@@ -76,6 +76,7 @@ export type Encounter = {
   roomNumber: string;
   lootNotes: string;
   difficultyRuleset?: EncounterRuleset;
+  difficulty?: string;
   combatants?: EncounterCombatant[];
   combatantCount: number;
   enemyCount: number;

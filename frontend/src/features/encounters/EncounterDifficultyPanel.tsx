@@ -1,4 +1,5 @@
 import { Shield, Skull } from "lucide-react";
+import { difficultyTone } from "../../components/shared/categoryText";
 import type { EncounterDifficulty } from "../../lib/domain/combat";
 import { encounterRuleset2024 } from "../../lib/domain/encounterRulesets";
 
@@ -163,63 +164,6 @@ function DifficultyMetric({
         {value}
       </div>
     </div>
-  );
-}
-
-function difficultyTone(label: string) {
-  const tones: Record<string, { icon: string; surface: string; text: string }> = {
-    Easy: {
-      icon: "border-success/30 bg-success/10 text-success",
-      surface: "bg-success/5",
-      text: "text-success",
-    },
-    Medium: {
-      icon: "border-info/30 bg-info/10 text-info",
-      surface: "bg-info/5",
-      text: "text-info",
-    },
-    Low: {
-      icon: "border-success/30 bg-success/10 text-success",
-      surface: "bg-success/5",
-      text: "text-success",
-    },
-    Moderate: {
-      icon: "border-info/30 bg-info/10 text-info",
-      surface: "bg-info/5",
-      text: "text-info",
-    },
-    High: {
-      icon: "border-warning/30 bg-warning/10 text-warning",
-      surface: "bg-warning/5",
-      text: "text-warning",
-    },
-    "Over High": {
-      icon: "border-destructive/30 bg-destructive/10 text-destructive",
-      surface: "bg-destructive/5",
-      text: "text-destructive",
-    },
-    Hard: {
-      icon: "border-warning/30 bg-warning/10 text-warning",
-      surface: "bg-warning/5",
-      text: "text-warning",
-    },
-    Deadly: {
-      icon: "border-destructive/30 bg-destructive/10 text-destructive",
-      surface: "bg-destructive/5",
-      text: "text-destructive",
-    },
-    "Over Deadly": {
-      icon: "border-companion-custom/30 bg-companion-custom/10 text-companion-custom",
-      surface: "bg-companion-custom/5",
-      text: "text-companion-custom",
-    },
-  };
-  return (
-    tones[label] ?? {
-      icon: "border-companion-metadata/30 bg-companion-metadata/10 text-companion-metadata",
-      surface: "bg-companion-metadata/5",
-      text: "text-companion-metadata",
-    }
   );
 }
 

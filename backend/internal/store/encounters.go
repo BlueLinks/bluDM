@@ -128,6 +128,52 @@ func (s EncounterStore) Combatants(ctx context.Context, ownerUserID, encounterID
 	return combatants, nil
 }
 
+func (s EncounterStore) ResolvedCombatants(ctx context.Context, ownerUserID, encounterID string) ([]models.EncounterCombatant, error) {
+	combatants, err := s.Combatants(ctx, ownerUserID, encounterID)
+	if err != nil {
+		return nil, err
+	}
+	resolver := newEncounterReferenceResolver(s.db, ownerUserID, true)
+	for index, combatant := range combatants {
+		combatants[index], err = resolver.resolve(ctx, combatant)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return combatants, nil
+}
+
+func (s EncounterStore) CombatantsForCampaign(
+	ctx context.Context,
+	ownerUserID string,
+	campaignID string,
+) (map[string][]models.EncounterCombatant, error) {
+	var entities []dbmodels.EncounterCombatantEntity
+	if err := s.db.WithContext(ctx).
+		Table("encounter_combatants").
+		Select("encounter_combatants.*").
+		Joins("join encounters on encounters.id = encounter_combatants.encounter_id").
+		Joins("join campaigns on campaigns.id = encounters.campaign_id").
+		Where("encounters.campaign_id = ? and campaigns.owner_user_id = ?", strings.TrimSpace(campaignID), ownerUserID).
+		Order("encounter_combatants.encounter_id asc, encounter_combatants.sort_order asc, encounter_combatants.created_at asc").
+		Find(&entities).Error; err != nil {
+		return nil, err
+	}
+	combatantsByEncounter := make(map[string][]models.EncounterCombatant)
+	resolver := newEncounterReferenceResolver(s.db, ownerUserID, false)
+	for _, entity := range entities {
+		combatant, err := resolver.resolve(ctx, encounterCombatantFromEntity(entity))
+		if err != nil {
+			return nil, err
+		}
+		combatantsByEncounter[entity.EncounterID] = append(
+			combatantsByEncounter[entity.EncounterID],
+			combatant,
+		)
+	}
+	return combatantsByEncounter, nil
+}
+
 func (s EncounterStore) Update(ctx context.Context, ownerUserID, encounterID string, input EncounterInput) (models.Encounter, error) {
 	var entity dbmodels.EncounterEntity
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {

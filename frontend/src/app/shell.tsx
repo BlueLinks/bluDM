@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   Castle,
   ChevronRight,
+  ClipboardList,
   Import,
   Menu,
   Package,
@@ -29,6 +30,7 @@ export type { ThemeAccent, ThemeMode } from "./theme";
 
 const navItems = [
   { to: "/campaigns", label: "Campaigns", icon: Castle },
+  { to: "/encounters", label: "Encounters", icon: ClipboardList },
   { to: "/players", label: "Players", icon: UsersRound },
   { to: "/npcs", label: "NPCs", icon: Swords },
   { to: "/spells", label: "Spells", icon: Sparkles },

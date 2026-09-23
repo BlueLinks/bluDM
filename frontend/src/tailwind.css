@@ -46,4 +46,18 @@
   --color-companion-draft-foreground: hsl(var(--companion-draft-foreground));
   --color-companion-published: hsl(var(--companion-published));
   --color-companion-published-foreground: hsl(var(--companion-published-foreground));
+  --color-class-artificer: hsl(var(--class-artificer));
+  --color-class-barbarian: hsl(var(--class-barbarian));
+  --color-class-bard: hsl(var(--class-bard));
+  --color-class-cleric: hsl(var(--class-cleric));
+  --color-class-druid: hsl(var(--class-druid));
+  --color-class-fighter: hsl(var(--class-fighter));
+  --color-class-monk: hsl(var(--class-monk));
+  --color-class-paladin: hsl(var(--class-paladin));
+  --color-class-ranger: hsl(var(--class-ranger));
+  --color-class-rogue: hsl(var(--class-rogue));
+  --color-class-sorcerer: hsl(var(--class-sorcerer));
+  --color-class-warlock: hsl(var(--class-warlock));
+  --color-class-wizard: hsl(var(--class-wizard));
+  --color-class-custom: hsl(var(--class-custom));
 }

@@ -89,27 +89,27 @@ describe("CampaignDetailPage travel", () => {
     vi.mocked(api.deleteCampaignJourney).mockResolvedValue(undefined);
   });
 
-  it("renders the campaign hub, travel guidance, and journey log", async () => {
+  it("renders the compact party, encounter, and NPC overview", async () => {
     renderCampaign();
 
-    expect(await screen.findByText("World workspace")).toBeTruthy();
+    expect(await screen.findByText("Party · 0")).toBeTruthy();
+    expect(screen.getByText("Encounters · 0")).toBeTruthy();
+    expect(screen.getByText("Campaign NPCs · 0")).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "Search encounters" })).toBeTruthy();
+    expect(screen.getByRole("searchbox", { name: "Search campaign NPCs" })).toBeTruthy();
     expect(screen.getAllByRole("link", { name: "Open world" }).length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Use saved journeys for routes the party may travel again/i),
-    ).toBeTruthy();
-    expect(screen.getByText("Waterdeep to Ironford · 63 Miles")).toBeTruthy();
-    expect(screen.getByText("Use world places")).toBeTruthy();
-    expect(screen.getByText("Origin: Waterdeep")).toBeTruthy();
-    expect(screen.getAllByText(/^Saved /).length).toBeGreaterThan(0);
+    expect(screen.queryByText("World workspace")).toBeNull();
   });
 
-  it("shows workspace shortcuts for world, encounters, party, and npcs", async () => {
+  it("links the compact lists to their full workspaces", async () => {
     renderCampaign();
 
     expect((await screen.findAllByRole("link", { name: "Open world" })).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Jump to encounters" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Jump to party" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: "Jump to NPCs" })).toBeTruthy();
+    const viewAllLinks = screen.getAllByRole("link", { name: "View all" });
+    expect(
+      viewAllLinks.some((link) => link.getAttribute("href") === "/campaigns/campaign-1/encounters"),
+    ).toBe(true);
+    expect(viewAllLinks.some((link) => link.getAttribute("href") === "/npcs")).toBe(true);
   });
 
   it("opens the calculator and recalculates when travel inputs change", async () => {
@@ -180,42 +180,6 @@ describe("CampaignDetailPage travel", () => {
       ),
     );
     await waitFor(() => expect(api.campaignJourneys).toHaveBeenCalledTimes(2));
-  });
-
-  it("edits, duplicates, and deletes saved journeys", async () => {
-    renderCampaign();
-
-    const journeyCard = (await screen.findByText("Waterdeep to Ironford")).closest("article");
-    if (!journeyCard) throw new Error("journey card not found");
-    fireEvent.click(within(journeyCard).getByRole("button", { name: "Edit" }));
-    const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByDisplayValue("Waterdeep to Ironford")).toBeTruthy();
-    fireEvent.change(within(dialog).getByLabelText("Journey name"), {
-      target: { value: "Road session prep" },
-    });
-    fireEvent.click(await within(dialog).findByRole("button", { name: "Update journey" }));
-
-    await waitFor(() =>
-      expect(api.updateCampaignJourney).toHaveBeenCalledWith(
-        "campaign-1",
-        "journey-1",
-        expect.objectContaining({ origin: "Waterdeep", destination: "Ironford" }),
-        "Road session prep",
-      ),
-    );
-
-    const refreshedCard = (await screen.findByText("Waterdeep to Ironford")).closest("article");
-    if (!refreshedCard) throw new Error("journey card not found after edit");
-    fireEvent.click(within(refreshedCard).getByRole("button", { name: "Duplicate" }));
-    await waitFor(() =>
-      expect(api.cloneCampaignJourney).toHaveBeenCalledWith("campaign-1", "journey-1"),
-    );
-
-    fireEvent.click(within(refreshedCard).getByRole("button", { name: "Delete" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Delete journey" }));
-    await waitFor(() =>
-      expect(api.deleteCampaignJourney).toHaveBeenCalledWith("campaign-1", "journey-1"),
-    );
   });
 
   it("recalculates when good roads changes effective pace", async () => {

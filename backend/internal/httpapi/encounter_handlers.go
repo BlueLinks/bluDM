@@ -17,7 +17,7 @@ func (s *Server) getEncounter(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "encounter not found")
 		return
 	}
-	combatants, err := s.stores.Encounters.Combatants(r.Context(), user.ID, encounterID)
+	combatants, err := s.stores.Encounters.ResolvedCombatants(r.Context(), user.ID, encounterID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "could not load encounter combatants")
 		return

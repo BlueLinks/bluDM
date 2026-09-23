@@ -1,11 +1,12 @@
 import { Check, HeartPulse, MoreHorizontal, Pencil, Shield, Sparkles, Trash2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
+import { ClassNameText } from "../../components/shared/categoryText";
 import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
 import { Button, Checkbox } from "../../components/ui";
 import { effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
 import type { Creature, EncounterCombatant, EncounterRunCombatant, Player } from "../../types";
-import { combatantPlayerClassLevel, playerClassLevel } from "./domain";
+import { combatantPlayerClassLevel } from "./domain";
 
 export type CombatantCardStat = {
   label: string;
@@ -37,7 +38,7 @@ export function CombatantCard({
   className?: string;
   compact?: boolean;
   fallback: string;
-  meta: string;
+  meta: ReactNode;
   name: string;
   quantity?: ReactNode;
   role?: string;
@@ -108,7 +109,18 @@ export function PlayerCombatantCard({
       avatarSrc={avatarImageSrc(player.avatarAssetId, player.avatarUrl)}
       compact={compact}
       fallback={initials(player.characterName)}
-      meta={playerClassLevel(player)}
+      meta={
+        <>
+          {typeof player.characterSheet.level === "number"
+            ? `Level ${player.characterSheet.level} `
+            : null}
+          {typeof player.characterSheet.className === "string" ? (
+            <ClassNameText>{player.characterSheet.className}</ClassNameText>
+          ) : (
+            "Character sheet"
+          )}
+        </>
+      }
       name={player.characterName}
       stats={[
         { icon: Shield, label: "AC", value: player.armorClass },
@@ -133,6 +145,7 @@ export function CreatureCombatantCard({
   role,
   showChallengeRating = true,
   statsClassName = "",
+  tone = "enemy",
 }: {
   creature: Creature;
   actions?: ReactNode;
@@ -143,6 +156,7 @@ export function CreatureCombatantCard({
   role?: string;
   showChallengeRating?: boolean;
   statsClassName?: string;
+  tone?: "enemy" | "friendly";
 }) {
   return (
     <CombatantCard
@@ -155,7 +169,7 @@ export function CreatureCombatantCard({
       meta={creatureMeta(creature)}
       name={creature.name}
       quantity={quantity}
-      role={role ?? creatureRole(creature)}
+      role={role ?? (tone === "friendly" ? "Ally" : creatureRole(creature))}
       statsClassName={statsClassName}
       stats={[
         ...(showChallengeRating
@@ -164,7 +178,7 @@ export function CreatureCombatantCard({
         { icon: Shield, label: "AC", value: creature.armorClass },
         { icon: HeartPulse, label: "HP", value: creature.hitPoints },
       ]}
-      tone="enemy"
+      tone={tone}
     />
   );
 }
@@ -417,7 +431,16 @@ function combatantSubtitle(
   combatant: EncounterCombatant,
   sideTone: "player" | "friendly" | "enemy",
 ) {
-  if (sideTone === "player") return combatantPlayerClassLevel(combatant);
+  if (sideTone === "player") {
+    const [label, className] = combatantPlayerClassLevel(combatant).split(" · ");
+    return className ? (
+      <>
+        {label} · <ClassNameText>{className}</ClassNameText>
+      </>
+    ) : (
+      label
+    );
+  }
   const creature = combatant.snapshot?.creature;
   if (creature && typeof creature === "object") {
     const record = creature as Record<string, unknown>;

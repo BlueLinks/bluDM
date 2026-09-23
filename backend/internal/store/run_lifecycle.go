@@ -28,7 +28,7 @@ func (s RunStore) StartEncounter(ctx context.Context, ownerUserID, encounterID s
 		if err := tx.Create(&run).Error; err != nil {
 			return err
 		}
-		if err := s.snapshotRunCombatants(ctx, tx, run.ID, encounterID); err != nil {
+		if err := s.snapshotRunCombatants(ctx, tx, ownerUserID, run.ID, encounterID); err != nil {
 			return err
 		}
 		return s.snapshotRunSpellSlots(ctx, tx, run.ID)
@@ -93,13 +93,18 @@ func (s RunStore) UpdateDeathSave(ctx context.Context, combatant models.Encounte
 		}).Error
 }
 
-func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, runID string, encounterID string) error {
+func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, ownerUserID string, runID string, encounterID string) error {
 	var sources []dbmodels.EncounterCombatantEntity
 	if err := tx.WithContext(ctx).Where("encounter_id = ?", strings.TrimSpace(encounterID)).Order("sort_order asc").Find(&sources).Error; err != nil {
 		return err
 	}
+	resolver := newEncounterReferenceResolver(tx, ownerUserID, true)
 	for _, source := range sources {
-		avatarURL := source.AvatarURL
+		effective, err := resolver.resolve(ctx, encounterCombatantFromEntity(source))
+		if err != nil {
+			return err
+		}
+		avatarURL := effective.AvatarURL
 		if strings.TrimSpace(avatarURL) == "" {
 			avatarURL = s.snapshotAvatarURL(ctx, tx, source)
 		}
@@ -110,14 +115,26 @@ func (s RunStore) snapshotRunCombatants(ctx context.Context, tx *gorm.DB, runID 
 			PlayerID:          source.PlayerID,
 			CreatureID:        source.CreatureID,
 			Side:              canonicalCombatantSide(source.SourceType, source.Side),
-			DisplayName:       source.DisplayName,
+			DisplayName:       effective.DisplayName,
 			ColorLabel:        source.ColorLabel,
 			AvatarURL:         avatarURL,
-			ArmorClass:        source.ArmorClass,
-			MaxHitPoints:      source.MaxHitPoints,
-			CurrentHitPoints:  source.CurrentHitPoints,
+			ArmorClass:        effective.ArmorClass,
+			MaxHitPoints:      effective.MaxHitPoints,
+			CurrentHitPoints:  effective.CurrentHitPoints,
 			SortOrder:         source.SortOrder,
-			Snapshot:          source.Snapshot,
+			Snapshot:          jsonMap(effective.Snapshot),
+		}
+		if source.SourceType == "player" && source.PlayerID != nil {
+			var player dbmodels.PlayerEntity
+			err := tx.WithContext(ctx).Where("id = ?", *source.PlayerID).First(&player).Error
+			if err == nil {
+				entity.MaxHitPoints = player.MaxHitPoints
+				entity.CurrentHitPoints = player.CurrentHitPoints
+				entity.TemporaryHitPoints = player.TemporaryHitPoints
+				entity.MaxHitPointsModifier = player.TemporaryMaxHitPoints
+			} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+				return err
+			}
 		}
 		if source.SourceType == "player" && source.PlayerID != nil {
 			var player dbmodels.PlayerEntity

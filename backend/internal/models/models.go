@@ -38,6 +38,7 @@ type Encounter struct {
 	RoomNumber        string               `json:"roomNumber"`
 	LootNotes         string               `json:"lootNotes"`
 	DifficultyRuleset string               `json:"difficultyRuleset"`
+	Difficulty        string               `json:"difficulty"`
 	Combatants        []EncounterCombatant `json:"combatants,omitempty"`
 	CombatantCount    int                  `json:"combatantCount"`
 	EnemyCount        int                  `json:"enemyCount"`

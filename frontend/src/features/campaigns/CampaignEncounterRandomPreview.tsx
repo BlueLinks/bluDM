@@ -1,108 +1,113 @@
 import { RefreshCw } from "lucide-react";
+import { Children, type ReactNode } from "react";
 import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import { Button, Callout } from "../../components/ui";
 import { calculateEncounterDifficulty } from "../../lib/domain/combat";
 import { encounterRuleset2014, type EncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { EncounterCombatant, Player } from "../../types";
 import { CombatantCard } from "../encounters/EncounterCombatantCard";
+import { CreatureCombatantCard, PlayerCombatantCard } from "../encounters/EncounterCombatantCard";
 import { EncounterDifficultyPanel } from "../encounters/EncounterDifficultyPanel";
-import type { EncounterBuilderPreview } from "./encounterBuilderGenerator";
+import type {
+  EncounterBuilderCreatureDraft,
+  EncounterBuilderMode,
+} from "./encounterBuilderGenerator";
 
-export function RandomPreviewPanel({
-  allyCount,
+export function EncounterPreviewPanel({
+  allies,
   difficultyRuleset = encounterRuleset2014,
+  enemies,
+  mode,
   players,
-  preview,
+  targetNotice,
   onRegenerate,
 }: {
-  allyCount: number;
+  allies: EncounterBuilderCreatureDraft[];
   difficultyRuleset?: EncounterRuleset;
+  enemies: EncounterBuilderCreatureDraft[];
+  mode: EncounterBuilderMode;
   players: Player[];
-  preview: EncounterBuilderPreview;
-  onRegenerate: () => void;
+  targetNotice?: string;
+  onRegenerate?: () => void;
 }) {
   const difficulty = calculateEncounterDifficulty(
     players,
-    previewCombatants(preview),
+    previewCombatants(enemies),
     difficultyRuleset,
   );
+  const enemyXp = enemies.reduce((total, enemy) => total + enemy.creature.xp * enemy.quantity, 0);
   return (
     <aside className="grid content-start gap-3 lg:-my-4 lg:border-l lg:border-border lg:pb-4 lg:pl-6 lg:pr-0.5 lg:pt-[1.375rem]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-semibold">Encounter preview</h3>
-          <p className="text-sm text-muted-foreground">{preview.estimatedXp} enemy XP generated</p>
+          <p className="text-sm text-muted-foreground">{enemyXp.toLocaleString()} enemy XP</p>
         </div>
-        <Button
-          className="border-primary text-primary"
-          type="button"
-          icon={RefreshCw}
-          size="sm"
-          variant="outline"
-          onClick={onRegenerate}
-        >
-          Regenerate
-        </Button>
+        {mode === "random" && onRegenerate ? (
+          <Button type="button" icon={RefreshCw} size="sm" variant="outline" onClick={onRegenerate}>
+            Regenerate
+          </Button>
+        ) : null}
       </div>
-      <div className="mt-2.5">
+      {players.length ? (
         <EncounterDifficultyPanel compact difficulty={difficulty} />
-      </div>
-      {preview.targetNotice ? <Callout tone="warning">{preview.targetNotice}</Callout> : null}
-      <div className="mt-2.5">
-        <h4 className="font-semibold">{preview.title}</h4>
-        <p className="mt-1 text-sm text-muted-foreground">{preview.summary}</p>
-      </div>
-      <div className="mt-[1.0625rem]">
-        <PreviewParty allyCount={allyCount} players={players} />
-      </div>
-      <div className="mt-0.5 grid gap-2 text-sm">
-        {preview.enemies.map((enemy) => (
+      ) : (
+        <p className="text-sm text-muted-foreground">Add party members to estimate difficulty.</p>
+      )}
+      {targetNotice ? <Callout tone="warning">{targetNotice}</Callout> : null}
+      <PreviewGroup title={`Party members (${players.length})`}>
+        {players.map((player) => (
+          <PlayerCombatantCard compact key={player.id} player={player} />
+        ))}
+      </PreviewGroup>
+      <PreviewGroup title={`Allies (${allies.length})`}>
+        {allies.map((ally) => (
+          <CreatureCombatantCard
+            compact
+            creature={ally.creature}
+            key={ally.id}
+            quantity={ally.quantity > 1 ? `Qty ${ally.quantity}` : undefined}
+            showChallengeRating={false}
+            tone="friendly"
+          />
+        ))}
+      </PreviewGroup>
+      <PreviewGroup
+        title={`Enemies (${enemies.reduce((total, enemy) => total + enemy.quantity, 0)})`}
+      >
+        {enemies.map((enemy) => (
           <CombatantCard
             avatarSrc={avatarImageSrc(enemy.creature.imageAssetId, enemy.creature.avatarUrl)}
             compact
             fallback={enemy.creature.name.slice(0, 2).toUpperCase()}
             key={enemy.id}
-            meta={`${[enemy.creature.size, enemy.creature.creatureType || "Creature"]
-              .filter(Boolean)
-              .join(" · ")} · CR ${enemy.creature.challengeRating || "0"}`}
+            meta={`CR ${enemy.creature.challengeRating || "0"}`}
             name={enemy.creature.name}
             quantity={`Qty ${enemy.quantity}`}
             stats={[]}
             tone="enemy"
           />
         ))}
-      </div>
+      </PreviewGroup>
     </aside>
   );
 }
 
-function PreviewParty({ allyCount, players }: { allyCount: number; players: Player[] }) {
-  const averageLevel = players.length
-    ? Math.round(
-        players.reduce((total, player) => {
-          const level =
-            typeof player.characterSheet.level === "number" ? player.characterSheet.level : 1;
-          return total + level;
-        }, 0) / players.length,
-      )
-    : 0;
+function PreviewGroup({ children, title }: { children: ReactNode; title: string }) {
   return (
-    <section className="grid gap-4 rounded-md border border-border bg-background px-3.5 pb-[0.8125rem] pt-4">
-      <div className="text-xs font-semibold uppercase text-muted-foreground">Party</div>
-      {players.length ? (
-        <p className="text-sm">
-          {players.length} player{players.length === 1 ? "" : "s"} · {allyCount} all
-          {allyCount === 1 ? "y" : "ies"} · average level {averageLevel}
-        </p>
+    <section className="grid gap-2 border-t border-border pt-3">
+      <h4 className="text-sm font-semibold">{title}</h4>
+      {Children.count(children) ? (
+        children
       ) : (
-        <p className="text-sm text-muted-foreground">No party selected yet.</p>
+        <p className="text-sm text-muted-foreground">None selected.</p>
       )}
     </section>
   );
 }
 
-function previewCombatants(preview: EncounterBuilderPreview): EncounterCombatant[] {
-  return preview.enemies.flatMap((enemy) =>
+function previewCombatants(enemies: EncounterBuilderCreatureDraft[]): EncounterCombatant[] {
+  return enemies.flatMap((enemy) =>
     Array.from({ length: enemy.quantity }, (_, index) => ({
       id: `${enemy.id}-${index}`,
       encounterId: "preview",

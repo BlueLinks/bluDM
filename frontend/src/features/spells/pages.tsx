@@ -1,6 +1,7 @@
 import { BookOpen, Copy, Eye, ListChecks, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ResponsiveGrid } from "../../components/layout";
+import { ClassNameText } from "../../components/shared/categoryText";
 import { ContentSourceFilter } from "../../components/shared/ContentSourceFilter";
 import { PropertyCard } from "../../components/shared/displayPrimitives";
 import { StandardSourceToggles } from "../../components/shared/StandardSourceToggles";
@@ -326,7 +327,7 @@ function ClassList({ classes }: { classes: string[] }) {
       <div className="mt-2 flex flex-wrap gap-2">
         {classes.map((className) => (
           <Badge key={className} tone="official">
-            {className}
+            <ClassNameText>{className}</ClassNameText>
           </Badge>
         ))}
       </div>

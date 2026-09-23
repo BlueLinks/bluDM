@@ -74,6 +74,11 @@ const EncounterEditPage = lazy(() =>
     default: module.EncounterEditPage,
   })),
 );
+const EncountersPage = lazy(() =>
+  import("../features/encounters/EncountersPage").then((module) => ({
+    default: module.EncountersPage,
+  })),
+);
 
 export function AppRoutes() {
   return (
@@ -98,6 +103,7 @@ export function AppRoutes() {
           element={<DungeonStudioPage />}
         />
         <Route path="/campaigns/:campaignID/world/maps" element={<CampaignWorldPage />} />
+        <Route path="/campaigns/:campaignID/encounters" element={<EncountersPage />} />
         <Route
           path="/campaigns/:campaignID/encounters/:encounterID/edit"
           element={<EncounterEditPage />}
@@ -106,6 +112,7 @@ export function AppRoutes() {
         <Route path="/encounter-runs/:runID" element={<CombatTrackerPage />} />
         <Route path="/encounter-runs/:runID/summary" element={<EncounterSummaryPage />} />
         <Route path="/players" element={<PlayersPage />} />
+        <Route path="/encounters" element={<EncountersPage />} />
         <Route path="/players/new" element={<PlayerCreatePage />} />
         <Route path="/players/:playerID/edit" element={<PlayerEditPage />} />
         <Route path="/npcs" element={<NpcsPage />} />

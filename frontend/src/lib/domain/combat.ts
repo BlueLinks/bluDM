@@ -177,7 +177,8 @@ function difficultyFromXP(
   const multiplier = encounterMultiplier(count);
   const adjustedXP = Math.round(enemyXP * multiplier);
   let label = "Trivial";
-  if (thresholds.deadly > 0 && adjustedXP >= thresholds.deadly * 1.5) label = "Over Deadly";
+  if (adjustedXP === 0) label = "Trivial";
+  else if (thresholds.deadly > 0 && adjustedXP >= thresholds.deadly * 1.5) label = "Over Deadly";
   else if (adjustedXP >= thresholds.deadly) label = "Deadly";
   else if (adjustedXP >= thresholds.hard) label = "Hard";
   else if (adjustedXP >= thresholds.medium) label = "Medium";

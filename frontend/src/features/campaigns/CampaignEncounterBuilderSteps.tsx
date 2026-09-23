@@ -1,13 +1,9 @@
-import { Check, Plus, Shield, UsersRound } from "lucide-react";
+import { Check, HeartPulse, Plus, Shield, UsersRound } from "lucide-react";
 import type { ReactNode } from "react";
+import { ClassNameText } from "../../components/shared/categoryText";
+import { StatChip } from "../../components/shared/displayPrimitives";
 import { Badge, Button } from "../../components/ui";
-import { calculateEncounterDifficulty } from "../../lib/domain/combat";
-import {
-  encounterRuleset2014,
-  encounterRuleset2024,
-  type EncounterRuleset,
-} from "../../lib/domain/encounterRulesets";
-import type { Player } from "../../types";
+import type { Creature, Player } from "../../types";
 import {
   CreatureCombatantCard,
   IconRemoveButton,
@@ -107,70 +103,124 @@ export function Toggle({
 
 export function PartyAlliesStep({
   allies,
+  availableAllies,
   availablePlayers,
-  difficultyRuleset = encounterRuleset2014,
   players,
   onAddAllPlayers,
   onAddAlly,
+  onAddAvailableAlly,
   onAddPlayer,
   onRemoveAlly,
   onRemovePlayer,
 }: {
   allies: EncounterBuilderCreatureDraft[];
+  availableAllies: Creature[];
   availablePlayers: Player[];
-  difficultyRuleset?: EncounterRuleset;
   players: Player[];
   onAddAllPlayers: () => void;
   onAddAlly: () => void;
+  onAddAvailableAlly: (creature: Creature) => void;
   onAddPlayer: (player: Player) => void;
   onRemoveAlly: (id: string) => void;
   onRemovePlayer: (id: string) => void;
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
-      <div className="grid gap-4 lg:grid-cols-2">
-        <RosterPanel
-          action={
-            <Button
+    <div className="grid gap-4 md:grid-cols-2">
+      <RosterPanel
+        icon={UsersRound}
+        title={`Available · ${availablePlayers.length + availableAllies.length}`}
+      >
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            icon={Plus}
+            size="sm"
+            disabled={!availablePlayers.length}
+            onClick={onAddAllPlayers}
+          >
+            Add all party
+          </Button>
+          <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddAlly}>
+            Browse allies
+          </Button>
+        </div>
+        <RosterLabel icon={UsersRound} label="Party members" />
+        <div className="grid gap-2">
+          {availablePlayers.map((player) => (
+            <button
+              aria-label={`Add ${player.characterName}`}
+              className="flex min-w-0 items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              key={player.id}
               type="button"
-              icon={Plus}
-              size="sm"
-              disabled={!availablePlayers.length}
-              onClick={onAddAllPlayers}
+              onClick={() => onAddPlayer(player)}
             >
-              Add all party members
-            </Button>
-          }
-          icon={UsersRound}
-          title="Player Characters"
-        >
-          <PlayerDraftList players={players} onRemove={onRemovePlayer} />
-          <AddList players={availablePlayers} onAddPlayer={onAddPlayer} />
-        </RosterPanel>
-        <RosterPanel
-          action={
-            <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddAlly}>
-              Add ally
-            </Button>
-          }
-          icon={Shield}
-          title="Allies"
-        >
-          <AllyDraftList drafts={allies} onRemove={onRemoveAlly} />
-        </RosterPanel>
-      </div>
-      <PartySummary allies={allies} players={players} ruleset={difficultyRuleset} />
+              <span className="min-w-0 truncate">
+                <span className="font-medium">{player.characterName}</span>
+                {typeof player.characterSheet.className === "string" ? (
+                  <span className="ml-2 text-xs">
+                    <ClassNameText>{player.characterSheet.className}</ClassNameText>
+                  </span>
+                ) : null}
+              </span>
+              <Plus className="h-4 w-4 shrink-0" />
+            </button>
+          ))}
+          {!availablePlayers.length ? (
+            <p className="text-sm text-muted-foreground">All party members are included.</p>
+          ) : null}
+        </div>
+        <RosterLabel icon={Shield} label="Campaign NPCs as allies" />
+        <div className="grid gap-2">
+          {availableAllies.map((creature) => (
+            <button
+              aria-label={`Add ${creature.name} as ally`}
+              className="flex items-center justify-between gap-3 rounded-md border border-border bg-surface px-3 py-2 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
+              key={creature.id}
+              type="button"
+              onClick={() => onAddAvailableAlly(creature)}
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{creature.name}</span>
+                <span className="mt-1 flex flex-wrap gap-1.5">
+                  <StatChip icon={Shield} label="AC" tone="primary" value={creature.armorClass} />
+                  <StatChip
+                    icon={HeartPulse}
+                    label="HP"
+                    tone="tertiary"
+                    value={creature.hitPoints}
+                  />
+                </span>
+              </span>
+              <Plus className="h-4 w-4 shrink-0" />
+            </button>
+          ))}
+          {!availableAllies.length ? (
+            <p className="text-sm text-muted-foreground">No other campaign NPCs available.</p>
+          ) : null}
+        </div>
+      </RosterPanel>
+      <RosterPanel icon={Check} title={`Included · ${players.length + allies.length}`}>
+        {!players.length && !allies.length ? (
+          <p className="text-sm text-muted-foreground">
+            Nothing is included yet. Add party members or allies from the left.
+          </p>
+        ) : null}
+        {players.length ? (
+          <RosterLabel icon={UsersRound} label={`Party members · ${players.length}`} />
+        ) : null}
+        <PlayerDraftList players={players} onRemove={onRemovePlayer} />
+        {allies.length ? <RosterLabel icon={Shield} label={`Allies · ${allies.length}`} /> : null}
+        <AllyDraftList drafts={allies} onRemove={onRemoveAlly} />
+      </RosterPanel>
     </div>
   );
 }
 
 function RosterPanel({
-  action,
   children,
   icon: Icon,
   title,
 }: {
-  action?: ReactNode;
   children: ReactNode;
   icon: typeof UsersRound;
   title: string;
@@ -182,32 +232,17 @@ function RosterPanel({
           <Icon className="h-4 w-4 text-accent" />
           {title}
         </div>
-        {action}
       </div>
       {children}
     </section>
   );
 }
 
-function AddList({
-  players,
-  onAddPlayer,
-}: {
-  players: Player[];
-  onAddPlayer: (player: Player) => void;
-}) {
+function RosterLabel({ icon: Icon, label }: { icon: typeof UsersRound; label: string }) {
   return (
-    <div className="grid gap-2">
-      {players.map((player) => (
-        <button
-          className="rounded-md border border-border bg-surface p-2 text-left text-sm text-surface-foreground transition hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
-          key={player.id}
-          type="button"
-          onClick={() => onAddPlayer(player)}
-        >
-          {player.characterName}
-        </button>
-      ))}
+    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+      <Icon className="h-3.5 w-3.5" />
+      {label}
     </div>
   );
 }
@@ -219,8 +254,7 @@ function PlayerDraftList({
   players: Player[];
   onRemove: (id: string) => void;
 }) {
-  if (!players.length)
-    return <p className="text-sm text-muted-foreground">No players added yet.</p>;
+  if (!players.length) return null;
   return (
     <div className="grid gap-2">
       {players.map((player) => (
@@ -247,7 +281,7 @@ function AllyDraftList({
   drafts: EncounterBuilderCreatureDraft[];
   onRemove: (id: string) => void;
 }) {
-  if (!drafts.length) return <p className="text-sm text-muted-foreground">None added yet.</p>;
+  if (!drafts.length) return null;
   return (
     <div className="grid gap-2">
       {drafts.map((draft) => (
@@ -257,6 +291,7 @@ function AllyDraftList({
           creature={draft.creature}
           badge={<Badge tone="shared">Friendly</Badge>}
           quantity={draft.quantity > 1 ? `Qty ${draft.quantity}` : undefined}
+          tone="friendly"
           actions={
             <IconRemoveButton
               label={`Remove ${draft.creature.name}`}
@@ -267,54 +302,4 @@ function AllyDraftList({
       ))}
     </div>
   );
-}
-
-function PartySummary({
-  allies,
-  players,
-  ruleset,
-}: {
-  allies: EncounterBuilderCreatureDraft[];
-  players: Player[];
-  ruleset: EncounterRuleset;
-}) {
-  const averageLevel = players.length
-    ? Math.round(players.reduce((total, player) => total + playerLevel(player), 0) / players.length)
-    : 0;
-  const difficulty = calculateEncounterDifficulty(players, [], ruleset);
-  const uses2024Rules = ruleset === encounterRuleset2024;
-  return (
-    <aside className="grid content-start gap-3 rounded-md border border-border bg-card p-3">
-      <div className="font-semibold">Party Summary</div>
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <SummaryMetric label="Players" value={players.length} />
-        <SummaryMetric label="Allies" value={allies.length} />
-        <SummaryMetric label="Average Level" value={averageLevel || "-"} />
-        <SummaryMetric
-          label={uses2024Rules ? "High Budget" : "Deadly Threshold"}
-          value={`${uses2024Rules ? difficulty.thresholds.high : difficulty.thresholds.deadly} XP`}
-        />
-      </div>
-      <p className="rounded-md border border-border bg-background p-3 text-sm text-muted-foreground">
-        {players.length + allies.length
-          ? `You have ${players.length + allies.length} participant${
-              players.length + allies.length === 1 ? "" : "s"
-            } in this encounter.`
-          : "Add at least one player before tuning encounter difficulty."}
-      </p>
-    </aside>
-  );
-}
-
-function SummaryMetric({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="rounded-md border border-border bg-background p-2">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function playerLevel(player: Player) {
-  return typeof player.characterSheet.level === "number" ? player.characterSheet.level : 1;
 }

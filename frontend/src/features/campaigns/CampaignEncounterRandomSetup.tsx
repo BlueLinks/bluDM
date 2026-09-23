@@ -1,5 +1,5 @@
 import { Minus, Plus } from "lucide-react";
-import { ResponsiveGrid } from "../../components/layout";
+import { ResponsiveGrid, SidebarDetailLayout } from "../../components/layout";
 import { Button, Field, Select } from "../../components/ui";
 import type { Player } from "../../types";
 import {
@@ -15,7 +15,7 @@ import {
   RolledHpToggle,
   creatureRole,
 } from "../encounters/EncounterCombatantCard";
-import { RandomPreviewPanel } from "./CampaignEncounterRandomPreview";
+import { EncounterPreviewPanel } from "./CampaignEncounterRandomPreview";
 import { Toggle } from "./CampaignEncounterBuilderSteps";
 import { EncounterArchetypeIcon } from "./encounterArchetypeIcons";
 import {
@@ -28,8 +28,41 @@ import {
   type EncounterBuilderRandomOptions,
 } from "./encounterBuilderGenerator";
 
+export function CustomEncounterSetup({
+  enemies,
+  onAddEnemy,
+  onRemoveEnemy,
+  onUpdateEnemy,
+}: {
+  enemies: EncounterBuilderCreatureDraft[];
+  onAddEnemy: () => void;
+  onRemoveEnemy: (id: string) => void;
+  onUpdateEnemy: (draft: EncounterBuilderCreatureDraft) => void;
+}) {
+  return (
+    <section className="grid gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h3 className="font-semibold">Custom encounter</h3>
+          <p className="text-sm text-muted-foreground">Choose the enemies for this encounter.</p>
+        </div>
+        <Button type="button" icon={Plus} size="sm" variant="secondary" onClick={onAddEnemy}>
+          Add enemy
+        </Button>
+      </div>
+      <EnemyDraftList
+        enemies={enemies}
+        title="Enemies"
+        emptyCopy="No enemies added yet. Add one from your creature library."
+        onRemove={onRemoveEnemy}
+        onUpdate={onUpdateEnemy}
+      />
+    </section>
+  );
+}
+
 export function EncounterSetupStep({
-  allyCount,
+  allies,
   difficultyRuleset = encounterRuleset2014,
   enemies,
   options,
@@ -41,7 +74,7 @@ export function EncounterSetupStep({
   onRemoveEnemy,
   onUpdateEnemy,
 }: {
-  allyCount: number;
+  allies: EncounterBuilderCreatureDraft[];
   difficultyRuleset?: EncounterRuleset;
   enemies: EncounterBuilderCreatureDraft[];
   options: EncounterBuilderRandomOptions;
@@ -54,7 +87,7 @@ export function EncounterSetupStep({
   onUpdateEnemy: (draft: EncounterBuilderCreatureDraft) => void;
 }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_24.1875rem]">
+    <SidebarDetailLayout variant="encounterBuilder">
       <div className="grid content-start gap-3 lg:pr-[0.1875rem]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -133,14 +166,16 @@ export function EncounterSetupStep({
         </div>
         <EnemyDraftList enemies={enemies} onRemove={onRemoveEnemy} onUpdate={onUpdateEnemy} />
       </div>
-      <RandomPreviewPanel
-        allyCount={allyCount}
+      <EncounterPreviewPanel
+        allies={allies}
+        enemies={enemies}
+        mode="random"
         difficultyRuleset={difficultyRuleset}
         players={players}
-        preview={preview}
+        targetNotice={preview.targetNotice}
         onRegenerate={onRegenerate}
       />
-    </div>
+    </SidebarDetailLayout>
   );
 }
 
@@ -155,6 +190,7 @@ function ArchetypeCard({
 }) {
   return (
     <button
+      aria-pressed={active}
       className={[
         "flex min-h-[4.875rem] min-w-0 items-start gap-2.5 rounded-md border p-2.5 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35",
         active
@@ -280,26 +316,29 @@ function EnemyCountStepper({
   );
 }
 
-function EnemyDraftList({
+export function EnemyDraftList({
   enemies,
+  emptyCopy = "Generated enemies will appear here after the preview is ready. Use Add enemy for manual adjustments.",
+  title = "Generated enemies",
   onRemove,
   onUpdate,
 }: {
   enemies: EncounterBuilderCreatureDraft[];
+  emptyCopy?: string;
+  title?: string;
   onRemove: (id: string) => void;
   onUpdate: (draft: EncounterBuilderCreatureDraft) => void;
 }) {
   if (!enemies.length) {
     return (
       <p className="rounded-md border border-border bg-card p-3 text-sm text-muted-foreground">
-        Generated enemies will appear here after the preview is ready. Use Add enemy for manual
-        adjustments.
+        {emptyCopy}
       </p>
     );
   }
   return (
     <section className="mt-px grid gap-0.5 rounded-md border border-border bg-card px-4 pb-2 pt-1">
-      <h3 className="font-semibold">Generated enemies</h3>
+      <h3 className="font-semibold">{title}</h3>
       <div className="grid gap-2">
         {enemies.map((enemy) => (
           <CreatureCombatantCard

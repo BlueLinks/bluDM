@@ -100,7 +100,7 @@ func (s *Service) GetEncounter(
 	if err != nil || encounter.CampaignID != campaignID {
 		return EncounterDetails{}, NewError(CodeNotFound, "encounter not found", nil)
 	}
-	combatants, err := s.stores.Encounters.Combatants(ctx, principal.UserID, encounterID)
+	combatants, err := s.stores.Encounters.ResolvedCombatants(ctx, principal.UserID, encounterID)
 	if err != nil {
 		return EncounterDetails{}, err
 	}
