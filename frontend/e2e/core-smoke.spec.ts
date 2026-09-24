@@ -77,7 +77,7 @@ test("core bluDM browser journeys", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Finish Combat" })).toBeVisible();
 
   await page.goto(`/encounter-runs/${runID}/summary`);
-  await expect(page.getByRole("heading", { name: "XP and loot" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Combat summary" })).toBeVisible();
   await page.getByPlaceholder("Loot note or item").fill("Smoke-test silver ring");
   await page.getByRole("button", { name: "Add" }).click();
   await expect(page.getByText("Smoke-test silver ring")).toBeVisible();
