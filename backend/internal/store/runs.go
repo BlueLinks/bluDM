@@ -59,6 +59,9 @@ func (s RunStore) ByID(ctx context.Context, ownerUserID, runID string) (models.E
 		return models.EncounterRun{}, err
 	}
 	run.Events, _ = s.CombatLogEventsForRun(ctx, runID, 80)
+	if run.Timing, err = s.TimingForRun(ctx, run); err != nil {
+		return models.EncounterRun{}, err
+	}
 	run.SpellSlots, _ = s.SpellSlots(ctx, runID)
 	run.ActiveEffects, _ = s.ActiveEffects(ctx, runID)
 	run.Alerts, _ = s.Alerts(ctx, runID)

@@ -15,6 +15,9 @@ describe("CombatLog", () => {
       />,
     );
     expect(screen.getByText("Mage resolved Burning Hands for Ogre")).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Recent combat events" }).className).not.toContain(
+      "grid-cols-2",
+    );
     fireEvent.click(screen.getByText("Mage resolved Burning Hands for Ogre"));
     expect(screen.getByText("8 raw · 4 applied")).toBeTruthy();
     expect(screen.getByText("dice 5 · modifier +3")).toBeTruthy();

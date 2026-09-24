@@ -2,12 +2,17 @@ import { describe, expect, it } from "vitest";
 import type { EncounterCombatant, EncounterRunCombatant, Player } from "../../types";
 import {
   calculateEncounterDifficulty,
+  combatantFrameColor,
+  combatantSheet,
   effectiveAC,
   effectiveMaxHP,
   encounterMultiplier,
-  hpBarColor,
+  hpBarTone,
   hpPercent,
   isDownEnemy,
+  saveBonusFromSheet,
+  skillBonusFromSheet,
+  speedFromSheet,
 } from "./combat";
 import { createId } from "./ids";
 import { encounterRuleset2024 } from "./encounterRulesets";
@@ -122,7 +127,71 @@ describe("combat domain helpers", () => {
     expect(effectiveAC(runCombatant({ armorClass: 12, armorClassOverride: 18 }))).toBe(18);
     expect(effectiveMaxHP(runCombatant({ maxHitPoints: 30, maxHitPointsModifier: 5 }))).toBe(35);
     expect(hpPercent(runCombatant({ maxHitPoints: 40, currentHitPoints: 20 }))).toBe(50);
-    expect(hpBarColor(50)).toBe("hsl(60 70% 45%)");
+    expect(hpBarTone(100)).toBe("bg-success");
+    expect(hpBarTone(50)).toBe("bg-warning");
+    expect(hpBarTone(25)).toBe("bg-destructive");
+  });
+
+  it("keeps custom and legacy frame colours visible across themes", () => {
+    expect(combatantFrameColor(runCombatant({ colorLabel: "#7c3aed" }))).toBe("#7c3aed");
+    expect(combatantFrameColor(runCombatant({ colorLabel: "primary" }))).toBe(
+      "hsl(var(--primary))",
+    );
+    expect(combatantFrameColor(runCombatant({ colorLabel: "danger" }))).toBe(
+      "hsl(var(--destructive))",
+    );
+    expect(combatantFrameColor(runCombatant({ colorLabel: "slate" }))).toBe(
+      "hsl(var(--companion-metadata))",
+    );
+  });
+
+  it("reads standard creature scores, explicit saves, skills, speed, and defenses", () => {
+    const sheet = combatantSheet(
+      runCombatant({
+        snapshot: {
+          creature: {
+            challengeRating: "1",
+            statBlock: {
+              abilities: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
+              abilitySaveProficiencies: { dex: 4 },
+              skills: { perception: 3, stealth: 4 },
+              speed: { walk: "40 ft." },
+              defenses: { resistances: ["fire"] },
+            },
+          },
+        },
+      }),
+    );
+    expect(sheet.abilityScores).toMatchObject({ str: 12, dex: 15, int: 3 });
+    expect(saveBonusFromSheet(sheet, "dex")).toBe(4);
+    expect(saveBonusFromSheet(sheet, "int")).toBe(-4);
+    expect(skillBonusFromSheet(sheet, "Perception", "wis")).toBe(3);
+    expect(skillBonusFromSheet(sheet, "Stealth", "dex")).toBe(4);
+    expect(speedFromSheet(sheet)).toBe(40);
+    expect(sheet.damageResistances).toEqual(["fire"]);
+  });
+
+  it("derives custom creature proficiencies and expertise without changing explicit zeroes", () => {
+    const sheet = combatantSheet(
+      runCombatant({
+        snapshot: {
+          creature: {
+            statBlock: {
+              abilityScores: { str: 10, dex: 14, wis: 16 },
+              proficiencyBonus: 3,
+              savingThrowProficiencies: ["wis"],
+              skillProficiencies: ["Stealth"],
+              skillExpertise: ["Perception"],
+              skillBonuses: { Athletics: 0 },
+            },
+          },
+        },
+      }),
+    );
+    expect(saveBonusFromSheet(sheet, "wis")).toBe(6);
+    expect(skillBonusFromSheet(sheet, "Stealth", "dex")).toBe(5);
+    expect(skillBonusFromSheet(sheet, "Perception", "wis")).toBe(9);
+    expect(skillBonusFromSheet(sheet, "Athletics", "str")).toBe(0);
   });
 
   it("classifies downed enemies for target grouping", () => {

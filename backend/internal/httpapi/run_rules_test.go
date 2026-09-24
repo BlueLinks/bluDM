@@ -120,6 +120,30 @@ func TestAbilityModFromSnapshot(t *testing.T) {
 	}
 }
 
+func TestStandardCreatureSavingThrowBonus(t *testing.T) {
+	snapshot := map[string]any{
+		"creature": map[string]any{
+			"challengeRating": "5",
+			"statBlock": map[string]any{
+				"abilities":                map[string]any{"dex": float64(15), "int": float64(3), "wis": float64(14)},
+				"abilitySaveProficiencies": map[string]any{"dex": float64(5)},
+				"savingThrowProficiencies": []any{"wis"},
+			},
+		},
+	}
+	if got := abilityModFromSnapshot(snapshot, "int"); got != -4 {
+		t.Fatalf("abilityModFromSnapshot(int) = %d, want -4", got)
+	}
+	for _, test := range []struct {
+		ability string
+		want    int
+	}{{"dex", 5}, {"int", -4}, {"wis", 5}} {
+		if got := savingThrowBonusFromSnapshot(snapshot, test.ability); got != test.want {
+			t.Errorf("savingThrowBonusFromSnapshot(%s) = %d, want %d", test.ability, got, test.want)
+		}
+	}
+}
+
 func TestNormalizeSide(t *testing.T) {
 	if got := normalizeSide("friendly"); got != "friendly" {
 		t.Fatalf("normalizeSide(friendly) = %q, want friendly", got)

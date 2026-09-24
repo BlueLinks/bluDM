@@ -246,8 +246,19 @@ export function hpPercent(combatant: EncounterRunCombatant) {
   );
 }
 
-export function hpBarColor(percent: number) {
-  return `hsl(${Math.max(0, Math.min(120, Math.round(percent * 1.2)))} 70% 45%)`;
+export function hpBarTone(percent: number) {
+  if (percent > 50) return "bg-success";
+  if (percent > 25) return "bg-warning";
+  return "bg-destructive";
+}
+
+export function combatantFrameColor(combatant: EncounterRunCombatant) {
+  const color = combatant.colorLabel.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(color)) return color;
+  if (color === "primary") return "hsl(var(--primary))";
+  if (color === "danger") return "hsl(var(--destructive))";
+  if (color === "slate") return "hsl(var(--companion-metadata))";
+  return undefined;
 }
 
 export function effectiveAC(combatant: EncounterRunCombatant) {
@@ -274,15 +285,29 @@ export function combatantSheet(combatant: {
       source.statBlock ??
       source.stat_block ??
       source) as Record<string, unknown>) || {};
+  const defenses = sheetRecord(raw.defenses);
   return {
     ...raw,
-    abilityScores: raw.abilityScores ?? raw.ability_scores,
+    abilityScores: raw.abilityScores ?? raw.ability_scores ?? raw.abilities,
     className: raw.className ?? raw.class_name,
-    proficiencyBonus: raw.proficiencyBonus ?? raw.proficiency_bonus,
+    proficiencyBonus:
+      raw.proficiencyBonus ??
+      raw.proficiency_bonus ??
+      creatureProficiencyBonus(source.challengeRating),
     savingThrowProficiencies: raw.savingThrowProficiencies ?? raw.saving_throw_proficiencies,
-    skillBonuses: raw.skillBonuses ?? raw.skill_bonuses,
+    skillBonuses: raw.skillBonuses ?? raw.skill_bonuses ?? raw.skills,
     walkSpeed: raw.walkSpeed ?? raw.walk_speed,
+    damageVulnerabilities: raw.damageVulnerabilities ?? defenses.vulnerabilities,
+    damageResistances: raw.damageResistances ?? defenses.resistances,
+    damageImmunities: raw.damageImmunities ?? defenses.immunities,
+    conditionImmunities: raw.conditionImmunities ?? defenses.conditionImmunities,
   };
+}
+
+function creatureProficiencyBonus(challengeRating: unknown) {
+  if (challengeRating == null || challengeRating === "") return undefined;
+  const rating = Number(challengeRating);
+  return Number.isFinite(rating) ? Math.max(2, Math.ceil(rating / 4) + 1) : undefined;
 }
 
 export function sheetRecord(value: unknown) {
@@ -295,7 +320,47 @@ export function abilityScoresFromSheet(sheet: Record<string, unknown>) {
 
 export function speedFromSheet(sheet: Record<string, unknown>) {
   const speed = sheetRecord(sheet.speed);
-  return Number(speed.walk) || Number(sheet.walkSpeed) || 30;
+  const walk = speed.walk ?? sheet.walkSpeed;
+  return typeof walk === "number" || typeof walk === "string"
+    ? parseInt(String(walk), 10) || 30
+    : 30;
+}
+
+export function saveBonusFromSheet(sheet: Record<string, unknown>, ability: string) {
+  const key = ability.toLowerCase();
+  const explicit = sheetRecord(sheet.abilitySaveProficiencies);
+  if (explicit[key] != null) return Number(explicit[key]) || 0;
+  const score = Number(abilityScoresFromSheet(sheet)[key]) || 10;
+  const modifier = Math.floor((score - 10) / 2);
+  const proficient = stringArrayFromSheet(sheet.savingThrowProficiencies).some(
+    (value) => value.toLowerCase() === key,
+  );
+  return modifier + (proficient ? proficiencyBonusFromCombatSheet(sheet) : 0);
+}
+
+export function skillBonusFromSheet(
+  sheet: Record<string, unknown>,
+  skill: string,
+  ability: string,
+) {
+  const scores = abilityScoresFromSheet(sheet);
+  const fallback = Math.floor(((Number(scores[ability]) || 10) - 10) / 2);
+  const bonuses = sheetRecord(sheet.skillBonuses);
+  const explicit = Object.entries(bonuses).find(
+    ([name]) => name.toLowerCase() === skill.toLowerCase(),
+  );
+  if (explicit) return Number(explicit[1]) || 0;
+  const contains = (value: unknown) =>
+    stringArrayFromSheet(value).some((name) => name.toLowerCase() === skill.toLowerCase());
+  const proficiency = proficiencyBonusFromCombatSheet(sheet);
+  const trained = contains(sheet.skillProficiencies);
+  const expert = contains(sheet.skillExpertise);
+  const adjustments = sheetRecord(sheet.skillAdjustments);
+  const adjustment =
+    Number(
+      Object.entries(adjustments).find(([name]) => name.toLowerCase() === skill.toLowerCase())?.[1],
+    ) || 0;
+  return fallback + (expert ? proficiency * 2 : trained ? proficiency : 0) + adjustment;
 }
 
 export function stringArrayFromSheet(value: unknown) {

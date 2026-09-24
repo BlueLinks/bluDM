@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { BackButton, Breadcrumbs } from "../../app/shell";
 import { MutedPanel, Page, useToasts } from "../../components/ui";
@@ -9,7 +9,6 @@ import { createId } from "../../lib/domain/ids";
 import type {
   CreatureAction,
   CreatureSpellcastingProfile,
-  Encounter,
   EncounterRun,
   EncounterRunCombatant,
   RollMode,
@@ -23,25 +22,22 @@ import type { CombatRollFlash } from "./combatTypes";
 import { applyResolutionPayload, blankResolutionTarget } from "./resolutionModel";
 import { standardRunActions } from "./standardRunActions";
 import {
-  combatStartTimestamp,
   combatTrackerBreadcrumbs,
   hasLivingEnemies,
   hpAdjustmentAmount,
+  useCombatRunLoader,
   needsDeathSaves,
   rollModeFromEvent,
   spellLevelLabel,
   stringFromResult,
   stringValue,
-  useCombatElapsed,
-  useEncounterRunRefresh,
+  useRunTimers,
 } from "./trackerPageHelpers";
 
 export function CombatTrackerPage() {
   const { runID } = useParams();
   const navigate = useNavigate();
-  const [run, setRun] = useState<EncounterRun | null>(null);
-  const [encounter, setEncounter] = useState<Encounter | null>(null);
-  const [error, setError] = useState("");
+  const { run, setRun, encounter, error, setError } = useCombatRunLoader(runID, navigate);
   const [selectedSheetID, setSelectedSheetID] = useState("");
   const [actingID, setActingID] = useState("");
   const [targetIDs, setTargetIDs] = useState<string[]>([]);
@@ -62,26 +58,7 @@ export function CombatTrackerPage() {
   const [pendingNavigation, setPendingNavigation] = useState("");
   const [rollFlash, setRollFlash] = useState<CombatRollFlash | null>(null);
   const toast = useToasts();
-  const combatStartedAt = combatStartTimestamp(run);
-  const elapsed = useCombatElapsed(combatStartedAt);
-
-  const load = useCallback(async () => {
-    if (!runID) return;
-    try {
-      const payload = await api.encounterRun(runID);
-      setRun(payload.run);
-      void api
-        .encounter(payload.run.encounterId)
-        .then((encounterPayload) => setEncounter(encounterPayload.encounter))
-        .catch(() => setEncounter(null));
-      if (payload.run.status === "setup") void navigate(`/encounter-runs/${runID}/initiative`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load combat tracker");
-    }
-  }, [navigate, runID]);
-
-  useEffect(() => void load(), [load]);
-  useEncounterRunRefresh(runID, load);
+  const { combatStartedAt, elapsed, turnElapsed } = useRunTimers(run);
 
   const combatants = run?.combatants ?? [];
   const active = combatants[run?.currentTurnIndex ?? 0];
@@ -357,7 +334,8 @@ export function CombatTrackerPage() {
   if (!run || !active || !acting || !selectedSheet) {
     return <MutedPanel>{error || "Loading combat tracker..."}</MutedPanel>;
   }
-  function goToSummary() {
+  async function goToSummary() {
+    if (!(await refreshFrom(api.finishCombat(run!.id)))) return;
     setNavigationBypass(true);
     setLeaveWarningOpen(false);
     window.setTimeout(() => void navigate(`/encounter-runs/${run!.id}/summary`), 0);
@@ -374,10 +352,11 @@ export function CombatTrackerPage() {
     <Page size="wide" className="combat-tracker-page gap-2">
       <BackButton to={`/encounter-runs/${run.id}/initiative`}>Back to initiative</BackButton>
       <Breadcrumbs items={breadcrumbs} />
-      <div className="combat-stack grid gap-2">
+      <div className="combat-stack grid min-w-0 grid-cols-1 gap-2">
         <CombatStatusBar
           combatantCount={combatants.length}
           elapsed={elapsed}
+          turnElapsed={turnElapsed}
           encounterName={encounter?.name ?? ""}
           run={run}
           showMeters={showMeters}

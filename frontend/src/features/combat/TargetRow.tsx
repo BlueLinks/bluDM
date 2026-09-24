@@ -1,6 +1,12 @@
 import { CircleDot, MoreHorizontal, Shield, Skull } from "lucide-react";
 import { Badge, DeathSaveTrack } from "../../components/ui";
-import { effectiveAC, effectiveMaxHP, hpPercent } from "../../lib/domain/combat";
+import {
+  combatantFrameColor,
+  effectiveAC,
+  effectiveMaxHP,
+  hpBarTone,
+  hpPercent,
+} from "../../lib/domain/combat";
 import { friendlyEffectLabel } from "../../lib/domain/spellMessaging";
 import type { EncounterRunCombatant, EncounterRunEffect } from "../../types";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
@@ -30,6 +36,7 @@ export function TargetRow({
   ) => void;
 }) {
   const pct = hpPercent(combatant);
+  const frameColor = combatantFrameColor(combatant);
   const showDeathSaves = combatant.sourceType === "player" && combatant.currentHitPoints <= 0;
   const rowTone = selected
     ? "border-warning bg-warning/5 ring-1 ring-warning/35"
@@ -57,7 +64,10 @@ export function TargetRow({
       >
         {selected ? <CircleDot className="h-5 w-5" /> : position}
       </div>
-      <div className={["target-row-card min-w-0 rounded-md border px-1 py-1", rowTone].join(" ")}>
+      <div
+        className={["target-row-card min-w-0 rounded-md border px-1 py-1", rowTone].join(" ")}
+        style={frameColor ? { borderColor: frameColor } : undefined}
+      >
         <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
@@ -83,11 +93,37 @@ export function TargetRow({
                   </span>
                   <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                     {combatant.currentHitPoints} / {effectiveMaxHP(combatant)} HP
+                    {combatant.temporaryHitPoints > 0
+                      ? ` · +${combatant.temporaryHitPoints} temp`
+                      : ""}
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 min-w-0 overflow-hidden rounded-full bg-muted">
-                  <div className="hp-bar-fill h-full bg-success" style={{ width: `${pct}%` }} />
+                <div
+                  className="mt-1 h-1.5 min-w-0 overflow-hidden rounded-full bg-muted"
+                  role="meter"
+                  aria-label={`${combatant.displayName} hit points`}
+                  aria-valuemin={0}
+                  aria-valuemax={effectiveMaxHP(combatant)}
+                  aria-valuenow={Math.max(0, combatant.currentHitPoints)}
+                >
+                  <div
+                    className={`hp-bar-fill h-full ${hpBarTone(pct)}`}
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
+                {combatant.temporaryHitPoints > 0 && (
+                  <div
+                    className="mt-0.5 h-1 min-w-0 overflow-hidden rounded-full bg-muted"
+                    title={`${combatant.temporaryHitPoints} temporary hit points`}
+                  >
+                    <div
+                      className="h-full bg-info"
+                      style={{
+                        width: `${Math.min(100, (combatant.temporaryHitPoints / effectiveMaxHP(combatant)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </button>

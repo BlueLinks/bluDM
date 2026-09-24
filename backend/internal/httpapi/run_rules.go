@@ -293,18 +293,6 @@ func effectDamageTypes(effect models.EncounterRunEffect) []string {
 	}
 }
 
-func abilityModFromSnapshot(snapshot map[string]any, ability string) int {
-	source := sourceMap(snapshot)
-	if scores, ok := source["abilityScores"].(map[string]any); ok {
-		score := intFromAny(scores[ability])
-		if score == 0 {
-			score = 10
-		}
-		return (score - 10) / 2
-	}
-	return 0
-}
-
 func sourceMap(snapshot map[string]any) map[string]any {
 	for _, key := range []string{"player", "creature"} {
 		if source, ok := snapshot[key].(map[string]any); ok {

@@ -145,8 +145,9 @@ func (s *Server) beginEncounterRunCommand(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusInternalServerError, "could not begin combat")
 		return
 	}
-	_ = s.appendCombatLogEvent(r.Context(), runID, "combat_began", "", "", map[string]any{})
 	run, _ := s.encounterRunByID(r.Context(), runID)
+	_ = s.appendCombatLogEvent(r.Context(), runID, "combat_began", "", activeCombatantID(run), map[string]any{})
+	run, _ = s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
 }
 
@@ -214,7 +215,9 @@ func (s *Server) moveTurn(w http.ResponseWriter, r *http.Request, direction int)
 	if direction > 0 && nextIndex >= 0 && nextIndex < len(run.Combatants) {
 		timedEffects = append(timedEffects, s.applyStartTurnEffects(r.Context(), runID, run.Combatants[nextIndex].ID)...)
 	}
-	_ = s.appendCombatLogEvent(r.Context(), runID, "turn_changed", "", "", map[string]any{"undoable": true, "before": before, "after": after, "skipped": skipped, "timedEffects": timedEffects})
+	beforeID := activeCombatantID(run)
+	afterID := run.Combatants[nextIndex].ID
+	_ = s.appendCombatLogEvent(r.Context(), runID, "turn_changed", beforeID, afterID, map[string]any{"undoable": true, "before": before, "after": after, "skipped": skipped, "timedEffects": timedEffects})
 	run, _ = s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
 }

@@ -1,7 +1,7 @@
 import { BowArrow, ChevronDown, Search, Star, Sword, WandSparkles, Zap } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { ActionIcon } from "../../components/shared/ActionIcon";
-import { Button, Checkbox, Input } from "../../components/ui";
+import { Button, Input } from "../../components/ui";
 import { actionSummary, isRollableCreatureAction } from "../../lib/domain/combat";
 import type { CreatureAction, CreatureSpell } from "../../types";
 
@@ -29,7 +29,6 @@ export function CombatActionPicker({
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Attacks");
-  const [showUnavailable, setShowUnavailable] = useState(false);
   const [favorites, setFavorites] = useState<string[]>(readFavorites);
   const [recent, setRecent] = useState<string[]>([]);
   const items = useMemo(
@@ -37,10 +36,7 @@ export function CombatActionPicker({
     [actions, spells],
   );
   const matchingItems = items.filter((item) => matchesQuery(item, query));
-  const availableItems = matchingItems.filter(
-    (item) => showUnavailable || item.kind === "spell" || !actionDisabledReason,
-  );
-  const allGroups = pickerGroups(availableItems, favorites, recent);
+  const allGroups = pickerGroups(matchingItems, favorites, recent);
   const groups = allGroups.filter((group) => group.label === category);
   const selectedKey = items.find((item) => itemName(item) === triggerLabel)?.key;
 
@@ -97,11 +93,7 @@ export function CombatActionPicker({
           ))}
         </div>
         {actionDisabledReason ? (
-          <Checkbox
-            checked={showUnavailable}
-            label="Show unavailable actions"
-            onChange={setShowUnavailable}
-          />
+          <p className="px-2 py-1.5 text-xs text-muted-foreground">{actionDisabledReason}</p>
         ) : null}
         <div className="max-h-80 overflow-y-auto p-1" onKeyDown={handlePickerKeys}>
           {groups.map((group) => (

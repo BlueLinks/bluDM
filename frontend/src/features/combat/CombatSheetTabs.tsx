@@ -73,6 +73,9 @@ function DefenseDetails({ sheet }: { sheet: Record<string, unknown> }) {
 
 function senseValues(senses: Record<string, unknown>) {
   return Object.entries(senses).flatMap(([name, raw]) => {
+    if (typeof raw === "string" || typeof raw === "number") {
+      return [`${name.replaceAll("_", " ")} ${raw}`];
+    }
     const sense = sheetRecord(raw);
     if (!sense.enabled) return [];
     const range =

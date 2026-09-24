@@ -110,7 +110,12 @@ func (s *Server) undoCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = s.stores.Runs.MarkLogEventNotUndoable(r.Context(), event.ID)
-	_ = s.appendCombatLogEvent(r.Context(), runID, "undo", "", "", map[string]any{"undoneEventId": event.ID, "undoneSequence": event.Sequence})
+	undoneRun, _ := s.encounterRunByID(r.Context(), runID)
+	activeID := ""
+	if event.EventType == "turn_changed" {
+		activeID = activeCombatantID(undoneRun)
+	}
+	_ = s.appendCombatLogEvent(r.Context(), runID, "undo", "", activeID, map[string]any{"undoneEventId": event.ID, "undoneSequence": event.Sequence})
 	run, _ := s.encounterRunByID(r.Context(), runID)
 	writeJSON(w, http.StatusOK, map[string]any{"run": run})
 }

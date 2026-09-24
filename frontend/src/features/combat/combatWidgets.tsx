@@ -10,12 +10,14 @@ import type {
   EncounterRunCombatant,
 } from "../../types";
 import type { CombatRollFlash } from "./combatTypes";
+import { formatCombatDuration } from "./trackerPageHelpers";
 import { RunTargetCombatantCard } from "../encounters/EncounterCombatantCard";
 import { RunCombatantAvatar as Avatar } from "./RunCombatantAvatar";
 
 export function CombatStatusBar({
   combatantCount,
   elapsed,
+  turnElapsed,
   encounterName,
   run,
   showMeters,
@@ -26,6 +28,7 @@ export function CombatStatusBar({
 }: {
   combatantCount: number;
   elapsed: number;
+  turnElapsed: number;
   encounterName: string;
   run: EncounterRun;
   showMeters: boolean;
@@ -35,7 +38,7 @@ export function CombatStatusBar({
   onUndo: () => void;
 }) {
   return (
-    <div className="combat-panel sticky top-0 z-20 grid gap-2 rounded-lg border border-border bg-card px-4 py-2 md:grid-cols-[1fr_auto_1.15fr] md:items-center">
+    <div className="combat-panel sticky top-0 z-20 grid gap-2 rounded-lg border border-border bg-card px-4 py-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center 2xl:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
       <div className="min-w-0">
         <div className="truncate font-semibold">{encounterName || "Encounter run"}</div>
         <div className="text-xs text-muted-foreground">
@@ -53,7 +56,7 @@ export function CombatStatusBar({
         >
           &larr;
         </Button>
-        <div className="grid min-w-0 grid-cols-3 overflow-hidden rounded-lg border border-border bg-background text-center">
+        <div className="grid min-w-0 grid-cols-4 overflow-hidden rounded-lg border border-border bg-background text-center">
           <div className="px-2 py-1 sm:px-5">
             <div className="text-xs font-semibold text-muted-foreground">Round</div>
             <div className="text-base font-black tabular-nums">{run.currentRound}</div>
@@ -64,10 +67,14 @@ export function CombatStatusBar({
               {run.currentTurnIndex + 1} / {combatantCount}
             </div>
           </div>
-          <div className="px-2 py-1 sm:px-5">
-            <div className="text-xs font-semibold text-muted-foreground">Timer</div>
+          <div className="border-r border-border px-2 py-1 sm:px-3">
+            <div className="text-xs font-semibold text-muted-foreground">Combat</div>
+            <div className="text-base font-black tabular-nums">{formatCombatDuration(elapsed)}</div>
+          </div>
+          <div className="px-2 py-1 sm:px-3">
+            <div className="text-xs font-semibold text-muted-foreground">This turn</div>
             <div className="text-base font-black tabular-nums">
-              {Math.floor(elapsed / 60)}:{String(elapsed % 60).padStart(2, "0")}
+              {formatCombatDuration(turnElapsed)}
             </div>
           </div>
         </div>
@@ -82,7 +89,7 @@ export function CombatStatusBar({
           &rarr;
         </Button>
       </div>
-      <div className="flex flex-wrap justify-end gap-3">
+      <div className="flex flex-wrap justify-end gap-3 lg:col-span-2 2xl:col-span-1">
         <Button
           className="border-primary px-[0.8125rem] !py-[0.1875rem] text-primary"
           size="sm"
