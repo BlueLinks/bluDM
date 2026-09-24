@@ -88,7 +88,7 @@ func (s *Server) applySpellAreaCommand(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		d20, d20Rolls, rollMode := rollD20WithMode(req.RollMode)
-		saveBonus := abilityModFromSnapshot(target.Snapshot, saveAbility)
+		saveBonus := savingThrowBonusFromSnapshot(target.Snapshot, saveAbility)
 		saveTotal := d20 + saveBonus
 		succeeded := saveAbility != "" && saveDC > 0 && saveTotal >= saveDC
 		damage := spellAreaDamageAmount(payload, area.CastLevel)

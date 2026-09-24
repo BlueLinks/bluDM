@@ -41,7 +41,8 @@ export function matchesCombatLogFilter(event: CombatLogEvent, filter: CombatLogF
       results.some((result) => arrayField(result, "conditions").length > 0)
     );
   }
-  if (filter === "turns") return type === "combat_began" || type === "turn_changed";
+  if (filter === "turns")
+    return ["combat_began", "combat_finished", "combat_resumed", "turn_changed"].includes(type);
   return (
     type.includes("note") || (typeof payload.notes === "string" && payload.notes.trim() !== "")
   );

@@ -16,12 +16,12 @@ import {
   abilityScoresFromSheet,
   combatantSheet,
   effectiveMaxHP,
-  proficiencyBonusFromCombatSheet,
   rollDiceDetail,
   rollModeLabel,
+  saveBonusFromSheet,
   sheetRecord,
+  skillBonusFromSheet,
   speedFromSheet,
-  stringArrayFromSheet,
 } from "../../lib/domain/combat";
 import { abilityModifier, modifierTone } from "../../lib/domain/forms";
 import { abilities, skillDefinitions } from "../../lib/domain/options";
@@ -51,10 +51,6 @@ export function CombatSheet({
   ) => void;
 }) {
   const sheet = combatantSheet(combatant);
-  const scores = abilityScoresFromSheet(sheet);
-  const skills = sheetRecord(sheet.skillBonuses);
-  const savingThrows = stringArrayFromSheet(sheet.savingThrowProficiencies);
-  const profBonus = proficiencyBonusFromCombatSheet(sheet);
   const descriptor = combatantDescriptor(combatant, sheet);
   const { addRollLogEntry } = useRollLog();
   const [showAllSkills, setShowAllSkills] = React.useState(false);
@@ -135,7 +131,7 @@ export function CombatSheet({
           <IconStat
             icon={HeartPulse}
             label="HP"
-            value={`${combatant.currentHitPoints} / ${effectiveMaxHP(combatant)}`}
+            value={`${combatant.currentHitPoints} / ${effectiveMaxHP(combatant)}${combatant.temporaryHitPoints > 0 ? ` +${combatant.temporaryHitPoints} temp` : ""}`}
             tone="heart"
           />
           <IconStat
@@ -165,12 +161,7 @@ export function CombatSheet({
         </div>
         <div className="-mt-[0.4375rem] grid gap-1">
           <div className="border-b border-border px-1 pb-1 text-xs font-semibold">Abilities</div>
-          <AbilityCards
-            scores={scores}
-            savingThrows={savingThrows}
-            proficiencyBonus={profBonus}
-            onRoll={roll}
-          />
+          <AbilityCards sheet={sheet} onRoll={roll} />
         </div>
         <div className="mt-2">
           <CombatSheetTabs
@@ -180,8 +171,7 @@ export function CombatSheet({
                 compact={compact}
                 expanded={showAllSkills}
                 footer={footer}
-                scores={scores}
-                skills={skills}
+                sheet={sheet}
                 onRoll={roll}
                 onToggleExpanded={() => setShowAllSkills((current) => !current)}
               />
@@ -198,16 +188,14 @@ function CombatSheetOverview({
   compact,
   expanded,
   footer,
-  scores,
-  skills,
+  sheet,
   onRoll,
   onToggleExpanded,
 }: {
   compact: boolean;
   expanded: boolean;
   footer?: React.ReactNode;
-  scores: Record<string, unknown>;
-  skills: Record<string, unknown>;
+  sheet: Record<string, unknown>;
   onRoll: (
     event: React.MouseEvent,
     label: string,
@@ -219,7 +207,7 @@ function CombatSheetOverview({
 }) {
   return (
     <div className="grid gap-2">
-      <SkillRollList expanded={expanded} scores={scores} skills={skills} onRoll={onRoll} />
+      <SkillRollList expanded={expanded} sheet={sheet} onRoll={onRoll} />
       <div
         className={[
           "mt-[0.3125rem] flex min-w-0 flex-wrap items-center justify-start",
@@ -246,13 +234,11 @@ function CombatSheetOverview({
 
 function SkillRollList({
   expanded,
-  scores,
-  skills,
+  sheet,
   onRoll,
 }: {
   expanded: boolean;
-  scores: Record<string, unknown>;
-  skills: Record<string, unknown>;
+  sheet: Record<string, unknown>;
   onRoll: (
     event: React.MouseEvent,
     label: string,
@@ -264,8 +250,7 @@ function SkillRollList({
   return (
     <div className="grid grid-cols-2 gap-x-2 gap-y-0.5">
       {(expanded ? skillDefinitions : skillDefinitions.slice(0, 12)).map((skill) => {
-        const fallback = abilityModifier(Number(scores[skill.ability]) || 10);
-        const bonus = Number(skills[skill.name]) || fallback;
+        const bonus = skillBonusFromSheet(sheet, skill.name, skill.ability);
         return (
           <button
             key={skill.name}
@@ -316,14 +301,10 @@ function effectiveACWithEffects(combatant: EncounterRunCombatant, effects: Encou
 }
 
 function AbilityCards({
-  scores,
-  savingThrows,
-  proficiencyBonus,
+  sheet,
   onRoll,
 }: {
-  scores: Record<string, unknown>;
-  savingThrows: string[];
-  proficiencyBonus: number;
+  sheet: Record<string, unknown>;
   onRoll: (
     event: React.MouseEvent,
     label: string,
@@ -332,12 +313,13 @@ function AbilityCards({
     rollType: "Check" | "Saving Throw",
   ) => Promise<void>;
 }) {
+  const scores = abilityScoresFromSheet(sheet);
   return (
     <div className="combat-ability-grid grid grid-cols-3 gap-1.5 sm:grid-cols-6">
       {abilities.map((ability) => {
         const score = Number(scores[ability.key]) || 10;
         const bonus = abilityModifier(score);
-        const saveBonus = bonus + (savingThrows.includes(ability.key) ? proficiencyBonus : 0);
+        const saveBonus = saveBonusFromSheet(sheet, ability.key);
         return (
           <div key={ability.key} className="grid min-w-0 text-center">
             <button
@@ -354,8 +336,9 @@ function AbilityCards({
             </button>
             <button
               type="button"
-              className="sr-only"
+              className="rounded-b-md py-0.5 text-xs font-semibold text-muted-foreground hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/35"
               title={`${ability.label} saving throw. Shift-click for advantage, Control-click for disadvantage.`}
+              aria-label={`${ability.label} saving throw ${saveBonus >= 0 ? `+${saveBonus}` : saveBonus}`}
               onClick={(event) =>
                 void onRoll(event, ability.label, ability.key, saveBonus, "Saving Throw")
               }

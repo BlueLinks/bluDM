@@ -1,28 +1,94 @@
-import { useEffect, useState, type MouseEvent } from "react";
-import type { EncounterRun, EncounterRunCombatant, RollMode } from "../../types";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import type { NavigateFunction } from "react-router-dom";
+import type { Encounter, EncounterRun, EncounterRunCombatant, RollMode } from "../../types";
+import { api } from "../../lib/api";
 import type { HpMultiplier } from "./CombatContextPanel";
 
 export function combatStartTimestamp(run: EncounterRun | null) {
   return (
+    run?.timing?.combatStartedAt ??
     run?.events?.find((event) => event.eventType === "combat_began")?.createdAt ??
     run?.startedAt ??
     ""
   );
 }
 
-export function useCombatElapsed(startedAt: string) {
+export function useCombatElapsed(startedAt: string, endedAt?: string) {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
     const timestamp = Date.parse(startedAt);
-    if (!Number.isFinite(timestamp)) return;
-    const update = () => setElapsed(Math.max(0, Math.floor((Date.now() - timestamp) / 1000)));
+    if (!Number.isFinite(timestamp)) {
+      setElapsed(0);
+      return;
+    }
+    const finish = endedAt ? Date.parse(endedAt) : NaN;
+    const update = () =>
+      setElapsed(
+        Math.max(
+          0,
+          Math.floor(((Number.isFinite(finish) ? finish : Date.now()) - timestamp) / 1000),
+        ),
+      );
     update();
+    if (Number.isFinite(finish)) return;
     const timer = window.setInterval(update, 1000);
     return () => window.clearInterval(timer);
-  }, [startedAt]);
+  }, [startedAt, endedAt]);
 
   return elapsed;
+}
+
+export function useRunTimers(run: EncounterRun | null) {
+  const combatStartedAt = combatStartTimestamp(run);
+  const fallbackElapsed = useCombatElapsed(run?.timing ? "" : combatStartedAt);
+  const turnElapsed = useCombatElapsed(run?.timing?.currentTurnStartedAt ?? "");
+  const elapsed = run?.timing ? completedTurnSeconds(run) + turnElapsed : fallbackElapsed;
+  return { combatStartedAt, elapsed, turnElapsed };
+}
+
+export function completedTurnSeconds(run: EncounterRun) {
+  return Object.values(run.timing?.turnTimeMs ?? {}).reduce((total, ms) => total + ms, 0) / 1000;
+}
+
+export async function loadTrackerRun(runID: string) {
+  const payload = await api.encounterRun(runID);
+  return payload.run.status === "active" && payload.run.timing?.combatFinishedAt
+    ? (await api.resumeCombat(runID)).run
+    : payload.run;
+}
+
+export function useCombatRunLoader(runID: string | undefined, navigate: NavigateFunction) {
+  const [run, setRun] = useState<EncounterRun | null>(null);
+  const [encounter, setEncounter] = useState<Encounter | null>(null);
+  const [error, setError] = useState("");
+  const load = useCallback(async () => {
+    if (!runID) return;
+    try {
+      const loadedRun = await loadTrackerRun(runID);
+      setRun(loadedRun);
+      void api
+        .encounter(loadedRun.encounterId)
+        .then((payload) => setEncounter(payload.encounter))
+        .catch(() => setEncounter(null));
+      if (loadedRun.status === "setup") void navigate(`/encounter-runs/${runID}/initiative`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load combat tracker");
+    }
+  }, [navigate, runID]);
+  useEffect(() => void load(), [load]);
+  useEncounterRunRefresh(runID, load);
+  return { run, setRun, encounter, error, setError };
+}
+
+export function formatCombatDuration(seconds: number) {
+  const whole = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(whole / 3600);
+  const minutes = Math.floor((whole % 3600) / 60);
+  const remainder = String(whole % 60).padStart(2, "0");
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${remainder}`
+    : `${minutes}:${remainder}`;
 }
 
 export function useEncounterRunRefresh(

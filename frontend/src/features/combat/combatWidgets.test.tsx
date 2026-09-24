@@ -1,9 +1,39 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { CreatureAction, EncounterRunCombatant } from "../../types";
-import { CombatControls, DeathSaveControls } from "./combatWidgets";
+import type { CreatureAction, EncounterRun, EncounterRunCombatant } from "../../types";
+import { CombatControls, CombatStatusBar, DeathSaveControls } from "./combatWidgets";
 
 describe("combat widgets", () => {
+  it("shows independent overall and current-turn timers", () => {
+    const run: EncounterRun = {
+      id: "run",
+      encounterId: "encounter",
+      status: "active",
+      isTest: false,
+      currentRound: 2,
+      currentTurnIndex: 0,
+      startedAt: "2026-09-24T10:00:00Z",
+      summary: {},
+    };
+    render(
+      <CombatStatusBar
+        combatantCount={2}
+        elapsed={125}
+        turnElapsed={35}
+        encounterName="Wolves at the Camp"
+        run={run}
+        showMeters={false}
+        onEnd={vi.fn()}
+        onMeters={vi.fn()}
+        onMove={vi.fn()}
+        onUndo={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Combat")).toBeTruthy();
+    expect(screen.getByText("This turn")).toBeTruthy();
+    expect(screen.getByText("2:05")).toBeTruthy();
+    expect(screen.getByText("0:35")).toBeTruthy();
+  });
   it("emits manual HP and action commands from combat controls", () => {
     const onAction = vi.fn();
     const onAmountChange = vi.fn();

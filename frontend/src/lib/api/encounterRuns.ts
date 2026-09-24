@@ -12,6 +12,14 @@ export type RollTableResolutionPayload = {
 
 export const encounterRunApi = {
   encounterRun: (id: string) => request<{ run: EncounterRun }>(`/api/encounter-runs/${id}`),
+  finishCombat: (runId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/finish-combat`, {
+      method: "POST",
+    }),
+  resumeCombat: (runId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/resume-combat`, {
+      method: "POST",
+    }),
   rollInitiative: (runId: string, sides: string[]) =>
     request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/roll-initiative`, {
       method: "POST",

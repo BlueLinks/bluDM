@@ -4,7 +4,7 @@ import { avatarImageSrc } from "../../components/AvatarImagePicker";
 import { ClassNameText } from "../../components/shared/categoryText";
 import { InitialsAvatar, StatChip } from "../../components/shared/displayPrimitives";
 import { Button, Checkbox } from "../../components/ui";
-import { effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
+import { combatantFrameColor, effectiveAC, effectiveMaxHP } from "../../lib/domain/combat";
 import type { Creature, EncounterCombatant, EncounterRunCombatant, Player } from "../../types";
 import { combatantPlayerClassLevel } from "./domain";
 
@@ -22,6 +22,7 @@ export function CombatantCard({
   className = "",
   compact = false,
   fallback,
+  frameColor,
   meta,
   name,
   quantity,
@@ -38,6 +39,7 @@ export function CombatantCard({
   className?: string;
   compact?: boolean;
   fallback: string;
+  frameColor?: string;
   meta: ReactNode;
   name: string;
   quantity?: ReactNode;
@@ -55,6 +57,7 @@ export function CombatantCard({
         selected ? "border-primary bg-primary/10" : toneBorder(tone),
         className,
       ].join(" ")}
+      style={frameColor ? { borderColor: frameColor } : undefined}
     >
       <div
         className={[
@@ -237,6 +240,7 @@ export function RunTargetCombatantCard({ combatant }: { combatant: EncounterRunC
   return (
     <CombatantCard
       avatarSrc={combatant.avatarUrl}
+      frameColor={combatantFrameColor(combatant)}
       fallback={combatant.displayName.slice(0, 2).toUpperCase()}
       meta="Targeting"
       name={combatant.displayName}
@@ -245,7 +249,7 @@ export function RunTargetCombatantCard({ combatant }: { combatant: EncounterRunC
         {
           icon: HeartPulse,
           label: "HP",
-          value: `${combatant.currentHitPoints}/${effectiveMaxHP(combatant)}`,
+          value: `${combatant.currentHitPoints}/${effectiveMaxHP(combatant)}${combatant.temporaryHitPoints > 0 ? ` +${combatant.temporaryHitPoints} temp` : ""}`,
         },
       ]}
       tone={combatant.side}

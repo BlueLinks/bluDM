@@ -1,11 +1,9 @@
 import {
-  abilityScoresFromSheet,
   combatantSheet,
   effectiveMaxHP,
-  proficiencyBonusFromCombatSheet,
+  saveBonusFromSheet,
   stringArrayFromSheet,
 } from "../../lib/domain/combat";
-import { abilityModifier } from "../../lib/domain/forms";
 import type { EncounterRunCombatant, RollMode } from "../../types";
 
 export type ResolutionKind = "attack" | "save" | "spell" | "healing" | "manual";
@@ -96,13 +94,7 @@ export type DamageDefenses = {
 
 export function saveModifier(combatant: EncounterRunCombatant, ability: string) {
   const sheet = combatantSheet(combatant);
-  const scores = abilityScoresFromSheet(sheet);
-  const normalized = ability.trim().toLowerCase();
-  const score = Number(scores[normalized]) || 10;
-  const proficient = stringArrayFromSheet(sheet.savingThrowProficiencies).some(
-    (item) => item.toLowerCase() === normalized,
-  );
-  return abilityModifier(score) + (proficient ? proficiencyBonusFromCombatSheet(sheet) : 0);
+  return saveBonusFromSheet(sheet, ability.trim());
 }
 
 export function rollSavingThrow(

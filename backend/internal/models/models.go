@@ -78,11 +78,19 @@ type EncounterRun struct {
 	StartedAt        time.Time               `json:"startedAt"`
 	EndedAt          *time.Time              `json:"endedAt,omitempty"`
 	Summary          map[string]any          `json:"summary"`
+	Timing           EncounterRunTiming      `json:"timing"`
 	Combatants       []EncounterRunCombatant `json:"combatants,omitempty"`
 	Events           []CombatLogEvent        `json:"events,omitempty"`
 	SpellSlots       []EncounterRunSpellSlot `json:"spellSlots,omitempty"`
 	ActiveEffects    []EncounterRunEffect    `json:"activeEffects,omitempty"`
 	Alerts           []EncounterRunAlert     `json:"alerts,omitempty"`
+}
+
+type EncounterRunTiming struct {
+	CombatStartedAt      *time.Time       `json:"combatStartedAt,omitempty"`
+	CombatFinishedAt     *time.Time       `json:"combatFinishedAt,omitempty"`
+	CurrentTurnStartedAt *time.Time       `json:"currentTurnStartedAt,omitempty"`
+	TurnTimeMs           map[string]int64 `json:"turnTimeMs"`
 }
 
 type EncounterRunCombatant struct {

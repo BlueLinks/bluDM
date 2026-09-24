@@ -23,7 +23,7 @@ export function CombatLog({
       title="Combat Log"
       icon={ScrollText}
       className="combat-panel combat-log-panel p-2 xl:p-3"
-      bodyClassName="max-h-48 overflow-y-auto"
+      bodyClassName="max-h-[70svh] overflow-y-auto"
     >
       <div className="mb-2 flex gap-1 overflow-x-auto" aria-label="Combat log filters">
         {combatLogFilters.map((option) => (
@@ -48,7 +48,7 @@ export function CombatLog({
           {events.length === 0 ? "Combat events will appear here." : "No events match this filter."}
         </div>
       ) : (
-        <ol className="grid gap-x-6 gap-y-1 md:grid-cols-2" aria-label="Recent combat events">
+        <ol className="grid gap-1" aria-label="Recent combat events">
           {visibleEvents.map((event) => (
             <li
               key={event.id}
@@ -84,6 +84,10 @@ export function eventLabel(event: CombatLogEvent, combatants: EncounterRunCombat
   switch (event.eventType) {
     case "combat_began":
       return "Combat started";
+    case "combat_finished":
+      return "Combat finished";
+    case "combat_resumed":
+      return "Combat resumed";
     case "turn_changed": {
       const after = recordValue(payload.after);
       const turnIndex = numberValue(after.turnIndex);
@@ -166,7 +170,7 @@ function eventTone(eventType: string) {
     return "border-destructive/70";
   }
   if (eventType.includes("heal") || eventType === "undo") return "border-success/70";
-  if (eventType.includes("turn") || eventType === "combat_began") return "border-primary/70";
+  if (eventType.includes("turn") || eventType.startsWith("combat_")) return "border-primary/70";
   return "border-border";
 }
 

@@ -114,6 +114,12 @@ export type EncounterRun = {
   startedAt: string;
   endedAt?: string;
   summary: Record<string, unknown>;
+  timing?: {
+    combatStartedAt?: string;
+    combatFinishedAt?: string;
+    currentTurnStartedAt?: string;
+    turnTimeMs: Record<string, number>;
+  };
   combatants?: EncounterRunCombatant[];
   events?: CombatLogEvent[];
   spellSlots?: EncounterRunSpellSlot[];

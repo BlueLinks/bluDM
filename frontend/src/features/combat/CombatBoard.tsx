@@ -52,8 +52,8 @@ export function CombatBoard({
       <div
         className={
           showMeters
-            ? "combat-board-grid grid min-h-0 min-w-0 gap-4 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.35fr)_minmax(0,0.75fr)_minmax(0,0.65fr)] xl:grid-cols-[minmax(18rem,0.82fr)_minmax(32rem,1.4fr)_minmax(20rem,1fr)_minmax(15rem,0.7fr)]"
-            : "combat-board-grid grid min-h-0 min-w-0 gap-4 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.5fr)_minmax(0,0.75fr)] xl:grid-cols-[minmax(18rem,0.827fr)_minmax(32rem,1.385fr)_minmax(20rem,1.02fr)]"
+            ? "combat-board-grid grid min-h-0 min-w-0 gap-4 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.5fr)_minmax(0,0.75fr)] 2xl:grid-cols-[minmax(18rem,0.82fr)_minmax(32rem,1.4fr)_minmax(20rem,1fr)_minmax(15rem,0.7fr)]"
+            : "combat-board-grid grid min-h-0 min-w-0 gap-4 lg:grid-cols-[minmax(0,0.75fr)_minmax(0,1.5fr)_minmax(0,0.75fr)] 2xl:grid-cols-[minmax(18rem,0.827fr)_minmax(32rem,1.385fr)_minmax(20rem,1.02fr)]"
         }
       >
         <CombatSheet
@@ -149,7 +149,11 @@ export function CombatBoard({
             </div>
           </SectionPanel>
         )}
-        {showMeters && <DamageMeters combatants={combatants} />}
+        {showMeters && (
+          <div className="min-w-0 lg:col-span-3 2xl:col-span-1">
+            <DamageMeters combatants={combatants} />
+          </div>
+        )}
       </div>
     </div>
   );

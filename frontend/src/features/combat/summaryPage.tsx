@@ -15,6 +15,7 @@ import {
 import { api } from "../../lib/api";
 import { defeatedEnemyXP } from "../../lib/domain/combat";
 import type { Encounter, EncounterRun } from "../../types";
+import { CombatPerformanceSummary } from "./CombatPerformanceSummary";
 
 export function EncounterSummaryPage() {
   const { runID } = useParams();
@@ -75,10 +76,11 @@ export function EncounterSummaryPage() {
       />
       <PageHeader
         eyebrow="Summary"
-        title="XP and loot"
-        copy="Award XP from defeated enemies and assign loose loot notes until inventory management exists."
+        title="Combat summary"
+        copy="Review combat performance, award XP, and assign loot."
         action={<Button onClick={() => void end()}>Save Summary</Button>}
       />
+      <CombatPerformanceSummary run={run} />
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionPanel title="XP Awards" icon={Sparkles}>
           <p className="mb-3 text-sm text-muted-foreground">

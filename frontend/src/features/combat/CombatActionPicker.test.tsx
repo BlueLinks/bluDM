@@ -33,21 +33,26 @@ describe("CombatActionPicker", () => {
     expect(onSpell).toHaveBeenCalledWith(expect.objectContaining({ spellId: "fireball" }));
   });
 
-  it("explains unavailable actions and supports arrow-key navigation", () => {
+  it("shows unavailable actions without a filter and explains why they are disabled", () => {
+    const onAction = vi.fn();
     render(
       <CombatActionPicker
         actions={[action("bite", "Bite", "Melee Attack"), action("claw", "Claw", "Melee Attack")]}
         actionDisabledReason="Choose exactly one target."
         spells={[]}
-        onAction={vi.fn()}
+        onAction={onAction}
         onSpell={vi.fn()}
       />,
     );
     fireEvent.click(screen.getByText("Choose attack or spell"));
-    fireEvent.click(screen.getByLabelText("Show unavailable actions"));
+    expect(screen.queryByLabelText("Show unavailable actions")).toBeNull();
+    expect(screen.getByText("Choose exactly one target.")).toBeTruthy();
     const bite = screen.getByRole("button", { name: /^Bite/ });
     expect(bite.getAttribute("title")).toBe("Choose exactly one target.");
     expect(bite.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: /^Claw/ }).hasAttribute("disabled")).toBe(true);
+    fireEvent.click(bite);
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it("moves through usable choices with the arrow keys", () => {

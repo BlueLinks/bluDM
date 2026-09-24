@@ -68,6 +68,26 @@ describe("encounter combat workspace", () => {
     );
   });
 
+  it("changes HP severity, shows temporary HP, and keeps custom frames visible", () => {
+    const target = combatant("target", "Goblin", {
+      colorLabel: "#7c3aed",
+      currentHitPoints: 20,
+      maxHitPoints: 20,
+      temporaryHitPoints: 5,
+    });
+    const props = { selected: false, onEdit: vi.fn(), onSelect: vi.fn() };
+    const { container, rerender } = render(<TargetRow {...props} combatant={target} />);
+    expect(container.querySelector(".hp-bar-fill")?.className).toContain("bg-success");
+    expect(screen.getByText(/\+5 temp/)).toBeTruthy();
+    expect(container.querySelector(".target-row-card")?.getAttribute("style")).toContain(
+      "rgb(124, 58, 237)",
+    );
+    rerender(<TargetRow {...props} combatant={{ ...target, currentHitPoints: 10 }} />);
+    expect(container.querySelector(".hp-bar-fill")?.className).toContain("bg-warning");
+    rerender(<TargetRow {...props} combatant={{ ...target, currentHitPoints: 4 }} />);
+    expect(container.querySelector(".hp-bar-fill")?.className).toContain("bg-destructive");
+  });
+
   it("keeps actor, action, target, and the three-region board in one focused workspace", () => {
     const actor = combatant("actor", "Mage", { side: "player", sourceType: "player" });
     const target = combatant("target", "Goblin");
@@ -193,6 +213,39 @@ describe("encounter combat workspace", () => {
       expect(api.rollCheck).toHaveBeenCalledWith(
         "run",
         expect.objectContaining({ actorId: "selected", ability: "wis", bonus: 4 }),
+      ),
+    );
+  });
+
+  it("shows standard creature saves and uses their published bonus", async () => {
+    vi.mocked(api.rollCheck).mockResolvedValue({
+      result: { d20: 12, d20Rolls: [12], total: 16 },
+    });
+    const wolf = combatant("wolf", "Wolf", {
+      snapshot: {
+        creature: {
+          statBlock: {
+            abilities: { str: 12, dex: 15, con: 12, int: 3, wis: 12, cha: 6 },
+            abilitySaveProficiencies: { dex: 4 },
+            skills: { perception: 3 },
+            speed: { walk: "40 ft." },
+          },
+        },
+      },
+    });
+    render(
+      <RollLogProvider>
+        <CombatSheet combatant={wolf} runID="run" onRoll={vi.fn()} />
+      </RollLogProvider>,
+    );
+    expect(screen.getByRole("button", { name: "DEX saving throw +4" })).toBeTruthy();
+    expect(screen.getByText("40 ft.")).toBeTruthy();
+    expect(screen.getByText("Perception").parentElement?.textContent).toContain("+3");
+    fireEvent.click(screen.getByRole("button", { name: "DEX saving throw +4" }));
+    await waitFor(() =>
+      expect(api.rollCheck).toHaveBeenCalledWith(
+        "run",
+        expect.objectContaining({ actorId: "wolf", ability: "dex", bonus: 4 }),
       ),
     );
   });
