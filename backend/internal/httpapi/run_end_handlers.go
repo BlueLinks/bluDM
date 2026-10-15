@@ -143,6 +143,7 @@ func (s *Server) endEncounterRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	summary := map[string]any{
+		"encounterName":   run.Summary["encounterName"],
 		"xpAwards":        req.XPAwards,
 		"lootPool":        req.LootPool,
 		"lootAssignments": req.LootAssignments,

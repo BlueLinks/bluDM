@@ -87,10 +87,11 @@ type EncounterRun struct {
 }
 
 type EncounterRunTiming struct {
-	CombatStartedAt      *time.Time       `json:"combatStartedAt,omitempty"`
-	CombatFinishedAt     *time.Time       `json:"combatFinishedAt,omitempty"`
-	CurrentTurnStartedAt *time.Time       `json:"currentTurnStartedAt,omitempty"`
-	TurnTimeMs           map[string]int64 `json:"turnTimeMs"`
+	CombatStartedAt      *time.Time         `json:"combatStartedAt,omitempty"`
+	CombatFinishedAt     *time.Time         `json:"combatFinishedAt,omitempty"`
+	CurrentTurnStartedAt *time.Time         `json:"currentTurnStartedAt,omitempty"`
+	TurnTimeMs           map[string]int64   `json:"turnTimeMs"`
+	Turns                []EncounterRunTurn `json:"turns,omitempty"`
 }
 
 type EncounterRunCombatant struct {

@@ -79,6 +79,11 @@ const EncountersPage = lazy(() =>
     default: module.EncountersPage,
   })),
 );
+const CombatReportPage = lazy(() =>
+  import("../features/encounters/history/CombatReportPage").then((module) => ({
+    default: module.CombatReportPage,
+  })),
+);
 
 export function AppRoutes() {
   return (
@@ -111,6 +116,7 @@ export function AppRoutes() {
         <Route path="/encounter-runs/:runID/initiative" element={<EncounterInitiativePage />} />
         <Route path="/encounter-runs/:runID" element={<CombatTrackerPage />} />
         <Route path="/encounter-runs/:runID/summary" element={<EncounterSummaryPage />} />
+        <Route path="/encounter-runs/:runID/report" element={<CombatReportPage />} />
         <Route path="/players" element={<PlayersPage />} />
         <Route path="/encounters" element={<EncountersPage />} />
         <Route path="/players/new" element={<PlayerCreatePage />} />

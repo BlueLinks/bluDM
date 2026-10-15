@@ -1,0 +1,170 @@
+.combat-history {
+  min-width: 0;
+  .history-table-wrap {
+    overflow-x: auto;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+  }
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+  }
+  .history-table th {
+    background: hsl(var(--surface));
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .history-table th,
+  .history-table td {
+    padding: 0.875rem 0.75rem;
+    border-bottom: 1px solid hsl(var(--border));
+  }
+  .history-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+  .history-table tr:hover td {
+    background: hsl(var(--surface));
+    color: hsl(var(--surface-foreground));
+  }
+  .history-table small {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .number-cell {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .history-report-link {
+    font-weight: 600;
+    text-underline-offset: 0.2rem;
+  }
+  .history-report-link:hover {
+    text-decoration: underline;
+  }
+  .history-report-link:focus-visible {
+    outline: 2px solid hsl(var(--accent));
+    outline-offset: 3px;
+  }
+  .history-mobile-status {
+    display: none;
+  }
+  .history-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+    border-block: 1px solid hsl(var(--border));
+    padding-block: 1rem;
+  }
+  .history-metrics > div {
+    min-width: 0;
+    border-right: 1px solid hsl(var(--border));
+    padding-right: 1rem;
+  }
+  .history-metrics > div:last-child {
+    border-right: 0;
+  }
+  .history-metrics dt,
+  .history-metrics small {
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+  }
+  .history-metrics dd {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    margin-block: 0.25rem;
+  }
+  .history-round {
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    background: hsl(var(--card));
+    color: hsl(var(--card-foreground));
+    overflow: hidden;
+  }
+  .history-round > summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 1rem;
+    cursor: pointer;
+    background: hsl(var(--surface));
+    color: hsl(var(--surface-foreground));
+    font-weight: 600;
+  }
+  .history-round > summary span {
+    margin-left: auto;
+    font-size: 0.75rem;
+    font-weight: 400;
+  }
+  .history-events {
+    padding-inline: 1rem;
+  }
+  .history-events > li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding-block: 0.875rem;
+    border-bottom: 1px solid hsl(var(--border));
+    font-size: 0.875rem;
+  }
+  .history-events > li:last-child {
+    border-bottom: 0;
+  }
+  .history-events time {
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    font-variant-numeric: tabular-nums;
+  }
+  .history-events details {
+    min-width: 0;
+  }
+  .history-events details summary {
+    cursor: pointer;
+    overflow-wrap: anywhere;
+  }
+  .history-events details summary > span {
+    margin-left: 0.5rem;
+  }
+  .history-event-undone {
+    color: hsl(var(--muted-foreground));
+  }
+  .history-event-undone > span {
+    text-decoration: line-through;
+  }
+  @media (max-width: 640px) {
+    .history-optional {
+      display: none;
+    }
+    .history-mobile-status {
+      display: block;
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      color: hsl(var(--muted-foreground));
+    }
+    .history-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .history-metrics > div:nth-child(2) {
+      border-right: 0;
+    }
+    .history-table th,
+    .history-table td {
+      padding: 0.75rem 0.5rem;
+    }
+    .history-events > li {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 0.5rem;
+    }
+    .history-events time {
+      grid-column: 1 / -1;
+    }
+  }
+}

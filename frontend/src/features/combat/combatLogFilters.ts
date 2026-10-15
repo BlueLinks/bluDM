@@ -29,11 +29,20 @@ export function matchesCombatLogFilter(event: CombatLogEvent, filter: CombatLogF
   }
   if (filter === "damage") {
     return (
-      type.includes("damage") || results.some((result) => numberField(result, "finalDamage") > 0)
+      type.includes("damage") ||
+      (type === "manual_hp" && payload.mode === "damage") ||
+      results.some((result) => numberField(result, "finalDamage") > 0)
     );
   }
   if (filter === "healing") {
-    return type.includes("heal") || results.some((result) => numberField(result, "healing") > 0);
+    return (
+      type.includes("heal") ||
+      (type === "manual_hp" && payload.mode === "healing") ||
+      results.some(
+        (result) =>
+          numberField(result, "healing") > 0 || numberField(result, "healingRequested") > 0,
+      )
+    );
   }
   if (filter === "conditions") {
     return (

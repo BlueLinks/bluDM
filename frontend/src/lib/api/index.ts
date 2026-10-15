@@ -29,6 +29,7 @@ import { actionTemplateApi } from "./actionTemplates";
 import { apiTokenApi } from "./apiTokens";
 import { campaignWorldApi } from "./campaignWorld";
 import { encounterRunApi } from "./encounterRuns";
+import { combatHistoryApi } from "./combatHistory";
 import { generationApi } from "./generation";
 import { importExportApi } from "./importExport";
 import { journeyApi } from "./journeys";
@@ -44,6 +45,7 @@ import {
 } from "./payloads";
 import { request } from "./request";
 export const api = {
+  ...combatHistoryApi,
   ...actionTemplateApi,
   ...apiTokenApi,
   ...campaignWorldApi,

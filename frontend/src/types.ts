@@ -119,6 +119,7 @@ export type EncounterRun = {
     combatFinishedAt?: string;
     currentTurnStartedAt?: string;
     turnTimeMs: Record<string, number>;
+    turns?: import("./lib/api/combatHistory").EncounterRunTurn[];
   };
   combatants?: EncounterRunCombatant[];
   events?: CombatLogEvent[];

@@ -50,6 +50,7 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 	}
 	targetBefore := combatantUndoPayload(target)
 	actorBefore := combatantUndoPayload(actor)
+	requestedAmount := amount
 	if mode == "damage" {
 		if strings.TrimSpace(damageType) != "" {
 			amount = s.applyActiveDamageDefenses(ctx, runID, target.ID, amount, damageType)
@@ -84,7 +85,9 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 				"targetAfter":  targetBefore,
 			})
 		}
+		beforeHP := target.CurrentHitPoints
 		target.CurrentHitPoints = min(effectiveMaxHitPoints(target), target.CurrentHitPoints+amount)
+		amount = max(0, target.CurrentHitPoints-beforeHP)
 		if target.CurrentHitPoints > 0 {
 			target.Defeated = false
 			target.DeathSaveSuccesses = 0
@@ -99,12 +102,13 @@ func (s *Server) applyHPChange(ctx context.Context, runID, actorID, targetID str
 		}
 	}
 	payload := map[string]any{
-		"undoable":     true,
-		"mode":         mode,
-		"amount":       amount,
-		"damageType":   damageType,
-		"targetBefore": targetBefore,
-		"targetAfter":  combatantUndoPayload(target),
+		"undoable":        true,
+		"mode":            mode,
+		"amount":          amount,
+		"requestedAmount": requestedAmount,
+		"damageType":      damageType,
+		"targetBefore":    targetBefore,
+		"targetAfter":     combatantUndoPayload(target),
 	}
 	if actor.ID != "" {
 		payload["actorBefore"] = actorBefore

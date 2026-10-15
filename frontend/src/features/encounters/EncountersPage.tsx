@@ -22,6 +22,7 @@ import { api } from "../../lib/api";
 import { campaignEncounterRuleset } from "../../lib/domain/encounterRulesets";
 import type { Campaign, Encounter } from "../../types";
 import { EncounterList } from "./EncounterList";
+import { CombatHistory } from "./history/CombatHistory";
 
 export function EncountersPage() {
   const { campaignID } = useParams();
@@ -73,12 +74,17 @@ export function EncountersPage() {
 
   return (
     <CampaignEncountersWorkspace
+      key={selectedCampaignId}
       campaignId={selectedCampaignId}
       campaigns={campaigns}
       scoped={Boolean(campaignID)}
       onCampaignChange={(value) => {
         setSelectedCampaignId(value);
-        setSearchParams({ campaign: value });
+        setSearchParams((current) => {
+          const next = new URLSearchParams(current);
+          next.set("campaign", value);
+          return next;
+        });
       }}
     />
   );
@@ -101,6 +107,16 @@ function CampaignEncountersWorkspace({
   const [encounterOpen, setEncounterOpen] = useState(false);
   const [removeEncounter, setRemoveEncounter] = useState<Encounter | null>(null);
   const toast = useToasts();
+  const [viewParams, setViewParams] = useSearchParams();
+  const historyView = viewParams.get("tab") === "history";
+  function setHistoryView(history: boolean) {
+    setViewParams((current) => {
+      const next = new URLSearchParams(current);
+      if (history) next.set("tab", "history");
+      else next.delete("tab");
+      return next;
+    });
+  }
 
   async function startEncounter(encounter: Encounter, test: boolean) {
     setError("");
@@ -193,32 +209,49 @@ function CampaignEncountersWorkspace({
       />
       {scoped ? <CampaignWorkspaceTabs campaignId={campaignId} /> : null}
       {error ? <Callout tone="danger">{error}</Callout> : null}
-      <SectionPanel
-        title={`${detail.encounters.length} encounter${detail.encounters.length === 1 ? "" : "s"}`}
-        icon={ClipboardList}
-        action={
-          !scoped && campaigns.length > 1 ? (
-            <Select
-              ariaLabel="Campaign"
-              className="min-w-52"
-              placeholder="Choose campaign"
-              value={campaignId}
-              options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
-              onValueChange={onCampaignChange}
-            />
-          ) : undefined
-        }
-      >
-        <EncounterList
-          campaignId={campaignId}
-          encounters={detail.encounters}
-          extendedActions
-          pageSize={10}
-          onClone={(encounter) => void cloneEncounter(encounter)}
-          onRemove={setRemoveEncounter}
-          onStart={(encounter, test) => void startEncounter(encounter, test)}
+      {!scoped && campaigns.length > 1 && (
+        <Select
+          ariaLabel="Campaign"
+          placeholder="Choose campaign"
+          value={campaignId}
+          options={campaigns.map((campaign) => ({ label: campaign.name, value: campaign.id }))}
+          onValueChange={onCampaignChange}
         />
-      </SectionPanel>
+      )}
+      <nav className="flex flex-wrap gap-4 border-b border-border" aria-label="Encounter views">
+        {[
+          { history: false, label: "Prepared encounters" },
+          { history: true, label: "Combat history" },
+        ].map((tab) => (
+          <button
+            key={tab.label}
+            type="button"
+            aria-current={historyView === tab.history ? "page" : undefined}
+            onClick={() => setHistoryView(tab.history)}
+            className={`border-b-2 px-1 pb-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${historyView === tab.history ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:border-border hover:text-foreground"}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+      {historyView ? (
+        <CombatHistory campaignId={campaignId} onPrepared={() => setHistoryView(false)} />
+      ) : (
+        <SectionPanel
+          title={`${detail.encounters.length} encounter${detail.encounters.length === 1 ? "" : "s"}`}
+          icon={ClipboardList}
+        >
+          <EncounterList
+            campaignId={campaignId}
+            encounters={detail.encounters}
+            extendedActions
+            pageSize={10}
+            onClone={(encounter) => void cloneEncounter(encounter)}
+            onRemove={setRemoveEncounter}
+            onStart={(encounter, test) => void startEncounter(encounter, test)}
+          />
+        </SectionPanel>
+      )}
       <ConfirmDialog
         open={Boolean(removeEncounter)}
         title="Remove encounter?"
@@ -226,8 +259,8 @@ function CampaignEncountersWorkspace({
         onCancel={() => setRemoveEncounter(null)}
         onConfirm={() => void confirmRemoveEncounter()}
       >
-        This removes {removeEncounter?.name} and its prepared combatants. Creature and player
-        library records are not affected.
+        This removes {removeEncounter?.name}, its prepared combatants, and its recorded combat
+        history. Creature and player library records are not affected.
       </ConfirmDialog>
     </Page>
   );
