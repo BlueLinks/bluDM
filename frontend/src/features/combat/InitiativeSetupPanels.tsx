@@ -428,7 +428,14 @@ export function reorderTiedInitiative(
 }
 
 function initiativeMeta(combatant: EncounterRunCombatant) {
-  if (combatant.side === "player") return "Player";
+  if (combatant.side === "player") {
+    const player = combatant.snapshot.player;
+    const playerName =
+      player && typeof player === "object" && "playerName" in player ? player.playerName : "";
+    return typeof playerName === "string" && playerName.trim()
+      ? `Player · ${playerName.trim()}`
+      : "Player";
+  }
   const creature = combatant.snapshot.creature;
   const record =
     creature && typeof creature === "object" ? (creature as Record<string, unknown>) : {};
