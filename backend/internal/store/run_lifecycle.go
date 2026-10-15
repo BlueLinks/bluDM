@@ -14,16 +14,18 @@ import (
 )
 
 func (s RunStore) StartEncounter(ctx context.Context, ownerUserID, encounterID string, test bool) (models.EncounterRun, error) {
-	if _, err := encounterEntityForOwner(ctx, s.db, ownerUserID, encounterID); err != nil {
+	encounter, err := encounterEntityForOwner(ctx, s.db, ownerUserID, encounterID)
+	if err != nil {
 		return models.EncounterRun{}, err
 	}
 	var run dbmodels.EncounterRunEntity
-	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+	err = s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		run = dbmodels.EncounterRunEntity{
 			EncounterID: strings.TrimSpace(encounterID),
 			Status:      "setup",
 			IsTest:      test,
 			StartedAt:   time.Now(),
+			Summary:     jsonMap(map[string]any{"encounterName": encounter.Name}),
 		}
 		if err := tx.Create(&run).Error; err != nil {
 			return err
@@ -40,6 +42,12 @@ func (s RunStore) StartEncounter(ctx context.Context, ownerUserID, encounterID s
 }
 
 func (s RunStore) EndRun(ctx context.Context, run models.EncounterRun, summary map[string]any, xpAwards map[string]int) error {
+	if summary == nil {
+		summary = map[string]any{}
+	}
+	if name := stringFromAny(run.Summary["encounterName"]); name != "" {
+		summary["encounterName"] = name
+	}
 	return s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&dbmodels.EncounterRunEntity{}).
 			Where("id = ?", run.ID).

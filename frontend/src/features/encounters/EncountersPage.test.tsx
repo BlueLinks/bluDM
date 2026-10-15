@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
@@ -11,6 +11,7 @@ vi.mock("../../lib/api", () => ({
     campaignJourneys: vi.fn(),
     campaignLocations: vi.fn(),
     campaigns: vi.fn(),
+    combatHistory: vi.fn(),
   },
 }));
 
@@ -23,6 +24,7 @@ describe("EncountersPage", () => {
     vi.mocked(api.campaign).mockResolvedValue(detail());
     vi.mocked(api.campaignJourneys).mockResolvedValue({ journeys: [] });
     vi.mocked(api.campaignLocations).mockResolvedValue({ locations: [] });
+    vi.mocked(api.combatHistory).mockResolvedValue({ runs: [], total: 0 });
   });
 
   it("renders the campaign-scoped full encounter workspace", async () => {
@@ -41,6 +43,23 @@ describe("EncountersPage", () => {
     expect(screen.getByRole("link", { name: "Encounters" }).getAttribute("href")).toBe(
       "/campaigns/campaign-1/encounters",
     );
+  });
+  it("opens the history tab from its URL and returns to prepared encounters", async () => {
+    render(
+      <MemoryRouter initialEntries={["/campaigns/campaign-1/encounters?tab=history"]}>
+        <Routes>
+          <Route path="/campaigns/:campaignID/encounters" element={<EncountersPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("heading", { name: "No combats recorded yet" })).toBeTruthy();
+    expect(api.combatHistory).toHaveBeenCalledWith("campaign-1", {
+      q: "",
+      includeTests: false,
+      page: 1,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Prepared encounters" }));
+    expect(await screen.findByText("Bridge Ambush")).toBeTruthy();
   });
 });
 

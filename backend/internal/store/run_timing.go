@@ -8,12 +8,14 @@ import (
 	"bludm/backend/internal/models"
 )
 
+var timingEventTypes = []string{"combat_began", "turn_changed", "undo", "combat_finished", "combat_resumed", "encounter_ended"}
+
 // TimingForRun reads the complete turn timeline, independently of the capped
 // recent combat log returned with a run.
 func (s RunStore) TimingForRun(ctx context.Context, run models.EncounterRun) (models.EncounterRunTiming, error) {
 	var events []dbmodels.CombatLogEventEntity
 	err := s.db.WithContext(ctx).
-		Where("encounter_run_id = ? and event_type in ?", run.ID, []string{"combat_began", "turn_changed", "undo", "combat_finished", "combat_resumed", "encounter_ended"}).
+		Where("encounter_run_id = ? and event_type in ?", run.ID, timingEventTypes).
 		Order("sequence asc").Find(&events).Error
 	if err != nil {
 		return models.EncounterRunTiming{}, err
@@ -22,7 +24,7 @@ func (s RunStore) TimingForRun(ctx context.Context, run models.EncounterRun) (mo
 }
 
 func calculateRunTiming(run models.EncounterRun, events []dbmodels.CombatLogEventEntity) models.EncounterRunTiming {
-	timing := models.EncounterRunTiming{TurnTimeMs: map[string]int64{}}
+	timing := models.EncounterRunTiming{TurnTimeMs: map[string]int64{}, Turns: calculateRunTurns(run, events)}
 	combatantAt := func(position any) string {
 		index := intFromAny(position)
 		if index >= 0 && index < len(run.Combatants) {

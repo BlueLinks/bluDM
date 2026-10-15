@@ -11,10 +11,10 @@ import {
   useCombatElapsed,
 } from "./trackerPageHelpers";
 
-type MeterKind = "damage" | "healing";
+type MeterKind = "damage" | "healing" | "time";
 
 function meterValue(combatant: EncounterRunCombatant, kind: MeterKind) {
-  return kind === "damage" ? combatant.damageDealt : combatant.healingDone;
+  return kind === "damage" ? combatant.damageDealt : kind === "healing" ? combatant.healingDone : 0;
 }
 
 export function CombatPerformanceSummary({ run }: { run: EncounterRun }) {
@@ -85,24 +85,36 @@ export function CombatPerformanceSummary({ run }: { run: EncounterRun }) {
   );
 }
 
-function RankedMeter({
+export function RankedMeter({
   title,
   kind,
   combatants,
+  values,
+  action,
 }: {
   title: string;
   kind: MeterKind;
   combatants: EncounterRunCombatant[];
+  values?: Record<string, number>;
+  action?: React.ReactNode;
 }) {
-  const max = combatants.length ? meterValue(combatants[0], kind) : 1;
-  const fill = kind === "damage" ? "bg-destructive/30" : "bg-success/30";
+  const valueFor = (combatant: EncounterRunCombatant) =>
+    values?.[combatant.id] ?? meterValue(combatant, kind);
+  const max = Math.max(1, ...combatants.map(valueFor));
+  const fill =
+    kind === "damage" ? "bg-destructive/30" : kind === "healing" ? "bg-success/30" : "bg-accent/30";
 
   return (
-    <SectionPanel title={title} icon={kind === "damage" ? Swords : HeartPulse} className="min-w-0">
+    <SectionPanel
+      title={title}
+      icon={kind === "damage" ? Swords : kind === "healing" ? HeartPulse : Timer}
+      className="min-w-0"
+      action={action}
+    >
       {combatants.length ? (
         <ol className="space-y-1.5">
           {combatants.map((combatant, index) => {
-            const value = meterValue(combatant, kind);
+            const value = valueFor(combatant);
             return (
               <li key={combatant.id} className="flex min-w-0 items-center gap-2 text-sm">
                 <span className="w-5 shrink-0 text-right tabular-nums text-muted-foreground">
@@ -115,6 +127,7 @@ function RankedMeter({
                   aria-valuemin={0}
                   aria-valuemax={max}
                   aria-valuenow={value}
+                  aria-valuetext={kind === "time" ? `${value / 1000} seconds` : undefined}
                   className="relative flex h-9 min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden rounded border border-border bg-surface px-2 text-surface-foreground"
                 >
                   <span
@@ -129,7 +142,7 @@ function RankedMeter({
                     {combatant.displayName}
                   </span>
                   <span className="relative shrink-0 font-semibold tabular-nums">
-                    {value.toLocaleString()}
+                    {kind === "time" ? formatCombatDuration(value / 1000) : value.toLocaleString()}
                   </span>
                 </div>
               </li>
@@ -138,7 +151,7 @@ function RankedMeter({
         </ol>
       ) : (
         <p className="text-sm text-muted-foreground">
-          No {kind === "damage" ? "damage" : "healing"} recorded.
+          No {kind === "time" ? "turn time" : kind} recorded.
         </p>
       )}
     </SectionPanel>

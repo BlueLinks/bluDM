@@ -59,7 +59,7 @@ export function EncounterSummaryPage() {
   async function end() {
     if (!runID) return;
     await api.endEncounterRun(runID, { xpAwards, lootPool, lootAssignments });
-    void navigate(encounter ? `/campaigns/${encounter.campaignId}` : "/campaigns");
+    void navigate(`/encounter-runs/${runID}/report`);
   }
 
   return (
