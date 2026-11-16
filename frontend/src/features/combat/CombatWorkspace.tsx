@@ -13,6 +13,7 @@ import { CombatLog } from "./CombatLog";
 import { ConcentrationAlerts } from "./ConcentrationAlerts";
 import { ManualResolutionDialog } from "./ManualResolutionDialog";
 import { SaveResolutionDialog } from "./SaveResolutionDialog";
+import { RequestSaveDialog } from "./RequestSaveDialog";
 import type { CombatRollFlash } from "./combatTypes";
 import type { applyResolutionPayload } from "./resolutionModel";
 
@@ -186,11 +187,21 @@ export function CombatWorkspace({
       >
         <CombatLog combatants={combatants} events={run.events ?? []} startedAt={combatStartedAt} />
       </Modal>
+      {saveRequest && !saveRequest.concentrationAlert ? (
+        <RequestSaveDialog
+          actor={saveRequest.actor ?? acting}
+          currentTurnID={active.id}
+          runID={run.id}
+          targets={saveRequest.targets}
+          onApply={onApplyResolution}
+          onOpenChange={(open) => !open && setSaveRequest(null)}
+        />
+      ) : null}
       <SaveResolutionDialog
         actor={saveRequest?.actor ?? null}
         initialAbility={saveRequest?.ability}
         initialDC={saveRequest?.dc}
-        open={Boolean(saveRequest)}
+        open={Boolean(saveRequest?.concentrationAlert)}
         sourceName={saveRequest?.sourceName}
         targets={saveRequest?.targets ?? []}
         onApply={async (resolution) => {

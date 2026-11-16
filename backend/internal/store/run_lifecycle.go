@@ -156,6 +156,10 @@ func (s RunStore) snapshotRunSpellSlots(ctx context.Context, tx *gorm.DB, runID 
 	if err := tx.WithContext(ctx).Where("encounter_run_id = ?", runID).Find(&combatants).Error; err != nil {
 		return err
 	}
+	return s.snapshotCombatantSpellSlots(ctx, tx, runID, combatants)
+}
+
+func (s RunStore) snapshotCombatantSpellSlots(ctx context.Context, tx *gorm.DB, runID string, combatants []dbmodels.EncounterRunCombatantEntity) error {
 	for _, combatant := range combatants {
 		maxSlots := map[string]any{}
 		remaining := map[string]any(nil)

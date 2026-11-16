@@ -90,7 +90,11 @@ perception tile, and `Use actions` control are not rendered.
 ## Saving throws
 
 Saving throws remain an occasional overlay. Selecting a target and choosing `Request save` opens
-the hardened save dialog with:
+a compact ability, DC, and Roll dialog. Rolling records the save and keeps the result visible,
+including the total, dice, modifier, and success or failure. Done closes the dialog; Reroll records
+a new save. The last request is remembered for the current turn's combatant across targets and reloads.
+
+More options opens the detailed save dialog with:
 
 - source, save ability, and DC;
 - pending, automatic, physical, manual, and excluded target states;
@@ -103,7 +107,7 @@ the hardened save dialog with:
 - advanced damage, mitigation, condition, and note fields only when expanded.
 
 Closing the dialog returns to the original action strip and three-column board. Pending results are
-never persisted when the dialog is cancelled.
+never persisted when the detailed dialog is cancelled before Apply.
 
 ## Preserved correctness work
 

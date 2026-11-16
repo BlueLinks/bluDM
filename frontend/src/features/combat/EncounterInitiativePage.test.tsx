@@ -11,6 +11,10 @@ import {
 
 vi.mock("../../lib/api", () => ({
   api: {
+    addRunPlayer: vi.fn(),
+    removeRunPlayer: vi.fn(),
+    healRunParty: vi.fn(),
+    players: vi.fn(),
     beginEncounterRun: vi.fn(),
     clearInitiative: vi.fn(),
     encounter: vi.fn(),
@@ -88,6 +92,69 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("EncounterInitiativePage", () => {
+  it("adds campaign players and removes players from the run and preview", async () => {
+    vi.mocked(api.players).mockResolvedValue({
+      players: [
+        { id: "new-player", campaignId: "campaign-1", characterName: "Nessa", playerName: "Jo" },
+        { id: "other-player", campaignId: "other-campaign", characterName: "Other Hero" },
+      ] as import("../../types").Player[],
+    });
+    vi.mocked(api.addRunPlayer).mockImplementation(() => {
+      serverRun.combatants!.push({
+        ...combatant("new-combatant", "Nessa", "player", 0, false, 4),
+        playerId: "new-player",
+      });
+      return Promise.resolve({ run: structuredClone(serverRun) });
+    });
+    vi.mocked(api.removeRunPlayer).mockImplementation((_runID, combatantID) => {
+      serverRun.combatants = serverRun.combatants!.filter(({ id }) => id !== combatantID);
+      return Promise.resolve({ run: structuredClone(serverRun) });
+    });
+    renderPage();
+    await screen.findByRole("heading", { name: "Set initiative" });
+    fireEvent.click(screen.getByRole("button", { name: "Add player" }));
+    await screen.findByRole("button", { name: "Add Nessa" });
+    expect(screen.queryByText("Other Hero")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Add Nessa" }));
+    await screen.findByLabelText("Nessa initiative");
+    expect(api.addRunPlayer).toHaveBeenCalledWith("run-1", "new-player");
+    expect(screen.getAllByText("Nessa")).toHaveLength(2);
+    expect(screen.getByRole<HTMLButtonElement>("button", { name: "Begin Combat" }).disabled).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Remove Nessa from this run" }));
+    await waitFor(() => expect(screen.queryByText("Nessa")).toBeNull());
+    expect(api.removeRunPlayer).toHaveBeenCalledWith("run-1", "new-combatant");
+    fireEvent.click(screen.getByRole("button", { name: "Add player" }));
+    expect(await screen.findByRole("button", { name: "Add Nessa" })).toBeTruthy();
+  });
+
+  it("heals the party and shows updated HP without changing initiative", async () => {
+    serverRun.combatants![0].currentHitPoints = 3;
+    vi.mocked(api.healRunParty).mockImplementation(() => {
+      serverRun.combatants = serverRun.combatants!.map((item) =>
+        item.side === "player" ? { ...item, currentHitPoints: item.maxHitPoints } : item,
+      );
+      return Promise.resolve({ run: structuredClone(serverRun) });
+    });
+    renderPage();
+    await screen.findByText("Player · 3/20 HP");
+    fireEvent.click(screen.getByRole("button", { name: "Heal all" }));
+    await screen.findByText("Party healed to full HP.");
+    expect(api.healRunParty).toHaveBeenCalledWith("run-1");
+    expect(screen.queryByText("Player · 3/20 HP")).toBeNull();
+    expect(screen.getByLabelText<HTMLInputElement>("Borin initiative").value).toBe("");
+  });
+
+  it("hides party setup actions after combat begins", async () => {
+    serverRun.status = "active";
+    renderPage();
+    await screen.findByRole("heading", { name: "Set initiative" });
+    expect(screen.queryByRole("button", { name: "Heal all" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add player" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove Borin from this run" })).toBeNull();
+  });
+
   it("rolls players on request while keeping manual initiative available", async () => {
     renderPage();
     await screen.findByRole("heading", { name: "Set initiative" });

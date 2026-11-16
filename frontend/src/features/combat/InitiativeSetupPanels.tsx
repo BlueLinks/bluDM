@@ -24,11 +24,13 @@ import {
   Play,
   RotateCcw,
   UsersRound,
+  X,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { ActionRow } from "../../components/layout";
 import { Button, EmptyMini, Input } from "../../components/ui";
 import type { EncounterRunCombatant } from "../../types";
+import { effectiveMaxHP } from "../../lib/domain/combat";
 import { RunCombatantAvatar } from "./RunCombatantAvatar";
 
 export type InitiativeDrafts = Record<string, string>;
@@ -43,6 +45,8 @@ export function InitiativeEntryPanel({
   drafts,
   groups,
   readyCount,
+  playerActions,
+  onRemovePlayer,
   onClear,
   onCommit,
   onDraftChange,
@@ -52,6 +56,8 @@ export function InitiativeEntryPanel({
   drafts: InitiativeDrafts;
   groups: InitiativeGroups;
   readyCount: number;
+  playerActions?: ReactNode;
+  onRemovePlayer?: (combatant: EncounterRunCombatant) => void;
   onClear: () => void;
   onCommit: (combatant: EncounterRunCombatant, value: string) => void;
   onDraftChange: (id: string, value: string) => void;
@@ -78,17 +84,22 @@ export function InitiativeEntryPanel({
         hint="Enter physical rolls or roll for testing"
         combatants={groups.player}
         drafts={drafts}
+        busy={busy}
+        onRemovePlayer={onRemovePlayer}
         rollAction={
-          <Button
-            type="button"
-            icon={Dices}
-            size="sm"
-            variant="outline"
-            disabled={busy || groups.player.length === 0}
-            onClick={() => onRoll(["player"])}
-          >
-            Roll players
-          </Button>
+          <ActionRow>
+            {playerActions}
+            <Button
+              type="button"
+              icon={Dices}
+              size="sm"
+              variant="outline"
+              disabled={busy || groups.player.length === 0}
+              onClick={() => onRoll(["player"])}
+            >
+              Roll players
+            </Button>
+          </ActionRow>
         }
         onDraftChange={onDraftChange}
         onCommit={onCommit}
@@ -224,6 +235,8 @@ function InitiativeGroup({
   combatants,
   drafts,
   rollAction,
+  busy,
+  onRemovePlayer,
   onDraftChange,
   onCommit,
 }: {
@@ -232,6 +245,8 @@ function InitiativeGroup({
   combatants: EncounterRunCombatant[];
   drafts: InitiativeDrafts;
   rollAction?: ReactNode;
+  busy?: boolean;
+  onRemovePlayer?: (combatant: EncounterRunCombatant) => void;
   onDraftChange: (id: string, value: string) => void;
   onCommit: (combatant: EncounterRunCombatant, value: string) => void;
 }) {
@@ -271,6 +286,8 @@ function InitiativeGroup({
               key={combatant.id}
               combatant={combatant}
               value={drafts[combatant.id] ?? ""}
+              busy={busy}
+              onRemove={onRemovePlayer ? () => onRemovePlayer(combatant) : undefined}
               onChange={(value) => onDraftChange(combatant.id, value)}
               onCommit={(value) => onCommit(combatant, value)}
               onReset={() =>
@@ -290,12 +307,16 @@ function InitiativeGroup({
 function InitiativeInputRow({
   combatant,
   value,
+  busy,
+  onRemove,
   onChange,
   onCommit,
   onReset,
 }: {
   combatant: EncounterRunCombatant;
   value: string;
+  busy?: boolean;
+  onRemove?: () => void;
   onChange: (value: string) => void;
   onCommit: (value: string) => void;
   onReset: () => void;
@@ -303,21 +324,29 @@ function InitiativeInputRow({
   return (
     <div
       className={[
-        "grid min-w-0 grid-cols-[1.5rem_auto_minmax(0,1fr)_7rem_4.5rem] items-center gap-2 px-3",
+        "flex min-w-0 items-center gap-2 px-3",
         combatant.side === "enemy" ? "border-l-2 border-l-destructive" : "",
         combatant.side === "player" ? "py-[0.4375rem]" : "py-2",
       ].join(" ")}
     >
-      <GripVertical className="h-4 w-4 text-muted-foreground/70" aria-hidden="true" />
+      <GripVertical
+        className="hidden h-4 w-4 shrink-0 text-muted-foreground/70 sm:block"
+        aria-hidden="true"
+      />
       <RunCombatantAvatar
         combatant={combatant}
         tone={combatant.side === "friendly" ? "personal" : "primary"}
       />
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <div className="truncate font-medium">{combatant.displayName}</div>
-        <div className="text-xs text-muted-foreground">{initiativeMeta(combatant)}</div>
+        <div className="text-xs text-muted-foreground">
+          {initiativeMeta(combatant)}
+          {combatant.side === "player"
+            ? ` · ${combatant.currentHitPoints}/${effectiveMaxHP(combatant)} HP`
+            : ""}
+        </div>
       </div>
-      <div className="relative">
+      <div className="relative w-20 shrink-0 sm:w-28">
         <Input
           aria-label={`${combatant.displayName} initiative`}
           className="initiative-number-input text-center font-semibold tabular-nums"
@@ -347,8 +376,24 @@ function InitiativeInputRow({
           <ChevronDown className="-mt-1 h-3 w-3" />
         </span>
       </div>
-      <span className="text-right text-xs font-medium text-muted-foreground">
-        {combatant.side === "player" ? "Manual" : "Generated"}
+      <span className="shrink-0 text-right text-xs font-medium text-muted-foreground">
+        {onRemove ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            aria-label={`Remove ${combatant.displayName} from this run`}
+            title="Remove from this run"
+            onClick={onRemove}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        ) : combatant.side === "player" ? (
+          "Manual"
+        ) : (
+          "Generated"
+        )}
       </span>
     </div>
   );

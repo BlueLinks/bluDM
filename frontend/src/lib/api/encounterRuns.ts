@@ -12,6 +12,21 @@ export type RollTableResolutionPayload = {
 
 export const encounterRunApi = {
   encounterRun: (id: string) => request<{ run: EncounterRun }>(`/api/encounter-runs/${id}`),
+  addRunPlayer: (runId: string, playerId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/add-player`, {
+      method: "POST",
+      body: JSON.stringify({ playerId }),
+    }),
+  removeRunPlayer: (runId: string, combatantId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/remove-player`, {
+      method: "POST",
+      body: JSON.stringify({ combatantId }),
+    }),
+  healRunParty: (runId: string) =>
+    request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/heal-party`, {
+      method: "POST",
+      body: "{}",
+    }),
   finishCombat: (runId: string) =>
     request<{ run: EncounterRun }>(`/api/encounter-runs/${runId}/commands/finish-combat`, {
       method: "POST",
