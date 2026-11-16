@@ -17,6 +17,7 @@ import {
   type InitiativeDrafts,
   type InitiativeGroups,
 } from "./InitiativeSetupPanels";
+import { InitiativePartyControls } from "./InitiativePartyControls";
 
 export { orderInitiativePreview, reorderTiedInitiative } from "./InitiativeSetupPanels";
 
@@ -152,6 +153,24 @@ export function EncounterInitiativePage() {
           drafts={drafts}
           groups={groups}
           readyCount={readyCount}
+          playerActions={
+            run.status === "setup" ? (
+              <InitiativePartyControls
+                busy={busy}
+                campaignID={encounter?.campaignId}
+                players={groups.player}
+                runID={run.id}
+                onCommand={command}
+              />
+            ) : null
+          }
+          onRemovePlayer={
+            run.status === "setup"
+              ? (combatant) => {
+                  void command(() => api.removeRunPlayer(run.id, combatant.id));
+                }
+              : undefined
+          }
           onClear={() => void command(() => api.clearInitiative(run.id))}
           onCommit={commitInitiative}
           onDraftChange={(id, value) => setDrafts((current) => ({ ...current, [id]: value }))}

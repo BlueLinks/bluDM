@@ -165,6 +165,8 @@ describe("encounter combat workspace", () => {
     expect(screen.getAllByText("Shortsword").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Request save" }));
+    expect(screen.getByRole("heading", { name: "Request saving throw" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "More options" }));
     fireEvent.change(screen.getByLabelText("Goblin result method"), {
       target: { value: "physical" },
     });

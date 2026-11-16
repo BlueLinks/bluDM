@@ -273,6 +273,9 @@ Allowed literal-color exceptions:
 
 ## Component Patterns
 
+- Saving throw requests start with ability, DC, and one Roll action that records the result. Keep the dialog open with the roll total, dice, modifier, and success/failure visible until Done; Reroll records a new result. Physical dice, roll modes, damage, and effects stay behind More options. Remember the last successful request for the current turn's combatant within the run, independently of the target; browser preferences survive page reloads.
+- Initiative setup keeps Add player and Heal all beside Roll players, with removal on each player row and current/max HP visible. These controls adjust the current run before combat begins.
+
 - Page headers use `PageHeader`; eyebrow labels may use accent.
 - Panels and cards use `SectionPanel`, `MutedPanel`, `WorkspaceBanner`, `FeatureCard`, `MetricCard`, `card`, `background`, `border`, and `surface` tokens.
 - `SectionPanel` and `MutedPanel` usually map to flat or raised surfaces; `FeatureCard`, `MetricCard`, and `WorkspaceBanner` map to featured or hero surfaces.
